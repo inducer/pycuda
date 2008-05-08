@@ -38,10 +38,12 @@ def search_on_path(filename):
     from os import pathsep, environ
 
     search_path = environ["PATH"]
+    print "*", search_path
 
     file_found = 0
     paths = search_path.split(pathsep)
     for path in paths:
+        print path
         if exists(join(path, filename)):
              file_found = 1
              break
@@ -65,13 +67,20 @@ def main():
     LIBRARIES = conf["BOOST_PYTHON_LIBNAME"]
 
     from os.path import dirname, join, normpath
+
     if conf["CUDA_ROOT"] is None:
-        conf["CUDA_ROOT"] = normpath(join(dirname(search_on_path("nvcc")), ".."))
+        nvcc_path = search_on_path("nvcc")
+        if nvcc_path is None:
+            print "*** CUDA_ROOT not set, and nvcc not in path. Giving up."
+            import sys
+            sys.exit(1)
+            
+        conf["CUDA_ROOT"] = normpath(join(dirname(nvcc_path), ".."))
 
     if conf["CUDA_BIN_DIR"] is None:
         conf["CUDA_BIN_DIR"] = join(conf["CUDA_ROOT"], "bin")
     if conf["CUDA_INC_DIR"] is None:
-        conf["CUDA_INC_DIR"] = [join(conf["CUDA_ROOT"], "inc")]
+        conf["CUDA_INC_DIR"] = [join(conf["CUDA_ROOT"], "include")]
     if conf["CUDA_LIB_DIR"] is None:
         conf["CUDA_LIB_DIR"] = [join(conf["CUDA_ROOT"], "lib")]
 
@@ -137,8 +146,20 @@ def main():
             ext_package="pycuda",
 
             ext_modules=[
-                PyUblasExtension("_internal", 
-                    ["src/wrapper/wrap_main.cpp", 
+                PyUblasExtension("_rt", 
+                    [
+                        "src/wrapper/wrap_cudart.cpp", 
+                        ],
+                    include_dirs=INCLUDE_DIRS + EXTRA_INCLUDE_DIRS,
+                    library_dirs=LIBRARY_DIRS + EXTRA_LIBRARY_DIRS,
+                    libraries=LIBRARIES + EXTRA_LIBRARIES,
+                    define_macros=list(EXTRA_DEFINES.iteritems()),
+                    extra_compile_args=conf["CXXFLAGS"],
+                    extra_link_args=conf["LDFLAGS"],
+                    ),
+                PyUblasExtension("_blas", 
+                    [
+                        "src/wrapper/wrap_cublas.cpp", 
                         ],
                     include_dirs=INCLUDE_DIRS + EXTRA_INCLUDE_DIRS,
                     library_dirs=LIBRARY_DIRS + EXTRA_LIBRARY_DIRS,
