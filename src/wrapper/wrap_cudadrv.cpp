@@ -522,6 +522,6 @@ BOOST_PYTHON_MODULE(_driver)
       py::args("dest", "pitch", "data", "width", "height"));
 
   py::def("memcpy_htod", memcpy_htod, py::args("dest", "src"));
-  py::def("memcpy_dtoh", memcpy_htod, py::args("dest", "src"));
+  py::def("memcpy_dtoh", memcpy_dtoh, py::args("dest", "src"));
   py::def("memcpy_dtod", cuMemcpyDtoD, py::args("dest", "src", "size"));
 }
