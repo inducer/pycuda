@@ -1,5 +1,11 @@
-#include "wrap_helpers.hpp"
+#include <vector>
+#include <utility>
+#include <numeric>
+#include <algorithm>
 #include <cuda.h>
+#include "wrap_helpers.hpp"
+#include <boost/python/stl_iterator.hpp>
+#include "numpy_init.hpp"
 
 
 
@@ -64,6 +70,7 @@ namespace
 
 
 
+  // device -------------------------------------------------------------------
   class context;
 
   class device
@@ -126,6 +133,7 @@ namespace
 
 
 
+  // context ------------------------------------------------------------------
   struct context
   {
     private:
@@ -202,6 +210,45 @@ namespace
 
 
 
+  // streams ------------------------------------------------------------------
+  class stream : public boost::noncopyable
+  {
+    private:
+      CUstream m_stream;
+
+    public:
+      stream(unsigned int flags=0)
+      { CALL_GUARDED(cuStreamCreate, (&m_stream, flags)); }
+
+      ~stream()
+      { CALL_GUARDED(cuStreamDestroy, (m_stream)); }
+
+      void synchronize()
+      { CALL_GUARDED(cuStreamSynchronize, (m_stream)); }
+
+      CUstream data() const
+      { return m_stream; }
+
+      bool is_done() const
+      { 
+        CUresult result = cuStreamQuery(m_stream);
+        switch (result)
+        {
+          case CUDA_SUCCESS: 
+            return true;
+          case CUDA_ERROR_NOT_READY: 
+            return false;
+          default:
+            throw std::runtime_error("cuStreamQuery return unexpected error: "
+                +std::string(cuda_error_to_str(result)));
+        }
+      }
+  };
+
+
+
+
+  // module -------------------------------------------------------------------
   class function;
 
   struct module : public boost::noncopyable
@@ -220,7 +267,14 @@ namespace
       }
 
       function get_function(const char *name);
-      py::tuple get_global(const char *name);
+      py::tuple get_global(const char *name)
+      {
+        CUdeviceptr devptr;
+        unsigned int bytes;
+        CALL_GUARDED(cuModuleGetGlobal, (&devptr, &bytes, m_module, name));
+        return py::make_tuple(devptr, bytes);
+      }
+
       // get_texref(const char *name);
   };
 
@@ -244,6 +298,7 @@ namespace
 
 
 
+  // function -----------------------------------------------------------------
   struct function
   {
     private:
@@ -283,10 +338,8 @@ namespace
       { CALL_GUARDED(cuLaunch, (m_function)); }
       void launch_grid(int grid_width, int grid_height)
       { CALL_GUARDED(cuLaunchGrid, (m_function, grid_width, grid_height)); }
-      /* FIXME
-      void launch_grid_async(int grid_width, int grid_height)
-      { CALL_GUARDED(cuLaunchGridAsync, (m_function, grid_width, grid_height)); }
-      */
+      void launch_grid_async(int grid_width, int grid_height, const stream &s)
+      { CALL_GUARDED(cuLaunchGridAsync, (m_function, grid_width, grid_height, s.data())); }
   };
 
   function module::get_function(const char *name)
@@ -299,6 +352,7 @@ namespace
 
 
 
+  // device memory ------------------------------------------------------------
   struct device_allocation : public boost::noncopyable
   {
     private:
@@ -314,17 +368,9 @@ namespace
         CALL_GUARDED(cuMemFree, (m_devptr));
       }
       
-      unsigned int as_integer()
+      operator CUdeviceptr()
       { return m_devptr; }
   };
-
-  py::tuple module::get_global(const char *name)
-  {
-    CUdeviceptr devptr;
-    unsigned int bytes;
-    CALL_GUARDED(cuModuleGetGlobal, (&devptr, &bytes, m_module, name));
-    return py::make_tuple(devptr, bytes);
-  }
 
   py::tuple mem_get_info()
   {
@@ -376,6 +422,153 @@ namespace
       throw py::error_already_set();
     CALL_GUARDED(cuMemcpyDtoH, (buf, src, len));
   }
+
+  void memcpy_htod_async(CUdeviceptr dst, py::object src, const stream &s)
+  {
+    const void *buf;
+    Py_ssize_t len;
+    if (PyObject_AsReadBuffer(src.ptr(), &buf, &len))
+      throw py::error_already_set();
+    CALL_GUARDED(cuMemcpyHtoDAsync, (dst, buf, len, s.data()));
+  }
+
+  void memcpy_dtoh_async(py::object dest, CUdeviceptr src, const stream &s)
+  {
+    void *buf;
+    Py_ssize_t len;
+    if (PyObject_AsWriteBuffer(dest.ptr(), &buf, &len))
+      throw py::error_already_set();
+    CALL_GUARDED(cuMemcpyDtoHAsync, (buf, src, len, s.data()));
+  }
+
+
+
+  // host memory --------------------------------------------------------------
+  struct host_allocation : public boost::noncopyable
+  {
+    private:
+      void *m_data;
+
+    public:
+      host_allocation(unsigned bytesize)
+        : m_data(0)
+      { CALL_GUARDED(cuMemAllocHost, (&m_data, bytesize)); }
+
+      ~host_allocation()
+      { CALL_GUARDED(cuMemFreeHost, (m_data)); }
+      
+      void *data()
+      { return m_data; }
+  };
+
+
+
+
+  inline
+  npy_intp size_from_dims(int ndim, const npy_intp *dims)
+  {
+    if (ndim != 0)
+      return std::accumulate(dims, dims+ndim, 1, std::multiplies<npy_intp>());
+    else
+      return 1;
+  }
+
+
+
+
+  py::handle<> pagelocked_empty(py::object shape, py::object dtype, py::object order_py)
+  {
+    PyArray_Descr *tp_descr;
+    if (PyArray_DescrConverter(dtype.ptr(), &tp_descr) != NPY_SUCCEED)
+      throw py::error_already_set();
+
+    std::vector<npy_intp> dims;
+    std::copy(
+        py::stl_input_iterator<npy_intp>(shape),
+        py::stl_input_iterator<npy_intp>(),
+        back_inserter(dims));
+
+    std::auto_ptr<host_allocation> alloc(
+        new host_allocation(
+          tp_descr->elsize*size_from_dims(dims.size(), &dims.front())));
+
+    NPY_ORDER order = PyArray_CORDER;
+    PyArray_OrderConverter(order_py.ptr(), &order);
+
+    int flags = 0;
+    if (order == PyArray_FORTRANORDER)
+      flags |= NPY_FARRAY;
+    else if (order == PyArray_CORDER)
+      flags |= NPY_CARRAY;
+    else
+      throw std::runtime_error("unrecognized order specifier");
+
+    py::handle<> result = py::handle<>(PyArray_NewFromDescr(
+        &PyArray_Type, tp_descr,
+        dims.size(), &dims.front(), /*strides*/ NULL,
+        alloc->data(), flags, /*obj*/NULL));
+
+    py::object alloc_py(alloc.release());
+    PyArray_BASE(result.get()) = alloc_py.ptr();
+    Py_INCREF(alloc_py.ptr());
+
+    return result;
+  }
+
+
+
+
+  // events -------------------------------------------------------------------
+  class event : public boost::noncopyable
+  {
+    private:
+      CUevent m_event;
+
+    public:
+      event(unsigned int flags=0)
+      { CALL_GUARDED(cuEventCreate, (&m_event, flags)); }
+
+      ~event()
+      { CALL_GUARDED(cuEventDestroy, (m_event)); }
+
+      void record()
+      { CALL_GUARDED(cuEventRecord, (m_event, 0)); }
+
+      void record_in_stream(stream const &str)
+      { CALL_GUARDED(cuEventRecord, (m_event, str.data())); }
+
+      void synchronize()
+      { CALL_GUARDED(cuEventSynchronize, (m_event)); }
+
+      bool query() const
+      { 
+        CUresult result = cuEventQuery(m_event);
+        switch (result)
+        {
+          case CUDA_SUCCESS: 
+            return true;
+          case CUDA_ERROR_NOT_READY: 
+            return false;
+          default:
+            throw std::runtime_error("cuEventQuery failed: "
+                +std::string(cuda_error_to_str(result)));
+        }
+      }
+
+      float time_since(event const &start)
+      {
+        float result;
+        CALL_GUARDED(cuEventElapsedTime, (&result, start.m_event, m_event));
+        return result;
+      }
+
+      float time_till(event const &end)
+      {
+        float result;
+        CALL_GUARDED(cuEventElapsedTime, (&result, m_event, end.m_event));
+        return result;
+      }
+  };
 }
 
 
@@ -472,6 +665,15 @@ BOOST_PYTHON_MODULE(_driver)
   }
 
   {
+    typedef stream cl;
+    py::class_<cl, boost::noncopyable>
+      ("Stream", py::init<py::optional<unsigned int> >(py::arg("flags")))
+      .DEF_SIMPLE_METHOD(synchronize)
+      .DEF_SIMPLE_METHOD(is_done)
+      ;
+  }
+
+  {
     typedef module cl;
     py::class_<cl, boost::noncopyable>("Module", py::no_init)
       .def("get_function", &cl::get_function, (py::args("self", "name")))
@@ -489,20 +691,23 @@ BOOST_PYTHON_MODULE(_driver)
       .DEF_SIMPLE_METHOD(set_block_shape)
       .DEF_SIMPLE_METHOD(set_shared_size)
       .DEF_SIMPLE_METHOD(param_set_size)
-      .def("param_set", (void (cl::*)(int, unsigned int)) &cl::param_set)
-      .def("param_set", (void (cl::*)(int, float )) &cl::param_set)
+      .def("param_seti", (void (cl::*)(int, unsigned int)) &cl::param_set)
+      .def("param_setf", (void (cl::*)(int, float )) &cl::param_set)
       .DEF_SIMPLE_METHOD(param_set_buffer)
 
       .DEF_SIMPLE_METHOD(launch)
       .DEF_SIMPLE_METHOD(launch_grid)
+      .DEF_SIMPLE_METHOD(launch_grid_async)
       ;
   }
 
   {
     typedef device_allocation cl;
     py::class_<cl, boost::noncopyable>("DeviceAllocation", py::no_init)
-      .def("__int__", &cl::as_integer)
+      .def("__int__", &cl::operator CUdeviceptr)
       ;
+
+    py::implicitly_convertible<device_allocation, CUdeviceptr>();
   }
 
   DEF_SIMPLE_FUNCTION(mem_get_info);
@@ -523,5 +728,23 @@ BOOST_PYTHON_MODULE(_driver)
 
   py::def("memcpy_htod", memcpy_htod, py::args("dest", "src"));
   py::def("memcpy_dtoh", memcpy_dtoh, py::args("dest", "src"));
+  py::def("memcpy_htod", memcpy_htod_async, py::args("dest", "src", "stream"));
+  py::def("memcpy_dtoh", memcpy_dtoh_async, py::args("dest", "src", "stream"));
   py::def("memcpy_dtod", cuMemcpyDtoD, py::args("dest", "src", "size"));
+
+  py::def("pagelocked_empty", pagelocked_empty,
+      (py::arg("shape"), py::arg("dtype"), py::arg("order")="C"));
+
+  {
+    typedef event cl;
+    py::class_<cl, boost::noncopyable>
+      ("Event", py::init<py::optional<unsigned int> >(py::arg("flags")))
+      .DEF_SIMPLE_METHOD(record)
+      .def("record", &cl::record_in_stream)
+      .DEF_SIMPLE_METHOD(synchronize)
+      .DEF_SIMPLE_METHOD(query)
+      .DEF_SIMPLE_METHOD(time_since)
+      .DEF_SIMPLE_METHOD(time_till)
+      ;
+  }
 }

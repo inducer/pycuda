@@ -15,4 +15,13 @@ def _add_functionality():
 
 
 
+
+def pagelocked_zeros(shape, dtype, order="C"):
+    result = pagelocked_empty(shape, dtype, order)
+    result.fill(0)
+    return result
+
+
+
+
 _add_functionality()
