@@ -65,7 +65,7 @@ def search_on_path(filename):
 def main():
     import glob
     from aksetup_helper import hack_distutils, get_config, setup, \
-            PyUblasExtension
+            PyUblasExtension, NumpyExtension
 
     hack_distutils()
     conf = get_config(get_config_schema())
@@ -147,7 +147,7 @@ def main():
             ext_package="pycuda",
 
             ext_modules=[
-                PyUblasExtension("_driver", 
+                NumpyExtension("_driver", 
                     [
                         "src/wrapper/wrap_cudadrv.cpp", 
                         ],

@@ -320,7 +320,7 @@ namespace
       { CALL_GUARDED(cuParamSeti, (m_function, offset, value)); }
       void param_set(int offset, float value)
       { CALL_GUARDED(cuParamSeti, (m_function, offset, value)); }
-      void param_set_buffer(int offset, py::object buffer)
+      void param_setv(int offset, py::object buffer)
       { 
         const void *buf;
         Py_ssize_t len;
@@ -693,7 +693,7 @@ BOOST_PYTHON_MODULE(_driver)
       .DEF_SIMPLE_METHOD(param_set_size)
       .def("param_seti", (void (cl::*)(int, unsigned int)) &cl::param_set)
       .def("param_setf", (void (cl::*)(int, float )) &cl::param_set)
-      .DEF_SIMPLE_METHOD(param_set_buffer)
+      .DEF_SIMPLE_METHOD(param_setv)
 
       .DEF_SIMPLE_METHOD(launch)
       .DEF_SIMPLE_METHOD(launch_grid)

@@ -1,34 +1,60 @@
+import unittest
 import pycuda.driver as drv
 
-def test_memory():
-    import numpy
-    import numpy.linalg as la
-    z = numpy.random.randn(400).astype(numpy.float32)
-    z_gpu = drv.mem_alloc(z.nbytes)
-    drv.memcpy_htod(int(z_gpu), z)
-
-    new_z = numpy.empty_like(z)
-    drv.memcpy_dtoh(new_z, int(z_gpu))
-    assert la.norm(new_z-z) == 0
 
 
 
 
-def main():
-    drv.init()
-    for i in range(drv.Device.count()):
-        dev = drv.Device(i)
-        print dev.name(), dev.compute_capability()
-        print dev.get_attributes()
+class TestMatrices(unittest.TestCase):
+    def setUp(self):
+        drv.init()
+        assert drv.Device.count() >= 1
 
-        ctx = dev.make_context()
+        dev = drv.Device(0)
+        assert isinstance(dev.name(), str)
+        assert isinstance(dev.compute_capability(), tuple)
+        assert isinstance(dev.get_attributes(), dict)
 
-        print drv.mem_get_info()
-        test_memory()
+        self.ctx = dev.make_context()
+
+    def test_memory(self):
+        import numpy
+        import numpy.linalg as la
+        z = numpy.random.randn(400).astype(numpy.float32)
+        new_z = drv.from_device_like(drv.to_device(z), z)
+        assert la.norm(new_z-z) == 0
+
+    def test_simple_kernel(self):
+        mod = drv.SourceModule("""
+        __global__ void multiply_them(float *dest, float *a, float *b)
+        {
+          const int i = threadIdx.x;
+          dest[i] = a[i] * b[i];
+        }
+        """)
+
+        multiply_them = mod.get_function("multiply_them")
+
+        import numpy
+        a = numpy.random.randn(400).astype(numpy.float32)
+        b = numpy.random.randn(400).astype(numpy.float32)
+
+        try:
+            multiply_them(
+                    drv.Out(numpy.zeros_like(a)), drv.In(a), drv.In(b),
+                    shared=0, block=(400,1,1))
+        except:
+            import traceback
+            traceback.print_exc()
+            raise
+
+
+
+
 
 
 
 
 
 if __name__ == "__main__":
-    main()
+    unittest.main()
