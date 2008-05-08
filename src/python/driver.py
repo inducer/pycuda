@@ -28,19 +28,6 @@ class InOut(In, Out):
     pass
 
 def _add_functionality():
-    def get_pointer_size():
-        bits = 0
-        import sys
-        v = sys.maxint
-        while v:
-            bits += 1
-            v >>= 1
-
-        return (bits+7)//8
-
-    pointer_size = get_pointer_size()
-    print "PS", pointer_size
-
     def device_get_attributes(dev):
         return dict((getattr(device_attribute, att), 
             dev.get_attribute(getattr(device_attribute, att))
@@ -56,27 +43,27 @@ def _add_functionality():
 
         handlers = []
 
-        args = []
+        arg_data = []
         format = ""
         for arg in args:
             if numpy is not None and isinstance(arg, numpy.number):
-                args.append(arg)
+                arg_data.append(arg)
                 format += arg.dtype.char
             elif isinstance(arg, DeviceAllocation):
-                args.append(int(arg))
+                arg_data.append(int(arg))
                 format += "P"
             elif isinstance(arg, ArgumentHandler):
                 handlers.append(arg)
-                args.append(arg.get_device_alloc())
+                arg_data.append(int(arg.get_device_alloc()))
                 format += "P"
             elif isinstance(arg, buffer):
-                args.append(arg)
+                arg_data.append(arg)
                 format += "s"
             else:
                 raise TypeError("invalid parameter type")
 
         import struct
-        buf = struct.pack(format, *args)
+        buf = struct.pack(format, *arg_data)
         func.param_setv(0, buf)
         func.param_set_size(len(buf))
 
@@ -105,9 +92,8 @@ def _add_functionality():
             func.launch_grid(*grid)
             if post_handlers:
                 Context.synchronize()
-                for handler in handlers:
+                for handler in post_handlers:
                     handler.post_call()
-
         else:
             func.launch_grid(grid[0], grid[1], stream)
 

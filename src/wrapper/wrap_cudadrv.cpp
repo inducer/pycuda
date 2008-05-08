@@ -1,4 +1,5 @@
 #include <vector>
+#include <iostream>
 #include <utility>
 #include <numeric>
 #include <algorithm>
@@ -10,6 +11,21 @@
 
 
 
+// #define TRACE_CUDA
+
+
+
+
+#ifdef TRACE_CUDA
+#define CALL_GUARDED(NAME, ARGLIST) \
+  { \
+    std::cerr << #NAME << std::endl; \
+    CUresult cu_status_code = NAME ARGLIST; \
+    if (cu_status_code != CUDA_SUCCESS) \
+      throw std::runtime_error(#NAME " failed: "\
+          +std::string(cuda_error_to_str(cu_status_code)));\
+  }
+#else
 #define CALL_GUARDED(NAME, ARGLIST) \
   { \
     CUresult cu_status_code = NAME ARGLIST; \
@@ -17,6 +33,7 @@
       throw std::runtime_error(#NAME " failed: "\
           +std::string(cuda_error_to_str(cu_status_code)));\
   }
+#endif
 
 
 
@@ -231,6 +248,9 @@ namespace
 
       bool is_done() const
       { 
+#ifdef TRACE_CUDA
+        std::cerr << "cuStreamQuery" << std::endl;
+#endif
         CUresult result = cuStreamQuery(m_stream);
         switch (result)
         {
@@ -315,7 +335,7 @@ namespace
       { CALL_GUARDED(cuFuncSetSharedSize, (m_function, bytes)); }
 
       void param_set_size(unsigned int bytes)
-      { CALL_GUARDED(cuFuncSetSharedSize, (m_function, bytes)); }
+      { CALL_GUARDED(cuParamSetSize, (m_function, bytes)); }
       void param_set(int offset, unsigned int value)
       { CALL_GUARDED(cuParamSeti, (m_function, offset, value)); }
       void param_set(int offset, float value)
@@ -542,6 +562,9 @@ namespace
 
       bool query() const
       { 
+#ifdef TRACE_CUDA
+        std::cerr << "cuEventQuery" << std::endl;
+#endif
         CUresult result = cuEventQuery(m_event);
         switch (result)
         {

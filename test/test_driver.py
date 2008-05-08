@@ -5,18 +5,22 @@ import pycuda.driver as drv
 
 
 
+drv.init()
+assert drv.Device.count() >= 1
+
+dev = drv.Device(0)
+assert isinstance(dev.name(), str)
+assert isinstance(dev.compute_capability(), tuple)
+assert isinstance(dev.get_attributes(), dict)
+
+print dev.get_attributes()
+
+ctx = dev.make_context()
+
+
+
+
 class TestMatrices(unittest.TestCase):
-    def setUp(self):
-        drv.init()
-        assert drv.Device.count() >= 1
-
-        dev = drv.Device(0)
-        assert isinstance(dev.name(), str)
-        assert isinstance(dev.compute_capability(), tuple)
-        assert isinstance(dev.get_attributes(), dict)
-
-        self.ctx = dev.make_context()
-
     def test_memory(self):
         import numpy
         import numpy.linalg as la
@@ -42,7 +46,7 @@ class TestMatrices(unittest.TestCase):
         try:
             multiply_them(
                     drv.Out(numpy.zeros_like(a)), drv.In(a), drv.In(b),
-                    shared=0, block=(400,1,1))
+                    shared=4096, block=(16,16,1))
         except:
             import traceback
             traceback.print_exc()
