@@ -1,6 +1,7 @@
 import unittest
 import pycuda.driver as drv
-
+import numpy
+import numpy.linalg as la
 
 
 
@@ -22,8 +23,6 @@ ctx = dev.make_context()
 
 class TestMatrices(unittest.TestCase):
     def test_memory(self):
-        import numpy
-        import numpy.linalg as la
         z = numpy.random.randn(400).astype(numpy.float32)
         new_z = drv.from_device_like(drv.to_device(z), z)
         assert la.norm(new_z-z) == 0
@@ -43,18 +42,11 @@ class TestMatrices(unittest.TestCase):
         a = numpy.random.randn(400).astype(numpy.float32)
         b = numpy.random.randn(400).astype(numpy.float32)
 
-        try:
-            multiply_them(
-                    drv.Out(numpy.zeros_like(a)), drv.In(a), drv.In(b),
-                    shared=4096, block=(16,16,1))
-        except:
-            import traceback
-            traceback.print_exc()
-            raise
-
-
-
-
+        dest = numpy.zeros_like(a)
+        multiply_them(
+                drv.Out(dest), drv.In(a), drv.In(b),
+                shared=4096, block=(400,1,1))
+        self.assert_(la.norm(dest-a*b) == 0)
 
 
 
