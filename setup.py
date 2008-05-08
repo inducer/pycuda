@@ -38,8 +38,9 @@ def get_config_schema():
 
 
 def search_on_path(filename):
-    """Given a search path, find file
-    """
+    """Find file on system path."""
+    # http://aspn.activestate.com/ASPN/Cookbook/Python/Recipe/52224
+
     from os.path import exists, join, abspath
     from os import pathsep, environ
 
