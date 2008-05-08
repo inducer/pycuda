@@ -19,8 +19,14 @@ def get_config_schema():
         Option("CUDA_ROOT", help="Path to the CUDA toolkit"),
         Option("CUDA_BIN_DIR", help="Path to the CUDA executables"),
         IncludeDir("CUDA", None),
-        LibraryDir("CUDA", None),
-        Libraries("CUDA", ["cublas", "cudart"]),
+
+        LibraryDir("CUDADRV", []),
+        Libraries("CUDADRV", ["cuda"]),
+
+        LibraryDir("CUDART", None),
+        Libraries("CUDART", ["cudart"]),
+        LibraryDir("CUBLAS", None),
+        Libraries("CUBLAS", ["cublas", "cudart"]),
 
         StringListOption("CXXFLAGS", [], 
             help="Any extra C++ compiler options to include"),
@@ -81,8 +87,10 @@ def main():
         conf["CUDA_BIN_DIR"] = join(conf["CUDA_ROOT"], "bin")
     if conf["CUDA_INC_DIR"] is None:
         conf["CUDA_INC_DIR"] = [join(conf["CUDA_ROOT"], "include")]
-    if conf["CUDA_LIB_DIR"] is None:
-        conf["CUDA_LIB_DIR"] = [join(conf["CUDA_ROOT"], "lib")]
+    if conf["CUDART_LIB_DIR"] is None:
+        conf["CUDART_LIB_DIR"] = [join(conf["CUDA_ROOT"], "lib")]
+    if conf["CUBLAS_LIB_DIR"] is None:
+        conf["CUBLAS_LIB_DIR"] = [join(conf["CUDA_ROOT"], "lib")]
 
     EXTRA_DEFINES = { "PYUBLAS_HAVE_BOOST_BINDINGS":1 }
     EXTRA_INCLUDE_DIRS = []
@@ -94,17 +102,9 @@ def main():
             ] \
             + conf["BOOST_BINDINGS_INC_DIR"] \
             + conf["BOOST_INC_DIR"] \
+            + conf["CUDA_INC_DIR"] \
 
     conf["USE_CUDA"] = True
-
-    def handle_component(comp):
-        if conf["USE_"+comp]:
-            EXTRA_DEFINES["USE_"+comp] = 1
-            EXTRA_INCLUDE_DIRS.extend(conf[comp+"_INC_DIR"])
-            EXTRA_LIBRARY_DIRS.extend(conf[comp+"_LIB_DIR"])
-            EXTRA_LIBRARIES.extend(conf[comp+"_LIBNAME"])
-
-    handle_component("CUDA")
 
     setup(name="pycuda",
             # metadata
@@ -146,13 +146,24 @@ def main():
             ext_package="pycuda",
 
             ext_modules=[
+                PyUblasExtension("_driver", 
+                    [
+                        "src/wrapper/wrap_cudadrv.cpp", 
+                        ],
+                    include_dirs=INCLUDE_DIRS + EXTRA_INCLUDE_DIRS,
+                    library_dirs=LIBRARY_DIRS + conf["CUDADRV_LIB_DIR"],
+                    libraries=LIBRARIES + conf["CUDADRV_LIBNAME"],
+                    define_macros=list(EXTRA_DEFINES.iteritems()),
+                    extra_compile_args=conf["CXXFLAGS"],
+                    extra_link_args=conf["LDFLAGS"],
+                    ),
                 PyUblasExtension("_rt", 
                     [
                         "src/wrapper/wrap_cudart.cpp", 
                         ],
                     include_dirs=INCLUDE_DIRS + EXTRA_INCLUDE_DIRS,
-                    library_dirs=LIBRARY_DIRS + EXTRA_LIBRARY_DIRS,
-                    libraries=LIBRARIES + EXTRA_LIBRARIES,
+                    library_dirs=LIBRARY_DIRS + conf["CUDART_LIB_DIR"],
+                    libraries=LIBRARIES + conf["CUDART_LIBNAME"],
                     define_macros=list(EXTRA_DEFINES.iteritems()),
                     extra_compile_args=conf["CXXFLAGS"],
                     extra_link_args=conf["LDFLAGS"],
@@ -162,8 +173,8 @@ def main():
                         "src/wrapper/wrap_cublas.cpp", 
                         ],
                     include_dirs=INCLUDE_DIRS + EXTRA_INCLUDE_DIRS,
-                    library_dirs=LIBRARY_DIRS + EXTRA_LIBRARY_DIRS,
-                    libraries=LIBRARIES + EXTRA_LIBRARIES,
+                    library_dirs=LIBRARY_DIRS + conf["CUBLAS_LIB_DIR"],
+                    libraries=LIBRARIES + conf["CUBLAS_LIBNAME"],
                     define_macros=list(EXTRA_DEFINES.iteritems()),
                     extra_compile_args=conf["CXXFLAGS"],
                     extra_link_args=conf["LDFLAGS"],

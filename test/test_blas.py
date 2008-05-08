@@ -1,6 +1,3 @@
-
-
-
 def main():
     import pycuda.blas as blas
     import pyublas
@@ -11,9 +8,6 @@ def main():
     b = 33*blas.ones(shape, dtype=numpy.float32)
 
     print -a+b
-
-
-
 
 
 
