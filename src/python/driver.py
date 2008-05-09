@@ -13,16 +13,16 @@ class ArgumentHandler(object):
             self.dev_alloc = mem_alloc_like(self.array)
         return self.dev_alloc
 
-    def pre_call(self):
+    def pre_call(self, stream):
         pass
 
 class In(ArgumentHandler):
-    def pre_call(self):
-        memcpy_htod(self.get_device_alloc(), self.array)
+    def pre_call(self, stream):
+        memcpy_htod(self.get_device_alloc(), self.array, stream)
 
 class Out(ArgumentHandler):
-    def post_call(self):
-        memcpy_dtoh(self.array, self.get_device_alloc())
+    def post_call(self, stream):
+        memcpy_dtoh(self.array, self.get_device_alloc(), stream)
 
 class InOut(In, Out):
     pass
@@ -82,7 +82,7 @@ def _add_functionality():
             func.set_shared_size(shared)
 
         for handler in handlers:
-            handler.pre_call()
+            handler.pre_call(stream)
 
         post_handlers = [handler
                 for handler in handlers
@@ -93,14 +93,13 @@ def _add_functionality():
             if post_handlers:
                 Context.synchronize()
                 for handler in post_handlers:
-                    handler.post_call()
+                    handler.post_call(stream)
         else:
-            func.launch_grid(grid[0], grid[1], stream)
+            func.launch_grid_async(grid[0], grid[1], stream)
 
             if post_handlers:
-                stream.synchronize()
                 for handler in post_handlers:
-                    handler.post_call()
+                    handler.post_call(stream)
 
 
     Device.get_attributes = device_get_attributes
@@ -117,6 +116,27 @@ _add_functionality()
 
 def pagelocked_zeros(shape, dtype, order="C"):
     result = pagelocked_empty(shape, dtype, order)
+    result.fill(0)
+    return result
+
+
+
+
+def pagelocked_empty_like(array):
+    if array.flags.c_contiguous:
+        order = "C"
+    elif array.flags.f_contiguous:
+        order = "F"
+    else:
+        raise ValueError, "could not detect array order"
+
+    return pagelocked_empty(array.shape, array.dtype, order)
+
+
+
+
+def pagelocked_zeros_like(array):
+    result = pagelocked_empty_like(array)
     result.fill(0)
     return result
 

@@ -39,4 +39,17 @@ namespace py = boost::python;
 
 
 
+namespace
+{
+  template <typename T>
+  inline boost::python::handle<> handle_from_new_ptr(T *ptr)
+  {
+    return boost::python::handle<>(
+        typename boost::python::manage_new_object::apply<T *>::type()(ptr));
+  }
+}
+
+
+
+
 #endif

@@ -11,7 +11,7 @@
 
 
 
-// #define TRACE_CUDA
+//#define TRACE_CUDA
 
 
 
@@ -425,41 +425,42 @@ namespace
     return py::make_tuple(base, size);
   }
 
-  void memcpy_htod(CUdeviceptr dst, py::object src)
+  void memcpy_htod(CUdeviceptr dst, py::object src, py::object stream_py)
   {
     const void *buf;
     Py_ssize_t len;
     if (PyObject_AsReadBuffer(src.ptr(), &buf, &len))
       throw py::error_already_set();
-    CALL_GUARDED(cuMemcpyHtoD, (dst, buf, len));
+
+    if (stream_py.ptr() == Py_None)
+    {
+      CALL_GUARDED(cuMemcpyHtoD, (dst, buf, len));
+    }
+    else
+    {
+      const stream &s = py::extract<const stream &>(stream_py);
+      CALL_GUARDED(cuMemcpyHtoDAsync, (dst, buf, len, s.data()));
+    }
   }
 
-  void memcpy_dtoh(py::object dest, CUdeviceptr src)
+  void memcpy_dtoh(py::object dest, CUdeviceptr src, py::object stream_py)
   {
     void *buf;
     Py_ssize_t len;
     if (PyObject_AsWriteBuffer(dest.ptr(), &buf, &len))
       throw py::error_already_set();
-    CALL_GUARDED(cuMemcpyDtoH, (buf, src, len));
+
+    if (stream_py.ptr() == Py_None)
+    {
+      CALL_GUARDED(cuMemcpyDtoH, (buf, src, len));
+    }
+    else
+    {
+      const stream &s = py::extract<const stream &>(stream_py);
+      CALL_GUARDED(cuMemcpyDtoHAsync, (buf, src, len, s.data()));
+    }
   }
 
-  void memcpy_htod_async(CUdeviceptr dst, py::object src, const stream &s)
-  {
-    const void *buf;
-    Py_ssize_t len;
-    if (PyObject_AsReadBuffer(src.ptr(), &buf, &len))
-      throw py::error_already_set();
-    CALL_GUARDED(cuMemcpyHtoDAsync, (dst, buf, len, s.data()));
-  }
-
-  void memcpy_dtoh_async(py::object dest, CUdeviceptr src, const stream &s)
-  {
-    void *buf;
-    Py_ssize_t len;
-    if (PyObject_AsWriteBuffer(dest.ptr(), &buf, &len))
-      throw py::error_already_set();
-    CALL_GUARDED(cuMemcpyDtoHAsync, (buf, src, len, s.data()));
-  }
 
 
 
@@ -528,9 +529,9 @@ namespace
         dims.size(), &dims.front(), /*strides*/ NULL,
         alloc->data(), flags, /*obj*/NULL));
 
-    py::object alloc_py(alloc.release());
-    PyArray_BASE(result.get()) = alloc_py.ptr();
-    Py_INCREF(alloc_py.ptr());
+    py::handle<> alloc_py(handle_from_new_ptr(alloc.release()));
+    PyArray_BASE(result.get()) = alloc_py.get();
+    Py_INCREF(alloc_py.get());
 
     return result;
   }
@@ -733,6 +734,12 @@ BOOST_PYTHON_MODULE(_driver)
     py::implicitly_convertible<device_allocation, CUdeviceptr>();
   }
 
+  {
+    typedef host_allocation cl;
+    py::class_<cl, boost::noncopyable>("HostAllocation", py::no_init)
+      ;
+  }
+
   DEF_SIMPLE_FUNCTION(mem_get_info);
   py::def("mem_alloc", mem_alloc, py::return_value_policy<py::manage_new_object>());
   DEF_SIMPLE_FUNCTION(mem_alloc_pitch);
@@ -749,10 +756,10 @@ BOOST_PYTHON_MODULE(_driver)
   py::def("memset_d2d32", cuMemsetD2D32, 
       py::args("dest", "pitch", "data", "width", "height"));
 
-  py::def("memcpy_htod", memcpy_htod, py::args("dest", "src"));
-  py::def("memcpy_dtoh", memcpy_dtoh, py::args("dest", "src"));
-  py::def("memcpy_htod", memcpy_htod_async, py::args("dest", "src", "stream"));
-  py::def("memcpy_dtoh", memcpy_dtoh_async, py::args("dest", "src", "stream"));
+  py::def("memcpy_htod", memcpy_htod, 
+      (py::args("dest"), py::arg("src"), py::arg("stream")=py::object()));
+  py::def("memcpy_dtoh", memcpy_dtoh, 
+      (py::args("dest"), py::arg("src"), py::arg("stream")=py::object()));
   py::def("memcpy_dtod", cuMemcpyDtoD, py::args("dest", "src", "size"));
 
   py::def("pagelocked_empty", pagelocked_empty,
