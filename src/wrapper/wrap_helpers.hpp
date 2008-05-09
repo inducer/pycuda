@@ -26,8 +26,14 @@ namespace py = boost::python;
 #define DEF_SIMPLE_METHOD(NAME) \
   def(#NAME, &cl::NAME)
 
+#define DEF_SIMPLE_METHOD_WITH_ARGS(NAME, ARGS) \
+  def(#NAME, &cl::NAME, boost::python::args ARGS)
+
 #define DEF_SIMPLE_FUNCTION(NAME) \
-  py::def(#NAME, &NAME)
+  boost::python::def(#NAME, &NAME)
+
+#define DEF_SIMPLE_FUNCTION_WITH_ARGS(NAME, ARGS) \
+  boost::python::def(#NAME, &NAME, boost::python::args ARGS)
 
 #define DEF_SIMPLE_RO_MEMBER(NAME) \
   def_readonly(#NAME, &cl::NAME)

@@ -268,57 +268,6 @@ namespace
 
 
 
-  // module -------------------------------------------------------------------
-  class function;
-
-  struct module : public boost::noncopyable
-  {
-    private:
-      CUmodule m_module;
-
-    public:
-      module(CUmodule mod)
-        : m_module(mod)
-      { }
-
-      ~module()
-      {
-        CALL_GUARDED(cuModuleUnload, (m_module));
-      }
-
-      function get_function(const char *name);
-      py::tuple get_global(const char *name)
-      {
-        CUdeviceptr devptr;
-        unsigned int bytes;
-        CALL_GUARDED(cuModuleGetGlobal, (&devptr, &bytes, m_module, name));
-        return py::make_tuple(devptr, bytes);
-      }
-
-      // get_texref(const char *name);
-  };
-
-  module *load_module(const char *filename)
-  {
-    CUmodule mod;
-    CALL_GUARDED(cuModuleLoad, (&mod, filename));
-    return new module(mod);
-  }
-
-  module *module_from_buffer(py::object buffer)
-  {
-    const char *buf;
-    Py_ssize_t len;
-    if (PyObject_AsCharBuffer(buffer.ptr(), &buf, &len))
-      throw py::error_already_set();
-    CUmodule mod;
-    CALL_GUARDED(cuModuleLoadData, (&mod, buf));
-    return new module(mod);
-  }
-
-
-
-
   // arrays -------------------------------------------------------------------
   class array : public boost::noncopyable
   {
@@ -456,6 +405,63 @@ namespace
         return result;
       }
   };
+
+
+
+
+  // module -------------------------------------------------------------------
+  class function;
+
+  struct module : public boost::noncopyable
+  {
+    private:
+      CUmodule m_module;
+
+    public:
+      module(CUmodule mod)
+        : m_module(mod)
+      { }
+
+      ~module()
+      {
+        CALL_GUARDED(cuModuleUnload, (m_module));
+      }
+
+      function get_function(const char *name);
+      py::tuple get_global(const char *name)
+      {
+        CUdeviceptr devptr;
+        unsigned int bytes;
+        CALL_GUARDED(cuModuleGetGlobal, (&devptr, &bytes, m_module, name));
+        return py::make_tuple(devptr, bytes);
+      }
+
+      texture_reference *get_texref(const char *name)
+      {
+        CUtexref result;
+        CALL_GUARDED(cuModuleGetTexRef, (&result, m_module, name));
+        return new texture_reference(result, false);
+      }
+  };
+
+  module *load_module(const char *filename)
+  {
+    CUmodule mod;
+    CALL_GUARDED(cuModuleLoad, (&mod, filename));
+    return new module(mod);
+  }
+
+  module *module_from_buffer(py::object buffer)
+  {
+    const char *buf;
+    Py_ssize_t len;
+    if (PyObject_AsCharBuffer(buffer.ptr(), &buf, &len))
+      throw py::error_already_set();
+    CUmodule mod;
+    CALL_GUARDED(cuModuleLoadData, (&mod, buf));
+    return new module(mod);
+  }
+
 
 
 
@@ -601,6 +607,37 @@ namespace
       CALL_GUARDED(cuMemcpyDtoHAsync, (buf, src, len, s.data()));
     }
   }
+
+  void memcpy_dtoa(array const &ary, unsigned int index, CUdeviceptr src, unsigned int len)
+  { CALL_GUARDED(cuMemcpyDtoA, (ary.data(), index, src, len)); }
+  void memcpy_atod(CUdeviceptr dst, array const &ary, unsigned int index, unsigned int len)
+  { CALL_GUARDED(cuMemcpyAtoD, (dst, ary.data(), index, len)); }
+
+  void memcpy_htoa(array const &ary, unsigned int index, py::object src)
+  {
+    const void *buf;
+    Py_ssize_t len;
+    if (PyObject_AsReadBuffer(src.ptr(), &buf, &len))
+      throw py::error_already_set();
+
+    CALL_GUARDED(cuMemcpyHtoA, (ary.data(), index, buf, len));
+  }
+
+  void memcpy_atoh(py::object dst, array const &ary, unsigned int index)
+  {
+    void *buf;
+    Py_ssize_t len;
+    if (PyObject_AsWriteBuffer(dst.ptr(), &buf, &len))
+      throw py::error_already_set();
+
+    CALL_GUARDED(cuMemcpyAtoH, (buf, ary.data(), index, len));
+  }
+
+  void memcpy_atoa(
+      array const &dst, unsigned int dst_index, 
+      array const &src, unsigned int src_index, 
+      unsigned int len)
+  { CALL_GUARDED(cuMemcpyAtoA, (dst.data(), dst_index, src.data(), src_index, len)); }
 
 
 
@@ -843,8 +880,12 @@ BOOST_PYTHON_MODULE(_driver)
     py::class_<cl, boost::noncopyable>("Module", py::no_init)
       .def("get_function", &cl::get_function, (py::args("self", "name")))
       .def("get_global", &cl::get_global, (py::args("self", "name")))
+      .def("get_texref", &cl::get_texref, 
+          (py::args("self", "name")),
+          py::return_value_policy<py::manage_new_object>())
       ;
   }
+
   py::def("load_module", load_module,
       py::return_value_policy<py::manage_new_object>());
   py::def("module_from_buffer", module_from_buffer,
@@ -903,6 +944,18 @@ BOOST_PYTHON_MODULE(_driver)
       (py::args("dest"), py::arg("src"), py::arg("stream")=py::object()));
   py::def("memcpy_dtod", cuMemcpyDtoD, py::args("dest", "src", "size"));
 
+  DEF_SIMPLE_FUNCTION_WITH_ARGS(memcpy_dtoa,
+      ("ary", "index", "src", "len"));
+  DEF_SIMPLE_FUNCTION_WITH_ARGS(memcpy_atod,
+      ("dest", "ary", "index", "len"));
+  DEF_SIMPLE_FUNCTION_WITH_ARGS(memcpy_htoa,
+      ("ary", "index", "src"));
+  DEF_SIMPLE_FUNCTION_WITH_ARGS(memcpy_atoh,
+      ("dest", "ary", "index"));
+
+  DEF_SIMPLE_FUNCTION_WITH_ARGS(memcpy_atoa,
+      ("dest", "dest_index", "src", "src_index", "len"));
+
   py::def("pagelocked_empty", pagelocked_empty,
       (py::arg("shape"), py::arg("dtype"), py::arg("order")="C"));
 
@@ -954,9 +1007,9 @@ BOOST_PYTHON_MODULE(_driver)
     typedef texture_reference cl;
     py::class_<cl, boost::noncopyable>("TextureReference")
       .DEF_SIMPLE_METHOD(set_array)
-      .DEF_SIMPLE_METHOD(set_address)
-      .DEF_SIMPLE_METHOD(set_format)
-      .DEF_SIMPLE_METHOD(set_address_mode)
+      .DEF_SIMPLE_METHOD_WITH_ARGS(set_address, ("devptr", "bytes"))
+      .DEF_SIMPLE_METHOD_WITH_ARGS(set_format, ("format", "num_components"))
+      .DEF_SIMPLE_METHOD_WITH_ARGS(set_address_mode, ("dim", "am"))
       .DEF_SIMPLE_METHOD(set_filter_mode)
       .DEF_SIMPLE_METHOD(set_flags)
       .DEF_SIMPLE_METHOD(get_address)
@@ -968,6 +1021,7 @@ BOOST_PYTHON_MODULE(_driver)
       .DEF_SIMPLE_METHOD(get_flags)
       ;
   }
+
   py::scope().attr("TRSA_OVERRIDE_FORMAT") = CU_TRSA_OVERRIDE_FORMAT;
   py::scope().attr("TRSF_READ_AS_INTEGER") = CU_TRSF_READ_AS_INTEGER;
   py::scope().attr("TRSF_NORMALIZED_COORDINATES") = CU_TRSF_NORMALIZED_COORDINATES;
