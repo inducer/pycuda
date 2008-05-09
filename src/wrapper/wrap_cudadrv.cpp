@@ -639,7 +639,72 @@ namespace
       unsigned int len)
   { CALL_GUARDED(cuMemcpyAtoA, (dst.data(), dst_index, src.data(), src_index, len)); }
 
+  struct memcpy_2d : public CUDA_MEMCPY2D
+  {
+    void set_src_host(py::object buf_py)
+    {
+      Py_ssize_t len;
+      if (PyObject_AsReadBuffer(buf_py.ptr(), &srcHost, &len))
+        throw py::error_already_set();
+    }
 
+    void set_src_array(array const &ary) { srcArray = ary.data(); }
+
+    void set_dst_host(py::object buf_py)
+    {
+      Py_ssize_t len;
+      if (PyObject_AsWriteBuffer(buf_py.ptr(), &dstHost, &len))
+        throw py::error_already_set();
+    }
+
+    void set_dst_array(array const &ary) { dstArray = ary.data(); }
+
+    void execute(bool aligned) const
+    {
+      if (aligned)
+      { CALL_GUARDED(cuMemcpy2D, (this)); }
+      else
+      { CALL_GUARDED(cuMemcpy2DUnaligned, (this)); }
+    }
+
+    void execute_async(const stream &s) const
+    { CALL_GUARDED(cuMemcpy2DAsync, (this, s.data())); }
+  };
+
+  struct memcpy_3d : public CUDA_MEMCPY3D
+  {
+    memcpy_3d()
+    {
+      reserved0 = 0;
+      reserved1 = 0;
+    }
+
+    void set_src_host(py::object buf_py)
+    {
+      Py_ssize_t len;
+      if (PyObject_AsReadBuffer(buf_py.ptr(), &srcHost, &len))
+        throw py::error_already_set();
+    }
+
+    void set_src_array(array const &ary) { srcArray = ary.data(); }
+
+    void set_dst_host(py::object buf_py)
+    {
+      Py_ssize_t len;
+      if (PyObject_AsWriteBuffer(buf_py.ptr(), &dstHost, &len))
+        throw py::error_already_set();
+    }
+
+    void set_dst_array(array const &ary) { dstArray = ary.data(); }
+
+    void execute() const
+    {
+      CALL_GUARDED(cuMemcpy3D, (this));
+    }
+
+    void execute_async(const stream &s) const
+    { CALL_GUARDED(cuMemcpy3DAsync, (this, s.data())); }
+  };
 
 
   // host memory --------------------------------------------------------------
@@ -771,6 +836,7 @@ namespace
         return result;
       }
   };
+
 }
 
 
@@ -955,6 +1021,70 @@ BOOST_PYTHON_MODULE(_driver)
 
   DEF_SIMPLE_FUNCTION_WITH_ARGS(memcpy_atoa,
       ("dest", "dest_index", "src", "src_index", "len"));
+
+  {
+    typedef memcpy_2d cl;
+    py::class_<cl>("Memcpy2D")
+      .def_readwrite("src_x_in_bytes", &cl::srcXInBytes)
+      .def_readwrite("src_y", &cl::srcY)
+      .def_readwrite("src_memory_type", &cl::srcMemoryType)
+      .def_readwrite("src_device", &cl::srcDevice)
+      .def_readwrite("src_pitch", &cl::srcPitch)
+
+      .DEF_SIMPLE_METHOD(set_src_host)
+      .DEF_SIMPLE_METHOD(set_src_array)
+
+      .def_readwrite("dst_x_in_bytes", &cl::dstXInBytes)
+      .def_readwrite("dst_y", &cl::dstY)
+      .def_readwrite("dst_memory_type", &cl::dstMemoryType)
+      .def_readwrite("dst_device", &cl::dstDevice)
+      .def_readwrite("dst_pitch", &cl::dstPitch)
+
+      .DEF_SIMPLE_METHOD(set_dst_host)
+      .DEF_SIMPLE_METHOD(set_dst_array)
+
+      .def_readwrite("width_in_bytes", &cl::WidthInBytes)
+      .def_readwrite("height", &cl::Height)
+
+      .def("__call__", &cl::execute)
+      .def("__call__", &cl::execute_async)
+      ;
+  }
+
+  {
+    typedef memcpy_3d cl;
+    py::class_<cl>("Memcpy3D")
+      .def_readwrite("src_x_in_bytes", &cl::srcXInBytes)
+      .def_readwrite("src_y", &cl::srcY)
+      .def_readwrite("src_z", &cl::srcZ)
+      .def_readwrite("src_lod", &cl::srcLOD)
+      .def_readwrite("src_memory_type", &cl::srcMemoryType)
+      .def_readwrite("src_device", &cl::srcDevice)
+      .def_readwrite("src_pitch", &cl::srcPitch)
+      .def_readwrite("src_height", &cl::srcHeight)
+
+      .DEF_SIMPLE_METHOD(set_src_host)
+      .DEF_SIMPLE_METHOD(set_src_array)
+
+      .def_readwrite("dst_x_in_bytes", &cl::dstXInBytes)
+      .def_readwrite("dst_y", &cl::dstY)
+      .def_readwrite("dst_z", &cl::dstZ)
+      .def_readwrite("dst_lod", &cl::dstLOD)
+      .def_readwrite("dst_memory_type", &cl::dstMemoryType)
+      .def_readwrite("dst_device", &cl::dstDevice)
+      .def_readwrite("dst_pitch", &cl::dstPitch)
+      .def_readwrite("dst_height", &cl::dstHeight)
+
+      .DEF_SIMPLE_METHOD(set_dst_host)
+      .DEF_SIMPLE_METHOD(set_dst_array)
+
+      .def_readwrite("width_in_bytes", &cl::WidthInBytes)
+      .def_readwrite("height", &cl::Height)
+
+      .def("__call__", &cl::execute)
+      .def("__call__", &cl::execute_async)
+      ;
+  }
 
   py::def("pagelocked_empty", pagelocked_empty,
       (py::arg("shape"), py::arg("dtype"), py::arg("order")="C"));
