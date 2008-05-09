@@ -14,8 +14,6 @@ assert isinstance(dev.name(), str)
 assert isinstance(dev.compute_capability(), tuple)
 assert isinstance(dev.get_attributes(), dict)
 
-print dev.get_attributes()
-
 ctx = dev.make_context()
 
 

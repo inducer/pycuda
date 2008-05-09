@@ -318,6 +318,147 @@ namespace
 
 
 
+
+  // arrays -------------------------------------------------------------------
+  class array : public boost::noncopyable
+  {
+    private:
+      CUarray m_array;
+      bool m_managed;
+
+    public:
+      array(const CUDA_ARRAY_DESCRIPTOR &descr)
+        : m_managed(true)
+      { CALL_GUARDED(cuArrayCreate, (&m_array, &descr)); }
+
+      array(const CUDA_ARRAY3D_DESCRIPTOR &descr)
+        : m_managed(true)
+      { CALL_GUARDED(cuArray3DCreate, (&m_array, &descr)); }
+
+      array(CUarray ary, bool managed)
+        : m_array(ary), m_managed(managed)
+      { }
+
+      ~array()
+      { 
+        if (m_managed)
+        {
+          CALL_GUARDED(cuArrayDestroy, (m_array)); 
+        }
+      }
+
+      CUDA_ARRAY_DESCRIPTOR get_descriptor()
+      {
+        CUDA_ARRAY_DESCRIPTOR result;
+        CALL_GUARDED(cuArrayGetDescriptor, (&result, m_array));
+        return result;
+      }
+
+      CUDA_ARRAY3D_DESCRIPTOR get_descriptor_3d()
+      {
+        CUDA_ARRAY3D_DESCRIPTOR result;
+        CALL_GUARDED(cuArray3DGetDescriptor, (&result, m_array));
+        return result;
+      }
+
+      CUarray data() const
+      { return m_array; }
+  };
+
+
+
+
+  // texture reference --------------------------------------------------------
+  class texture_reference : public  boost::noncopyable
+  {
+    private:
+      CUtexref m_texref;
+      bool m_managed;
+
+    public:
+      texture_reference()
+        : m_managed(true)
+      { CALL_GUARDED(cuTexRefCreate, (&m_texref)); }
+      texture_reference(CUtexref tr, bool managed)
+        : m_texref(tr), m_managed(managed)
+      { }
+      ~texture_reference()
+      { 
+        if (m_managed)
+        {
+          CALL_GUARDED(cuTexRefDestroy, (m_texref)); 
+        }
+      }
+
+      CUtexref data() const
+      { return m_texref; }
+
+      void set_array(array const &ary)
+      { 
+        CALL_GUARDED(cuTexRefSetArray, (m_texref, 
+            ary.data(), CU_TRSA_OVERRIDE_FORMAT)); 
+      }
+
+      unsigned int set_address(CUdeviceptr dptr, unsigned int bytes)
+      { 
+        unsigned int byte_offset;
+        CALL_GUARDED(cuTexRefSetAddress, (&byte_offset,
+              m_texref, dptr, bytes)); 
+        return byte_offset;
+      }
+
+      void set_format(CUarray_format fmt, int num_packed_components)
+      { CALL_GUARDED(cuTexRefSetFormat, (m_texref, fmt, num_packed_components)); }
+
+      void set_address_mode(int dim, CUaddress_mode am)
+      { CALL_GUARDED(cuTexRefSetAddressMode, (m_texref, dim, am)); }
+      void set_filter_mode(CUfilter_mode fm)
+      { CALL_GUARDED(cuTexRefSetFilterMode, (m_texref, fm)); }
+
+      void set_flags(unsigned int flags)
+      { CALL_GUARDED(cuTexRefSetFlags, (m_texref, flags)); }
+
+      CUdeviceptr get_address()
+      {
+        CUdeviceptr result;
+        CALL_GUARDED(cuTexRefGetAddress, (&result, m_texref));
+        return result;
+      }
+      array *get_array()
+      {
+        CUarray result;
+        CALL_GUARDED(cuTexRefGetArray, (&result, m_texref));
+        return new array(result, false);
+      }
+      CUaddress_mode get_address_mode(int dim)
+      {
+        CUaddress_mode result;
+        CALL_GUARDED(cuTexRefGetAddressMode, (&result, m_texref, dim));
+        return result;
+      }
+      CUfilter_mode get_filter_mode()
+      {
+        CUfilter_mode result;
+        CALL_GUARDED(cuTexRefGetFilterMode, (&result, m_texref));
+        return result;
+      }
+      py::tuple get_format()
+      {
+        CUarray_format fmt;
+        int num_channels;
+        CALL_GUARDED(cuTexRefGetFormat, (&fmt, &num_channels, m_texref));
+        return py::make_tuple(fmt, num_channels);
+      }
+      unsigned int get_flags()
+      {
+        unsigned int result;
+        CALL_GUARDED(cuTexRefGetFlags, (&result, m_texref));
+        return result;
+      }
+  };
+
+
+
   // function -----------------------------------------------------------------
   struct function
   {
@@ -348,11 +489,11 @@ namespace
           throw py::error_already_set();
         CALL_GUARDED(cuParamSetv, (m_function, offset, const_cast<void *>(buf), len)); 
       }
-      /* FIXME
-      void param_set(int offset, const texture_ref &tr)
-      {
+      void param_set_texref(int offset, const texture_reference &tr)
+      { 
+        CALL_GUARDED(cuParamSetTexRef, (m_function, 
+            CU_PARAM_TR_DEFAULT, tr.data())); 
       }
-      */
 
       void launch()
       { CALL_GUARDED(cuLaunch, (m_function)); }
@@ -777,4 +918,58 @@ BOOST_PYTHON_MODULE(_driver)
       .DEF_SIMPLE_METHOD(time_till)
       ;
   }
+
+  {
+    typedef CUDA_ARRAY_DESCRIPTOR cl;
+    py::class_<cl>("ArrayDescriptor")
+      .def_readwrite("width", &cl::Width)
+      .def_readwrite("height", &cl::Height)
+      .def_readwrite("format", &cl::Format)
+      .def_readwrite("num_channels", &cl::NumChannels)
+      ;
+  }
+
+  {
+    typedef CUDA_ARRAY3D_DESCRIPTOR cl;
+    py::class_<cl>("ArrayDescriptor3D")
+      .def_readwrite("width", &cl::Width)
+      .def_readwrite("height", &cl::Height)
+      .def_readwrite("depth", &cl::Depth)
+      .def_readwrite("format", &cl::Format)
+      .def_readwrite("num_channels", &cl::NumChannels)
+      ;
+  }
+
+  {
+    typedef array cl;
+    py::class_<cl, boost::noncopyable>
+      ("Array", py::init<const CUDA_ARRAY_DESCRIPTOR &>())
+      .def(py::init<const CUDA_ARRAY3D_DESCRIPTOR &>())
+      .DEF_SIMPLE_METHOD(get_descriptor)
+      .DEF_SIMPLE_METHOD(get_descriptor_3d)
+      ;
+  }
+
+  {
+    typedef texture_reference cl;
+    py::class_<cl, boost::noncopyable>("TextureReference")
+      .DEF_SIMPLE_METHOD(set_array)
+      .DEF_SIMPLE_METHOD(set_address)
+      .DEF_SIMPLE_METHOD(set_format)
+      .DEF_SIMPLE_METHOD(set_address_mode)
+      .DEF_SIMPLE_METHOD(set_filter_mode)
+      .DEF_SIMPLE_METHOD(set_flags)
+      .DEF_SIMPLE_METHOD(get_address)
+      .def("get_array", &cl::get_array,
+          py::return_value_policy<py::manage_new_object>())
+      .DEF_SIMPLE_METHOD(get_address_mode)
+      .DEF_SIMPLE_METHOD(get_filter_mode)
+      .DEF_SIMPLE_METHOD(get_format)
+      .DEF_SIMPLE_METHOD(get_flags)
+      ;
+  }
+  py::scope().attr("TRSA_OVERRIDE_FORMAT") = CU_TRSA_OVERRIDE_FORMAT;
+  py::scope().attr("TRSF_READ_AS_INTEGER") = CU_TRSF_READ_AS_INTEGER;
+  py::scope().attr("TRSF_NORMALIZED_COORDINATES") = CU_TRSF_NORMALIZED_COORDINATES;
+  py::scope().attr("TR_DEFAULT") = CU_PARAM_TR_DEFAULT;
 }
