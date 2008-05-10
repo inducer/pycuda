@@ -1,5 +1,5 @@
 #include <boost/python.hpp>
-#include <pycuda/pycuda.hpp>
+#include <pycuda/pycublas.hpp>
 
 
 

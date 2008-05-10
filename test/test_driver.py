@@ -78,6 +78,17 @@ class TestCuda(unittest.TestCase):
 
         self.assert_(la.norm(dest-a*b) == 0)
 
+    def test_cublas_mixing(self):
+        self.test_streamed_kernel()
+
+        import pycuda.blas as blas
+
+        shape = (10,)
+        a = blas.ones(shape, dtype=numpy.float32)
+        b = 33*blas.ones(shape, dtype=numpy.float32)
+        self.assert_(((-a+b).from_gpu() == 32).all())
+        self.test_streamed_kernel()
+
 
 
 

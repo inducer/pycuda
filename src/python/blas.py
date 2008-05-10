@@ -1,4 +1,5 @@
 import numpy
+import pyublas
 import pycuda.rt
 from pycuda._blas import *
 init()
