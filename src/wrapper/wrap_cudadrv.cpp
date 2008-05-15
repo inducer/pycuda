@@ -3,15 +3,23 @@
 #include <utility>
 #include <numeric>
 #include <algorithm>
+#include <stack>
 #include <cuda.h>
 #include "wrap_helpers.hpp"
 #include <boost/python/stl_iterator.hpp>
+#include <boost/shared_ptr.hpp>
+#include <boost/weak_ptr.hpp>
 #include "numpy_init.hpp"
 
 
 
 
 //#define TRACE_CUDA
+
+
+
+
+using boost::shared_ptr;
 
 
 
@@ -135,7 +143,7 @@ namespace
         return result;
       }
 
-      context *make_context(unsigned int flags);
+      shared_ptr<context> make_context(unsigned int flags);
   };
 
   void init(unsigned int flags) { CALL_GUARDED(cuInit, (flags)); }
@@ -156,6 +164,10 @@ namespace
     private:
       CUcontext m_context;
       bool m_valid;
+      typedef std::stack<boost::weak_ptr<context>,
+        std::vector<boost::weak_ptr<context> > > context_stack_t;
+      
+      static context_stack_t m_context_stack;
 
     public:
       context(CUcontext ctx, bool borrowed)
@@ -192,11 +204,9 @@ namespace
         {
           CALL_GUARDED(cuCtxDetach, (m_context));
           m_valid = false;
+          m_context_stack.pop();
         }
       }
-
-      void push()
-      { CALL_GUARDED(cuCtxPushCurrent, (m_context)); }
 
       void pop()
       { 
@@ -204,6 +214,7 @@ namespace
         CALL_GUARDED(cuCtxPopCurrent, (&popped)); 
         if (popped != m_context)
           throw std::runtime_error("popped the wrong context");
+        m_context_stack.pop();
       }
 
       static device get_device()
@@ -215,14 +226,36 @@ namespace
 
       static void synchronize()
       { CALL_GUARDED(cuCtxSynchronize, ()); }
+
+      static shared_ptr<context> current_context()
+      {
+        return shared_ptr<context>(m_context_stack.top());
+      }
+
+      friend class device;
+      friend void context_push(shared_ptr<context> ctx);
   };
 
-  context *device::make_context(unsigned int flags)
+  context::context_stack_t context::m_context_stack;
+
+
+
+
+  shared_ptr<context> device::make_context(unsigned int flags)
   {
     CUcontext ctx;
     CALL_GUARDED(cuCtxCreate, (&ctx, flags, m_device));
-    return new context(ctx, false);
+    shared_ptr<context> result(new context(ctx, false));
+    context::m_context_stack.push(result);
+    return result;
   }
+
+  void context_push(shared_ptr<context> ctx)
+  { 
+    CALL_GUARDED(cuCtxPushCurrent, (ctx->m_context)); 
+    context::m_context_stack.push(ctx);
+  }
+
 
 
 
@@ -232,9 +265,11 @@ namespace
   {
     private:
       CUstream m_stream;
+      shared_ptr<context> m_ward;
 
     public:
       stream(unsigned int flags=0)
+        : m_ward(context::current_context())
       { CALL_GUARDED(cuStreamCreate, (&m_stream, flags)); }
 
       ~stream()
@@ -274,14 +309,15 @@ namespace
     private:
       CUarray m_array;
       bool m_managed;
+      shared_ptr<context> m_ward;
 
     public:
       array(const CUDA_ARRAY_DESCRIPTOR &descr)
-        : m_managed(true)
+        : m_managed(true), m_ward(context::current_context())
       { CALL_GUARDED(cuArrayCreate, (&m_array, &descr)); }
 
       array(const CUDA_ARRAY3D_DESCRIPTOR &descr)
-        : m_managed(true)
+        : m_managed(true), m_ward(context::current_context())
       { CALL_GUARDED(cuArray3DCreate, (&m_array, &descr)); }
 
       array(CUarray ary, bool managed)
@@ -416,10 +452,11 @@ namespace
   {
     private:
       CUmodule m_module;
+      shared_ptr<context> m_ward;
 
     public:
       module(CUmodule mod)
-        : m_module(mod)
+        : m_module(mod), m_ward(context::current_context())
       { }
 
       ~module()
@@ -444,7 +481,7 @@ namespace
       }
   };
 
-  module *load_module(const char *filename)
+  module *module_from_file(const char *filename)
   {
     CUmodule mod;
     CALL_GUARDED(cuModuleLoad, (&mod, filename));
@@ -524,10 +561,12 @@ namespace
   {
     private:
       CUdeviceptr m_devptr;
+      shared_ptr<context> m_ward;
 
     public:
       device_allocation(CUdeviceptr devptr)
-        : m_devptr(devptr)
+        : m_devptr(devptr), m_ward(context::current_context())
+                                                               
       { }
 
       ~device_allocation()
@@ -787,9 +826,11 @@ namespace
   {
     private:
       CUevent m_event;
+      shared_ptr<context> m_ward;
 
     public:
       event(unsigned int flags=0)
+        : m_ward(context::current_context())
       { CALL_GUARDED(cuEventCreate, (&m_event, flags)); }
 
       ~event()
@@ -913,17 +954,15 @@ BOOST_PYTHON_MODULE(_driver)
       .DEF_SIMPLE_METHOD(total_memory)
       .DEF_SIMPLE_METHOD(get_attribute)
       .def("make_context", &cl::make_context, 
-          py::return_value_policy<py::manage_new_object>(),
-          (py::args("self"), py::args("flags")=CU_CTX_SCHED_AUTO)
-          )
+          (py::args("self"), py::args("flags")=CU_CTX_SCHED_AUTO))
       ;
   }
 
   {
     typedef context cl;
-    py::class_<cl>("Context", py::no_init)
+    py::class_<cl, shared_ptr<cl> >("Context", py::no_init)
       .DEF_SIMPLE_METHOD(detach)
-      .DEF_SIMPLE_METHOD(push)
+      .def("push", context_push)
       .DEF_SIMPLE_METHOD(pop)
       .DEF_SIMPLE_METHOD(get_device)
       .staticmethod("get_device")
@@ -935,7 +974,7 @@ BOOST_PYTHON_MODULE(_driver)
   {
     typedef stream cl;
     py::class_<cl, boost::noncopyable>
-      ("Stream", py::init<py::optional<unsigned int> >(py::arg("flags")))
+      ("Stream", py::init<unsigned int>(py::arg("flags")=0))
       .DEF_SIMPLE_METHOD(synchronize)
       .DEF_SIMPLE_METHOD(is_done)
       ;
@@ -944,7 +983,8 @@ BOOST_PYTHON_MODULE(_driver)
   {
     typedef module cl;
     py::class_<cl, boost::noncopyable>("Module", py::no_init)
-      .def("get_function", &cl::get_function, (py::args("self", "name")))
+      .def("get_function", &cl::get_function, (py::args("self", "name")),
+          py::with_custodian_and_ward_postcall<0, 1>())
       .def("get_global", &cl::get_global, (py::args("self", "name")))
       .def("get_texref", &cl::get_texref, 
           (py::args("self", "name")),
@@ -952,9 +992,9 @@ BOOST_PYTHON_MODULE(_driver)
       ;
   }
 
-  py::def("load_module", load_module,
+  py::def("module_from_file", module_from_file, (py::arg("filename")),
       py::return_value_policy<py::manage_new_object>());
-  py::def("module_from_buffer", module_from_buffer,
+  py::def("module_from_buffer", module_from_buffer, (py::arg("buffer")),
       py::return_value_policy<py::manage_new_object>());
 
   {

@@ -27,6 +27,10 @@ class Out(ArgumentHandler):
 class InOut(In, Out):
     pass
 
+
+
+
+
 def _add_functionality():
     def device_get_attributes(dev):
         return dict((getattr(device_attribute, att), 
@@ -45,7 +49,7 @@ def _add_functionality():
 
         arg_data = []
         format = ""
-        for arg in args:
+        for i, arg in enumerate(args):
             if numpy is not None and isinstance(arg, numpy.number):
                 arg_data.append(arg)
                 format += arg.dtype.char
@@ -60,7 +64,7 @@ def _add_functionality():
                 arg_data.append(arg)
                 format += "s"
             else:
-                raise TypeError("invalid parameter type")
+                raise TypeError("invalid type on parameter #%d (0-based)" % i)
 
         import struct
         buf = struct.pack(format, *arg_data)
