@@ -78,7 +78,17 @@ class TestCuda(unittest.TestCase):
 
         self.assert_(la.norm(dest-a*b) == 0)
 
-    def test_cublas_mixing(self):
+    def test_gpuarray(self):
+        import numpy
+        a = numpy.arange(2000000, dtype=numpy.float32)
+        b = a + 17
+        import pycuda.gpuarray as gpuarray
+        a_g = gpuarray.to_gpu(a)
+        b_g = gpuarray.to_gpu(b)
+        diff = (a_g-3*b_g+(-a_g)).get() - (a-3*b+(-a))
+        assert la.norm(diff) == 0
+
+    def do_not_test_cublas_mixing(self):
         self.test_streamed_kernel()
 
         import pycuda.blas as blas
