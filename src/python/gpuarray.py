@@ -117,6 +117,13 @@ class GPUArray(object):
         self.gpudata = drv.mem_alloc(self.size * self.dtype.itemsize)
         self.stream = stream
 
+    @staticmethod
+    def compile_kernels():
+        # useful for benchmarking
+        get_axpbyz_kernel()
+        get_scale_kernel()
+        get_fill_kernel()
+
     def set(self, ary, stream=None):
         assert ary.size == self.size
         assert ary.dtype == self.dtype
@@ -166,27 +173,38 @@ class GPUArray(object):
         result = GPUArray(self.shape, self.dtype)
         return self._axpbyz(1, other, -1, result)
 
-    def _scale(self, factor):
+    def __iadd__(self, other):
+        return self._axpbyz(1, other, 1, self)
+
+    def __isub__(self, other):
+        return self._axpbyz(1, other, -1, self)
+
+    def _scale(self, factor, out):
         assert self.dtype == numpy.float32
 
         block_count, threads_per_block, elems_per_block = splay(self.size, WARP_SIZE, 128, 80)
 
-        result = GPUArray(self.shape, self.dtype)
         get_scale_kernel()(numpy.float32(factor), self.gpudata, 
-                result.gpudata, numpy.int32(self.size),
+                out.gpudata, numpy.int32(self.size),
                 shared=256, block=(threads_per_block,1,1), grid=(block_count,1),
                 stream=self.stream)
 
-        return result
+        return out
 
     def __neg__(self):
-        return self._scale(-1)
+        result = GPUArray(self.shape, self.dtype)
+        return self._scale(-1, result)
 
     def __mul__(self, scalar):
-        return self._scale(scalar)
+        result = GPUArray(self.shape, self.dtype)
+        return self._scale(scalar, result)
 
     def __rmul__(self, scalar):
-        return self._scale(scalar)
+        result = GPUArray(self.shape, self.dtype)
+        return self._scale(scalar, result)
+
+    def __imul__(self, scalar):
+        return self._scale(scalar, self)
 
     def fill(self, value):
         assert self.dtype == numpy.float32

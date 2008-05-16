@@ -10,11 +10,7 @@ def main():
     assert drv.Device.count() >= 1
     ctx = drv.Device(0).make_context()
 
-    import pycuda.gpuarray as gpuarray
-
-    # make sure all the kernels are compiled
-    gpuarray.GPUArray.compile_kernels()
-    print "done compiling"
+    import pycuda.blas as blas
 
     sizes = []
     times = []
@@ -23,9 +19,8 @@ def main():
         size = 1<<power
         print size
         sizes.append(size)
-        a = gpuarray.zeros((size,), dtype=numpy.float32)
-        b = gpuarray.zeros((size,), dtype=numpy.float32)
-        b.fill(1)
+        a = 10*blas.ones((size,), dtype=numpy.float32)
+        b = 33*blas.ones((size,), dtype=numpy.float32)
 
         if power > 20:
             count = 100
@@ -61,3 +56,4 @@ def main():
 
 if __name__ == "__main__":
     main()
+
