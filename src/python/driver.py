@@ -153,9 +153,10 @@ def mem_alloc_like(ary):
 
 
 
-def to_device(ary):
-    result = mem_alloc(ary.nbytes)
-    memcpy_htod(result, ary)
+def to_device(bf_obj):
+    bf = buffer(bf_obj)
+    result = mem_alloc(len(bf))
+    memcpy_htod(result, bf)
     return result
 
 
