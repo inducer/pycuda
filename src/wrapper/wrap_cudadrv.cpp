@@ -360,13 +360,18 @@ namespace
       CUtexref m_texref;
       bool m_managed;
 
+      // life support for the array
+      shared_ptr<array> m_array;
+
     public:
       texture_reference()
         : m_managed(true)
       { CALL_GUARDED(cuTexRefCreate, (&m_texref)); }
+
       texture_reference(CUtexref tr, bool managed)
         : m_texref(tr), m_managed(managed)
       { }
+
       ~texture_reference()
       { 
         if (m_managed)
@@ -378,10 +383,11 @@ namespace
       CUtexref data() const
       { return m_texref; }
 
-      void set_array(array const &ary)
+      void set_array(shared_ptr<array> ary)
       { 
         CALL_GUARDED(cuTexRefSetArray, (m_texref, 
-            ary.data(), CU_TRSA_OVERRIDE_FORMAT)); 
+            ary->data(), CU_TRSA_OVERRIDE_FORMAT)); 
+        m_array = ary;
       }
 
       unsigned int set_address(CUdeviceptr dptr, unsigned int bytes)
@@ -389,6 +395,7 @@ namespace
         unsigned int byte_offset;
         CALL_GUARDED(cuTexRefSetAddress, (&byte_offset,
               m_texref, dptr, bytes)); 
+        m_array.reset();
         return byte_offset;
       }
 
@@ -532,7 +539,7 @@ namespace
           throw py::error_already_set();
         CALL_GUARDED(cuParamSetv, (m_function, offset, const_cast<void *>(buf), len)); 
       }
-      void param_set_texref(int offset, const texture_reference &tr)
+      void param_set_texref(const texture_reference &tr)
       { 
         CALL_GUARDED(cuParamSetTexRef, (m_function, 
             CU_PARAM_TR_DEFAULT, tr.data())); 
@@ -678,25 +685,67 @@ namespace
       unsigned int len)
   { CALL_GUARDED(cuMemcpyAtoA, (dst.data(), dst_index, src.data(), src_index, len)); }
 
+
+
+
+  // structured memcpy --------------------------------------------------------
+#define MEMCPY_SETTERS \
+    void set_src_host(py::object buf_py) \
+    { \
+      srcMemoryType = CU_MEMORYTYPE_HOST; \
+      Py_ssize_t len; \
+      if (PyObject_AsReadBuffer(buf_py.ptr(), &srcHost, &len)) \
+        throw py::error_already_set(); \
+    } \
+    \
+    void set_src_array(array const &ary)  \
+    {  \
+      srcMemoryType = CU_MEMORYTYPE_ARRAY; \
+      srcArray = ary.data();  \
+    } \
+    \
+    void set_src_device(CUdeviceptr devptr)  \
+    { \
+      srcMemoryType = CU_MEMORYTYPE_DEVICE; \
+      srcDevice = devptr; \
+    } \
+    \
+    void set_dst_host(py::object buf_py) \
+    { \
+      dstMemoryType = CU_MEMORYTYPE_HOST; \
+      Py_ssize_t len; \
+      if (PyObject_AsWriteBuffer(buf_py.ptr(), &dstHost, &len)) \
+        throw py::error_already_set(); \
+    } \
+    \
+    void set_dst_array(array const &ary) \
+    { \
+      dstMemoryType = CU_MEMORYTYPE_ARRAY; \
+      dstArray = ary.data(); \
+    } \
+    \
+    void set_dst_device(CUdeviceptr devptr)  \
+    { \
+      dstMemoryType = CU_MEMORYTYPE_DEVICE; \
+      dstDevice = devptr; \
+    }
+
+
+
+
+
   struct memcpy_2d : public CUDA_MEMCPY2D
   {
-    void set_src_host(py::object buf_py)
+    memcpy_2d()
     {
-      Py_ssize_t len;
-      if (PyObject_AsReadBuffer(buf_py.ptr(), &srcHost, &len))
-        throw py::error_already_set();
+      srcXInBytes = 0;
+      srcY = 0;
+
+      dstXInBytes = 0;
+      dstY = 0;
     }
 
-    void set_src_array(array const &ary) { srcArray = ary.data(); }
-
-    void set_dst_host(py::object buf_py)
-    {
-      Py_ssize_t len;
-      if (PyObject_AsWriteBuffer(buf_py.ptr(), &dstHost, &len))
-        throw py::error_already_set();
-    }
-
-    void set_dst_array(array const &ary) { dstArray = ary.data(); }
+    MEMCPY_SETTERS;
 
     void execute(bool aligned) const
     {
@@ -716,25 +765,17 @@ namespace
     {
       reserved0 = 0;
       reserved1 = 0;
+
+      srcXInBytes = 0;
+      srcY = 0;
+      srcZ = 0;
+
+      dstXInBytes = 0;
+      dstY = 0;
+      dstZ = 0;
     }
 
-    void set_src_host(py::object buf_py)
-    {
-      Py_ssize_t len;
-      if (PyObject_AsReadBuffer(buf_py.ptr(), &srcHost, &len))
-        throw py::error_already_set();
-    }
-
-    void set_src_array(array const &ary) { srcArray = ary.data(); }
-
-    void set_dst_host(py::object buf_py)
-    {
-      Py_ssize_t len;
-      if (PyObject_AsWriteBuffer(buf_py.ptr(), &dstHost, &len))
-        throw py::error_already_set();
-    }
-
-    void set_dst_array(array const &ary) { dstArray = ary.data(); }
+    MEMCPY_SETTERS;
 
     void execute() const
     {
@@ -934,7 +975,7 @@ BOOST_PYTHON_MODULE(_driver)
     .value("GPU_OVERLAP", CU_DEVICE_ATTRIBUTE_GPU_OVERLAP)
     .value("MULTIPROCESSOR_COUNT", CU_DEVICE_ATTRIBUTE_MULTIPROCESSOR_COUNT)
     ;
-  py::enum_<CUmemorytype>("memorytype")
+  py::enum_<CUmemorytype>("memory_type")
     .value("HOST", CU_MEMORYTYPE_HOST)
     .value("DEVICE", CU_MEMORYTYPE_DEVICE)
     .value("ARRAY", CU_MEMORYTYPE_ARRAY)
@@ -1006,6 +1047,7 @@ BOOST_PYTHON_MODULE(_driver)
       .def("param_seti", (void (cl::*)(int, unsigned int)) &cl::param_set)
       .def("param_setf", (void (cl::*)(int, float )) &cl::param_set)
       .DEF_SIMPLE_METHOD(param_setv)
+      .DEF_SIMPLE_METHOD(param_set_texref)
 
       .DEF_SIMPLE_METHOD(launch)
       .DEF_SIMPLE_METHOD(launch_grid)
@@ -1073,6 +1115,7 @@ BOOST_PYTHON_MODULE(_driver)
 
       .DEF_SIMPLE_METHOD(set_src_host)
       .DEF_SIMPLE_METHOD(set_src_array)
+      .DEF_SIMPLE_METHOD(set_src_device)
 
       .def_readwrite("dst_x_in_bytes", &cl::dstXInBytes)
       .def_readwrite("dst_y", &cl::dstY)
@@ -1082,11 +1125,12 @@ BOOST_PYTHON_MODULE(_driver)
 
       .DEF_SIMPLE_METHOD(set_dst_host)
       .DEF_SIMPLE_METHOD(set_dst_array)
+      .DEF_SIMPLE_METHOD(set_dst_device)
 
       .def_readwrite("width_in_bytes", &cl::WidthInBytes)
       .def_readwrite("height", &cl::Height)
 
-      .def("__call__", &cl::execute)
+      .def("__call__", &cl::execute, py::arg("aligned"))
       .def("__call__", &cl::execute_async)
       ;
   }
@@ -1105,6 +1149,7 @@ BOOST_PYTHON_MODULE(_driver)
 
       .DEF_SIMPLE_METHOD(set_src_host)
       .DEF_SIMPLE_METHOD(set_src_array)
+      .DEF_SIMPLE_METHOD(set_src_device)
 
       .def_readwrite("dst_x_in_bytes", &cl::dstXInBytes)
       .def_readwrite("dst_y", &cl::dstY)
@@ -1117,11 +1162,12 @@ BOOST_PYTHON_MODULE(_driver)
 
       .DEF_SIMPLE_METHOD(set_dst_host)
       .DEF_SIMPLE_METHOD(set_dst_array)
+      .DEF_SIMPLE_METHOD(set_dst_device)
 
       .def_readwrite("width_in_bytes", &cl::WidthInBytes)
       .def_readwrite("height", &cl::Height)
 
-      .def("__call__", &cl::execute)
+      .def("__call__", &cl::execute, py::arg("aligned"))
       .def("__call__", &cl::execute_async)
       ;
   }
@@ -1165,7 +1211,7 @@ BOOST_PYTHON_MODULE(_driver)
 
   {
     typedef array cl;
-    py::class_<cl, boost::noncopyable>
+    py::class_<cl, shared_ptr<cl>, boost::noncopyable>
       ("Array", py::init<const CUDA_ARRAY_DESCRIPTOR &>())
       .def(py::init<const CUDA_ARRAY3D_DESCRIPTOR &>())
       .DEF_SIMPLE_METHOD(get_descriptor)

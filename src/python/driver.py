@@ -78,6 +78,7 @@ def _add_functionality():
         stream = kwargs.get("stream")
         block = kwargs.get("block")
         shared = kwargs.get("shared")
+        texrefs = kwargs.get("texrefs", [])
 
         if block is not None:
             func.set_block_shape(*block)
@@ -87,6 +88,9 @@ def _add_functionality():
 
         for handler in handlers:
             handler.pre_call(stream)
+
+        for texref in texrefs:
+            func.param_set_texref(texref)
 
         post_handlers = [handler
                 for handler in handlers
@@ -162,6 +166,35 @@ def to_device(bf_obj):
 
 
 
+def matrix_to_texref(matrix, texref):
+    import numpy
+    matrix = numpy.asarray(matrix, dtype=numpy.float32, order="F")
+    descr = ArrayDescriptor()
+    h, w = matrix.shape
+    descr.width = h # matrices are row-first
+    descr.height = w # matrices are row-first
+    descr.format = array_format.FLOAT
+    descr.num_channels = 1
+
+    ary = Array(descr)
+
+    copy = Memcpy2D()
+    copy.set_src_host(matrix)
+    copy.set_dst_array(ary)
+    copy.width_in_bytes = copy.src_pitch = copy.dst_pitch = matrix.strides[1]
+    copy.height = w
+    copy(aligned=True)
+
+    texref.set_array(ary)
+    texref.set_address_mode(0, address_mode.CLAMP)
+    texref.set_address_mode(1, address_mode.CLAMP)
+    texref.set_filter_mode(filter_mode.POINT)
+    assert texref.get_flags() == 0
+    assert texref.get_format() == (array_format.FLOAT, 1)
+
+
+
+
 def from_device(devptr, shape, dtype, order="C"):
     import numpy
     result = numpy.empty(shape, dtype, order)
@@ -219,4 +252,4 @@ class SourceModule(object):
 
         self.get_function = self.module.get_function
         self.get_global = self.module.get_global
-        #self.get_texref = self.module.get_texref
+        self.get_texref = self.module.get_texref

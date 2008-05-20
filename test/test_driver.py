@@ -99,6 +99,66 @@ class TestCuda(unittest.TestCase):
         self.assert_(((-a+b).from_gpu() == 32).all())
         self.test_streamed_kernel()
 
+    def test_2d_texture(self):
+        mod = drv.SourceModule("""
+        texture<float, 2, cudaReadModeElementType> mtx_tex;
+
+        __global__ void copy_texture(float *dest)
+        {
+          int row = threadIdx.x;
+          int col = threadIdx.y;
+          int w = blockDim.y;
+          dest[row*w+col] = tex2D(mtx_tex, row, col);
+        }
+        """)
+
+        copy_texture = mod.get_function("copy_texture")
+        mtx_tex = mod.get_texref("mtx_tex")
+
+        shape = (3,4)
+        a = numpy.random.randn(*shape).astype(numpy.float32)
+        drv.matrix_to_texref(a, mtx_tex)
+
+        dest = numpy.zeros(shape, dtype=numpy.float32)
+        copy_texture(drv.Out(dest),
+                shared=4096, block=shape+(1,), 
+                texrefs=[mtx_tex]
+                )
+        assert la.norm(dest-a) == 0
+
+    def test_multiple_2d_textures(self):
+        mod = drv.SourceModule("""
+        texture<float, 2, cudaReadModeElementType> mtx_tex;
+        texture<float, 2, cudaReadModeElementType> mtx2_tex;
+
+        __global__ void copy_texture(float *dest)
+        {
+          int row = threadIdx.x;
+          int col = threadIdx.y;
+          int w = blockDim.y;
+          dest[row*w+col] = 
+              tex2D(mtx_tex, row, col)
+              +
+              tex2D(mtx2_tex, row, col);
+        }
+        """)
+
+        copy_texture = mod.get_function("copy_texture")
+        mtx_tex = mod.get_texref("mtx_tex")
+        mtx2_tex = mod.get_texref("mtx2_tex")
+
+        shape = (3,4)
+        a = numpy.random.randn(*shape).astype(numpy.float32)
+        b = numpy.random.randn(*shape).astype(numpy.float32)
+        drv.matrix_to_texref(a, mtx_tex)
+        drv.matrix_to_texref(b, mtx2_tex)
+
+        dest = numpy.zeros(shape, dtype=numpy.float32)
+        copy_texture(drv.Out(dest),
+                shared=4096, block=shape+(1,), 
+                texrefs=[mtx_tex, mtx2_tex]
+                )
+        assert la.norm(dest-a-b) < 1e-6
 
 
 
