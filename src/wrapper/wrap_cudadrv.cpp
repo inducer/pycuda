@@ -321,7 +321,7 @@ namespace
       { CALL_GUARDED(cuArray3DCreate, (&m_array, &descr)); }
 
       array(CUarray ary, bool managed)
-        : m_array(ary), m_managed(managed)
+        : m_array(ary), m_managed(managed), m_ward(context::current_context())
       { }
 
       ~array()
@@ -354,14 +354,17 @@ namespace
 
 
   // texture reference --------------------------------------------------------
+  class module;
+
   class texture_reference : public  boost::noncopyable
   {
     private:
       CUtexref m_texref;
       bool m_managed;
 
-      // life support for the array
+      // life support for array and module
       shared_ptr<array> m_array;
+      shared_ptr<module> m_module;
 
     public:
       texture_reference()
@@ -379,6 +382,9 @@ namespace
           CALL_GUARDED(cuTexRefDestroy, (m_texref)); 
         }
       }
+
+      void set_module(shared_ptr<module> mod)
+      { m_module = mod; }
 
       CUtexref data() const
       { return m_texref; }
@@ -471,6 +477,9 @@ namespace
         CALL_GUARDED(cuModuleUnload, (m_module));
       }
 
+      CUmodule data() const
+      { return m_module; }
+
       function get_function(const char *name);
       py::tuple get_global(const char *name)
       {
@@ -478,13 +487,6 @@ namespace
         unsigned int bytes;
         CALL_GUARDED(cuModuleGetGlobal, (&devptr, &bytes, m_module, name));
         return py::make_tuple(devptr, bytes);
-      }
-
-      texture_reference *get_texref(const char *name)
-      {
-        CUtexref result;
-        CALL_GUARDED(cuModuleGetTexRef, (&result, m_module, name));
-        return new texture_reference(result, false);
       }
   };
 
@@ -504,6 +506,16 @@ namespace
     CUmodule mod;
     CALL_GUARDED(cuModuleLoadData, (&mod, buf));
     return new module(mod);
+  }
+
+  texture_reference *module_get_texref(shared_ptr<module> mod, const char *name)
+  {
+    CUtexref tr;
+    CALL_GUARDED(cuModuleGetTexRef, (&tr, mod->data(), name));
+    std::auto_ptr<texture_reference> result(
+        new texture_reference(tr, false));
+    result->set_module(mod);
+    return result.release();
   }
 
 
@@ -1023,11 +1035,11 @@ BOOST_PYTHON_MODULE(_driver)
 
   {
     typedef module cl;
-    py::class_<cl, boost::noncopyable>("Module", py::no_init)
+    py::class_<cl, boost::noncopyable, shared_ptr<cl> >("Module", py::no_init)
       .def("get_function", &cl::get_function, (py::args("self", "name")),
           py::with_custodian_and_ward_postcall<0, 1>())
       .def("get_global", &cl::get_global, (py::args("self", "name")))
-      .def("get_texref", &cl::get_texref, 
+      .def("get_texref", module_get_texref, 
           (py::args("self", "name")),
           py::return_value_policy<py::manage_new_object>())
       ;

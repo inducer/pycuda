@@ -64,7 +64,14 @@ def _add_functionality():
                 arg_data.append(arg)
                 format += "s"
             else:
-                raise TypeError("invalid type on parameter #%d (0-based)" % i)
+                try:
+                    gpudata = arg.gpudata
+                except AttributeError:
+                    raise TypeError("invalid type on parameter #%d (0-based)" % i)
+                else:
+                    # for gpuarrays
+                    arg_data.append(int(gpudata))
+                    format += "P"
 
         import struct
         buf = struct.pack(format, *arg_data)
@@ -166,7 +173,7 @@ def to_device(bf_obj):
 
 
 
-def matrix_to_texref(matrix, texref):
+def matrix_to_array(matrix):
     import numpy
     matrix = numpy.asarray(matrix, dtype=numpy.float32, order="F")
     descr = ArrayDescriptor()
@@ -185,12 +192,24 @@ def matrix_to_texref(matrix, texref):
     copy.height = w
     copy(aligned=True)
 
+    return ary
+
+
+
+
+def bind_array_to_texref(ary, texref):
     texref.set_array(ary)
     texref.set_address_mode(0, address_mode.CLAMP)
     texref.set_address_mode(1, address_mode.CLAMP)
     texref.set_filter_mode(filter_mode.POINT)
     assert texref.get_flags() == 0
     assert texref.get_format() == (array_format.FLOAT, 1)
+
+
+
+
+def matrix_to_texref(matrix, texref):
+    bind_array_to_texref(matrix_to_array(matrix), texref)
 
 
 
@@ -222,7 +241,7 @@ class SourceModule(object):
         outf = open(join(tempdir, "kernel.cu"), "w")
         if not no_extern_c:
             outf.write('extern "C" {\n')
-        outf.write(source)
+        outf.write(str(source))
         if not no_extern_c:
             outf.write('}\n')
         outf.write("\n")
