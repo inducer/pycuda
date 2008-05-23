@@ -81,14 +81,29 @@ def _add_functionality():
         return handlers
 
     def function_call(func, *args, **kwargs):
-        grid = kwargs.get("grid", (1,1))
-        stream = kwargs.get("stream")
-        block = kwargs.get("block")
-        shared = kwargs.get("shared")
-        texrefs = kwargs.get("texrefs", [])
+        def get_kwarg(name, default=None):
+            if name in kwargs:
+                result = kwargs[name]
+                del kwargs[name]
+                return result
+            else:
+                return default
 
-        if block is not None:
-            func.set_block_shape(*block)
+        grid = get_kwarg("grid", (1,1))
+        stream = get_kwarg("stream")
+        block = get_kwarg("block")
+        shared = get_kwarg("shared")
+        texrefs = get_kwarg("texrefs", [])
+
+        if kwargs:
+            raise ValueError(
+                    "extra keyword arguments: %s" 
+                    % (",".join(kwargs.iterkeys())))
+
+        if block is None:
+            raise ValueError, "must specify block size"
+
+        func.set_block_shape(*block)
         handlers = func.param_set(*args)
         if shared is not None:
             func.set_shared_size(shared)
