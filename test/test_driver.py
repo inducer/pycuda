@@ -160,6 +160,43 @@ class TestCuda(unittest.TestCase):
                 )
         assert la.norm(dest-a-b) < 1e-6
 
+    def test_multichannel_2d_texture(self):
+        mod = drv.SourceModule("""
+        #define CHANNELS 4
+        texture<float4, 2, cudaReadModeElementType> mtx_tex;
+
+        __global__ void copy_texture(float *dest)
+        {
+          int row = threadIdx.x;
+          int col = threadIdx.y;
+          int w = blockDim.y;
+          float4 texval = tex2D(mtx_tex, row, col);
+          dest[(row*w+col)*CHANNELS + 0] = texval.x;
+          dest[(row*w+col)*CHANNELS + 1] = texval.y;
+          dest[(row*w+col)*CHANNELS + 2] = texval.z;
+          dest[(row*w+col)*CHANNELS + 3] = texval.w;
+        }
+        """)
+
+        copy_texture = mod.get_function("copy_texture")
+        mtx_tex = mod.get_texref("mtx_tex")
+
+        shape = (5,6)
+        channels = 4
+        a = numpy.random.randn(*((channels,)+shape)).astype(numpy.float32)
+        drv.bind_array_to_texref(
+            drv.make_multichannel_2d_array(a), mtx_tex)
+
+        dest = numpy.zeros(shape+(channels,), dtype=numpy.float32)
+        copy_texture(drv.Out(dest),
+                shared=4096, block=shape+(1,), 
+                texrefs=[mtx_tex]
+                )
+        reshaped_a = a.transpose(1,2,0)
+        #print reshaped_a
+        #print dest
+        assert la.norm(dest-reshaped_a) == 0
+
 
 
 

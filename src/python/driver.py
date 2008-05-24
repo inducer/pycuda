@@ -203,7 +203,33 @@ def matrix_to_array(matrix):
     copy = Memcpy2D()
     copy.set_src_host(matrix)
     copy.set_dst_array(ary)
-    copy.width_in_bytes = copy.src_pitch = copy.dst_pitch = matrix.strides[1]
+    copy.width_in_bytes = copy.src_pitch = copy.dst_pitch = matrix.strides[-1]
+    copy.height = w
+    copy(aligned=True)
+
+    return ary
+
+
+
+
+def make_multichannel_2d_array(ndarray):
+    """Channel count has to be the first dimension of the C{ndarray}."""
+
+    import numpy
+    ndarray = numpy.asarray(ndarray, dtype=numpy.float32, order="F")
+    descr = ArrayDescriptor()
+    num_channels, h, w = ndarray.shape
+    descr.width = h # matrices are row-first
+    descr.height = w # matrices are row-first
+    descr.format = array_format.FLOAT
+    descr.num_channels = num_channels
+
+    ary = Array(descr)
+
+    copy = Memcpy2D()
+    copy.set_src_host(ndarray)
+    copy.set_dst_array(ary)
+    copy.width_in_bytes = copy.src_pitch = copy.dst_pitch = ndarray.strides[-1]
     copy.height = w
     copy(aligned=True)
 
@@ -218,7 +244,6 @@ def bind_array_to_texref(ary, texref):
     texref.set_address_mode(1, address_mode.CLAMP)
     texref.set_filter_mode(filter_mode.POINT)
     assert texref.get_flags() == 0
-    assert texref.get_format() == (array_format.FLOAT, 1)
 
 
 
