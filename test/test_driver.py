@@ -43,7 +43,7 @@ class TestCuda(unittest.TestCase):
         dest = numpy.zeros_like(a)
         multiply_them(
                 drv.Out(dest), drv.In(a), drv.In(b),
-                shared=4096, block=(400,1,1))
+                block=(400,1,1))
         self.assert_(la.norm(dest-a*b) == 0)
 
     def test_streamed_kernel(self):
@@ -73,7 +73,7 @@ class TestCuda(unittest.TestCase):
         dest = drv.pagelocked_empty_like(a)
         multiply_them(
                 drv.Out(dest), drv.In(a), drv.In(b),
-                shared=4096, block=shape+(1,), stream=strm)
+                block=shape+(1,), stream=strm)
         strm.synchronize()
 
         self.assert_(la.norm(dest-a*b) == 0)
@@ -121,7 +121,7 @@ class TestCuda(unittest.TestCase):
 
         dest = numpy.zeros(shape, dtype=numpy.float32)
         copy_texture(drv.Out(dest),
-                shared=4096, block=shape+(1,), 
+                block=shape+(1,), 
                 texrefs=[mtx_tex]
                 )
         assert la.norm(dest-a) == 0
@@ -155,7 +155,7 @@ class TestCuda(unittest.TestCase):
 
         dest = numpy.zeros(shape, dtype=numpy.float32)
         copy_texture(drv.Out(dest),
-                shared=4096, block=shape+(1,), 
+                block=shape+(1,), 
                 texrefs=[mtx_tex, mtx2_tex]
                 )
         assert la.norm(dest-a-b) < 1e-6
@@ -189,13 +189,34 @@ class TestCuda(unittest.TestCase):
 
         dest = numpy.zeros(shape+(channels,), dtype=numpy.float32)
         copy_texture(drv.Out(dest),
-                shared=4096, block=shape+(1,), 
+                block=shape+(1,), 
                 texrefs=[mtx_tex]
                 )
         reshaped_a = a.transpose(1,2,0)
         #print reshaped_a
         #print dest
         assert la.norm(dest-reshaped_a) == 0
+
+    def test_large_smem(self):
+        n = 4000
+        mod = drv.SourceModule("""
+        #include <stdio.h>
+
+        __global__ void kernel(int *d_data)
+        {
+        __shared__ int sdata[%d];
+        sdata[threadIdx.x] = threadIdx.x;
+        d_data[threadIdx.x] = sdata[threadIdx.x];
+        }
+        """ % n)
+
+        kernel = mod.get_function("kernel")
+
+        import pycuda.gpuarray as gpuarray
+        arg = gpuarray.zeros((n,), dtype=numpy.float32)
+
+        kernel(arg, block=(1,1,1,), )
+
 
 
 

@@ -301,6 +301,16 @@ class SourceModule(object):
             raise RuntimeError, "module compilation failed"
 
         data = open(join(tempdir, "kernel.cubin"), "r").read()
+
+        import re
+        self.lmem = int(re.search("lmem = ([0-9]+)", data).group(1))
+        self.smem = int(re.search("smem = ([0-9]+)", data).group(1))
+        self.registers = int(re.search("reg = ([0-9]+)", data).group(1))
+
+        if self.lmem:
+            from warnings import warn
+            warn("kernel uses local memory")
+
         self.module = module_from_buffer(data)
 
         if not keep:

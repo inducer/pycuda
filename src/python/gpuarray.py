@@ -160,14 +160,24 @@ class GPUArray(object):
         get_axpbyz_kernel()(numpy.float32(selffac), self.gpudata, 
                 numpy.float32(otherfac), other.gpudata, 
                 out.gpudata, numpy.int32(self.size),
-                shared=256, block=(threads_per_block,1,1), grid=(block_count,1),
+                block=(threads_per_block,1,1), grid=(block_count,1),
                 stream=self.stream)
 
         return out
 
     def __add__(self, other):
-        result = GPUArray(self.shape, self.dtype)
-        return self._axpbyz(1, other, 1, result)
+        if isinstance(other, (int, float, complex)):
+            # add a scalar
+            if other == 0:
+                return self
+            else:
+                raise NotImplementedError("real scalar addition")
+        else:
+            # add another vector
+            result = GPUArray(self.shape, self.dtype)
+            return self._axpbyz(1, other, 1, result)
+
+    __radd__ = __add__
 
     def __sub__(self, other):
         result = GPUArray(self.shape, self.dtype)
@@ -186,7 +196,7 @@ class GPUArray(object):
 
         get_scale_kernel()(numpy.float32(factor), self.gpudata, 
                 out.gpudata, numpy.int32(self.size),
-                shared=256, block=(threads_per_block,1,1), grid=(block_count,1),
+                block=(threads_per_block,1,1), grid=(block_count,1),
                 stream=self.stream)
 
         return out
@@ -211,12 +221,11 @@ class GPUArray(object):
 
         block_count, threads_per_block, elems_per_block = splay(self.size, WARP_SIZE, 128, 80)
 
-        result = GPUArray(self.shape, self.dtype)
         get_fill_kernel()(numpy.float32(value), self.gpudata, numpy.int32(self.size),
-                shared=256, block=(threads_per_block,1,1), grid=(block_count,1),
+                block=(threads_per_block,1,1), grid=(block_count,1),
                 stream=self.stream)
 
-        return result
+        return self
 
 
 
