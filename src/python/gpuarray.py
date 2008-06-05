@@ -34,6 +34,9 @@ def splay(n, min_threads, max_threads, max_blocks):
 
 
 
+NVCC_OPTIONS = []
+
+
 
 
 @memoize
@@ -52,7 +55,8 @@ def get_axpbyz_kernel():
             z[i] = a*x[i] + b*y[i];
           }
         }
-        """)
+        """,
+        options=NVCC_OPTIONS)
 
     return mod.get_function("axpbyz")
 
@@ -74,7 +78,8 @@ def get_scale_kernel():
             y[i] = a*x[i];
           }
         }
-        """)
+        """,
+        options=NVCC_OPTIONS)
 
     return mod.get_function("scale")
 
@@ -96,7 +101,8 @@ def get_fill_kernel():
             x[i] = a;
           }
         }
-        """)
+        """,
+        options=NVCC_OPTIONS)
 
     return mod.get_function("fill")
 

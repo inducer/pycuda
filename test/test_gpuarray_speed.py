@@ -1,3 +1,4 @@
+#! /usr/bin/env python
 import pycuda.driver as drv
 import numpy
 import numpy.linalg as la
