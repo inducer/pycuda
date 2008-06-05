@@ -94,6 +94,7 @@ def _add_functionality():
         block = get_kwarg("block")
         shared = get_kwarg("shared")
         texrefs = get_kwarg("texrefs", [])
+        time_kernel = get_kwarg("time_kernel", False)
 
         if kwargs:
             raise ValueError(
@@ -119,12 +120,23 @@ def _add_functionality():
                 if hasattr(handler, "post_call")]
 
         if stream is None:
+            if time_kernel:
+                from time import time
+                start_time = time()
             func.launch_grid(*grid)
-            if post_handlers:
+            if post_handlers or time_kernel:
                 Context.synchronize()
+
+                if time_kernel:
+                    run_time = time()-start_time
+
                 for handler in post_handlers:
                     handler.post_call(stream)
+
+                if time_kernel:
+                    return run_time
         else:
+            assert not time_kernel, "Can't time the kernel on an asynchronous invocation"
             func.launch_grid_async(grid[0], grid[1], stream)
 
             if post_handlers:
