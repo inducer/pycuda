@@ -542,7 +542,7 @@ namespace
       void param_set(int offset, unsigned int value)
       { CALL_GUARDED(cuParamSeti, (m_function, offset, value)); }
       void param_set(int offset, float value)
-      { CALL_GUARDED(cuParamSeti, (m_function, offset, value)); }
+      { CALL_GUARDED(cuParamSetf, (m_function, offset, value)); }
       void param_setv(int offset, py::object buffer)
       { 
         const void *buf;

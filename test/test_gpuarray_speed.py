@@ -44,14 +44,24 @@ def main():
         times.append(secs/count)
         flops.append(size*4)
 
-    if True:
+    flops = [f/t for f, t in zip(flops,times)]
+    try:
         from matplotlib.pylab import semilogx, show, title
+    except ImportError:
+        from pytools import Table
+        tbl = Table()
+        tbl.add_row(("Size", "Time", "Flops"))
+        for s, t, f in zip(sizes, times, flops):
+            tbl.add_row((s,t,f))
+        print tbl
+    else:
         title("time to add two vectors")
         semilogx(sizes, times)
         show()
         title("flops")
-        semilogx(sizes, [f/t for f, t in zip(flops,times)])
+        semilogx(sizes, flops)
         show()
+
 
 
         
