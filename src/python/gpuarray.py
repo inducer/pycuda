@@ -233,6 +233,10 @@ class GPUArray(object):
 
         return self
 
+    def bind_to_texref(self, texref):
+        texref.set_address(self.gpudata, self.size*self.dtype.itemsize)
+
+
 
 
 
