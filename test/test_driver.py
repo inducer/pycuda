@@ -88,6 +88,9 @@ class TestCuda(unittest.TestCase):
         diff = (a_g-3*b_g+(-a_g)).get() - (a-3*b+(-a))
         assert la.norm(diff) == 0
 
+        diff = ((a_g*b_g).get()-a*b)
+        assert la.norm(diff) == 0
+
     def do_not_test_cublas_mixing(self):
         self.test_streamed_kernel()
 

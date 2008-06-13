@@ -5,8 +5,11 @@ import pycuda.driver as drv
 
 
 
-def splay(n, min_threads, max_threads, max_blocks):
+def splay(n, min_threads=None, max_threads=128, max_blocks=80):
     # stolen from cublas
+
+    if min_threads is None:
+        min_threads = WARP_SIZE
 
     if n < min_threads:
         block_count = 1
@@ -59,6 +62,30 @@ def get_axpbyz_kernel():
         options=NVCC_OPTIONS)
 
     return mod.get_function("axpbyz")
+
+
+
+
+@memoize
+def get_multiply_kernel():
+    mod = drv.SourceModule("""
+        __global__ void multiply(float *x, float *y, float *z,
+          int n)
+        {
+          int tid = threadIdx.x;
+          int total_threads = gridDim.x*blockDim.x;
+          int cta_start = blockDim.x*blockIdx.x;
+          int i;
+                
+          for (i = cta_start + tid; i < n; i += total_threads) 
+          {
+            z[i] = x[i] * y[i];
+          }
+        }
+        """,
+        options=NVCC_OPTIONS)
+
+    return mod.get_function("multiply")
 
 
 
@@ -120,7 +147,10 @@ class GPUArray(object):
         self.dtype = numpy.dtype(dtype)
         from pytools import product
         self.size = product(shape)
-        self.gpudata = drv.mem_alloc(self.size * self.dtype.itemsize)
+        if self.size:
+            self.gpudata = drv.mem_alloc(self.size * self.dtype.itemsize)
+        else:
+            self.gpudata = None
         self.stream = stream
 
     @staticmethod
@@ -133,7 +163,8 @@ class GPUArray(object):
     def set(self, ary, stream=None):
         assert ary.size == self.size
         assert ary.dtype == self.dtype
-        drv.memcpy_htod(self.gpudata, ary, stream)
+        if self.size:
+            drv.memcpy_htod(self.gpudata, ary, stream)
 
     def get(self, ary=None, stream=None, pagelocked=False):
         if ary is None:
@@ -144,7 +175,8 @@ class GPUArray(object):
         else:
             assert ary.size == self.size
             assert ary.dtype == self.dtype
-        drv.memcpy_dtoh(ary, self.gpudata)
+        if self.size:
+            drv.memcpy_dtoh(ary, self.gpudata)
         return ary
 
     def __str__(self):
@@ -207,13 +239,30 @@ class GPUArray(object):
 
         return out
 
+    def _elwise_multiply(self, other, out):
+        assert self.dtype == numpy.float32
+        assert self.dtype == numpy.float32
+
+        block_count, threads_per_block, elems_per_block = splay(self.size, WARP_SIZE, 128, 80)
+
+        get_multiply_kernel()(
+                self.gpudata, other.gpudata,
+                out.gpudata, numpy.int32(self.size),
+                block=(threads_per_block,1,1), grid=(block_count,1),
+                stream=self.stream)
+
+        return out
+
     def __neg__(self):
         result = GPUArray(self.shape, self.dtype)
         return self._scale(-1, result)
 
-    def __mul__(self, scalar):
+    def __mul__(self, other):
         result = GPUArray(self.shape, self.dtype)
-        return self._scale(scalar, result)
+        if isinstance(other, (int, float, complex)):
+            return self._scale(scalar, result)
+        else:
+            return self._elwise_multiply(other, result)
 
     def __rmul__(self, scalar):
         result = GPUArray(self.shape, self.dtype)
