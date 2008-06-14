@@ -260,7 +260,7 @@ class GPUArray(object):
     def __mul__(self, other):
         result = GPUArray(self.shape, self.dtype)
         if isinstance(other, (int, float, complex)):
-            return self._scale(scalar, result)
+            return self._scale(other, result)
         else:
             return self._elwise_multiply(other, result)
 
