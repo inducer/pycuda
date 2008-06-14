@@ -11,7 +11,7 @@ doc/hedge-notes.pdf
 *.session
 dump.py
 *.orig
-Makefile
+/Makefile
 *.png
 tags
 *.vtu
