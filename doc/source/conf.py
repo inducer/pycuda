@@ -42,9 +42,13 @@ copyright = '2008, Andreas Kloeckner'
 # other places throughout the built documents.
 #
 # The short X.Y version.
-version = '0.90'
+import re
+ver_re = re.compile(r'version\s*=\s*"([0-9.]+)"')
+version = [ver_re.search(line).group(1) 
+        for line in open("../../setup.py").readlines() 
+        if ver_re.search(line)][0]
 # The full version, including alpha/beta/rc tags.
-release = '0.90'
+release = version
 
 # There are two options for replacing |today|: either, you set today to some
 # non-false value, then it is used:
