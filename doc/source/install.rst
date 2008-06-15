@@ -78,7 +78,7 @@ one later on::
 Step 2: Download and unpack PyCuda
 -----------------------------------
 
-`Download PyCuda <http://pypi.python.org/pypi/PyCuda>`_ and unpack it::
+`Download PyCuda <http://pypi.python.org/pypi/pycuda>`_ and unpack it::
 
     $ tar xfz PyCuda-VERSION.tar.gz
 
@@ -99,18 +99,20 @@ Here's an easy way to install it, if you do not have it already::
 Step 4: Build PyCuda
 --------------------
 
-Just type::
+Next, just type::
 
     $ cd PyCuda-VERSION # if you're not there already
     $ ./configure \
       --boost-inc-dir=$HOME/pool/include/boost-1_35 \
       --boost-lib-dir=$HOME/pool/lib \
-      --boost-python-libname=boost_python-gcc42-mt
+      --boost-python-libname=boost_python-gcc42-mt \
+      --cuda-root=/where/ever/you/installed/cuda
     $ su -c "make install"
 
 Note that ``gcc42`` is a compiler tag that depends on the compiler
 with which you built boost. Check the contents of your boost 
-library directory to find out what the correct tag is.
+library directory to find out what the correct tag is. Also note that
+you will (probably) have to change the value of :option:`--cuda-root`.
 
 Once that works, congratulations! You've successfully built PyCuda.
 

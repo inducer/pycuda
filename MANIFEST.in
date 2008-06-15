@@ -1,0 +1,12 @@
+include src/wrapper/*.hpp
+include src/wrapper/*.cpp
+include test/*.py
+include doc/source/*.rst
+include doc/Makefile
+include doc/source/conf.py
+
+include ez_setup.py
+include configure
+include Makefile.in
+include aksetup_helper.py
+include README_SETUP.txt

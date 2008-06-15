@@ -14,10 +14,7 @@ def get_config_schema():
         LibraryDir("BOOST", []),
         Libraries("BOOST_PYTHON", ["boost_python-gcc42-mt"]),
 
-        IncludeDir("BOOST_BINDINGS", []),
-
         Option("CUDA_ROOT", help="Path to the CUDA toolkit"),
-        Option("CUDA_BIN_DIR", help="Path to the CUDA executables"),
         IncludeDir("CUDA", None),
 
         LibraryDir("CUDADRV", []),
@@ -79,23 +76,15 @@ def main():
             
         conf["CUDA_ROOT"] = normpath(join(dirname(nvcc_path), ".."))
 
-    if conf["CUDA_BIN_DIR"] is None:
-        conf["CUDA_BIN_DIR"] = join(conf["CUDA_ROOT"], "bin")
     if conf["CUDA_INC_DIR"] is None:
         conf["CUDA_INC_DIR"] = [join(conf["CUDA_ROOT"], "include")]
 
-    EXTRA_DEFINES = { "PYUBLAS_HAVE_BOOST_BINDINGS":1 }
+    EXTRA_DEFINES = { }
     EXTRA_INCLUDE_DIRS = []
     EXTRA_LIBRARY_DIRS = []
     EXTRA_LIBRARIES = []
 
-    INCLUDE_DIRS = [
-            "src/cpp",
-            ] \
-            + conf["BOOST_BINDINGS_INC_DIR"] \
-            + conf["BOOST_INC_DIR"] \
-            + conf["CUDA_INC_DIR"] \
-
+    INCLUDE_DIRS =  conf["BOOST_INC_DIR"] + conf["CUDA_INC_DIR"]
     conf["USE_CUDA"] = True
 
     setup(name="pycuda",
