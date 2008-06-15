@@ -89,6 +89,9 @@ Note that this guide will not explain CUDA programming and technology.  Please
 refer to Nvidia's `programming documentation
 <http://www.nvidia.com/object/cuda_learn.html>`_ for that.
 
+PyCuda also has its own `web site <http://mathema.tician.de/software/pycuda>`_,
+where you can find updates, new versions, documentation, and support.
+
 Indices and tables
 ==================
 

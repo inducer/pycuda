@@ -83,10 +83,6 @@ def main():
         conf["CUDA_BIN_DIR"] = join(conf["CUDA_ROOT"], "bin")
     if conf["CUDA_INC_DIR"] is None:
         conf["CUDA_INC_DIR"] = [join(conf["CUDA_ROOT"], "include")]
-    if conf["CUDART_LIB_DIR"] is None:
-        conf["CUDART_LIB_DIR"] = [join(conf["CUDA_ROOT"], "lib")]
-    if conf["CUBLAS_LIB_DIR"] is None:
-        conf["CUBLAS_LIB_DIR"] = [join(conf["CUDA_ROOT"], "lib")]
 
     EXTRA_DEFINES = { "PYUBLAS_HAVE_BOOST_BINDINGS":1 }
     EXTRA_INCLUDE_DIRS = []
@@ -106,6 +102,35 @@ def main():
             # metadata
             version="0.90",
             description="Python wrapper for Nvidia CUDA",
+            long_description="""
+            PyCuda lets you access `Nvidia <http://nvidia.com>`_'s `CUDA
+            <http://nvidia.com/cuda/>`_ parallel computation API from Python.
+            Several wrappers of the CUDA API already exist-so what's so special
+            about PyCuda?
+
+            * Object cleanup tied to lifetime of objects. This idiom, often
+              called
+              `RAII <http://en.wikipedia.org/wiki/Resource_Acquisition_Is_Initialization>`_
+              in C++, makes it much easier to write correct, leak- and
+              crash-free code. PyCuda knows about dependencies, too, so (for
+              example) it won't detach from a context before all memory
+              allocated in it is also freed.
+
+            * Convenience. Abstractions like pycuda.driver.SourceModule and
+              pycuda.gpuarray.GPUArray make CUDA programming even more
+              convenient than with Nvidia's C-based runtime.
+
+            * Completeness. PyCuda puts the full power of CUDA's driver API at
+              your disposal, if you wish.
+
+            * Automatic Error Checking. All CUDA errors are automatically
+              translated into Python exceptions.
+
+            * Speed. PyCuda's base layer is written in C++, so all the niceties
+              above are virtually free.
+
+            * Helpful `Documentation <http://tiker.net/doc/pycuda>`_.
+            """,
             author=u"Andreas Kloeckner",
             author_email="inform@tiker.net",
             license = "MIT",
@@ -149,6 +174,7 @@ def main():
                     extra_compile_args=conf["CXXFLAGS"],
                     extra_link_args=conf["LDFLAGS"],
                     ),
+                ]
             )
 
 
