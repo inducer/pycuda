@@ -159,6 +159,7 @@ class GPUArray(object):
         get_axpbyz_kernel()
         get_scale_kernel()
         get_fill_kernel()
+        get_multiply_kernel()
 
     def set(self, ary, stream=None):
         assert ary.size == self.size

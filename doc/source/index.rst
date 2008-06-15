@@ -43,14 +43,14 @@ simple things simple. Here is a straightforward PyCuda program::
 On the surface, this program will print a screenful of zeros. Behind
 the scenes, a lot more interesting stuff is going on:
 
-* PyCuda has compiled the CUDA source code fed to in in the
-  :class:`SourceModule` constructor. This doesn't have to be
-  a constant--you can easily have Python generate the code you
-  want to compile.
+* PyCuda has compiled the CUDA source code and uploaded it to the card. 
+  
+  .. note:: This code doesn't have to be a constant--you can easily have Python
+    generate the code you want to compile.
 
 * PyCuda's numpy interaction code has automatically allocated
-  space on the device, copied the numpy arrays `a` and `b` over,
-  launched a 400x1x1 single-block grid, and copied `dest` back.
+  space on the device, copied the numpy arrays *a* and *b* over,
+  launched a 400x1x1 single-block grid, and copied *dest* back.
 
   Note that you can just as well keep your data on the card between
   kernel invocations--no need to copy data all the time.
@@ -59,18 +59,22 @@ the scenes, a lot more interesting stuff is going on:
   memory, modules, contexts, taking into account any ordering 
   constraints.
 
-Curious? This manual will guide you in your first steps with PyCuda.
+Curious? Let's get started.
 
-Contents:
+Contents
+=========
 
 .. toctree::
     :maxdepth: 2
 
+    install
+    tutorial
     driver
     array
 
-Note that this guide will not explain CUDA programming and technology,
-please refer to Nvidia's programming documentation for that.
+Note that this guide will not explain CUDA programming and technology.  Please
+refer to Nvidia's `programming documentation
+<http://www.nvidia.com/object/cuda_learn.html>`_ for that.
 
 Indices and tables
 ==================

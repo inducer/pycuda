@@ -23,11 +23,6 @@ def get_config_schema():
         LibraryDir("CUDADRV", []),
         Libraries("CUDADRV", ["cuda"]),
 
-        LibraryDir("CUDART", None),
-        Libraries("CUDART", ["cudart"]),
-        LibraryDir("CUBLAS", None),
-        Libraries("CUBLAS", ["cublas", "cudart"]),
-
         StringListOption("CXXFLAGS", [], 
             help="Any extra C++ compiler options to include"),
         StringListOption("LDFLAGS", [], 
@@ -131,14 +126,6 @@ def main():
               'Topic :: Scientific/Engineering :: Visualization',
               ],
 
-            # dependencies
-            setup_requires=[
-                "PyUblas>=0.92.5",
-                ],
-            install_requires=[
-                "PyUblas>=0.92.5",
-                ],
-
             # build info
             packages=["pycuda"],
             zip_safe=False,
@@ -158,29 +145,6 @@ def main():
                     extra_compile_args=conf["CXXFLAGS"],
                     extra_link_args=conf["LDFLAGS"],
                     ),
-                PyUblasExtension("_rt", 
-                    [
-                        "src/wrapper/wrap_cudart.cpp", 
-                        ],
-                    include_dirs=INCLUDE_DIRS + EXTRA_INCLUDE_DIRS,
-                    library_dirs=LIBRARY_DIRS + conf["CUDART_LIB_DIR"],
-                    libraries=LIBRARIES + conf["CUDART_LIBNAME"],
-                    define_macros=list(EXTRA_DEFINES.iteritems()),
-                    extra_compile_args=conf["CXXFLAGS"],
-                    extra_link_args=conf["LDFLAGS"],
-                    ),
-                PyUblasExtension("_blas", 
-                    [
-                        "src/wrapper/wrap_cublas.cpp", 
-                        ],
-                    include_dirs=INCLUDE_DIRS + EXTRA_INCLUDE_DIRS,
-                    library_dirs=LIBRARY_DIRS + conf["CUBLAS_LIB_DIR"],
-                    libraries=LIBRARIES + conf["CUBLAS_LIBNAME"],
-                    define_macros=list(EXTRA_DEFINES.iteritems()),
-                    extra_compile_args=conf["CXXFLAGS"],
-                    extra_link_args=conf["LDFLAGS"],
-                    ),
-                ],
             )
 
 

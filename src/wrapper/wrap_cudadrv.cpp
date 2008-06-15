@@ -1178,6 +1178,7 @@ BOOST_PYTHON_MODULE(_driver)
 
       .def_readwrite("width_in_bytes", &cl::WidthInBytes)
       .def_readwrite("height", &cl::Height)
+      .def_readwrite("height", &cl::Depth)
 
       .def("__call__", &cl::execute, py::arg("aligned"))
       .def("__call__", &cl::execute_async)
