@@ -615,13 +615,14 @@ Code on the Device: Modules and Functions
   *array* should be copied both onto the compute device before invoking
   the kernel, and off it afterwards.
 
-.. class:: SourceModule(source, options=[], keep=False, no_extern_c=False)
+.. class:: SourceModule(source, nvcc="nvcc", options=[], keep=False, 
+  no_extern_c=False)
   
-  Create a :class:`Module` from the CUDA source code *source*. :command:`nvcc`
-  is assumed to be on the :envvar:`PATH`, and is invoked with *options* to
-  compile the code. If *keep* is *True*, the compiler output directory
-  is kept, and a line indicating its location in the file system is printed
-  for debugging purposes.
+  Create a :class:`Module` from the CUDA source code *source*. The Nvidia
+  compiler *nvcc* is assumed to be on the :envvar:`PATH` if no path to it is
+  specified, and is invoked with *options* to compile the code. If *keep* is
+  *True*, the compiler output directory is kept, and a line indicating its
+  location in the file system is printed for debugging purposes.
 
   Unless *no_extern_c* is *True*, the given source code is wrapped in
   *extern "C" { ... }* to prevent C++ name mangling.

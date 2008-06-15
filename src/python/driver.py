@@ -285,7 +285,9 @@ def from_device_like(devptr, other_ary):
 
 
 class SourceModule(object):
-    def __init__(self, source, options=[], keep=False, no_extern_c=False):
+    def __init__(self, source, nvcc="nvcc",
+            options=[], keep=False, 
+            no_extern_c=False):
         from tempfile import mkdtemp
         tempdir = mkdtemp()
 
@@ -305,10 +307,15 @@ class SourceModule(object):
             print "*** compiler output in %s" % tempdir
 
         from subprocess import call
-        result = call(["nvcc", "--cubin"] 
-                + options
-                + ["kernel.cu"],
-            cwd=tempdir)
+        try:
+            result = call([nvcc, "--cubin"] 
+                    + options
+                    + ["kernel.cu"],
+                cwd=tempdir)
+        except OSError, e:
+            raise OSError, "%s was not found (is it on the PATH?) [%s]" % (
+                    nvcc, str(e))
+
         if result != 0:
             raise RuntimeError, "module compilation failed"
 
