@@ -109,7 +109,7 @@ def main():
             author=u"Andreas Kloeckner",
             author_email="inform@tiker.net",
             license = "MIT",
-            url="http://mathema.tician.de/software/hedge",
+            url="http://mathema.tician.de/software/pycuda",
             classifiers=[
               'Environment :: Console',
               'Development Status :: 4 - Beta',
@@ -129,6 +129,10 @@ def main():
             # build info
             packages=["pycuda"],
             zip_safe=False,
+
+            install_requires=[
+                "pytools>=3",
+                ],
 
             package_dir={"pycuda": "src/python"},
             ext_package="pycuda",

@@ -1,3 +1,5 @@
+.. _reference-doc:
+
 Device Interface Reference Documentation
 ========================================
 
@@ -583,7 +585,7 @@ Code on the Device: Modules and Functions
 
   .. method:: launch()
     
-    Launch a 1x1 grid of thread blocks of *self*.
+    Launch a single thread block of *self*.
 
   .. method:: launch_grid(width, height)
     

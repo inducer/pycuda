@@ -1,17 +1,34 @@
 Welcome to PyCuda's documentation!
 ==================================
 
-PyCuda gives you easy, Pythonic access to `Nvidia
-<http://nvidia.com>`_'s `CUDA <http://nvidia.com/cuda/>`_ parallel
-computation API. It exposes all low-level abstractions of the Nvidia
-API, including
+PyCuda gives you easy, Pythonic access to `Nvidia <http://nvidia.com>`_'s `CUDA
+<http://nvidia.com/cuda/>`_ parallel computation API. Several wrappers of the
+CUDA API already exist--so why the need for PyCuda?
 
-* Asynchronous execution (Streams, Events)
-* Multi-D synchronous and asynchronous memory transfers
-* Textures and Arrays
+* Object cleanup tied to lifetime of objects. This idiom,
+  often called 
+  `RAII <http://en.wikipedia.org/wiki/Resource_Acquisition_Is_Initialization>`_
+  in C++, makes it much easier to write correct, leak- and
+  crash-free code. PyCuda knows about dependencies, too, so (for example)
+  it won't detach from a context before all memory allocated in it is also
+  freed.
 
-In addition, it has many convenience options that make programming
-simple things simple. Here is a straightforward PyCuda program::
+* Convenience. Abstractions like :class:`pycuda.driver.SourceModule` and
+  :class:`pycuda.gpuarray.GPUArray` make CUDA programming even more convenient
+  than with Nvidia's C-based runtime.
+
+* Completeness. PyCuda puts the full power of CUDA's driver API at your
+  disposal, if you wish. 
+
+* Automatic Error Checking. All CUDA errors are automatically translated
+  into Python exceptions.
+
+* Speed. PyCuda's base layer is written in C++, so all the niceties above
+  are virtually free.
+
+* Helpful Documentation. You're looking at it. ;)
+
+Here's an example, to given you an impression::
 
   import pycuda.driver as drv
   import numpy
@@ -54,10 +71,6 @@ the scenes, a lot more interesting stuff is going on:
 
   Note that you can just as well keep your data on the card between
   kernel invocations--no need to copy data all the time.
-
-* PyCuda automatically frees the resources you use, such as
-  memory, modules, contexts, taking into account any ordering 
-  constraints.
 
 Curious? Let's get started.
 
