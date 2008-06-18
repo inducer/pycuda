@@ -28,7 +28,10 @@ using boost::shared_ptr;
 #define CALL_GUARDED(NAME, ARGLIST) \
   { \
     std::cerr << #NAME << std::endl; \
-    CUresult cu_status_code = NAME ARGLIST; \
+    CUresult cu_status_code; \
+    Py_BEGIN_ALLOW_THREADS \
+      cu_status_code = NAME ARGLIST; \
+    Py_END_ALLOW_THREADS \
     if (cu_status_code != CUDA_SUCCESS) \
       throw std::runtime_error(#NAME " failed: "\
           +std::string(cuda_error_to_str(cu_status_code)));\
@@ -36,7 +39,10 @@ using boost::shared_ptr;
 #else
 #define CALL_GUARDED(NAME, ARGLIST) \
   { \
-    CUresult cu_status_code = NAME ARGLIST; \
+    CUresult cu_status_code; \
+    Py_BEGIN_ALLOW_THREADS \
+      cu_status_code = NAME ARGLIST; \
+    Py_END_ALLOW_THREADS \
     if (cu_status_code != CUDA_SUCCESS) \
       throw std::runtime_error(#NAME " failed: "\
           +std::string(cuda_error_to_str(cu_status_code)));\
