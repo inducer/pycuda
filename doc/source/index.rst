@@ -84,6 +84,7 @@ Contents
     tutorial
     driver
     array
+    faq
 
 Note that this guide will not explain CUDA programming and technology.  Please
 refer to Nvidia's `programming documentation

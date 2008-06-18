@@ -8,16 +8,35 @@ Device Interface Reference Documentation
 
 .. moduleauthor:: Andreas Kloeckner <inform@tiker.net>
 
+
 Constants
 ---------
 
 .. class:: ctx_flags
 
+
+  Flags for :meth:`Device.make_context`.
+
   .. attribute:: SCHED_AUTO
+    
+    If there are more contexts than processors, yield, otherwise spin
+    while waiting for CUDA calls to complete.
+
   .. attribute:: SCHED_SPIN
+
+    Spin while waiting for CUDA calls to complete.
+    
   .. attribute:: SCHED_YIELD
+
+     Yield to other threads while waiting for CUDA calls to complete.
+
   .. attribute:: SCHED_MASK
+
+    Mask of valid flags in this bitfield.
+
   .. attribute:: SCHED_FLAGS_MASK
+
+    Mask of valid scheduling flags in this bitfield.
 
 .. class:: device_attribute
 
@@ -109,7 +128,7 @@ Devices and Contexts
 
   .. method:: make_context(flags=ctx_flags.SCHED_AUTO)
     
-    Create a :class:`context` on this device, with flags taken from the
+    Create a :class:`Context` on this device, with flags taken from the
     :class:`ctx_flags` values.
 
     Also make the newly-created context the current context.
