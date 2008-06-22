@@ -41,6 +41,34 @@ exception processing, C++ gives up and aborts the program with a message.
 In principle, this could be handled better. If you're willing to dedicate time
 to this, I'll likely take your patch.
 
+Are the CUBLAS APIs available via PyCuda?  
+-----------------------------------------
+
+No. I would be more than happy to make them available, but that would be mostly
+either-or with the rest of PyCuda, because of the following sentence in the
+CUDA programming guide:
+
+   [CUDA] is composed of two APIs:
+
+   * A low-level API called the CUDA driver API,
+   * A higher-level API called the CUDA runtime API that is implemented on top of
+     the CUDA driver API.
+
+   These APIs are mutually exclusive: An application should use either one or the
+   other.
+
+PyCuda is based on the driver API. CUBLAS uses the high-level API. Once *can*
+violate this rule without crashing immediately. But sketchy stuff does happen.
+Instead, for BLAS-1 operations, PyCuda comes with a class called GPUArray that
+essentially reimplements that part of CUBLAS.
+
+If you dig into the history of PyCuda, you'll find that, at one point, I
+did have rudimentary CUBLAS wrappers. I removed them because of the above
+issue. If you would like to make CUBLAS wrappers, feel free to use these
+rudiments as a starting point. That said, Arno Pähler's python-cuda has
+complete :mod:`ctypes`-based wrappers for CUBLAS. I don't think they interact natively
+with numpy, though.
+
 Licensing
 =========
 

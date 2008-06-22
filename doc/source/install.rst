@@ -3,7 +3,7 @@
 Installation
 ============
 
-This tutorial will walk you through the process of building PyUblas. To follow,
+This tutorial will walk you through the process of building PyCuda. To follow,
 you really only need four basic things:
 
 * A UNIX-like machine with web access.
