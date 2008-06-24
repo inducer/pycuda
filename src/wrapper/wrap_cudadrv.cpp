@@ -14,6 +14,13 @@
 
 
 
+#if CUDA_VERSION < 2000
+#error PyCuda only works with CUDA 2.0 (betas are also ok)
+#endif
+
+
+
+
 //#define TRACE_CUDA
 
 
