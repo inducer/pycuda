@@ -14,8 +14,8 @@
 
 
 
-#if CUDA_VERSION < 2000
-#error PyCuda only works with CUDA 2.0 (betas are also ok)
+#if CUDA_VERSION < 1010
+#error PyCuda only works with CUDA 1.1 or newer
 #endif
 
 
@@ -69,7 +69,9 @@ namespace
       case CUDA_ERROR_INVALID_VALUE: return "invalid value";
       case CUDA_ERROR_OUT_OF_MEMORY: return "out of memory";
       case CUDA_ERROR_NOT_INITIALIZED: return "not initialized";
+#if CUDA_VERSION >= 2000
       case CUDA_ERROR_DEINITIALIZED: return "deinitialized";
+#endif
 
       case CUDA_ERROR_NO_DEVICE: return "no device";
       case CUDA_ERROR_INVALID_DEVICE: return "invalid device";
@@ -221,6 +223,7 @@ namespace
         }
       }
 
+#if CUDA_VERSION >= 2000
       void pop()
       { 
         CUcontext popped;
@@ -229,6 +232,7 @@ namespace
           throw std::runtime_error("popped the wrong context");
         m_context_stack.pop();
       }
+#endif
 
       static device get_device()
       { 
@@ -263,11 +267,13 @@ namespace
     return result;
   }
 
+#if CUDA_VERSION >= 2000
   void context_push(shared_ptr<context> ctx)
   { 
     CALL_GUARDED(cuCtxPushCurrent, (ctx->m_context)); 
     context::m_context_stack.push(ctx);
   }
+#endif
 
 
 
@@ -329,9 +335,11 @@ namespace
         : m_managed(true), m_ward(context::current_context())
       { CALL_GUARDED(cuArrayCreate, (&m_array, &descr)); }
 
+#if CUDA_VERSION >= 2000
       array(const CUDA_ARRAY3D_DESCRIPTOR &descr)
         : m_managed(true), m_ward(context::current_context())
       { CALL_GUARDED(cuArray3DCreate, (&m_array, &descr)); }
+#endif
 
       array(CUarray ary, bool managed)
         : m_array(ary), m_managed(managed), m_ward(context::current_context())
@@ -352,12 +360,14 @@ namespace
         return result;
       }
 
+#if CUDA_VERSION >= 2000
       CUDA_ARRAY3D_DESCRIPTOR get_descriptor_3d()
       {
         CUDA_ARRAY3D_DESCRIPTOR result;
         CALL_GUARDED(cuArray3DGetDescriptor, (&result, m_array));
         return result;
       }
+#endif
 
       CUarray data() const
       { return m_array; }
@@ -784,6 +794,7 @@ namespace
     { CALL_GUARDED(cuMemcpy2DAsync, (this, s.data())); }
   };
 
+#if CUDA_VERSION >= 2000
   struct memcpy_3d : public CUDA_MEMCPY3D
   {
     memcpy_3d()
@@ -810,6 +821,7 @@ namespace
     void execute_async(const stream &s) const
     { CALL_GUARDED(cuMemcpy3DAsync, (this, s.data())); }
   };
+#endif
 
 
   // host memory --------------------------------------------------------------
@@ -951,6 +963,7 @@ namespace
 
 BOOST_PYTHON_MODULE(_driver)
 {
+#if CUDA_VERSION >= 2000
   py::enum_<CUctx_flags>("ctx_flags")
     .value("SCHED_AUTO", CU_CTX_SCHED_AUTO)
     .value("SCHED_SPIN", CU_CTX_SCHED_SPIN)
@@ -958,6 +971,8 @@ BOOST_PYTHON_MODULE(_driver)
     .value("SCHED_MASK", CU_CTX_SCHED_MASK)
     .value("SCHED_FLAGS_MASK", CU_CTX_FLAGS_MASK)
     ;
+#endif
+
   py::enum_<CUarray_format>("array_format")
     .value("UNSIGNED_INT8", CU_AD_FORMAT_UNSIGNED_INT8)
     .value("UNSIGNED_INT16", CU_AD_FORMAT_UNSIGNED_INT16)
@@ -987,18 +1002,24 @@ BOOST_PYTHON_MODULE(_driver)
     .value("MAX_GRID_DIM_X", CU_DEVICE_ATTRIBUTE_MAX_GRID_DIM_X)
     .value("MAX_GRID_DIM_Y", CU_DEVICE_ATTRIBUTE_MAX_GRID_DIM_Y)
     .value("MAX_GRID_DIM_Z", CU_DEVICE_ATTRIBUTE_MAX_GRID_DIM_Z)
+#if CUDA_VERSION >= 2000
     .value("MAX_SHARED_MEMORY_PER_BLOCK", CU_DEVICE_ATTRIBUTE_MAX_SHARED_MEMORY_PER_BLOCK)
+#endif
     .value("SHARED_MEMORY_PER_BLOCK", CU_DEVICE_ATTRIBUTE_SHARED_MEMORY_PER_BLOCK)
     .value("TOTAL_CONSTANT_MEMORY", CU_DEVICE_ATTRIBUTE_TOTAL_CONSTANT_MEMORY)
     .value("WARP_SIZE", CU_DEVICE_ATTRIBUTE_WARP_SIZE)
     .value("MAX_PITCH", CU_DEVICE_ATTRIBUTE_MAX_PITCH)
+#if CUDA_VERSION >= 2000
     .value("MAX_REGISTERS_PER_BLOCK", CU_DEVICE_ATTRIBUTE_MAX_REGISTERS_PER_BLOCK)
+#endif
     .value("REGISTERS_PER_BLOCK", CU_DEVICE_ATTRIBUTE_REGISTERS_PER_BLOCK)
     .value("CLOCK_RATE", CU_DEVICE_ATTRIBUTE_CLOCK_RATE)
     .value("TEXTURE_ALIGNMENT", CU_DEVICE_ATTRIBUTE_TEXTURE_ALIGNMENT)
 
     .value("GPU_OVERLAP", CU_DEVICE_ATTRIBUTE_GPU_OVERLAP)
+#if CUDA_VERSION >= 2000
     .value("MULTIPROCESSOR_COUNT", CU_DEVICE_ATTRIBUTE_MULTIPROCESSOR_COUNT)
+#endif
     ;
   py::enum_<CUmemorytype>("memory_type")
     .value("HOST", CU_MEMORYTYPE_HOST)
@@ -1020,7 +1041,7 @@ BOOST_PYTHON_MODULE(_driver)
       .DEF_SIMPLE_METHOD(total_memory)
       .DEF_SIMPLE_METHOD(get_attribute)
       .def("make_context", &cl::make_context, 
-          (py::args("self"), py::args("flags")=CU_CTX_SCHED_AUTO))
+          (py::args("self"), py::args("flags")=0))
       ;
   }
 
@@ -1028,8 +1049,10 @@ BOOST_PYTHON_MODULE(_driver)
     typedef context cl;
     py::class_<cl, shared_ptr<cl> >("Context", py::no_init)
       .DEF_SIMPLE_METHOD(detach)
+#if CUDA_VERSION >= 2000
       .def("push", context_push)
       .DEF_SIMPLE_METHOD(pop)
+#endif
       .DEF_SIMPLE_METHOD(get_device)
       .staticmethod("get_device")
       .DEF_SIMPLE_METHOD(synchronize)
@@ -1160,6 +1183,7 @@ BOOST_PYTHON_MODULE(_driver)
       ;
   }
 
+#if CUDA_VERSION >= 2000
   {
     typedef memcpy_3d cl;
     py::class_<cl>("Memcpy3D")
@@ -1197,6 +1221,7 @@ BOOST_PYTHON_MODULE(_driver)
       .def("__call__", &cl::execute_async)
       ;
   }
+#endif
 
   py::def("pagelocked_empty", pagelocked_empty,
       (py::arg("shape"), py::arg("dtype"), py::arg("order")="C"));
@@ -1224,6 +1249,7 @@ BOOST_PYTHON_MODULE(_driver)
       ;
   }
 
+#if CUDA_VERSION >= 2000
   {
     typedef CUDA_ARRAY3D_DESCRIPTOR cl;
     py::class_<cl>("ArrayDescriptor3D")
@@ -1234,14 +1260,17 @@ BOOST_PYTHON_MODULE(_driver)
       .def_readwrite("num_channels", &cl::NumChannels)
       ;
   }
+#endif
 
   {
     typedef array cl;
     py::class_<cl, shared_ptr<cl>, boost::noncopyable>
       ("Array", py::init<const CUDA_ARRAY_DESCRIPTOR &>())
-      .def(py::init<const CUDA_ARRAY3D_DESCRIPTOR &>())
       .DEF_SIMPLE_METHOD(get_descriptor)
+#if CUDA_VERSION >= 2000
+      .def(py::init<const CUDA_ARRAY3D_DESCRIPTOR &>())
       .DEF_SIMPLE_METHOD(get_descriptor_3d)
+#endif
       ;
   }
 
