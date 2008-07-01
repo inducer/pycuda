@@ -78,6 +78,8 @@ def main():
 
     if conf["CUDA_INC_DIR"] is None:
         conf["CUDA_INC_DIR"] = [join(conf["CUDA_ROOT"], "include")]
+    if not conf["CUDADRV_LIB_DIR"]:
+        conf["CUDADRV_LIB_DIR"] = [join(conf["CUDA_ROOT"], "lib")]
 
     EXTRA_DEFINES = { }
     EXTRA_INCLUDE_DIRS = []
@@ -89,7 +91,7 @@ def main():
 
     setup(name="pycuda",
             # metadata
-            version="0.90.2",
+            version="0.91",
             description="Python wrapper for Nvidia CUDA",
             long_description="""
             PyCuda lets you access `Nvidia <http://nvidia.com>`_'s `CUDA
