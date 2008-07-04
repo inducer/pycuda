@@ -72,6 +72,7 @@ with numpy, though.
 Acknowledgements
 ================
 
+* Gert Wohlgemuth ported PyCuda to MacOS X.
 * Znah on the Nvidia forums contributed build fixes for Windows XP.
 * Cosmin Stejerean contributed a patch for :file:`setup.py`.
 

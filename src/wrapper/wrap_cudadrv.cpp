@@ -233,7 +233,6 @@ namespace
           throw std::runtime_error("popped the wrong context");
         m_context_stack.pop();
       }
-#endif
 
       static device get_device()
       { 
@@ -241,6 +240,7 @@ namespace
         CALL_GUARDED(cuCtxGetDevice, (&dev)); 
         return device(dev);
       }
+#endif
 
       static void synchronize()
       { CALL_GUARDED(cuCtxSynchronize, ()); }
@@ -464,6 +464,8 @@ namespace
         CALL_GUARDED(cuTexRefGetFilterMode, (&result, m_texref));
         return result;
       }
+
+#if CUDA_VERSION >= 2000
       py::tuple get_format()
       {
         CUarray_format fmt;
@@ -471,6 +473,8 @@ namespace
         CALL_GUARDED(cuTexRefGetFormat, (&fmt, &num_channels, m_texref));
         return py::make_tuple(fmt, num_channels);
       }
+#endif
+
       unsigned int get_flags()
       {
         unsigned int result;
@@ -1067,12 +1071,14 @@ BOOST_PYTHON_MODULE(_driver)
     typedef context cl;
     py::class_<cl, shared_ptr<cl> >("Context", py::no_init)
       .DEF_SIMPLE_METHOD(detach)
+
 #if CUDA_VERSION >= 2000
       .def("push", context_push)
       .DEF_SIMPLE_METHOD(pop)
-#endif
       .DEF_SIMPLE_METHOD(get_device)
       .staticmethod("get_device")
+#endif
+
       .DEF_SIMPLE_METHOD(synchronize)
       .staticmethod("synchronize")
       ;
@@ -1306,7 +1312,11 @@ BOOST_PYTHON_MODULE(_driver)
           py::return_value_policy<py::manage_new_object>())
       .DEF_SIMPLE_METHOD(get_address_mode)
       .DEF_SIMPLE_METHOD(get_filter_mode)
+
+#if CUDA_VERSION >= 2000
       .DEF_SIMPLE_METHOD(get_format)
+#endif
+
       .DEF_SIMPLE_METHOD(get_flags)
       ;
   }
