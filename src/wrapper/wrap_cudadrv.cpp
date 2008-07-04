@@ -5,6 +5,7 @@
 #include <algorithm>
 #include <stack>
 #include <cuda.h>
+
 #include "wrap_helpers.hpp"
 #include <boost/python/stl_iterator.hpp>
 #include <boost/shared_ptr.hpp>
@@ -174,7 +175,7 @@ namespace
 
 
   // context ------------------------------------------------------------------
-  struct context
+  class context
   {
     private:
       CUcontext m_context;
@@ -484,7 +485,7 @@ namespace
   // module -------------------------------------------------------------------
   class function;
 
-  struct module : public boost::noncopyable
+  class module : public boost::noncopyable
   {
     private:
       CUmodule m_module;
@@ -545,7 +546,7 @@ namespace
 
 
   // function -----------------------------------------------------------------
-  struct function
+  class function
   {
     private:
       CUfunction m_function;
@@ -599,7 +600,7 @@ namespace
 
 
   // device memory ------------------------------------------------------------
-  struct device_allocation : public boost::noncopyable
+  class device_allocation : public boost::noncopyable
   {
     private:
       CUdeviceptr m_devptr;
@@ -960,6 +961,23 @@ namespace
 
 
 
+CUresult  _cuMemsetD8( CUdeviceptr dstDevice, unsigned char uc, unsigned int N ) { return cuMemsetD8( dstDevice, uc, N ); }
+CUresult  _cuMemsetD16( CUdeviceptr dstDevice, unsigned short us, unsigned int N ) { return cuMemsetD16( dstDevice, us, N ); }
+CUresult  _cuMemsetD32( CUdeviceptr dstDevice, unsigned int ui, unsigned int N ) { return cuMemsetD32( dstDevice, ui, N ); }
+
+CUresult  _cuMemsetD2D8( CUdeviceptr dstDevice, unsigned int dstPitch, unsigned char uc, unsigned int Width, unsigned int Height )
+{ return cuMemsetD2D8(dstDevice, dstPitch, uc, Width, Height); }
+
+CUresult  _cuMemsetD2D16( CUdeviceptr dstDevice, unsigned int dstPitch, unsigned short us, unsigned int Width, unsigned int Height )
+{ return cuMemsetD2D16(dstDevice, dstPitch, us, Width, Height); }
+
+CUresult  _cuMemsetD2D32( CUdeviceptr dstDevice, unsigned int dstPitch, unsigned int ui, unsigned int Width, unsigned int Height )
+{ return cuMemsetD2D32(dstDevice, dstPitch, ui, Width, Height); }
+
+CUresult  _cuMemcpyDtoD (CUdeviceptr dstDevice, CUdeviceptr srcDevice, unsigned int ByteCount )
+{ return cuMemcpyDtoD(dstDevice, srcDevice, ByteCount); }
+
+
 
 BOOST_PYTHON_MODULE(_driver)
 {
@@ -1123,22 +1141,22 @@ BOOST_PYTHON_MODULE(_driver)
   DEF_SIMPLE_FUNCTION(mem_alloc_pitch);
   DEF_SIMPLE_FUNCTION(mem_get_address_range);
 
-  py::def("memset_d8", cuMemsetD8, py::args("dest", "data", "size"));
-  py::def("memset_d16", cuMemsetD16, py::args("dest", "data", "size"));
-  py::def("memset_d32", cuMemsetD32, py::args("dest", "data", "size"));
+  py::def("memset_d8", _cuMemsetD8, py::args("dest", "data", "size"));
+  py::def("memset_d16", _cuMemsetD16, py::args("dest", "data", "size"));
+  py::def("memset_d32", _cuMemsetD32, py::args("dest", "data", "size"));
 
-  py::def("memset_d2d8", cuMemsetD2D8, 
+  py::def("memset_d2d8", _cuMemsetD2D8, 
       py::args("dest", "pitch", "data", "width", "height"));
-  py::def("memset_d2d16", cuMemsetD2D16, 
+  py::def("memset_d2d16", _cuMemsetD2D16, 
       py::args("dest", "pitch", "data", "width", "height"));
-  py::def("memset_d2d32", cuMemsetD2D32, 
+  py::def("memset_d2d32", _cuMemsetD2D32, 
       py::args("dest", "pitch", "data", "width", "height"));
 
   py::def("memcpy_htod", memcpy_htod, 
       (py::args("dest"), py::arg("src"), py::arg("stream")=py::object()));
   py::def("memcpy_dtoh", memcpy_dtoh, 
       (py::args("dest"), py::arg("src"), py::arg("stream")=py::object()));
-  py::def("memcpy_dtod", cuMemcpyDtoD, py::args("dest", "src", "size"));
+  py::def("memcpy_dtod", _cuMemcpyDtoD, py::args("dest", "src", "size"));
 
   DEF_SIMPLE_FUNCTION_WITH_ARGS(memcpy_dtoa,
       ("ary", "index", "src", "len"));
