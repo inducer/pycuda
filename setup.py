@@ -3,7 +3,6 @@
 
 
 
-
 def get_config_schema():
     from aksetup_helper import ConfigSchema, Option, \
             IncludeDir, LibraryDir, Libraries, \
@@ -88,6 +87,15 @@ def main():
 
     INCLUDE_DIRS =  conf["BOOST_INC_DIR"] + conf["CUDA_INC_DIR"]
     conf["USE_CUDA"] = True
+
+    import sys
+
+    if 'darwin' in sys.platform:
+        # prevent from building ppc since cuda on OS X is not compiled for ppc
+        if "-arch" not in conf["CXXFLAGS"]:
+            conf["CXXFLAGS"].extend(['-arch', 'i386'])
+        if "-arch" not in conf["LDFLAGS"]:
+            conf["LDFLAGS"].extend(['-arch', 'i386'])
 
     setup(name="pycuda",
             # metadata
