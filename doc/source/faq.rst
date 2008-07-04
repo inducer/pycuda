@@ -69,6 +69,12 @@ rudiments as a starting point. That said, Arno Pähler's python-cuda has
 complete :mod:`ctypes`-based wrappers for CUBLAS. I don't think they interact natively
 with numpy, though.
 
+Acknowledgements
+================
+
+* Znah on the Nvidia forums contributed build fixes for Windows XP.
+* Cosmin Stejerean contributed a patch for :file:`setup.py`.
+
 Licensing
 =========
 
