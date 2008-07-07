@@ -248,9 +248,9 @@ class GPUArray(object):
             if other == 0:
                 return self
             else:
-                 #scalar addition
-                 result = GPUArray(self.shape, self.dtype)
-                 return self._add(other,result)
+                #scalar addition
+                result = GPUArray(self.shape, self.dtype)
+                return self._add(other,result)
         else:
             # add another vector
             result = GPUArray(self.shape, self.dtype)
