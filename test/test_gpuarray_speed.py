@@ -20,7 +20,10 @@ def main():
     sizes = []
     times = []
     flops = []
-    for power in range(10, 24): # 24
+    flopsCPU = []
+    timesCPU = []
+    
+    for power in range(10, 25): # 24
         size = 1<<power
         print size
         sizes.append(size)
@@ -33,27 +36,63 @@ def main():
         else:
             count = 1000
 
+        #start timer
         start = drv.Event()
         end = drv.Event()
         start.record()
+
+        #cuda operation which adds two arrays over count time to get an average
         for i in range(count):
             a+b
+            
+        #stop timer
         end.record()
         end.synchronize()
+        
+        #calculate used time
         secs = start.time_till(end)*1e-3
 
         times.append(secs/count)
         flops.append(size*4)
 
+        #cpu operations which adds two arrays
+        aCpu = numpy.random.randn(size).astype(numpy.float32)
+        bCpu = numpy.random.randn(size).astype(numpy.float32)
+
+        #start timer
+        start = drv.Event()
+        end = drv.Event()
+        start.record()
+
+        #cpu operation which adds two arrays over count time to get an average        
+        for i in range(count):
+            aCpu + bCpu
+
+        #stop timer
+        end.record()
+        end.synchronize()
+        
+        #calculate used time
+        secs = start.time_till(end)*1e-3
+
+        #add results to variable
+        timesCPU.append(secs/count)
+        flopsCPU.append(size*4)
+            
+            
+    #calculate pseudo flops
     flops = [f/t for f, t in zip(flops,times)]
+    flopsCPU = [f/t for f, t in zip(flopsCPU,timesCPU)]
+
+    #print the data out
     try:
         from matplotlib.pylab import semilogx, show, title
     except ImportError:
         from pytools import Table
         tbl = Table()
-        tbl.add_row(("Size", "Time", "Flops"))
-        for s, t, f in zip(sizes, times, flops):
-            tbl.add_row((s,t,f))
+        tbl.add_row(("Size", "Time GPU", "Giga Flops GPU", "Time CPU","Giga Flops CPU"))
+        for s, t, f,tCpu,fCpu in zip(sizes, times, flops,timesCPU,flopsCPU):
+            tbl.add_row((s,t,f/1000000000,tCpu,fCpu/1000000000))
         print tbl
     else:
         title("time to add two vectors")
