@@ -64,6 +64,27 @@ def get_axpbyz_kernel():
     return mod.get_function("axpbyz")
 
 
+@memoize
+def get_add_kernel():
+    mod = drv.SourceModule("""
+        __global__ void add(float a, float *x,float *z,
+          int n)
+        {
+          int tid = threadIdx.x;
+          int total_threads = gridDim.x*blockDim.x;
+          int cta_start = blockDim.x*blockIdx.x;
+          int i;
+
+          for (i = cta_start + tid; i < n; i += total_threads)
+          {
+            z[i] = x[i] + a;
+          }
+
+        }
+        """,
+        options=NVCC_OPTIONS)
+
+    return mod.get_function("add")
 
 
 @memoize
@@ -160,6 +181,7 @@ class GPUArray(object):
         get_scale_kernel()
         get_fill_kernel()
         get_multiply_kernel()
+        get_add_kernel()
 
     def set(self, ary, stream=None):
         assert ary.size == self.size
@@ -204,13 +226,31 @@ class GPUArray(object):
 
         return out
 
+    def _add(self, other, out):
+        assert self.dtype == numpy.float32
+
+        block_count, threads_per_block, elems_per_block = splay(self.size, WARP_SIZE, 128, 80)
+
+        get_add_kernel()(
+                numpy.float32(other),
+                self.gpudata,
+                out.gpudata, numpy.int32(self.size),
+                block=(threads_per_block,1,1), grid=(block_count,1),
+                stream=self.stream)
+
+        return out
+
+
+
     def __add__(self, other):
         if isinstance(other, (int, float, complex)):
             # add a scalar
             if other == 0:
                 return self
             else:
-                raise NotImplementedError("real scalar addition")
+                 #scalar addition
+                 result = GPUArray(self.shape, self.dtype)
+                 return self._add(other,result)
         else:
             # add another vector
             result = GPUArray(self.shape, self.dtype)
