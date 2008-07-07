@@ -6,10 +6,15 @@ import unittest
 import pycuda.gpuarray as gpuarray
 import sys
 
-# simple test of an array
+"""tests the gpu array class"""
 class TestGPUArrary(unittest.TestCase):                                      
 
-    #initialize the class
+
+    """
+    
+    Initillializing of the class and the cuda driver.  
+    
+    """
     def setUp(self):
         #initialize driver
         drv.init()
@@ -26,9 +31,14 @@ class TestGPUArrary(unittest.TestCase):
         #compile kernels
         gpuarray.GPUArray.compile_kernels()
 
+        
 
-    #tests the multiplication of a * n
-    def testMultiply(self):
+    """
+    
+       Tests the muliplication of an array with a scalar.  
+       
+    """
+    def test_multiply(self):
 
         #test data
         a = numpy.array([1,2,3,4,5,6,7,8,9,10]).astype(numpy.float32)
@@ -43,8 +53,12 @@ class TestGPUArrary(unittest.TestCase):
         for i in range(0,a.size):
            self.assertEqual(a[i] * 2,a_doubled[i])
 
-    #tests the multiplication of a * a
-    def testMultiplyArray(self):
+    """
+    
+    Tests the multiplaction of two arrays.  
+    
+    """
+    def test_multiply_array(self):
 
         #test data
         a = numpy.array([1,2,3,4,5,6,7,8,9,10]).astype(numpy.float32)
@@ -61,8 +75,12 @@ class TestGPUArrary(unittest.TestCase):
            self.assertEqual(a[i] * a[i],a_doubled[i])
 
 
-     #tests the addition of a + a
-    def testAdditionArray(self):
+    """
+     
+    Tests the addition of two arrays.  
+     
+    """
+    def test_addition_array(self):
 
         #test data
         a = numpy.array([1,2,3,4,5,6,7,8,9,10]).astype(numpy.float32)
@@ -78,8 +96,12 @@ class TestGPUArrary(unittest.TestCase):
         for i in range(0,a.size):
            self.assertEqual(a[i] + a[i],a_added[i])
 
-     #tests the addition of a + n
-    def testAdditionScalar(self):
+    """
+    
+    Tests the addition of an array and a scalar.  
+    
+    """
+    def test_addition_scalar(self):
 
         #test data
         a = numpy.array([1,2,3,4,5,6,7,8,9,10]).astype(numpy.float32)
@@ -95,8 +117,12 @@ class TestGPUArrary(unittest.TestCase):
            self.assertEqual(7 + a[i],a_added[i])
 
 
-    #tests the addition of a - a
-    def testSubstractArray(self):
+    """
+    
+    Tests the substraction of two arrays.  
+    
+    """
+    def test_substract_array(self):
 
         #test data
         a = numpy.array([1,2,3,4,5,6,7,8,9,10]).astype(numpy.float32)
@@ -112,8 +138,12 @@ class TestGPUArrary(unittest.TestCase):
         for i in range(0,a.size):
            self.assertEqual(a[i] - a[i],a_substract[i])
 
-    #tests the addition of a - n
-    def testSubstractScalar(self):
+    """
+    
+    Tests the substraction of an array and a scalar.  
+    
+    """
+    def test_substract_scalar(self):
 
         #test data
         a = numpy.array([1,2,3,4,5,6,7,8,9,10]).astype(numpy.float32)
