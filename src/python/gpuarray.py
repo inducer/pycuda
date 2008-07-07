@@ -86,6 +86,27 @@ def get_add_kernel():
 
     return mod.get_function("add")
 
+@memoize
+def get_sub_kernel():
+    mod = drv.SourceModule("""
+        __global__ void sub(float a, float *x,float *z,
+          int n)
+        {
+          int tid = threadIdx.x;
+          int total_threads = gridDim.x*blockDim.x;
+          int cta_start = blockDim.x*blockIdx.x;
+          int i;
+
+          for (i = cta_start + tid; i < n; i += total_threads)
+          {
+            z[i] = x[i] - a;
+          }
+
+        }
+        """,
+        options=NVCC_OPTIONS)
+
+    return mod.get_function("sub")
 
 @memoize
 def get_multiply_kernel():
@@ -161,7 +182,12 @@ WARP_SIZE = 32
 
 
 
+"""
 
+    Defines a GPUArray which is used todo array based calculation on the GPU. For this reason we overwrite most
+    of the operators to make it as easy as possible to work with this object
+
+"""
 class GPUArray(object):
     def __init__(self, shape, dtype, stream=None):
         self.shape = shape
@@ -182,6 +208,7 @@ class GPUArray(object):
         get_fill_kernel()
         get_multiply_kernel()
         get_add_kernel()
+        get_sub_kernel()
 
     def set(self, ary, stream=None):
         assert ary.size == self.size
@@ -226,6 +253,11 @@ class GPUArray(object):
 
         return out
 
+    """
+    
+       Add an array with a scalar and store the result in out array
+       
+    """
     def _add(self, other, out):
         assert self.dtype == numpy.float32
 
@@ -240,8 +272,31 @@ class GPUArray(object):
 
         return out
 
+    """
+    
+       Substract a scalar from an array
+       
+    """
+    def _sub(self, other, out):
+        assert self.dtype == numpy.float32
+
+        block_count, threads_per_block, elems_per_block = splay(self.size, WARP_SIZE, 128, 80)
+
+        get_sub_kernel()(
+                numpy.float32(other),
+                self.gpudata,
+                out.gpudata, numpy.int32(self.size),
+                block=(threads_per_block,1,1), grid=(block_count,1),
+                stream=self.stream)
+
+        return out
 
 
+    """
+    
+       Add an array with an array or an array with a scalar
+       
+    """
     def __add__(self, other):
         if isinstance(other, (int, float, complex)):
             # add a scalar
@@ -258,9 +313,23 @@ class GPUArray(object):
 
     __radd__ = __add__
 
+    """
+    
+       Substract an array from an array or a scalar from an array 
+    
+    """
     def __sub__(self, other):
-        result = GPUArray(self.shape, self.dtype)
-        return self._axpbyz(1, other, -1, result)
+        if isinstance(other, (int, float, complex)):
+            #if array - 0 than just return the array since its the same anyway
+            if other == 0:
+                return self
+            else:
+                #create a new array for the result
+                result = GPUArray(self.shape, self.dtype)
+                return self._sub(other, result)
+        else:
+            result = GPUArray(self.shape, self.dtype)
+            return self._axpbyz(1, other, -1, result)
 
     def __iadd__(self, other):
         return self._axpbyz(1, other, 1, self)
