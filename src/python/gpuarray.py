@@ -276,6 +276,11 @@ WARP_SIZE = 32
 
 """
 class GPUArray(object):
+    
+    
+    """
+       Constructor for this class to create an array of the given shape
+    """
     def __init__(self, shape, dtype, stream=None):
         self.shape = shape
         self.dtype = numpy.dtype(dtype)
@@ -286,6 +291,7 @@ class GPUArray(object):
         else:
             self.gpudata = None
         self.stream = stream
+
 
     """
 
@@ -307,12 +313,24 @@ class GPUArray(object):
         get_divide_scalar_kernel()
         get_divider_scalar_kernel()
 
+
+    """
+    
+       Set array content. This copies the given array to the gpu
+    
+    """
     def set(self, ary, stream=None):
         assert ary.size == self.size
         assert ary.dtype == self.dtype
         if self.size:
             drv.memcpy_htod(self.gpudata, ary, stream)
 
+
+    """
+    
+        Get the array content from the device
+    
+    """
     def get(self, ary=None, stream=None, pagelocked=False):
         if ary is None:
             if pagelocked:
