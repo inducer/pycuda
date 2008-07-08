@@ -72,7 +72,8 @@ with numpy, though.
 Acknowledgements
 ================
 
-* Gert Wohlgemuth ported PyCuda to MacOS X.
+* Gert Wohlgemuth ported PyCuda to MacOS X and contributed large parts of
+  :class:`pycuda.gpuarray.GPUArray`.
 * Znah on the Nvidia forums contributed fixes for Windows XP.
 * Cosmin Stejerean provided multiple patches for PyCuda's build system.
 

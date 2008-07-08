@@ -42,11 +42,9 @@ NVCC_OPTIONS = []
 
 
 
-@memoize
-def get_axpbyz_kernel():
+def _get_scalar_kernel(arguments, operation, name="kernel"):
     mod = drv.SourceModule("""
-        __global__ void axpbyz(float a, float *x, float b, float *y, float *z,
-          int n)
+        __global__ void %(name)s(%(arguments)s, int n)
         {
           int tid = threadIdx.x;
           int total_threads = gridDim.x*blockDim.x;
@@ -55,212 +53,61 @@ def get_axpbyz_kernel():
                 
           for (i = cta_start + tid; i < n; i += total_threads) 
           {
-            z[i] = a*x[i] + b*y[i];
+            %(operation)s;
           }
         }
-        """,
+        """ % {
+            "arguments": arguments, 
+            "operation": operation,
+            "name": name},
         options=NVCC_OPTIONS)
 
-    return mod.get_function("axpbyz")
-
+    return mod.get_function(name)
 
 @memoize
-def get_add_kernel():
-    mod = drv.SourceModule("""
-        __global__ void add(float a, float *x,float *z,
-          int n)
-        {
-          int tid = threadIdx.x;
-          int total_threads = gridDim.x*blockDim.x;
-          int cta_start = blockDim.x*blockIdx.x;
-          int i;
-
-          for (i = cta_start + tid; i < n; i += total_threads)
-          {
-            z[i] = x[i] + a;
-          }
-
-        }
-        """,
-        options=NVCC_OPTIONS)
-
-    return mod.get_function("add")
+def _get_axpbyz_kernel():
+    return _get_scalar_kernel(
+            "float a, float *x, float b, float *y, float *z",
+            "z[i] = a*x[i] + b*y[i]",
+            "axpbyz")
 
 @memoize
-def get_subr_kernel():
-    mod = drv.SourceModule("""
-        __global__ void subr(float a, float *x,float *z,
-          int n)
-        {
-          int tid = threadIdx.x;
-          int total_threads = gridDim.x*blockDim.x;
-          int cta_start = blockDim.x*blockIdx.x;
-          int i;
-
-          for (i = cta_start + tid; i < n; i += total_threads)
-          {
-            z[i] = a - x[i];
-          }
-
-        }
-        """,
-        options=NVCC_OPTIONS)
-
-    return mod.get_function("subr")
-
+def _get_axpbz_kernel():
+    return _get_scalar_kernel(
+            "float a, float *x,float b, float *z",
+            "z[i] = a * x[i] + b",
+            "axpb")
 
 @memoize
-def get_sub_kernel():
-    mod = drv.SourceModule("""
-        __global__ void sub(float a, float *x,float *z,
-          int n)
-        {
-          int tid = threadIdx.x;
-          int total_threads = gridDim.x*blockDim.x;
-          int cta_start = blockDim.x*blockIdx.x;
-          int i;
-
-          for (i = cta_start + tid; i < n; i += total_threads)
-          {
-            z[i] = x[i] - a;
-          }
-
-        }
-        """,
-        options=NVCC_OPTIONS)
-
-    return mod.get_function("sub")
+def _get_multiply_kernel():
+    return _get_scalar_kernel(
+            "float *x, float *y, float *z",
+            "z[i] = x[i] * y[i]",
+            "multiply")
 
 @memoize
-def get_multiply_kernel():
-    mod = drv.SourceModule("""
-        __global__ void multiply(float *x, float *y, float *z,
-          int n)
-        {
-          int tid = threadIdx.x;
-          int total_threads = gridDim.x*blockDim.x;
-          int cta_start = blockDim.x*blockIdx.x;
-          int i;
-                
-          for (i = cta_start + tid; i < n; i += total_threads) 
-          {
-            z[i] = x[i] * y[i];
-          }
-        }
-        """,
-        options=NVCC_OPTIONS)
-
-    return mod.get_function("multiply")
+def _get_divide_kernel():
+    return _get_scalar_kernel(
+            "float *x, float *y, float *z",
+            "z[i] = x[i] / y[i]",
+            "divide")
 
 @memoize
-def get_divide_kernel():
-    mod = drv.SourceModule("""
-        __global__ void divide(float *x, float *y, float *z,
-          int n)
-        {
-          int tid = threadIdx.x;
-          int total_threads = gridDim.x*blockDim.x;
-          int cta_start = blockDim.x*blockIdx.x;
-          int i;
-
-          for (i = cta_start + tid; i < n; i += total_threads)
-          {
-            z[i] = x[i] / y[i];
-          }
-        }
-        """,
-        options=NVCC_OPTIONS)
-
-    return mod.get_function("divide")
-
-@memoize
-def get_divide_scalar_kernel():
-    mod = drv.SourceModule("""
-        __global__ void divideScalar(float *x, float y, float *z,
-          int n)
-        {
-          int tid = threadIdx.x;
-          int total_threads = gridDim.x*blockDim.x;
-          int cta_start = blockDim.x*blockIdx.x;
-          int i;
-
-          for (i = cta_start + tid; i < n; i += total_threads)
-          {
-            z[i] = x[i] / y;
-          }
-        }
-        """,
-        options=NVCC_OPTIONS)
-
-    return mod.get_function("divideScalar")
-
-@memoize
-def get_divider_scalar_kernel():
-    mod = drv.SourceModule("""
-        __global__ void divideRScalar(float *x, float y, float *z,
-          int n)
-        {
-          int tid = threadIdx.x;
-          int total_threads = gridDim.x*blockDim.x;
-          int cta_start = blockDim.x*blockIdx.x;
-          int i;
-
-          for (i = cta_start + tid; i < n; i += total_threads)
-          {
-            z[i] = y / x[i];
-          }
-        }
-        """,
-        options=NVCC_OPTIONS)
-
-    return mod.get_function("divideRScalar")
-
+def _get_rdivide_scalar_kernel():
+    return _get_scalar_kernel(
+            "float *x, float y, float *z",
+            "z[i] = y / x[i]",
+            "divide_r")
 
 
 
 
 @memoize
-def get_scale_kernel():
-    mod = drv.SourceModule("""
-        __global__ void scale(float a, float *x, float *y,int n)
-        {
-          int tid = threadIdx.x;
-          int total_threads = gridDim.x*blockDim.x;
-          int cta_start = blockDim.x*blockIdx.x;
-          int i;
-                
-          for (i = cta_start + tid; i < n; i += total_threads) 
-          {
-            y[i] = a*x[i];
-          }
-        }
-        """,
-        options=NVCC_OPTIONS)
-
-    return mod.get_function("scale")
-
-
-
-
-@memoize
-def get_fill_kernel():
-    mod = drv.SourceModule("""
-        __global__ void fill(float a, float *x, int n)
-        {
-          int tid = threadIdx.x;
-          int total_threads = gridDim.x*blockDim.x;
-          int cta_start = blockDim.x*blockIdx.x;
-          int i;
-                
-          for (i = cta_start + tid; i < n; i += total_threads) 
-          {
-            x[i] = a;
-          }
-        }
-        """,
-        options=NVCC_OPTIONS)
-
-    return mod.get_function("fill")
+def _get_fill_kernel():
+    return _get_scalar_kernel(
+            "float a, float *z",
+            "z[i] = a",
+            "fill")
 
 
 
@@ -269,18 +116,13 @@ WARP_SIZE = 32
 
 
 
-"""
+class GPUArray(object): 
+    """A GPUArray is used to do array based calculation on the GPU. 
 
-    Defines a GPUArray which is used todo array based calculation on the GPU. For this reason we overwrite most
-    of the operators to make it as easy as possible to work with this object
+    This is mostly supposed to be a numpy-workalike. Operators
+    work on an element-by-element basis, just like numpy.ndarray.
+    """
 
-"""
-class GPUArray(object):
-    
-    
-    """
-       Constructor for this class to create an array of the given shape
-    """
     def __init__(self, shape, dtype, stream=None):
         self.shape = shape
         self.dtype = numpy.dtype(dtype)
@@ -292,45 +134,30 @@ class GPUArray(object):
             self.gpudata = None
         self.stream = stream
 
+        self._update_kernel_kwargs()
 
-    """
+    def _update_kernel_kwargs(self):
+        block_count, threads_per_block, elems_per_block = splay(self.size, WARP_SIZE, 128, 80)
 
-       Compiles all the defined kernels to save time. Mostly needed for benchmarks, since you don't
-       want to time the compiling overhead
+        self._kernel_kwargs = {
+                "block": (threads_per_block,1,1), 
+                "grid": (block_count,1),
+                "stream": self.stream,
+        }
 
-    """
-    @staticmethod
-    def compile_kernels():
+    @classmethod
+    def compile_kernels(cls):
         # useful for benchmarking
-        get_axpbyz_kernel()
-        get_scale_kernel()
-        get_fill_kernel()
-        get_multiply_kernel()
-        get_add_kernel()
-        get_sub_kernel()
-        get_subr_kernel()
-        get_divide_kernel()
-        get_divide_scalar_kernel()
-        get_divider_scalar_kernel()
+        for name in dir(cls.__module__):
+            if name.startswith("_get_") and name.endswith("_kernel"):
+                name()
 
-
-    """
-    
-       Set array content. This copies the given array to the gpu
-    
-    """
     def set(self, ary, stream=None):
         assert ary.size == self.size
         assert ary.dtype == self.dtype
         if self.size:
             drv.memcpy_htod(self.gpudata, ary, stream)
 
-
-    """
-    
-        Get the array content from the device
-    
-    """
     def get(self, ary=None, stream=None, pagelocked=False):
         if ary is None:
             if pagelocked:
@@ -350,7 +177,13 @@ class GPUArray(object):
     def __repr__(self):
         return repr(self.get())
 
+
+
+
+    # kernel invocation wrappers ----------------------------------------------
     def _axpbyz(self, selffac, other, otherfac, out):
+        """Compute ``out = selffac * self + otherfac*other``, 
+        where `other` is a vector.."""
         assert self.dtype == numpy.float32
         assert self.shape == other.shape
         assert self.dtype == other.dtype
@@ -358,285 +191,22 @@ class GPUArray(object):
         if self.stream is not None or other.stream is not None:
             assert self.stream is other.stream
 
-        block_count, threads_per_block, elems_per_block = splay(self.size, WARP_SIZE, 128, 80)
-
-        get_axpbyz_kernel()(numpy.float32(selffac), self.gpudata, 
+        _get_axpbyz_kernel()(numpy.float32(selffac), self.gpudata, 
                 numpy.float32(otherfac), other.gpudata, 
                 out.gpudata, numpy.int32(self.size),
-                block=(threads_per_block,1,1), grid=(block_count,1),
-                stream=self.stream)
+                **self._kernel_kwargs)
 
         return out
 
-
-    """
-    
-       Add an array with a scalar and store the result in out array
-       
-    """
-    def _add(self, other, out):
+    def _axpbz(self, selffac, other, out):
+        """Compute ``out = selffac * self + other``, where `other` is a scalar."""
         assert self.dtype == numpy.float32
 
-        block_count, threads_per_block, elems_per_block = splay(self.size, WARP_SIZE, 128, 80)
-
-        get_add_kernel()(
-                numpy.float32(other),
-                self.gpudata,
-                out.gpudata, numpy.int32(self.size),
-                block=(threads_per_block,1,1), grid=(block_count,1),
-                stream=self.stream)
-
-        return out
-
-
-    """
-
-       Divides an array by a scalar
-
-       y = self / n
-
-    """
-    def _divScalar(self, other, out):
-        assert self.dtype == numpy.float32
-
-        block_count, threads_per_block, elems_per_block = splay(self.size, WARP_SIZE, 128, 80)
-
-        get_divide_scalar_kernel()(
-                self.gpudata,
+        _get_axpbz_kernel()(
+                numpy.float32(selffac), self.gpudata,
                 numpy.float32(other),
                 out.gpudata, numpy.int32(self.size),
-                block=(threads_per_block,1,1), grid=(block_count,1),
-                stream=self.stream)
-
-        return out
-
-
-    """
-
-       Divides an array by a scalar
-      
-       y = n / self
-
-    """
-    def _divRScalar(self, other, out):
-        assert self.dtype == numpy.float32
-
-        block_count, threads_per_block, elems_per_block = splay(self.size, WARP_SIZE, 128, 80)
-
-        get_divider_scalar_kernel()(
-                self.gpudata,
-                numpy.float32(other),
-                out.gpudata, numpy.int32(self.size),
-                block=(threads_per_block,1,1), grid=(block_count,1),
-                stream=self.stream)
-
-        return out
-
-
-    """
-    
-       Divides an array by another array.
-
-    """
-    def _div(self, other, out):
-        assert self.dtype == numpy.float32
-        assert self.shape == other.shape
-        assert self.dtype == other.dtype
-
-        block_count, threads_per_block, elems_per_block = splay(self.size, WARP_SIZE, 128, 80)
-
-        get_divide_kernel()(self.gpudata, other.gpudata,
-                out.gpudata, numpy.int32(self.size),
-                block=(threads_per_block,1,1), grid=(block_count,1),
-                stream=self.stream)
-
-        return out
-
-
-    """
-    
-       Substract a scalar from an array
-       
-    """
-    def _sub(self, other, out):
-        assert self.dtype == numpy.float32
-
-        block_count, threads_per_block, elems_per_block = splay(self.size, WARP_SIZE, 128, 80)
-
-        get_sub_kernel()(
-                numpy.float32(other),
-                self.gpudata,
-                out.gpudata, numpy.int32(self.size),
-                block=(threads_per_block,1,1), grid=(block_count,1),
-                stream=self.stream)
-
-        return out
-
-
-    """
-
-       Substract an array from a scalar
-
-    """
-    def _subr(self, other, out):
-        assert self.dtype == numpy.float32
-
-        block_count, threads_per_block, elems_per_block = splay(self.size, WARP_SIZE, 128, 80)
-
-        get_subr_kernel()(
-                numpy.float32(other),
-                self.gpudata,
-                out.gpudata, numpy.int32(self.size),
-                block=(threads_per_block,1,1), grid=(block_count,1),
-                stream=self.stream)
-
-        return out
-
-
-    """
-    
-       Add an array with an array or an array with a scalar
-       
-    """
-    def __add__(self, other):
-        if isinstance(other, (int, float, complex)):
-            # add a scalar
-            if other == 0:
-                return self
-            else:
-                #scalar addition
-                result = GPUArray(self.shape, self.dtype)
-                return self._add(other,result)
-        else:
-            # add another vector
-            result = GPUArray(self.shape, self.dtype)
-            return self._axpbyz(1, other, 1, result)
-
-    __radd__ = __add__
-
-
-    """
-    
-       Substract an array from an array or a scalar from an array 
-    
-    """
-    def __sub__(self, other):
-        if isinstance(other, (int, float, complex)):
-            #if array - 0 than just return the array since its the same anyway
-            if other == 0:
-                return self
-            else:
-                #create a new array for the result
-                result = GPUArray(self.shape, self.dtype)
-                return self._sub(other, result)
-        else:
-            result = GPUArray(self.shape, self.dtype)
-            return self._axpbyz(1, other, -1, result)
-
-
-    """
-
-       Divides an array by an array or a scalar
-
-       x = self / n
-
-    """
-    def __div__(self, other):
-        if isinstance(other, (int, float, complex)):
-            #if array - 0 than just return the array since its the same anyway
-            if other == 0:
-                return self
-            else:
-                #create a new array for the result
-                result = GPUArray(self.shape, self.dtype)
-                return self._divScalar(other, result)
-        else:
-            result = GPUArray(self.shape, self.dtype)
-            return self._div(other, result)
-
-
-    """
-
-       Divides an array by a scalar or an array
-
-       x = n / self
-
-    """
-    def __rdiv__(self,other):
-        if isinstance(other, (int, float, complex)):
-            #if array - 0 than just return the array since its the same anyway
-            if other == 0:
-                return self
-            else:
-                #create a new array for the result
-                result = GPUArray(self.shape, self.dtype)
-                return self._divRScalar(other, result)
-        else:
-            result = GPUArray(self.shape, self.dtype)
-
-            assert self.dtype == numpy.float32
-            assert self.shape == other.shape
-            assert self.dtype == other.dtype
-
-            block_count, threads_per_block, elems_per_block = splay(self.size, WARP_SIZE, 128, 80)
-
-            get_divide_kernel()(other.gpudata, self.gpudata,
-                    out.gpudata, numpy.int32(self.size),
-                    block=(threads_per_block,1,1), grid=(block_count,1),
-                    stream=self.stream)
-
-            return out
-
-
-    """
-
-       Substracts an array by a scalar or an array
-
-       x = n - self
-
-    """
-    def __rsub__(self,other):
-        if isinstance(other, (int, float, complex)):
-            #if array - 0 than just return the array since its the same anyway
-            if other == 0:
-                return self
-            else:
-                #create a new array for the result
-                result = GPUArray(self.shape, self.dtype)
-                return self._subr(other, result)
-        else:
-            result = GPUArray(self.shape, self.dtype)
-
-            assert self.dtype == numpy.float32
-            assert self.shape == other.shape
-            assert self.dtype == other.dtype
-
-            block_count, threads_per_block, elems_per_block = splay(self.size, WARP_SIZE, 128, 80)
-
-            get_axpbyz_kernel()(numpy.float32(-1), other.gpudata,
-                    numpy.float32(-1), self.gpudata,
-                    out.gpudata, numpy.int32(self.size),
-                    block=(threads_per_block,1,1), grid=(block_count,1),
-                    stream=self.stream)
-
-            return out
-
-
-    def __iadd__(self, other):
-        return self._axpbyz(1, other, 1, self)
-
-    def __isub__(self, other):
-        return self._axpbyz(1, other, -1, self)
-
-    def _scale(self, factor, out):
-        assert self.dtype == numpy.float32
-
-        block_count, threads_per_block, elems_per_block = splay(self.size, WARP_SIZE, 128, 80)
-
-        get_scale_kernel()(numpy.float32(factor), self.gpudata, 
-                out.gpudata, numpy.int32(self.size),
-                block=(threads_per_block,1,1), grid=(block_count,1),
-                stream=self.stream)
+                **self._kernel_kwargs)
 
         return out
 
@@ -644,51 +214,174 @@ class GPUArray(object):
         assert self.dtype == numpy.float32
         assert self.dtype == numpy.float32
 
-        block_count, threads_per_block, elems_per_block = splay(self.size, WARP_SIZE, 128, 80)
-
-        get_multiply_kernel()(
+        _get_multiply_kernel()(
                 self.gpudata, other.gpudata,
                 out.gpudata, numpy.int32(self.size),
-                block=(threads_per_block,1,1), grid=(block_count,1),
-                stream=self.stream)
+                **self._kernel_kwargs)
 
         return out
 
+    def _rdiv_scalar(self, other, out):
+        """Divides an array by a scalar::
+          
+           y = n / self 
+        """
+
+        assert self.dtype == numpy.float32
+
+        _get_rdivide_scalar_kernel()(
+                self.gpudata,
+                numpy.float32(other),
+                out.gpudata, numpy.int32(self.size),
+                **self._kernel_kwargs)
+
+        return out
+
+    def _div(self, other, out):
+        """Divides an array by another array."""
+
+        assert self.dtype == numpy.float32
+        assert self.shape == other.shape
+        assert self.dtype == other.dtype
+
+        block_count, threads_per_block, elems_per_block = splay(self.size, WARP_SIZE, 128, 80)
+
+        _get_divide_kernel()(self.gpudata, other.gpudata,
+                out.gpudata, numpy.int32(self.size),
+                **self._kernel_kwargs)
+
+        return out
+
+
+
+    # operators ---------------------------------------------------------------
+    def __add__(self, other):
+        """Add an array with an array or an array with a scalar."""
+
+        if isinstance(other, (int, float, complex)):
+            # add a scalar
+            if other == 0:
+                return self
+            else:
+                result = GPUArray(self.shape, self.dtype)
+                return self._axpbz(1, other, result)
+        else:
+            # add another vector
+            result = GPUArray(self.shape, self.dtype)
+            return self._axpbyz(1, other, 1, result)
+
+    __radd__ = __add__
+
+    def __sub__(self, other):
+        """Substract an array from an array or a scalar from an array."""
+
+        if isinstance(other, (int, float, complex)):
+            # if array - 0 than just return the array since its the same anyway
+
+            if other == 0:
+                return self
+            else:
+                # create a new array for the result
+                result = GPUArray(self.shape, self.dtype)
+                return self._axpbz(1, -other, result)
+        else:
+            result = GPUArray(self.shape, self.dtype)
+            return self._axpbyz(1, other, -1, result)
+
+    def __rsub__(self,other):
+        """Substracts an array by a scalar or an array:: 
+
+           x = n - self
+        """
+        assert isinstance(other, (int, float, complex))
+
+        # if array - 0 than just return the array since its the same anyway
+        if other == 0:
+            return self
+        else:
+            # create a new array for the result
+            result = GPUArray(self.shape, self.dtype)
+            return self._axpbz(-1, other, result)
+
+    def __iadd__(self, other):
+        return self._axpbyz(1, other, 1, self)
+
+    def __isub__(self, other):
+        return self._axpbyz(1, other, -1, self)
+
     def __neg__(self):
         result = GPUArray(self.shape, self.dtype)
-        return self._scale(-1, result)
+        return self._axpbz(-1, 0, result)
 
     def __mul__(self, other):
         result = GPUArray(self.shape, self.dtype)
         if isinstance(other, (int, float, complex)):
-            return self._scale(other, result)
+            return self._axpbz(other, 0, result)
         else:
             return self._elwise_multiply(other, result)
 
     def __rmul__(self, scalar):
         result = GPUArray(self.shape, self.dtype)
-        return self._scale(scalar, result)
+        return self._axpbz(scalar, 0, result)
 
     def __imul__(self, scalar):
-        return self._scale(scalar, self)
+        return self._axpbz(scalar, 0, self)
+
+    def __div__(self, other):
+        """Divides an array by an array or a scalar::
+
+           x = self / n
+        """
+        if isinstance(other, (int, float, complex)):
+            # if array - 0 than just return the array since its the same anyway
+            if other == 0:
+                return self
+            else:
+                # create a new array for the result
+                result = GPUArray(self.shape, self.dtype)
+                return self._axpbz(1/other, 0, result)
+        else:
+            result = GPUArray(self.shape, self.dtype)
+            return self._div(other, result)
+
+    def __rdiv__(self,other):
+        """Divides an array by a scalar or an array::
+
+           x = n / self
+        """
+
+        if isinstance(other, (int, float, complex)):
+            # if array - 0 than just return the array since its the same anyway
+            if other == 0:
+                return self
+            else:
+                # create a new array for the result
+                result = GPUArray(self.shape, self.dtype)
+                return self._rdiv_scalar(other, result)
+        else:
+            result = GPUArray(self.shape, self.dtype)
+
+            assert self.dtype == numpy.float32
+            assert self.shape == other.shape
+            assert self.dtype == other.dtype
+
+            _get_divide_kernel()(other.gpudata, self.gpudata,
+                    out.gpudata, numpy.int32(self.size),
+                    **self._kernel_kwargs)
+
+            return result
 
 
-    """
-
-       fills the array with values
-
-    """
     def fill(self, value):
         assert self.dtype == numpy.float32
 
         block_count, threads_per_block, elems_per_block = splay(self.size, WARP_SIZE, 128, 80)
 
-        get_fill_kernel()(numpy.float32(value), self.gpudata, numpy.int32(self.size),
+        _get_fill_kernel()(numpy.float32(value), self.gpudata, numpy.int32(self.size),
                 block=(threads_per_block,1,1), grid=(block_count,1),
                 stream=self.stream)
 
         return self
-
 
     def bind_to_texref(self, texref):
         texref.set_address(self.gpudata, self.size*self.dtype.itemsize)
@@ -696,28 +389,20 @@ class GPUArray(object):
 
 
 
-"""
 
-    converts a numpy array to a gpu array
-
-"""
 def to_gpu(ary, stream=None):
+    """converts a numpy array to a GPUArray"""
     result = GPUArray(ary.shape, ary.dtype)
     result.set(ary, stream)
     return result
 
 
+
+
 empty = GPUArray
 
-
-"""
-
-   creats an gpu array of the given size filled with zeros
-
-"""
 def zeros(shape, dtype, stream=None):
+    """creates an array of the given size and fills it with 0's"""
     result = GPUArray(shape, dtype, stream)
     result.fill(0)
     return result
-
-
