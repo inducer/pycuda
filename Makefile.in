@@ -15,3 +15,7 @@ clean:
 
 tags:
 	ctags -R src || true
+
+tests:
+	echo "running tests"
+	find ./test -type f -name "*.py" -exec python {} \;
