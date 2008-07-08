@@ -118,8 +118,11 @@ namespace
   {
     private:
       CUdevice m_device;
-
+      
     public:
+
+      static bool context_created;
+      
       device(CUdevice dev)
         : m_device(dev)
       { }
@@ -160,8 +163,13 @@ namespace
       }
 
       shared_ptr<context> make_context(unsigned int flags);
-  };
 
+  };
+  
+  //initialize it to false
+  bool device::context_created;
+  
+  
   void init(unsigned int flags) { CALL_GUARDED(cuInit, (flags)); }
 
   device *make_device(int ordinal)
@@ -256,18 +264,25 @@ namespace
 
   context::context_stack_t context::m_context_stack;
 
-
-
-
+  
+  /**
+   * makes the initial context
+   */
   shared_ptr<context> device::make_context(unsigned int flags)
   {
     CUcontext ctx;
     CALL_GUARDED(cuCtxCreate, (&ctx, flags, m_device));
     shared_ptr<context> result(new context(ctx, false));
     context::m_context_stack.push(result);
+    
+    device::context_created = true;
+    
+    //store that the context was created
     return result;
   }
 
+  
+  
 #if CUDA_VERSION >= 2000
   void context_push(shared_ptr<context> ctx)
   { 
@@ -276,7 +291,14 @@ namespace
   }
 #endif
 
-
+  
+  /**
+   * returns if the context was created and is a simple check
+   * to avoid the creation of more than one context
+   */
+  bool was_context_created(){
+	  return device::context_created;
+  } 
 
 
 
@@ -1052,6 +1074,9 @@ BOOST_PYTHON_MODULE(_driver)
   py::def("init", init,
       py::arg("flags")=0);
 
+  /*
+   * defines the methods which are exported to python
+   */
   {
     typedef device cl;
     py::class_<cl>("Device", py::no_init)
@@ -1142,6 +1167,9 @@ BOOST_PYTHON_MODULE(_driver)
       ;
   }
 
+  //register this method
+  py::def("was_context_created", was_context_created);
+ 
   DEF_SIMPLE_FUNCTION(mem_get_info);
   py::def("mem_alloc", mem_alloc, py::return_value_policy<py::manage_new_object>());
   DEF_SIMPLE_FUNCTION(mem_alloc_pitch);
