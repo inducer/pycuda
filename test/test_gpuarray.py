@@ -12,7 +12,7 @@ class TestGPUArrary(unittest.TestCase):
 
     """
     
-    Initillializing of the class and the cuda driver.  
+       Initillializing of the class and the cuda driver.  
     
     """
     def setUp(self):
@@ -55,7 +55,7 @@ class TestGPUArrary(unittest.TestCase):
 
     """
     
-    Tests the multiplaction of two arrays.  
+        Tests the multiplaction of two arrays.  
     
     """
     def test_multiply_array(self):
@@ -77,7 +77,7 @@ class TestGPUArrary(unittest.TestCase):
 
     """
      
-    Tests the addition of two arrays.  
+        Tests the addition of two arrays.  
      
     """
     def test_addition_array(self):
@@ -98,7 +98,7 @@ class TestGPUArrary(unittest.TestCase):
 
     """
     
-    Tests the addition of an array and a scalar.  
+        Tests the addition of an array and a scalar.  
     
     """
     def test_addition_scalar(self):
@@ -119,7 +119,7 @@ class TestGPUArrary(unittest.TestCase):
 
     """
     
-    Tests the substraction of two arrays.  
+       Tests the substraction of two arrays.  
     
     """
     def test_substract_array(self):
@@ -140,7 +140,7 @@ class TestGPUArrary(unittest.TestCase):
 
     """
     
-    Tests the substraction of an array and a scalar.  
+        Tests the substraction of an array and a scalar.  
     
     """
     def test_substract_scalar(self):
@@ -159,6 +159,46 @@ class TestGPUArrary(unittest.TestCase):
            self.assertEqual(a[i]-1,a_substract[i])
 
 
+    """
+
+        Tests the divition of an array and a scalar.
+
+    """
+    def test_divide_scalar(self):
+
+        #test data
+        a = numpy.array([1,2,3,4,5,6,7,8,9,10]).astype(numpy.float32)
+
+        #convert a to a gpu object
+        a_gpu = gpuarray.to_gpu(a)
+
+        #divides the array by 2
+        a_divide = (a_gpu/2).get()
+
+        #check that the result is like we expsect it
+        for i in range(0,a.size):
+           self.assertEqual(a[i]/2,a_divide[i])
+
+    """
+
+        Tests the divition of an array and a scalar.
+
+    """
+    def test_divide_array(self):
+
+        #test data
+        a = numpy.array([1,2,3,4,5,6,7,8,9,10]).astype(numpy.float32)
+
+
+        #convert a to a gpu object
+        a_gpu = gpuarray.to_gpu(a)
+        
+        #divides the array by itself
+        a_divide = (a_gpu/a_gpu).get()
+
+        #check that the result is like we expsect it
+        for i in range(0,a.size):
+           self.assertEqual(a[i]/a[i],a_divide[i])
 
 
 if __name__ == '__main__':
