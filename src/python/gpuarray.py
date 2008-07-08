@@ -287,6 +287,12 @@ class GPUArray(object):
             self.gpudata = None
         self.stream = stream
 
+    """
+
+       Compiles all the defined kernels to save time. Mostly needed for benchmarks, since you don't
+       want to time the compiling overhead
+
+    """
     @staticmethod
     def compile_kernels():
         # useful for benchmarking
@@ -386,6 +392,7 @@ class GPUArray(object):
 
         return out
 
+
     """
 
        Divides an array by a scalar
@@ -406,7 +413,6 @@ class GPUArray(object):
                 stream=self.stream)
 
         return out
-
 
 
     """
@@ -563,6 +569,7 @@ class GPUArray(object):
 
             return out
 
+
     """
 
        Substracts an array by a scalar or an array
@@ -647,6 +654,12 @@ class GPUArray(object):
     def __imul__(self, scalar):
         return self._scale(scalar, self)
 
+
+    """
+
+       fills the array with values
+
+    """
     def fill(self, value):
         assert self.dtype == numpy.float32
 
@@ -658,24 +671,35 @@ class GPUArray(object):
 
         return self
 
+
     def bind_to_texref(self, texref):
         texref.set_address(self.gpudata, self.size*self.dtype.itemsize)
 
 
 
 
+"""
 
+    converts a numpy array to a gpu array
+
+"""
 def to_gpu(ary, stream=None):
     result = GPUArray(ary.shape, ary.dtype)
     result.set(ary, stream)
     return result
 
 
-
-
 empty = GPUArray
 
+
+"""
+
+   creats an gpu array of the given size filled with zeros
+
+"""
 def zeros(shape, dtype, stream=None):
     result = GPUArray(shape, dtype, stream)
     result.fill(0)
     return result
+
+
