@@ -6,39 +6,15 @@ import unittest
 import pycuda.gpuarray as gpuarray
 import sys
 
-"""tests the gpu array class"""
-class TestGPUArrary(unittest.TestCase):                                      
+drv.init()
+ctx = drv.Device(0).make_context()
+gpuarray.GPUArray.compile_kernels()
 
+class TestGPUArray(unittest.TestCase):                                      
+    """tests the gpu array class"""
 
-    """
-    
-       Initillializing of the class and the cuda driver.  
-    
-    """
-    def setUp(self):
-        #initialize driver
-        drv.init()
-
-
-        #we should have a function to check if a context was already created
-        try:
-           ctx = drv.Device(0).make_context()
-        except RuntimeError:
-           #we are going to ignore the runtime error at this point
-           #since its realted that we try to create more than one context
-           ""
-
-        #compile kernels
-        gpuarray.GPUArray.compile_kernels()
-
-        
-
-    """
-    
-       Tests the muliplication of an array with a scalar.  
-       
-    """
     def test_multiply(self):
+        """Tests the muliplication of an array with a scalar. """
 
         #test data
         a = numpy.array([1,2,3,4,5,6,7,8,9,10]).astype(numpy.float32)
@@ -54,12 +30,8 @@ class TestGPUArrary(unittest.TestCase):
            self.assertEqual(a[i] * 2,a_doubled[i])
 
 
-    """
-    
-        Tests the multiplaction of two arrays.  
-    
-    """
     def test_multiply_array(self):
+        """Tests the multiplaction of two arrays."""
 
         #test data
         a = numpy.array([1,2,3,4,5,6,7,8,9,10]).astype(numpy.float32)
@@ -76,12 +48,8 @@ class TestGPUArrary(unittest.TestCase):
            self.assertEqual(a[i] * a[i],a_doubled[i])
 
 
-    """
-     
-        Tests the addition of two arrays.  
-     
-    """
     def test_addition_array(self):
+        """Tests the addition of two arrays."""
 
         #test data
         a = numpy.array([1,2,3,4,5,6,7,8,9,10]).astype(numpy.float32)
@@ -98,12 +66,8 @@ class TestGPUArrary(unittest.TestCase):
            self.assertEqual(a[i] + a[i],a_added[i])
 
 
-    """
-    
-        Tests the addition of an array and a scalar.  
-    
-    """
     def test_addition_scalar(self):
+        """Tests the addition of an array and a scalar."""
 
         #test data
         a = numpy.array([1,2,3,4,5,6,7,8,9,10]).astype(numpy.float32)
@@ -126,13 +90,8 @@ class TestGPUArrary(unittest.TestCase):
            self.assertEqual(7 + a[i],a_added[i])
 
 
-    """
-    
-       Tests the substraction of two arrays.  
-    
-    """
     def test_substract_array(self):
-
+        """Tests the substraction of two arrays."""
         #test data
         a = numpy.array([1,2,3,4,5,6,7,8,9,10]).astype(numpy.float32)
         b = numpy.array([10,20,30,40,50,60,70,80,90,100]).astype(numpy.float32)
@@ -157,12 +116,8 @@ class TestGPUArrary(unittest.TestCase):
 
 
 
-    """
-    
-        Tests the substraction of an array and a scalar.  
-    
-    """
     def test_substract_scalar(self):
+        """Tests the substraction of an array and a scalar."""
 
         #test data
         a = numpy.array([1,2,3,4,5,6,7,8,9,10]).astype(numpy.float32)
@@ -187,12 +142,8 @@ class TestGPUArrary(unittest.TestCase):
 
 
 
-    """
-
-        Tests the divition of an array and a scalar.
-
-    """
     def test_divide_scalar(self):
+        """Tests the division of an array and a scalar."""
 
         #test data
         a = numpy.array([1,2,3,4,5,6,7,8,9,10]).astype(numpy.float32)
@@ -214,12 +165,8 @@ class TestGPUArrary(unittest.TestCase):
         for i in range(0,a.size):
             self.assert_( abs(2/a[i] - a_divide[i]) < 1e-3 )
 
-    """
-
-        Tests the divition of an array and a scalar.
-
-    """
     def test_divide_array(self):
+        """Tests the division of an array and a scalar. """
 
         #test data
         a = numpy.array([10,20,30,40,50,60,70,80,90,100]).astype(numpy.float32)

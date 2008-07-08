@@ -58,7 +58,7 @@ def _get_scalar_kernel(arguments, operation, name="kernel"):
         }
         """ % {
             "arguments": arguments, 
-            "operations": operations,
+            "operation": operation,
             "name": name},
         options=NVCC_OPTIONS)
 
@@ -93,10 +93,10 @@ def _get_divide_kernel():
             "divide")
 
 @memoize
-def _get_divider_scalar_kernel():
+def _get_rdivide_scalar_kernel():
     return _get_scalar_kernel(
             "float *x, float y, float *z",
-            "z[i] = x[i] / y",
+            "z[i] = y / x[i]",
             "divide_r")
 
 
@@ -142,13 +142,13 @@ class GPUArray(object):
         self._kernel_kwargs = {
                 "block": (threads_per_block,1,1), 
                 "grid": (block_count,1),
-                "stream": self.stream),
+                "stream": self.stream,
         }
 
-    @staticmethod
-    def compile_kernels():
+    @classmethod
+    def compile_kernels(cls):
         # useful for benchmarking
-        for name in dir(__module__):
+        for name in dir(cls.__module__):
             if name.startswith("_get_") and name.endswith("_kernel"):
                 name()
 
@@ -194,7 +194,7 @@ class GPUArray(object):
         _get_axpbyz_kernel()(numpy.float32(selffac), self.gpudata, 
                 numpy.float32(otherfac), other.gpudata, 
                 out.gpudata, numpy.int32(self.size),
-                **self.kernel_kwargs)
+                **self._kernel_kwargs)
 
         return out
 
@@ -206,16 +206,7 @@ class GPUArray(object):
                 numpy.float32(selffac), self.gpudata,
                 numpy.float32(other),
                 out.gpudata, numpy.int32(self.size),
-                **self.kernel_kwargs)
-
-        return out
-
-    def _scale(self, factor, out):
-        assert self.dtype == numpy.float32
-
-        _get_scale_kernel()(numpy.float32(factor), self.gpudata, 
-                out.gpudata, numpy.int32(self.size),
-                **self.kernel_kwargs)
+                **self._kernel_kwargs)
 
         return out
 
@@ -226,7 +217,7 @@ class GPUArray(object):
         _get_multiply_kernel()(
                 self.gpudata, other.gpudata,
                 out.gpudata, numpy.int32(self.size),
-                **self.kernel_kwargs)
+                **self._kernel_kwargs)
 
         return out
 
@@ -242,7 +233,7 @@ class GPUArray(object):
                 self.gpudata,
                 numpy.float32(other),
                 out.gpudata, numpy.int32(self.size),
-                **self.kernel_kwargs)
+                **self._kernel_kwargs)
 
         return out
 
@@ -257,7 +248,7 @@ class GPUArray(object):
 
         _get_divide_kernel()(self.gpudata, other.gpudata,
                 out.gpudata, numpy.int32(self.size),
-                **self.kernel_kwargs)
+                **self._kernel_kwargs)
 
         return out
 
@@ -320,21 +311,21 @@ class GPUArray(object):
 
     def __neg__(self):
         result = GPUArray(self.shape, self.dtype)
-        return self._scale(-1, result)
+        return self._axpbz(-1, 0, result)
 
     def __mul__(self, other):
         result = GPUArray(self.shape, self.dtype)
         if isinstance(other, (int, float, complex)):
-            return self._scale(other, result)
+            return self._axpbz(other, 0, result)
         else:
             return self._elwise_multiply(other, result)
 
     def __rmul__(self, scalar):
         result = GPUArray(self.shape, self.dtype)
-        return self._scale(scalar, result)
+        return self._axpbz(scalar, 0, result)
 
     def __imul__(self, scalar):
-        return self._scale(scalar, self)
+        return self._axpbz(scalar, 0, self)
 
     def __div__(self, other):
         """Divides an array by an array or a scalar::
@@ -348,7 +339,7 @@ class GPUArray(object):
             else:
                 # create a new array for the result
                 result = GPUArray(self.shape, self.dtype)
-                return self._scale(1/other, result)
+                return self._axpbz(1/other, 0, result)
         else:
             result = GPUArray(self.shape, self.dtype)
             return self._div(other, result)
@@ -366,7 +357,7 @@ class GPUArray(object):
             else:
                 # create a new array for the result
                 result = GPUArray(self.shape, self.dtype)
-                return self._divRScalar(other, result)
+                return self._rdiv_scalar(other, result)
         else:
             result = GPUArray(self.shape, self.dtype)
 
@@ -376,7 +367,7 @@ class GPUArray(object):
 
             _get_divide_kernel()(other.gpudata, self.gpudata,
                     out.gpudata, numpy.int32(self.size),
-                    **self.kernel_kwargs)
+                    **self._kernel_kwargs)
 
             return result
 
