@@ -418,7 +418,7 @@ class GPUArray(object):
 
 
     def reverse(self):
-        """Reverse the array
+        """Reverse the array::
 
            the first entry becomes the last entry. This is only valid for no matrix based arrays!
 

@@ -10,7 +10,7 @@ if not drv.was_context_created():
     ctx = dev.make_context()
 
 class SimpleArray(gpuarray.GPUArray):
-    """A simplified class to work with GPU arrays.
+    """A simplified class to work with GPU arrays::
     
     Basically it initializes the context for you and makes the live easier.
     But it will always work on the first device found!
