@@ -13,6 +13,29 @@ class TestAbstractArray(unittest.TestCase):
         """is supposed to create an array and needs to be overwritten"""
         return None
 
+    def test_pow_array(self):
+        """tests the pow function based on arrays"""
+
+        a = numpy.array([1,2,3,4,5]).astype(numpy.float32)
+        a_cpu = self.create_array(a)
+
+        result = pow(a_cpu,a_cpu).get()
+
+        for i in range(0,5):
+            self.assert_(abs(pow(a[i],a[i]) - result[i]) < 1e-3)
+
+
+    def test_pow_number(self):
+        """tests the pow function based on a number"""
+
+        a = numpy.array([1,2,3,4,5,6,7,8,9,10]).astype(numpy.float32)
+        a_cpu = self.create_array(a)
+ 
+        result = pow(a_cpu,2).get()
+
+        for i in range(0,10):
+            self.assert_(abs(pow(a[i],2) - result[i]) < 1e-3)
+       
 
     def test_abs(self):
         """test if the abs function works"""

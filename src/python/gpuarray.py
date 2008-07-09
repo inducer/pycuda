@@ -130,6 +130,23 @@ def _get_abs_kernel():
             "z[i] = abs(y[i])",
             "abs_method")
 
+@memoize
+def _get_pow_kernel():
+    return _get_scalar_kernel(
+            "float value, float *y, float *z",
+            "z[i] = pow(y[i],value)",
+            "pow_method")
+
+@memoize
+def _get_pow_array_kernel():
+    return _get_scalar_kernel(
+            "float *x, float *y, float *z",
+            "z[i] = pow(x[i],y[i])",
+            "pow_method")
+
+
+
+
 
 WARP_SIZE = 32
 
@@ -430,7 +447,34 @@ class GPUArray(object):
 
         return result
 
+    def __pow__(self,other):
+        """pow function::
+ 
+           example:
+                   array = pow(array)
+                   array = pow(array,4)
+                   array = pow(array,array)
 
+        """
+        result = GPUArray(self.shape, self.dtype)
+        block_count, threads_per_block, elems_per_block = splay(self.size, WARP_SIZE, 128, 80)
+
+        if isinstance(other, (int, float, complex)):
+
+            _get_pow_kernel()(numpy.float32(other),self.gpudata,result.gpudata,numpy.int32(self.size),
+            block=(threads_per_block,1,1), grid=(block_count,1),
+            stream=self.stream)
+
+            return result
+        else:
+            assert self.shape == other.shape
+            assert self.dtype == other.dtype
+
+            _get_pow_array_kernel()(self.gpudata,other.gpudata,result.gpudata,numpy.int32(self.size),
+            block=(threads_per_block,1,1), grid=(block_count,1),
+            stream=self.stream)
+            
+            return result
 
     def _shape(self):
         """returns the shape of the internal array"""
