@@ -101,7 +101,6 @@ def _get_rdivide_scalar_kernel():
 
 
 
-
 @memoize
 def _get_fill_kernel():
     return _get_scalar_kernel(
@@ -122,6 +121,14 @@ def _get_arrange_kernel():
             "float *z",
             "z[i] = i",
             "arrange")
+
+
+@memoize
+def _get_abs_kernel():
+    return _get_scalar_kernel(
+            "float *y, float *z",
+            "z[i] = abs(y[i])",
+            "abs_method")
 
 
 
@@ -403,6 +410,22 @@ class GPUArray(object):
     def __len__(self):
         """returns the len of the internal array"""
         return self.size
+
+
+    def __abs__(self):
+        """calculates the abs value of all values in the array"""
+
+        assert self.dtype == numpy.float32
+
+        result = GPUArray(self.shape, self.dtype)
+        block_count, threads_per_block, elems_per_block = splay(self.size, WARP_SIZE, 128, 80)
+
+        _get_abs_kernel()(self.gpudata,result.gpudata,numpy.int32(self.size),
+                block=(threads_per_block,1,1), grid=(block_count,1),
+                stream=self.stream)
+
+        return result
+
 
 
     def _shape(self):
