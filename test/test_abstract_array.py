@@ -13,6 +13,46 @@ class TestAbstractArray(unittest.TestCase):
         """is supposed to create an array and needs to be overwritten"""
         return None
 
+
+
+    def test_reverse(self):
+        """test if the reverse works"""
+        a = numpy.array([1,2,3,4,5,6,7,8,9,10]).astype(numpy.float32)
+        a_cpu = self.create_array(a)
+
+        a_cpu = a_cpu.reverse()
+
+
+        b = a_cpu.get()
+
+        for i in range(0,10):
+            self.assert_(a[len(a)-1-i] == b[i])
+        
+
+    def test_is_matrix(self):
+        """tests if the gpu array is a matrix"""
+        a = numpy.array([1,2,3,4,5,6,7,8,9,10]).astype(numpy.float32)
+        a.shape = 2,5
+
+        b = numpy.array([1,2,3,4,5,6,7,8,9,10]).astype(numpy.float32)
+        
+        self.assert_(self.create_array(a).is_matrix() == True)
+        self.assert_(self.create_array(b).is_matrix() == False)
+
+
+    def test_len(self):
+        """test the len"""
+        a = numpy.array([1,2,3,4,5,6,7,8,9,10]).astype(numpy.float32)
+        a_cpu = self.create_array(a)
+        self.assert_(len(a_cpu) == 10)
+
+
+    def test_shape(self):
+        a = numpy.array([1,2,3,4,5,6,7,8,9,10]).astype(numpy.float32)
+        a_cpu = self.create_array(a)
+        self.assert_(len(a_cpu._shape()) == 1)
+
+
     def test_multiply(self):
         """Tests the muliplication of an array with a scalar. """
 

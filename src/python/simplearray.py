@@ -41,6 +41,10 @@ def to_gpu_from_list(list, stream=None):
 
 empty = SimpleArray
 
+def list(size,value=0):
+    """creates a list of the given size"""
+    return fill((size,1),value)
+
 
 def matrix(width,height,value=0):
     """creates a matrix of the given size"""
@@ -56,4 +60,4 @@ def fill(shape,value, dtype=numpy.float32, stream=None):
 
 def zeros(shape, dtype=numpy.float32, stream=None):
     """creates an array of the given size and fills it with 0's"""
-    fill(shape,0,dtype,stream)
+    return fill(shape,0,dtype,stream)

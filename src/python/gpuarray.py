@@ -109,6 +109,13 @@ def _get_fill_kernel():
             "z[i] = a",
             "fill")
 
+@memoize
+def _get_reverse_kernel():
+    return _get_scalar_kernel(
+            "float *y, float *z",
+            "z[i] = y[n-1-i]",
+            "reverse")
+
 
 
 
@@ -387,8 +394,41 @@ class GPUArray(object):
         texref.set_address(self.gpudata, self.size*self.dtype.itemsize)
 
 
+    def __len__(self):
+        """returns the len of the internal array"""
+        return self.size
 
 
+    def _shape(self):
+        """returns the shape of the internal array"""
+        return self.shape
+
+
+    def is_matrix(self):
+        """returns if this is a matrix"""
+        if(len(self.shape) == 1):
+            return False
+        return True
+
+
+    def reverse(self):
+        """Reverse the array
+
+           the first entry becomes the last entry. This is only valid for no matrix based arrays!
+
+        """
+
+        assert self.is_matrix() == False
+        assert self.dtype == numpy.float32
+        
+        result = GPUArray(self.shape, self.dtype)
+        block_count, threads_per_block, elems_per_block = splay(self.size, WARP_SIZE, 128, 80)
+
+        _get_reverse_kernel()(self.gpudata,result.gpudata,numpy.int32(self.size),
+                block=(threads_per_block,1,1), grid=(block_count,1),
+                stream=self.stream)
+
+        return result
 
 def to_gpu(ary, stream=None):
     """converts a numpy array to a GPUArray"""
