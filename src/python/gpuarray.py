@@ -46,14 +46,14 @@ def _get_scalar_kernel(arguments, operation, name="kernel"):
     mod = drv.SourceModule("""
         __global__ void %(name)s(%(arguments)s, int n)
         {
-          int tid = threadIdx.x;
-          int total_threads = gridDim.x*blockDim.x;
-          int cta_start = blockDim.x*blockIdx.x;
+
           int i;
-                
-          for (i = cta_start + tid; i < n; i += total_threads) 
-          {
-            %(operation)s;
+          int idx = blockIdx.x * blockDim.x + threadIdx.x;
+
+          if(idx < n){
+
+            i = idx;
+             %(operation)s;
           }
         }
         """ % {
@@ -116,6 +116,12 @@ def _get_reverse_kernel():
             "z[i] = y[n-1-i]",
             "reverse")
 
+@memoize
+def _get_arrange_kernel():
+    return _get_scalar_kernel(
+            "float *z",
+            "z[i] = i",
+            "arrange")
 
 
 
@@ -429,6 +435,21 @@ class GPUArray(object):
                 stream=self.stream)
 
         return result
+
+
+def arrange(limit,dtype=numpy.float32):
+    """arranges an array like the array function from numpy"""
+    result = GPUArray((limit,1), dtype)
+   
+    block_count, threads_per_block, elems_per_block = splay(result.size, WARP_SIZE, 128, 80) 
+    _get_arrange_kernel()(result.gpudata, numpy.int32(result.size),
+            block=(threads_per_block,1,1), grid=(block_count,1),
+            stream=result.stream)
+
+    return result
+
+
+
 
 def to_gpu(ary, stream=None):
     """converts a numpy array to a GPUArray"""
