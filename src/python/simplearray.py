@@ -41,9 +41,9 @@ def to_gpu_from_list(list, stream=None):
 
 empty = SimpleArray
 
-def list(size,value=0):
-    """creates a list of the given size"""
-    return fill((size,1),value)
+def array(size,value=0):
+    """creates a array of the given size"""
+    return fill((size,),value)
 
 
 def matrix(width,height,value=0):

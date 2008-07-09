@@ -447,7 +447,6 @@ class GPUArray(object):
 
         """
 
-        assert self.is_matrix() == False
         assert self.dtype == numpy.float32
         
         result = GPUArray(self.shape, self.dtype)
