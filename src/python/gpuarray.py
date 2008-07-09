@@ -518,6 +518,40 @@ class GPUArray(object):
         return self
 
 
+    def __iter__(self):
+        """iteration works over the internal array"""
+        return GPUIterator(self.get())
+
+    def __getitem__(self,key):
+        """allows us to get objects using an index::
+
+           this operation is extremly slow since we need to copy the array from the gpu
+           to the cpu for each access
+        """
+        return self.get()[key]
+
+
+class GPUIterator:
+    """small helper to support iterations"""
+
+    def __init__(self,target):
+        self.target = target
+        self.size = target.size
+        self.count = 0
+
+    def __iter__(self):
+        return self
+
+    def next(self):
+        count = self.count + 1
+        if count > self.target.size:
+            raise StopIteration
+
+        self.count = count
+
+        return count
+
+ 
 def arrange(limit,dtype=numpy.float32):
     """arranges an array like the array function from numpy"""
     result = GPUArray((limit,1), dtype)

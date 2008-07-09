@@ -13,6 +13,26 @@ class TestAbstractArray(unittest.TestCase):
         """is supposed to create an array and needs to be overwritten"""
         return None
 
+
+    def test_index_access(self):
+        """tests the index based access"""
+        a = numpy.array([1,2,3,4,5]).astype(numpy.float32)
+        a_cpu = self.create_array(a)
+
+        for i in range(0,5):
+            self.assert_(a[i] == a_cpu[i])
+
+
+    def test_iterate(self):
+        """tests the iteration methods"""
+        a = numpy.array([1,2,3,4,5]).astype(numpy.float32)
+        a_cpu = self.create_array(a)
+
+        for i in a_cpu:
+            #ok iteration works
+            self.assert_(True)
+
+
     def test_pow_array(self):
         """tests the pow function based on arrays"""
 
