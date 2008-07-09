@@ -53,7 +53,7 @@ def main():
         secs = start.time_till(end)*1e-3
 
         times.append(secs/count)
-        flops.append(size*4)
+        flops.append(size)
 
         #cpu operations which adds two arrays
         aCpu = numpy.random.randn(size).astype(numpy.float32)
@@ -77,7 +77,7 @@ def main():
 
         #add results to variable
         timesCPU.append(secs/count)
-        flopsCPU.append(size*4)
+        flopsCPU.append(size)
             
             
     #calculate pseudo flops
@@ -90,9 +90,9 @@ def main():
     except ImportError:
         from pytools import Table
         tbl = Table()
-        tbl.add_row(("Size", "Time GPU", "Giga Flops GPU", "Time CPU","Giga Flops CPU"))
+        tbl.add_row(("Size", "Time GPU", "Size/Time GPU", "Time CPU","Size/Time CPU","GPU vs CPU speedup"))
         for s, t, f,tCpu,fCpu in zip(sizes, times, flops,timesCPU,flopsCPU):
-            tbl.add_row((s,t,f/1000000000,tCpu,fCpu/1000000000))
+            tbl.add_row((s,t,f,tCpu,fCpu,f/fCpu))
         print tbl
     else:
         title("time to add two vectors")
