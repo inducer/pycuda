@@ -1,5 +1,6 @@
 import pycuda.driver as drv
 import pycuda.gpuarray as gpuarray
+import numpy
 
 #if the context was not created, created it now
 if not drv.was_context_created():
@@ -15,20 +16,44 @@ class SimpleArray(gpuarray.GPUArray):
     But it will always work on the first device found!
     
     """
+
+    def __init__(self, shape, dtype, stream=None):
+        """call to the top level constructor"""
+        gpuarray.GPUArray.__init__(self,shape,dtype,stream)
     
-def to_gpu(ary, stream=None):
+    
+def to_gpu_from_numpy(ary, stream=None):
     """converts a numpy array to a GPUArray"""
-    result = SimpleArray(ary.shape, ary.dtype)
+    result = SimpleArray(ary.shape,ary.dtype,stream)
     result.set(ary, stream)
     return result
 
+    
+def to_gpu(ary, stream=None):
+    """converts a numpy array to a GPUArray"""
+    return to_gpu_from_numpy(ary,stream)
 
+    
+def to_gpu_from_list(list, stream=None):
+    """converts a list to a GPUArray"""
+    return to_gpu_from_numpy(numpy.array(list).astype(numpy.float32),stream)
 
 
 empty = SimpleArray
 
-def zeros(shape, dtype, stream=None):
-    """creates an array of the given size and fills it with 0's"""
+
+def matrix(width,height,value=0):
+    """creates a matrix of the given size"""
+    return fill((width,height),value)
+
+
+def fill(shape,value, dtype=numpy.float32, stream=None):
+    """creates an array of the given shape and fills it with the data"""
     result = SimpleArray(shape, dtype, stream)
-    result.fill(0)
+    result.fill(value)
     return result
+
+
+def zeros(shape, dtype=numpy.float32, stream=None):
+    """creates an array of the given size and fills it with 0's"""
+    fill(shape,0,dtype,stream)
