@@ -44,6 +44,11 @@ class TestAbstractArray(unittest.TestCase):
         for i in range(0,5):
             self.assert_(abs(pow(a[i],a[i]) - result[i]) < 1e-3)
 
+        result = a_cpu**a_cpu
+
+        for i in range(0,5):
+            self.assert_(abs(pow(a[i],a[i]) - result[i]) < 1e-3)
+
 
     def test_pow_number(self):
         """tests the pow function based on a number"""
