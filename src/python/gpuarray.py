@@ -131,7 +131,6 @@ def _get_abs_kernel():
             "abs_method")
 
 
-
 WARP_SIZE = 32
 
 
@@ -143,7 +142,12 @@ class GPUArray(object):
     work on an element-by-element basis, just like numpy.ndarray.
     """
 
-    def __init__(self, shape, dtype, stream=None):
+    def __init__(self, shape, dtype=numpy.float32, stream=None):
+        """init method for the gpu arrray::
+
+           you need to specify at a minimum the shape of an array
+
+        """
         self.shape = shape
         self.dtype = numpy.dtype(dtype)
         from pytools import product
@@ -459,18 +463,23 @@ class GPUArray(object):
         return result
 
 
+    def fill_arrange(self):
+        """fills the array in an arranged way, like numpy"""
+
+        block_count, threads_per_block, elems_per_block = splay(self.size, WARP_SIZE, 128, 80)
+        _get_arrange_kernel()(self.gpudata, numpy.int32(self.size),
+                block=(threads_per_block,1,1), grid=(block_count,1),
+                stream=self.stream)
+
+        return self
+
+
 def arrange(limit,dtype=numpy.float32):
     """arranges an array like the array function from numpy"""
     result = GPUArray((limit,1), dtype)
-   
-    block_count, threads_per_block, elems_per_block = splay(result.size, WARP_SIZE, 128, 80) 
-    _get_arrange_kernel()(result.gpudata, numpy.int32(result.size),
-            block=(threads_per_block,1,1), grid=(block_count,1),
-            stream=result.stream)
-
+  
+    result.fill_arrange() 
     return result
-
-
 
 
 def to_gpu(ary, stream=None):
@@ -478,8 +487,6 @@ def to_gpu(ary, stream=None):
     result = GPUArray(ary.shape, ary.dtype)
     result.set(ary, stream)
     return result
-
-
 
 
 empty = GPUArray
