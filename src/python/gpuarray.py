@@ -507,6 +507,11 @@ class GPUArray(object):
         return result
 
 
+    def __invert__(self):
+        """does the same as reverse"""
+        return self.reverse()
+
+
     def fill_arrange(self):
         """fills the array in an arranged way, like numpy"""
 
@@ -528,7 +533,13 @@ class GPUArray(object):
            this operation is extremly slow since we need to copy the array from the gpu
            to the cpu for each access
         """
-        return self.get()[key]
+
+        if self.is_matrix():
+            #if its a matrix we return a gpu array so that we can calculate on it
+            entry = self.get()[key]
+            return to_gpu(entry)
+        else:
+            return self.get()[key]
 
 
 class GPUIterator:
@@ -554,7 +565,7 @@ class GPUIterator:
  
 def arrange(limit,dtype=numpy.float32):
     """arranges an array like the array function from numpy"""
-    result = GPUArray((limit,1), dtype)
+    result = GPUArray((limit,), dtype)
   
     result.fill_arrange() 
     return result
@@ -568,6 +579,7 @@ def to_gpu(ary, stream=None):
 
 
 empty = GPUArray
+
 
 def zeros(shape, dtype, stream=None):
     """creates an array of the given size and fills it with 0's"""

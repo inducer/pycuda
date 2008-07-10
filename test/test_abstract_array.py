@@ -80,6 +80,11 @@ class TestAbstractArray(unittest.TestCase):
             self.assert_(res[i] >= 0)
 
 
+        for i in range(100,200):
+            a = gpuarray.arrange(500 * i)
+            print a[len(a)-1], " - ", len(a)-1
+            self.assert_(a[len(a)-1] == len(a)-1)
+
     def test_arrange(self):
         """test the arrangement of the array"""
         a = gpuarray.arrange(12)

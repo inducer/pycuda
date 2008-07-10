@@ -23,7 +23,7 @@ class TestSimpleArray(test.TestAbstractArray):
         
         #simple formula to run over all the data
         d = (a - 5) + (b + 2) / c
-        
+       
         
 if __name__ == '__main__':
     unittest.main()
