@@ -78,11 +78,11 @@ class TestAbstractArray(unittest.TestCase):
 
         for i in range (111):
             self.assert_(res[i] >= 0)
+            self.assert_(res[i] == i)
 
 
         for i in range(100,200):
             a = gpuarray.arrange(500 * i)
-            print a[len(a)-1], " - ", len(a)-1
             self.assert_(a[len(a)-1] == len(a)-1)
 
     def test_arrange(self):
@@ -148,6 +148,19 @@ class TestAbstractArray(unittest.TestCase):
         for i in range(0,a.size):
            self.assertEqual(a[i] * 2,a_doubled[i])
 
+
+        #test with a large array
+        a = numpy.arange(50000).astype(numpy.float32)
+        
+        a_gpu = self.create_array(a)
+
+        a_doubled = (2 * a_gpu).get()
+
+        #check that the result is like we expsect it
+        for i in range(0,a.size):
+           self.assertEqual(a[i] * 2,a_doubled[i])
+
+        
 
     def test_multiply_array(self):
         """Tests the multiplaction of two arrays."""

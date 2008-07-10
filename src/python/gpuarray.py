@@ -46,7 +46,7 @@ def _get_scalar_kernel(arguments, operation, name="kernel"):
     mod = drv.SourceModule("""
         __global__ void %(name)s(%(arguments)s, int n)
         {
-
+/*
           int i;
           int idx = blockIdx.x * blockDim.x + threadIdx.x;
 
@@ -54,6 +54,18 @@ def _get_scalar_kernel(arguments, operation, name="kernel"):
 
             i = idx;
              %(operation)s;
+
+          }
+*/
+
+          int tid = threadIdx.x;
+          int total_threads = gridDim.x*blockDim.x;
+          int cta_start = blockDim.x*blockIdx.x;
+          int i;
+                
+          for (i = cta_start + tid; i < n; i += total_threads) 
+          {
+            %(operation)s;
           }
         }
         """ % {
