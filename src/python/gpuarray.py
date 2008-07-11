@@ -1,8 +1,9 @@
 from __future__ import division
 import numpy
+import pycuda.kernel as kernel
+import random as random
 from pytools import memoize
 import pycuda.driver as drv
-
 
 
 def splay(n, min_threads=None, max_threads=128, max_blocks=80):
@@ -36,125 +37,6 @@ def splay(n, min_threads=None, max_threads=128, max_blocks=80):
 
 
 
-
-NVCC_OPTIONS = []
-
-
-
-
-def _get_scalar_kernel(arguments, operation, name="kernel"):
-    mod = drv.SourceModule("""
-        __global__ void %(name)s(%(arguments)s, int n)
-        {
-/*
-          int i;
-          int idx = blockIdx.x * blockDim.x + threadIdx.x;
-
-          if(idx < n){
-
-            i = idx;
-             %(operation)s;
-
-          }
-*/
-
-          int tid = threadIdx.x;
-          int total_threads = gridDim.x*blockDim.x;
-          int cta_start = blockDim.x*blockIdx.x;
-          int i;
-                
-          for (i = cta_start + tid; i < n; i += total_threads) 
-          {
-            %(operation)s;
-          }
-        }
-        """ % {
-            "arguments": arguments, 
-            "operation": operation,
-            "name": name},
-        options=NVCC_OPTIONS)
-
-    return mod.get_function(name)
-
-@memoize
-def _get_axpbyz_kernel():
-    return _get_scalar_kernel(
-            "float a, float *x, float b, float *y, float *z",
-            "z[i] = a*x[i] + b*y[i]",
-            "axpbyz")
-
-@memoize
-def _get_axpbz_kernel():
-    return _get_scalar_kernel(
-            "float a, float *x,float b, float *z",
-            "z[i] = a * x[i] + b",
-            "axpb")
-
-@memoize
-def _get_multiply_kernel():
-    return _get_scalar_kernel(
-            "float *x, float *y, float *z",
-            "z[i] = x[i] * y[i]",
-            "multiply")
-
-@memoize
-def _get_divide_kernel():
-    return _get_scalar_kernel(
-            "float *x, float *y, float *z",
-            "z[i] = x[i] / y[i]",
-            "divide")
-
-@memoize
-def _get_rdivide_scalar_kernel():
-    return _get_scalar_kernel(
-            "float *x, float y, float *z",
-            "z[i] = y / x[i]",
-            "divide_r")
-
-
-
-@memoize
-def _get_fill_kernel():
-    return _get_scalar_kernel(
-            "float a, float *z",
-            "z[i] = a",
-            "fill")
-
-@memoize
-def _get_reverse_kernel():
-    return _get_scalar_kernel(
-            "float *y, float *z",
-            "z[i] = y[n-1-i]",
-            "reverse")
-
-@memoize
-def _get_arrange_kernel():
-    return _get_scalar_kernel(
-            "float *z",
-            "z[i] = i",
-            "arrange")
-
-
-@memoize
-def _get_abs_kernel():
-    return _get_scalar_kernel(
-            "float *y, float *z",
-            "z[i] = abs(y[i])",
-            "abs_method")
-
-@memoize
-def _get_pow_kernel():
-    return _get_scalar_kernel(
-            "float value, float *y, float *z",
-            "z[i] = pow(y[i],value)",
-            "pow_method")
-
-@memoize
-def _get_pow_array_kernel():
-    return _get_scalar_kernel(
-            "float *x, float *y, float *z",
-            "z[i] = pow(x[i],y[i])",
-            "pow_method")
 
 
 
@@ -201,9 +83,8 @@ class GPUArray(object):
     @classmethod
     def compile_kernels(cls):
         # useful for benchmarking
-        for name in dir(cls.__module__):
-            if name.startswith("_get_") and name.endswith("_kernel"):
-                name()
+        kernel._compile_kernels(cls)
+    
 
     def set(self, ary, stream=None):
         assert ary.size == self.size
@@ -244,7 +125,7 @@ class GPUArray(object):
         if self.stream is not None or other.stream is not None:
             assert self.stream is other.stream
 
-        _get_axpbyz_kernel()(numpy.float32(selffac), self.gpudata, 
+        kernel._get_axpbyz_kernel()(numpy.float32(selffac), self.gpudata, 
                 numpy.float32(otherfac), other.gpudata, 
                 out.gpudata, numpy.int32(self.size),
                 **self._kernel_kwargs)
@@ -255,7 +136,7 @@ class GPUArray(object):
         """Compute ``out = selffac * self + other``, where `other` is a scalar."""
         assert self.dtype == numpy.float32
 
-        _get_axpbz_kernel()(
+        kernel._get_axpbz_kernel()(
                 numpy.float32(selffac), self.gpudata,
                 numpy.float32(other),
                 out.gpudata, numpy.int32(self.size),
@@ -267,7 +148,7 @@ class GPUArray(object):
         assert self.dtype == numpy.float32
         assert self.dtype == numpy.float32
 
-        _get_multiply_kernel()(
+        kernel._get_multiply_kernel()(
                 self.gpudata, other.gpudata,
                 out.gpudata, numpy.int32(self.size),
                 **self._kernel_kwargs)
@@ -282,7 +163,7 @@ class GPUArray(object):
 
         assert self.dtype == numpy.float32
 
-        _get_rdivide_scalar_kernel()(
+        kernel._get_rdivide_scalar_kernel()(
                 self.gpudata,
                 numpy.float32(other),
                 out.gpudata, numpy.int32(self.size),
@@ -299,7 +180,7 @@ class GPUArray(object):
 
         block_count, threads_per_block, elems_per_block = splay(self.size, WARP_SIZE, 128, 80)
 
-        _get_divide_kernel()(self.gpudata, other.gpudata,
+        kernel._get_divide_kernel()(self.gpudata, other.gpudata,
                 out.gpudata, numpy.int32(self.size),
                 **self._kernel_kwargs)
 
@@ -418,7 +299,7 @@ class GPUArray(object):
             assert self.shape == other.shape
             assert self.dtype == other.dtype
 
-            _get_divide_kernel()(other.gpudata, self.gpudata,
+            kernel._get_divide_kernel()(other.gpudata, self.gpudata,
                     out.gpudata, numpy.int32(self.size),
                     **self._kernel_kwargs)
 
@@ -426,16 +307,25 @@ class GPUArray(object):
 
 
     def fill(self, value):
+        """fills the array with the specified value"""
         assert self.dtype == numpy.float32
 
-        block_count, threads_per_block, elems_per_block = splay(self.size, WARP_SIZE, 128, 80)
-
-        _get_fill_kernel()(numpy.float32(value), self.gpudata, numpy.int32(self.size),
-                block=(threads_per_block,1,1), grid=(block_count,1),
-                stream=self.stream)
+        kernel._get_fill_kernel()(numpy.float32(value), self.gpudata, numpy.int32(self.size),**self._kernel_kwargs
+)
 
         return self
 
+    def fill_random(self):
+        """fills the array with random data
+    
+            calculates random numbers for each element of the array
+            
+        """
+        kernel._get_random_kernel()(self.gpudata,numpy.float32(random.random()), numpy.int32(self.size),
+                **self._kernel_kwargs)
+
+        return self
+        
     def bind_to_texref(self, texref):
         texref.set_address(self.gpudata, self.size*self.dtype.itemsize)
 
@@ -453,7 +343,7 @@ class GPUArray(object):
         result = GPUArray(self.shape, self.dtype)
         block_count, threads_per_block, elems_per_block = splay(self.size, WARP_SIZE, 128, 80)
 
-        _get_abs_kernel()(self.gpudata,result.gpudata,numpy.int32(self.size),
+        kernel._get_abs_kernel()(self.gpudata,result.gpudata,numpy.int32(self.size),
                 block=(threads_per_block,1,1), grid=(block_count,1),
                 stream=self.stream)
 
@@ -473,7 +363,7 @@ class GPUArray(object):
 
         if isinstance(other, (int, float, complex)):
 
-            _get_pow_kernel()(numpy.float32(other),self.gpudata,result.gpudata,numpy.int32(self.size),
+            kernel._get_pow_kernel()(numpy.float32(other),self.gpudata,result.gpudata,numpy.int32(self.size),
             block=(threads_per_block,1,1), grid=(block_count,1),
             stream=self.stream)
 
@@ -482,7 +372,7 @@ class GPUArray(object):
             assert self.shape == other.shape
             assert self.dtype == other.dtype
 
-            _get_pow_array_kernel()(self.gpudata,other.gpudata,result.gpudata,numpy.int32(self.size),
+            kernel._get_pow_array_kernel()(self.gpudata,other.gpudata,result.gpudata,numpy.int32(self.size),
             block=(threads_per_block,1,1), grid=(block_count,1),
             stream=self.stream)
             
@@ -510,11 +400,8 @@ class GPUArray(object):
         assert self.dtype == numpy.float32
         
         result = GPUArray(self.shape, self.dtype)
-        block_count, threads_per_block, elems_per_block = splay(self.size, WARP_SIZE, 128, 80)
 
-        _get_reverse_kernel()(self.gpudata,result.gpudata,numpy.int32(self.size),
-                block=(threads_per_block,1,1), grid=(block_count,1),
-                stream=self.stream)
+        kernel._get_reverse_kernel()(self.gpudata,result.gpudata,numpy.int32(self.size),**self._kernel_kwargs)
 
         return result
 
@@ -528,7 +415,7 @@ class GPUArray(object):
         """fills the array in an arranged way, like numpy"""
 
         block_count, threads_per_block, elems_per_block = splay(self.size, WARP_SIZE, 128, 80)
-        _get_arrange_kernel()(self.gpudata, numpy.int32(self.size),
+        kernel._get_arrange_kernel()(self.gpudata, numpy.int32(self.size),
                 block=(threads_per_block,1,1), grid=(block_count,1),
                 stream=self.stream)
 
