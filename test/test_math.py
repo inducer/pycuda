@@ -30,5 +30,14 @@ class TestMath(unittest.TestCase):
         for i in range(100):
             self.assert_(math.floor(a[i]) == b[i])
                
+    def test_fmod(self):
+        """tests if the floor function works"""
+        a = simplearray.array(100).fill_arange()/10        
+        b = cumath.fmod(a,2)
+        
+        for i in range(100):
+            self.assert_(math.fmod(a[i],2) == b[i])
+               
+               
 if __name__ == '__main__':
     unittest.main()

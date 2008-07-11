@@ -270,3 +270,10 @@ def _get_floor_kernel():
             "z[i] = floorf(y[i])",
             "floor_kernel")
     
+@memoize
+def _get_fmod_kernel():
+    return _get_scalar_kernel(
+            "float *y, float *z, float mod",
+            "z[i] = fmod(y[i],mod)",
+            "fmod_kernel")
+    
