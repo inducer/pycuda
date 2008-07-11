@@ -82,15 +82,13 @@ def main():
     flopsCPU = [f/t for f, t in zip(flopsCPU,timesCPU)]
 
     #print the data out
-    try:
-        from matplotlib.pylab import semilogx, show, title
-    except ImportError:
-        from pytools import Table
-        tbl = Table()
-        tbl.add_row(("Size", "Time GPU", "Size/Time GPU", "Time CPU","Size/Time CPU","GPU vs CPU speedup"))
-        for s, t, f,tCpu,fCpu in zip(sizes, times, flops,timesCPU,flopsCPU):
-            tbl.add_row((s,t,f,tCpu,fCpu,f/fCpu))
-        print tbl
+
+    from pytools import Table
+    tbl = Table()
+    tbl.add_row(("Size", "Time GPU", "Size/Time GPU", "Time CPU","Size/Time CPU","GPU vs CPU speedup"))
+    for s, t, f,tCpu,fCpu in zip(sizes, times, flops,timesCPU,flopsCPU):
+        tbl.add_row((s,t,f,tCpu,fCpu,f/fCpu))
+    print tbl
  
 
 if __name__ == "__main__":
