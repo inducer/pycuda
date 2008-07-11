@@ -178,3 +178,73 @@ def acos(array):
     else:
         raise NotImplementedError, 'sorry only GPUArrays and subclasses are supported by this method'
 
+
+def cos(array):
+    """executes the cos function on the gpu for all elements in the given array"""
+    if isinstance(array, gpuarray.GPUArray):
+        result = gpuarray.GPUArray(array.shape, array.dtype)
+        
+        kernel._get_cos_kernel()(array.gpudata,
+                result.gpudata,numpy.int32(array.size),
+                **result._kernel_kwargs)
+        
+        return result
+    else:
+        raise NotImplementedError, 'sorry only GPUArrays and subclasses are supported by this method'
+
+
+def tan(array):
+    """executes the tan function on the gpu for all elements in the given array"""
+    if isinstance(array, gpuarray.GPUArray):
+        result = gpuarray.GPUArray(array.shape, array.dtype)
+        
+        kernel._get_tan_kernel()(array.gpudata,
+                result.gpudata,numpy.int32(array.size),
+                **result._kernel_kwargs)
+        
+        return result
+    else:
+        raise NotImplementedError, 'sorry only GPUArrays and subclasses are supported by this method'
+
+
+def atan(array):
+    """executes the cos function on the gpu for all elements in the given array"""
+    if isinstance(array, gpuarray.GPUArray):
+        result = gpuarray.GPUArray(array.shape, array.dtype)
+        
+        kernel._get_atan_kernel()(array.gpudata,
+                result.gpudata,numpy.int32(array.size),
+                **result._kernel_kwargs)
+        
+        return result
+    else:
+        raise NotImplementedError, 'sorry only GPUArrays and subclasses are supported by this method'
+
+
+def asin(array):
+    """executes the asin function on the gpu for all elements in the given array"""
+    if isinstance(array, gpuarray.GPUArray):
+        result = gpuarray.GPUArray(array.shape, array.dtype)
+        
+        kernel._get_asin_kernel()(array.gpudata,
+                result.gpudata,numpy.int32(array.size),
+                **result._kernel_kwargs)
+        
+        return result
+    else:
+        raise NotImplementedError, 'sorry only GPUArrays and subclasses are supported by this method'
+
+
+def sin(array):
+    """executes the sin function on the gpu for all elements in the given array"""
+    if isinstance(array, gpuarray.GPUArray):
+        result = gpuarray.GPUArray(array.shape, array.dtype)
+        
+        kernel._get_sin_kernel()(array.gpudata,
+                result.gpudata,numpy.int32(array.size),
+                **result._kernel_kwargs)
+        
+        return result
+    else:
+        raise NotImplementedError, 'sorry only GPUArrays and subclasses are supported by this method'
+

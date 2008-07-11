@@ -115,13 +115,37 @@ class TestMath(unittest.TestCase):
             self.assert_(abs(math.sqrt(a[i]) - b[i]) < 1e-3)
          
     def test_acos(self):
-        """tests if the sqrt function works"""
+        """tests if the acos function works"""
         a = (simplearray.array(10).fill_arange()+1)/100      
         b = cumath.acos(a)
         
         for i in range(10):
             self.assert_(abs(math.acos(a[i]) - b[i]) < 1e-2)
+          
+    def test_cos(self):
+        """tests if the cos function works"""
+        a = (simplearray.array(10).fill_arange()+1)/100      
+        b = cumath.cos(a)
+        
+        for i in range(10):
+            self.assert_(abs(math.cos(a[i]) - b[i]) < 1e-2)         
          
+    def test_sin(self):
+        """tests if the sin function works"""
+        a = (simplearray.array(10).fill_arange()+1)/100      
+        b = cumath.sin(a)
+        
+        for i in range(10):
+            self.assert_(abs(math.sin(a[i]) - b[i]) < 1e-2)
+          
+    def test_asin(self):
+        """tests if the asin function works"""
+        a = (simplearray.array(10).fill_arange()+1)/100      
+        b = cumath.asin(a)
+        
+        for i in range(10):
+            self.assert_(abs(math.asin(a[i]) - b[i]) < 1e-2)         
+
 
 if __name__ == '__main__':
     unittest.main()

@@ -338,3 +338,39 @@ def _get_acos_kernel():
             "z[i] = acos(y[i])",
             "acos_kernel")    
     
+@memoize
+def _get_asin_kernel():
+    return _get_scalar_kernel(
+            "float *y, float *z",
+            "z[i] = asin(y[i])",
+            "asin_kernel")    
+    
+@memoize
+def _get_atan_kernel():
+    return _get_scalar_kernel(
+            "float *y, float *z",
+            "z[i] = atan(y[i])",
+            "atan_kernel")    
+    
+    
+@memoize
+def _get_cos_kernel():
+    return _get_scalar_kernel(
+            "float *y, float *z",
+            "z[i] = cos(y[i])",
+            "cos_kernel")    
+    
+@memoize
+def _get_sin_kernel():
+    return _get_scalar_kernel(
+            "float *y, float *z",
+            "z[i] = sin(y[i])",
+            "sin_kernel")    
+    
+@memoize
+def _get_tan_kernel():
+    return _get_scalar_kernel(
+            "float *y, float *z",
+            "z[i] = tan(y[i])",
+            "tan_kernel")    
+        
