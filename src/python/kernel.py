@@ -277,3 +277,17 @@ def _get_fmod_kernel():
             "z[i] = fmod(y[i],mod)",
             "fmod_kernel")
     
+@memoize
+def _get_ldexp_kernel():
+    return _get_scalar_kernel(
+            "float *y, float *z, float ix",
+            "z[i] = ldexp(y[i],ix)",
+            "ldexp_kernel")
+
+@memoize
+def _get_modf_kernel():
+    return _get_scalar_kernel(
+            "float *y, float *z,float *a",
+            "z[i] = modf(y[i],&a[i])",
+            "modf_kernel")
+    
