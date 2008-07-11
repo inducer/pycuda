@@ -323,3 +323,10 @@ def _get_log10_kernel():
             "z[i] = log10(y[i])",
             "exp_kernel")    
     
+@memoize
+def _get_sqrt_kernel():
+    return _get_scalar_kernel(
+            "float *y, float *z",
+            "z[i] = sqrt(y[i])",
+            "exp_kernel")    
+    
