@@ -144,3 +144,10 @@ def log10(array):
         return result
     else:
         raise NotImplementedError, 'sorry only GPUArrays and subclasses are supported by this method'
+
+def pow(x,y):
+    """executes the pow function on the gpu for all elements in the given array"""
+    if isinstance(x, gpuarray.GPUArray):
+        return x.__pow__(y)
+    else:
+        raise NotImplementedError, 'sorry only GPUArrays and subclasses are supported by this method'

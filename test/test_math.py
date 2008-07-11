@@ -98,5 +98,13 @@ class TestMath(unittest.TestCase):
         for i in range(100):
             self.assert_(abs(math.log10(a[i]) - b[i]) < 1e-3)
          
+    def test_pow(self):
+        """tests if the pow function works"""
+        a = simplearray.array(10).fill_arange()+1       
+        b = cumath.pow(a,2)
+        
+        for i in range(10):
+            self.assert_(abs(math.pow(a[i],2) - b[i]) < 1e-3)
+         
 if __name__ == '__main__':
     unittest.main()
