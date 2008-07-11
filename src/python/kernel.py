@@ -314,19 +314,27 @@ def _get_log_kernel():
     return _get_scalar_kernel(
             "float *y, float *z",
             "z[i] = log(y[i])",
-            "exp_kernel")    
+            "log_kernel")    
     
 @memoize
 def _get_log10_kernel():
     return _get_scalar_kernel(
             "float *y, float *z",
             "z[i] = log10(y[i])",
-            "exp_kernel")    
+            "log10_kernel")    
     
 @memoize
 def _get_sqrt_kernel():
     return _get_scalar_kernel(
             "float *y, float *z",
             "z[i] = sqrt(y[i])",
-            "exp_kernel")    
+            "sqrt_kernel")    
+    
+    
+@memoize
+def _get_acos_kernel():
+    return _get_scalar_kernel(
+            "float *y, float *z",
+            "z[i] = acos(y[i])",
+            "acos_kernel")    
     
