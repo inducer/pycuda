@@ -22,6 +22,13 @@ class TestMath(unittest.TestCase):
             self.assert_(a[i] + b[i] == 0)
             self.assert_(b[i] >= 0)
                
-    
+    def test_floor(self):
+        """tests if the floor function works"""
+        a = simplearray.array(100).fill_arange()/10        
+        b = cumath.floor(a)
+        
+        for i in range(100):
+            self.assert_(math.floor(a[i]) == b[i])
+               
 if __name__ == '__main__':
     unittest.main()

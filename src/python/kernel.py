@@ -261,4 +261,12 @@ def _get_ceil_kernel():
             "float *y, float *z",
             "z[i] = ceilf(y[i])",
             "ceil_kernel")
+
+
+@memoize
+def _get_floor_kernel():
+    return _get_scalar_kernel(
+            "float *y, float *z",
+            "z[i] = floorf(y[i])",
+            "floor_kernel")
     
