@@ -301,4 +301,25 @@ def _get_frexp_kernel():
                 a[i] = value;
             """,
             "frexp_kernel")
+
+@memoize
+def _get_exp_kernel():
+    return _get_scalar_kernel(
+            "float *y, float *z",
+            "z[i] = exp(y[i])",
+            "exp_kernel")    
+    
+@memoize
+def _get_log_kernel():
+    return _get_scalar_kernel(
+            "float *y, float *z",
+            "z[i] = log(y[i])",
+            "exp_kernel")    
+    
+@memoize
+def _get_log10_kernel():
+    return _get_scalar_kernel(
+            "float *y, float *z",
+            "z[i] = log10(y[i])",
+            "exp_kernel")    
     

@@ -98,3 +98,49 @@ def modf(array):
     else:
         raise NotImplementedError, 'sorry only GPUArrays and subclasses are supported by this method'
 
+def exp(array):
+    """executes the exp function on the gpu for all elements in the given array::
+    
+       it seems that the original python math function is much more precise than the float
+       based version in C.
+    """
+    if isinstance(array, gpuarray.GPUArray):
+        result = gpuarray.GPUArray(array.shape, array.dtype)
+        
+        kernel._get_exp_kernel()(array.gpudata,
+                result.gpudata,numpy.int32(array.size),
+                **result._kernel_kwargs)
+        
+        return result
+    else:
+        raise NotImplementedError, 'sorry only GPUArrays and subclasses are supported by this method'
+
+def log(array):
+    """executes the log function on the gpu for all elements in the given array::
+    
+       we only support the base of two since the internal cuda function does not
+       allow to specify the base
+    """
+    if isinstance(array, gpuarray.GPUArray):
+        result = gpuarray.GPUArray(array.shape, array.dtype)
+        
+        kernel._get_log_kernel()(array.gpudata,
+                result.gpudata,numpy.int32(array.size),
+                **result._kernel_kwargs)
+        
+        return result
+    else:
+        raise NotImplementedError, 'sorry only GPUArrays and subclasses are supported by this method'
+    
+def log10(array):
+    """executes the log10 function on the gpu for all elements in the given array"""
+    if isinstance(array, gpuarray.GPUArray):
+        result = gpuarray.GPUArray(array.shape, array.dtype)
+        
+        kernel._get_log10_kernel()(array.gpudata,
+                result.gpudata,numpy.int32(array.size),
+                **result._kernel_kwargs)
+        
+        return result
+    else:
+        raise NotImplementedError, 'sorry only GPUArrays and subclasses are supported by this method'

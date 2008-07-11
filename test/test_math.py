@@ -73,6 +73,30 @@ class TestMath(unittest.TestCase):
             
             self.assert_(c[0] == first[i])
             self.assert_(c[1] == second[i])
-                   
+
+    def test_exp(self):
+        """tests if the exp function works"""
+        a = simplearray.array(100).fill_arange()/10        
+        b = cumath.exp(a)
+        
+        for i in range(100):
+            self.assert_(abs(math.exp(a[i]) - b[i]) < 1e-2)
+
+    def test_log(self):
+        """tests if the log function works"""
+        a = simplearray.array(100).fill_arange()+1       
+        b = cumath.log(a)
+        
+        for i in range(100):
+            self.assert_(abs(math.log(a[i]) - b[i]) < 1e-3)
+
+    def test_log10(self):
+        """tests if the log function works"""
+        a = simplearray.array(100).fill_arange()+1       
+        b = cumath.log10(a)
+        
+        for i in range(100):
+            self.assert_(abs(math.log10(a[i]) - b[i]) < 1e-3)
+         
 if __name__ == '__main__':
     unittest.main()
