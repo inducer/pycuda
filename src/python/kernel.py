@@ -290,4 +290,15 @@ def _get_modf_kernel():
             "float *y, float *z,float *a",
             "z[i] = modf(y[i],&a[i])",
             "modf_kernel")
+
+@memoize
+def _get_frexp_kernel():
+    return _get_scalar_kernel(
+            "float *y, float *z,float *a",
+            """
+                int value = 0;
+                z[i] = frexp(y[i],&value);
+                a[i] = value;
+            """,
+            "frexp_kernel")
     

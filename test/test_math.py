@@ -59,7 +59,20 @@ class TestMath(unittest.TestCase):
             
             self.assert_(c[0] == first[i])
             self.assert_(c[1] == second[i])
-          
-               
+                         
+    def test_frexp(self):
+        """tests if the frexp function works"""
+        a = simplearray.array(100).fill_arange()/10  
+        b = cumath.frexp(a)
+    
+        first = b[0]
+        second = b[1]    
+        
+        for i in range(100):
+            c = math.frexp(a[i])
+            
+            self.assert_(c[0] == first[i])
+            self.assert_(c[1] == second[i])
+                   
 if __name__ == '__main__':
     unittest.main()

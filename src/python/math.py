@@ -51,7 +51,23 @@ def fmod(array,mod):
     else:
         raise NotImplementedError, 'sorry only GPUArrays and subclasses are supported by this method'
 
-
+def frexp(array):
+    """executes the frexp function on the gpu for all elements in the given array::
+    
+       it return a tuple with two gpu arrays which contains the calculates results
+    """
+    if isinstance(array, gpuarray.GPUArray):
+        first = gpuarray.GPUArray(array.shape, array.dtype)
+        second = gpuarray.GPUArray(array.shape, array.dtype)
+        
+        kernel._get_frexp_kernel()(array.gpudata,
+                first.gpudata,second.gpudata,numpy.int32(array.size),
+                **first._kernel_kwargs)
+        
+        return (first,second)
+    else:
+        raise NotImplementedError, 'sorry only GPUArrays and subclasses are supported by this method'
+    
 def ldexp(array, i):
     """executes the ldexp function on the gpu for all elements in the given array"""
     if isinstance(array, gpuarray.GPUArray):
@@ -68,7 +84,7 @@ def ldexp(array, i):
 def modf(array):
     """executes the modf function on the gpu for all elements in the given array::
     
-       it returns two gpu arrays with calculates results
+       it return a tuple with two gpu arrays which contains the calculates results
     """
     if isinstance(array, gpuarray.GPUArray):
         first = gpuarray.GPUArray(array.shape, array.dtype)
