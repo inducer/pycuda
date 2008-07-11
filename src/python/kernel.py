@@ -12,6 +12,11 @@ def _compile_kernels(cls):
             
                 
 def _get_scalar_kernel(arguments, operation, name="kernel"):
+    """a function to generate c functions on the fly::
+    
+       basically it reduces some overhead for the programmer and
+       simplifies the kernel development
+    """
     mod = drv.SourceModule("""
         __global__ void %(name)s(%(arguments)s, int n)
         {
@@ -119,6 +124,8 @@ def _get_random_kernel():
     """calculates random values::
 
        based on the algorithm found here    
+
+       http://forums.nvidia.com/index.php?act=Attach&type=post&id=4398
     """
     
     mod = drv.SourceModule(

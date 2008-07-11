@@ -14,6 +14,15 @@ class TestAbstractArray(unittest.TestCase):
         return None
 
 
+    def test_random(self):
+        for i in range(30):
+            a = numpy.arange(100000).astype(numpy.float32)
+            a_cpu = self.create_array(a)
+            a_cpu.fill_random()
+
+        #no idea how to test it yet, most likley search for double numbers or so
+        
+        
     def test_index_access(self):
         """tests the index based access"""
         a = numpy.array([1,2,3,4,5]).astype(numpy.float32)
