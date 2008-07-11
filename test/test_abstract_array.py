@@ -73,7 +73,7 @@ class TestAbstractArray(unittest.TestCase):
 
     def test_abs(self):
         """test if the abs function works"""
-        a = gpuarray.arrange(111)
+        a = gpuarray.arange(111)
         a = a * -1
 
         res = a.get()
@@ -91,12 +91,12 @@ class TestAbstractArray(unittest.TestCase):
 
 
         for i in range(100,200):
-            a = gpuarray.arrange(500 * i)
+            a = gpuarray.arange(500 * i)
             self.assert_(a[len(a)-1] == len(a)-1)
 
-    def test_arrange(self):
+    def test_arange(self):
         """test the arrangement of the array"""
-        a = gpuarray.arrange(12)
+        a = gpuarray.arange(12)
 
         res = a.get()
 

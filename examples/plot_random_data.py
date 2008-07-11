@@ -3,7 +3,7 @@
 import pycuda.simplearray as cuda
 from matplotlib.pylab import *
 
-size = 10000
+size = 1000
 
 #random data generated on gpu
 a = cuda.array(size).fill_random()

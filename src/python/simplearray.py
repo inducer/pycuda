@@ -42,11 +42,11 @@ def to_gpu_from_list(list, stream=None):
 empty = SimpleArray
 
 
-def arrange(limit,dtype=numpy.float32):
+def arange(limit,dtype=numpy.float32):
     """arranges an array like the array function from numpy"""
     result = SimpleArray((limit,), dtype)
 
-    result.fill_arrange()
+    result.fill_arange()
     return result
 
 

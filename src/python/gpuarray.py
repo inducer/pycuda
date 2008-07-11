@@ -321,9 +321,10 @@ class GPUArray(object):
             calculates random numbers for each element of the array
             
         """
+
         kernel._get_random_kernel()(self.gpudata,numpy.float32(random.random()), numpy.int32(self.size),
                 **self._kernel_kwargs)
-
+            
         return self
         
     def bind_to_texref(self, texref):
@@ -411,7 +412,7 @@ class GPUArray(object):
         return self.reverse()
 
 
-    def fill_arrange(self):
+    def fill_arange(self):
         """fills the array in an arranged way, like numpy"""
 
         block_count, threads_per_block, elems_per_block = splay(self.size, WARP_SIZE, 128, 80)
@@ -462,11 +463,11 @@ class GPUIterator:
         return count
 
  
-def arrange(limit,dtype=numpy.float32):
+def arange(limit,dtype=numpy.float32):
     """arranges an array like the array function from numpy"""
     result = GPUArray((limit,), dtype)
   
-    result.fill_arrange() 
+    result.fill_arange() 
     return result
 
 

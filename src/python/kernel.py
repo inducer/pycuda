@@ -253,4 +253,12 @@ __global__ void calculate_random(float *dest,int seed,int n)
     """
     )
  
-    return mod.get_function("calculate_random")   
+    return mod.get_function("calculate_random")
+
+@memoize
+def _get_ceil_kernel():
+    return _get_scalar_kernel(
+            "float *y, float *z",
+            "z[i] = ceilf(y[i])",
+            "ceil_kernel")
+    
