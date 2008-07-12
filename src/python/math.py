@@ -287,3 +287,19 @@ def cosh(array):
     else:
         raise NotImplementedError, 'sorry only GPUArrays and subclasses are supported by this method'
 
+def degrees(array):
+    """executes the cosh function on the gpu for all elements in the given array"""
+    if isinstance(array, gpuarray.GPUArray):
+        result = gpuarray.GPUArray(array.shape, array.dtype)
+        
+        kernel._get_degress_kernel()(array.gpudata,
+                result.gpudata,numpy.float32(pi),numpy.int32(array.size),
+                **result._kernel_kwargs)
+        
+        return result
+    else:
+        raise NotImplementedError, 'sorry only GPUArrays and subclasses are supported by this method'
+
+pi = 3.14159265358979323846
+
+e = 2.7182818284590451

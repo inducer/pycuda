@@ -187,6 +187,15 @@ class TestMath(unittest.TestCase):
         
         for i in range(10):
             self.assert_(abs(math.tanh(a[i]) - b[i]) < 1e-2)
+
+         
+    def test_degrees(self):
+        """tests if the tanh function works"""
+        a = (simplearray.array(10).fill_arange()+1)     
+        b = cumath.degrees(a)
+        
+        for i in range(10):
+            self.assert_(abs(math.degrees(a[i]) - b[i]) < 1e-2)
           
 if __name__ == '__main__':
     unittest.main()

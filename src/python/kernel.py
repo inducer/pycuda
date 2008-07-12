@@ -395,3 +395,10 @@ def _get_tanh_kernel():
             "float *y, float *z",
             "z[i] = tanh(y[i])",
             "tanh_kernel")         
+
+@memoize
+def _get_degress_kernel():
+    return _get_scalar_kernel(
+            "float *y, float *z, float pi",
+            "z[i] = y[i] * 180 / pi",
+            "degrees_kernel")         
