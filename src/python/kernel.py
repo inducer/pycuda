@@ -374,3 +374,24 @@ def _get_tan_kernel():
             "z[i] = tan(y[i])",
             "tan_kernel")    
         
+    
+@memoize
+def _get_cosh_kernel():
+    return _get_scalar_kernel(
+            "float *y, float *z",
+            "z[i] = cosh(y[i])",
+            "cosh_kernel")    
+    
+@memoize
+def _get_sinh_kernel():
+    return _get_scalar_kernel(
+            "float *y, float *z",
+            "z[i] = sinh(y[i])",
+            "sinh_kernel")    
+    
+@memoize
+def _get_tanh_kernel():
+    return _get_scalar_kernel(
+            "float *y, float *z",
+            "z[i] = tanh(y[i])",
+            "tanh_kernel")         

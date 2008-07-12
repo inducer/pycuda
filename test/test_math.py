@@ -146,6 +146,47 @@ class TestMath(unittest.TestCase):
         for i in range(10):
             self.assert_(abs(math.asin(a[i]) - b[i]) < 1e-2)         
 
+         
+    def test_tan(self):
+        """tests if the tan function works"""
+        a = (simplearray.array(10).fill_arange()+1)/100      
+        b = cumath.tan(a)
+        
+        for i in range(10):
+            self.assert_(abs(math.tan(a[i]) - b[i]) < 1e-2)
+          
+    def test_atan(self):
+        """tests if the asin function works"""
+        a = (simplearray.array(10).fill_arange()+1)/100      
+        b = cumath.atan(a)
+        
+        for i in range(10):
+            self.assert_(abs(math.atan(a[i]) - b[i]) < 1e-2)         
 
+    def test_cosh(self):
+        """tests if the cosh function works"""
+        a = (simplearray.array(10).fill_arange()+1)/100      
+        b = cumath.cosh(a)
+        
+        for i in range(10):
+            self.assert_(abs(math.cosh(a[i]) - b[i]) < 1e-2)         
+         
+    def test_sinh(self):
+        """tests if the sinh function works"""
+        a = (simplearray.array(10).fill_arange()+1)/100      
+        b = cumath.sinh(a)
+        
+        for i in range(10):
+            self.assert_(abs(math.sinh(a[i]) - b[i]) < 1e-2)
+
+         
+    def test_tanh(self):
+        """tests if the tanh function works"""
+        a = (simplearray.array(10).fill_arange()+1)/100      
+        b = cumath.tanh(a)
+        
+        for i in range(10):
+            self.assert_(abs(math.tanh(a[i]) - b[i]) < 1e-2)
+          
 if __name__ == '__main__':
     unittest.main()

@@ -248,3 +248,42 @@ def sin(array):
     else:
         raise NotImplementedError, 'sorry only GPUArrays and subclasses are supported by this method'
 
+def sinh(array):
+    """executes the sinh function on the gpu for all elements in the given array"""
+    if isinstance(array, gpuarray.GPUArray):
+        result = gpuarray.GPUArray(array.shape, array.dtype)
+        
+        kernel._get_sinh_kernel()(array.gpudata,
+                result.gpudata,numpy.int32(array.size),
+                **result._kernel_kwargs)
+        
+        return result
+    else:
+        raise NotImplementedError, 'sorry only GPUArrays and subclasses are supported by this method'
+
+def tanh(array):
+    """executes the tah function on the gpu for all elements in the given array"""
+    if isinstance(array, gpuarray.GPUArray):
+        result = gpuarray.GPUArray(array.shape, array.dtype)
+        
+        kernel._get_tanh_kernel()(array.gpudata,
+                result.gpudata,numpy.int32(array.size),
+                **result._kernel_kwargs)
+        
+        return result
+    else:
+        raise NotImplementedError, 'sorry only GPUArrays and subclasses are supported by this method'
+
+def cosh(array):
+    """executes the cosh function on the gpu for all elements in the given array"""
+    if isinstance(array, gpuarray.GPUArray):
+        result = gpuarray.GPUArray(array.shape, array.dtype)
+        
+        kernel._get_cosh_kernel()(array.gpudata,
+                result.gpudata,numpy.int32(array.size),
+                **result._kernel_kwargs)
+        
+        return result
+    else:
+        raise NotImplementedError, 'sorry only GPUArrays and subclasses are supported by this method'
+
