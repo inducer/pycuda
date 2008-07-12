@@ -1,6 +1,6 @@
 import pycuda.simplearray as simplearray
 import unittest
-import pycuda.math as cumath
+import pycuda.cumath as cumath
 import math as math
 
 class TestMath(unittest.TestCase):

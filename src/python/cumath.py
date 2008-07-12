@@ -49,7 +49,7 @@ def fmod(array,mod):
         
         return result
     else:
-        return math.fmod(arry, mod)
+        return math.fmod(array, mod)
 
 def frexp(array):
     """executes the frexp function on the gpu for all elements in the given array::
