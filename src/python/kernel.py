@@ -402,3 +402,9 @@ def _get_degress_kernel():
             "float *y, float *z, float pi",
             "z[i] = y[i] * 180 / pi",
             "degrees_kernel")         
+
+def _get_radians_kernel():
+    return _get_scalar_kernel(
+            "float *y, float *z, float pi",
+            "z[i] = y[i] * pi / 180",
+            "degrees_kernel")         

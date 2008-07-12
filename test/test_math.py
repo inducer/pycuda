@@ -190,12 +190,22 @@ class TestMath(unittest.TestCase):
 
          
     def test_degrees(self):
-        """tests if the tanh function works"""
+        """tests if the degrees function works"""
         a = (simplearray.array(10).fill_arange()+1)     
         b = cumath.degrees(a)
         
         for i in range(10):
             self.assert_(abs(math.degrees(a[i]) - b[i]) < 1e-2)
+
+         
+    def test_radians(self):
+        """tests if the radians function works"""
+        a = (simplearray.array(10).fill_arange()+1)     
+        b = cumath.radians(a)
+        
+        for i in range(10):
+            self.assert_(abs(math.radians(a[i]) - b[i]) < 1e-2)
           
+                    
 if __name__ == '__main__':
     unittest.main()
