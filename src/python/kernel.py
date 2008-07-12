@@ -4,11 +4,12 @@ from pytools import memoize
 
 NVCC_OPTIONS = []
 
-def _compile_kernels(cls):
-    """compiles all kernels in this module"""
-    for name in dir(cls.__module__):
+def _compile_kernels(kernel):
+    """compiles all kernels in this module, which is usefull for benchmarks"""
+    for name in dir(kernel):
         if name.startswith("_get_") and name.endswith("_kernel"):
-            name()
+            if name is not "_get_scalar_kernel":
+                getattr(kernel,name)()
             
                 
 def _get_scalar_kernel(arguments, operation, name="kernel"):

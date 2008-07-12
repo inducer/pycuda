@@ -1,6 +1,7 @@
 import pycuda.gpuarray as gpuarray
 import pycuda.kernel as kernel
 import numpy
+import math
 
 def ceil(array):
     """executes the ceil function on the gpu for all elements in the given array"""
@@ -13,7 +14,7 @@ def ceil(array):
         
         return result
     else:
-        raise NotImplementedError, 'sorry only GPUArrays and subclasses are supported by this method'
+        return math.ceil(array)
     
 def fabs(array):
     """executes the fabs function on the gpu for all elements in the given array"""
@@ -22,7 +23,7 @@ def fabs(array):
         
         return abs(result)
     else:
-        raise NotImplementedError, 'sorry only GPUArrays and subclasses are supported by this method'
+        return math.fabs(array)
 
 def floor(array):
     """executes the floor function on the gpu for all elements in the given array"""
@@ -35,8 +36,7 @@ def floor(array):
         
         return result
     else:
-        raise NotImplementedError, 'sorry only GPUArrays and subclasses are supported by this method'
-    
+        return math.floor(array)
 
 def fmod(array,mod):
     """executes the fmod function on the gpu for all elements in the given array"""
@@ -49,7 +49,7 @@ def fmod(array,mod):
         
         return result
     else:
-        raise NotImplementedError, 'sorry only GPUArrays and subclasses are supported by this method'
+        return math.fmod(arry, mod)
 
 def frexp(array):
     """executes the frexp function on the gpu for all elements in the given array::
@@ -66,7 +66,7 @@ def frexp(array):
         
         return (first,second)
     else:
-        raise NotImplementedError, 'sorry only GPUArrays and subclasses are supported by this method'
+        return math.frexp(array)
     
 def ldexp(array, i):
     """executes the ldexp function on the gpu for all elements in the given array"""
@@ -79,8 +79,8 @@ def ldexp(array, i):
         
         return result
     else:
-        raise NotImplementedError, 'sorry only GPUArrays and subclasses are supported by this method'
-
+        return math.ldexp(array, i)
+        
 def modf(array):
     """executes the modf function on the gpu for all elements in the given array::
     
@@ -96,7 +96,7 @@ def modf(array):
         
         return (first,second)
     else:
-        raise NotImplementedError, 'sorry only GPUArrays and subclasses are supported by this method'
+        return math.modf(array)
 
 def exp(array):
     """executes the exp function on the gpu for all elements in the given array::
@@ -113,7 +113,7 @@ def exp(array):
         
         return result
     else:
-        raise NotImplementedError, 'sorry only GPUArrays and subclasses are supported by this method'
+        return math.exp(array)
 
 def log(array):
     """executes the log function on the gpu for all elements in the given array::
@@ -130,7 +130,7 @@ def log(array):
         
         return result
     else:
-        raise NotImplementedError, 'sorry only GPUArrays and subclasses are supported by this method'
+        return math.log(array)
     
 def log10(array):
     """executes the log10 function on the gpu for all elements in the given array"""
@@ -143,14 +143,14 @@ def log10(array):
         
         return result
     else:
-        raise NotImplementedError, 'sorry only GPUArrays and subclasses are supported by this method'
+        return math.log10(array)
 
 def pow(x,y):
     """executes the pow function on the gpu for all elements in the given array"""
     if isinstance(x, gpuarray.GPUArray):
         return x.__pow__(y)
     else:
-        raise NotImplementedError, 'sorry only GPUArrays and subclasses are supported by this method'
+        return math.pow(x, y)
 
 def sqrt(array):
     """executes the sqrt function on the gpu for all elements in the given array"""
@@ -163,8 +163,8 @@ def sqrt(array):
         
         return result
     else:
-        raise NotImplementedError, 'sorry only GPUArrays and subclasses are supported by this method'
-
+        return math.sqrt(array)
+    
 def acos(array):
     """executes the acos function on the gpu for all elements in the given array"""
     if isinstance(array, gpuarray.GPUArray):
@@ -176,7 +176,7 @@ def acos(array):
         
         return result
     else:
-        raise NotImplementedError, 'sorry only GPUArrays and subclasses are supported by this method'
+        return math.acos(array)
 
 
 def cos(array):
@@ -190,7 +190,7 @@ def cos(array):
         
         return result
     else:
-        raise NotImplementedError, 'sorry only GPUArrays and subclasses are supported by this method'
+        return math.cos(array)
 
 
 def tan(array):
@@ -204,8 +204,7 @@ def tan(array):
         
         return result
     else:
-        raise NotImplementedError, 'sorry only GPUArrays and subclasses are supported by this method'
-
+        return math.tan(array)
 
 def atan(array):
     """executes the cos function on the gpu for all elements in the given array"""
@@ -218,7 +217,7 @@ def atan(array):
         
         return result
     else:
-        raise NotImplementedError, 'sorry only GPUArrays and subclasses are supported by this method'
+        return math.atan(array)
 
 
 def asin(array):
@@ -232,7 +231,7 @@ def asin(array):
         
         return result
     else:
-        raise NotImplementedError, 'sorry only GPUArrays and subclasses are supported by this method'
+        return math.asin(array)
 
 
 def sin(array):
@@ -246,8 +245,8 @@ def sin(array):
         
         return result
     else:
-        raise NotImplementedError, 'sorry only GPUArrays and subclasses are supported by this method'
-
+        return math.sin(array)
+        
 def sinh(array):
     """executes the sinh function on the gpu for all elements in the given array"""
     if isinstance(array, gpuarray.GPUArray):
@@ -259,7 +258,7 @@ def sinh(array):
         
         return result
     else:
-        raise NotImplementedError, 'sorry only GPUArrays and subclasses are supported by this method'
+        return math.sinh(array)
 
 def tanh(array):
     """executes the tah function on the gpu for all elements in the given array"""
@@ -272,7 +271,7 @@ def tanh(array):
         
         return result
     else:
-        raise NotImplementedError, 'sorry only GPUArrays and subclasses are supported by this method'
+        return math.tanh(array)
 
 def cosh(array):
     """executes the cosh function on the gpu for all elements in the given array"""
@@ -285,7 +284,7 @@ def cosh(array):
         
         return result
     else:
-        raise NotImplementedError, 'sorry only GPUArrays and subclasses are supported by this method'
+        return math.cosh(array)
 
 def degrees(array):
     """executes the cosh function on the gpu for all elements in the given array"""
@@ -298,7 +297,7 @@ def degrees(array):
         
         return result
     else:
-        raise NotImplementedError, 'sorry only GPUArrays and subclasses are supported by this method'
+        return math.degrees(array)
 
 
 def radians(array):
@@ -312,7 +311,7 @@ def radians(array):
         
         return result
     else:
-        raise NotImplementedError, 'sorry only GPUArrays and subclasses are supported by this method'
+        return math.radians(array)
     
 #cconstant pi
 pi = 3.14159265358979323846
