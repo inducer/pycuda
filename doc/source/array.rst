@@ -62,3 +62,8 @@ The :class:`GPUArray` Array Class
 
   Same as :func:`empty`, but the :class:`GPUArray` is zero-initialized before
   being returned.
+
+We are also providing a math module which emulates the standard python math module and
+executes all it's methods on the GPU instead of the CPU, if the argument is of a supported
+type. Right now this is only the case for the class GPUArray and classes which inherit GPUArray
+like SimpleArray.

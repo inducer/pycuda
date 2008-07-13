@@ -97,15 +97,31 @@ Using a :class:`pycuda.gpuarray.GPUArray`, the same effect can be
 achieved with much less writing::
 
   import pycuda.gpuarray as gpuarray
+  import pycuda.driver as cuda
+
+  cuda.init()
+  assert cuda.Device.count() >= 1
+
+  dev = cuda.Device(0)
+  ctx = dev.make_context()
+  
   a_gpu = gpuarray.to_gpu(numpy.random.randn(4,4).astype(numpy.float32))
   a_doubled = (2*a_gpu).get()
   print a_doubled
   print a_gpu
+
 
 Where to Go from Here
 ---------------------
 
 Once you feel sufficiently familiar with the basics, feel free to dig into the
 :ref:`reference-doc`. Also check out PyCuda's test suite at
-:file:`test/test_driver.py`. It contains examples (and tests!) of many more
+:file:`test`. It contains examples (and tests!) of many more
 advanced techniques.
+
+More examples
+-------------
+
+In case you want to see more examples, you can find them in the :file:`example` folder.
+This folder also contains several benchmarks to see the difference between gpu and
+cpu based calculations.

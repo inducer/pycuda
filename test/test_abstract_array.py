@@ -330,8 +330,3 @@ class TestAbstractArray(unittest.TestCase):
         #check that the result is like we expsect it
         for i in range(0,a.size):
            self.assert_( abs(b[i]/a[i] - a_divide[i]) < 1e-3 )
-
-
-if __name__ == '__main__':
-    unittest.main()
-
