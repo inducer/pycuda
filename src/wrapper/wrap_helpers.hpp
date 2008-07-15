@@ -31,10 +31,10 @@
   boost::python::def(#NAME, &NAME, boost::python::args ARGS)
 
 #define DEF_SIMPLE_RO_MEMBER(NAME) \
-  def_readonly(#NAME, &cl::NAME)
+  def_readonly(#NAME, &cl::m_##NAME)
 
 #define DEF_SIMPLE_RW_MEMBER(NAME) \
-  def_readwrite(#NAME, &cl::NAME)
+  def_readwrite(#NAME, &cl::m_##NAME)
 
 
 

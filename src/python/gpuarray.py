@@ -5,6 +5,7 @@ import pycuda.driver as drv
 
 
 
+
 def splay(n, min_threads=None, max_threads=128, max_blocks=80):
     # stolen from cublas
 
@@ -123,13 +124,15 @@ class GPUArray(object):
     work on an element-by-element basis, just like numpy.ndarray.
     """
 
+    allocate = staticmethod(drv.mem_alloc)
+
     def __init__(self, shape, dtype, stream=None):
         self.shape = shape
         self.dtype = numpy.dtype(dtype)
         from pytools import product
         self.size = product(shape)
         if self.size:
-            self.gpudata = drv.mem_alloc(self.size * self.dtype.itemsize)
+            self.gpudata = self.allocate(self.size * self.dtype.itemsize)
         else:
             self.gpudata = None
         self.stream = stream
@@ -263,11 +266,11 @@ class GPUArray(object):
             if other == 0:
                 return self
             else:
-                result = GPUArray(self.shape, self.dtype)
+                result = self.__class__(self.shape, self.dtype)
                 return self._axpbz(1, other, result)
         else:
             # add another vector
-            result = GPUArray(self.shape, self.dtype)
+            result = self.__class__(self.shape, self.dtype)
             return self._axpbyz(1, other, 1, result)
 
     __radd__ = __add__
@@ -282,10 +285,10 @@ class GPUArray(object):
                 return self
             else:
                 # create a new array for the result
-                result = GPUArray(self.shape, self.dtype)
+                result = self.__class__(self.shape, self.dtype)
                 return self._axpbz(1, -other, result)
         else:
-            result = GPUArray(self.shape, self.dtype)
+            result = self.__class__(self.shape, self.dtype)
             return self._axpbyz(1, other, -1, result)
 
     def __rsub__(self,other):
@@ -300,7 +303,7 @@ class GPUArray(object):
             return self
         else:
             # create a new array for the result
-            result = GPUArray(self.shape, self.dtype)
+            result = self.__class__(self.shape, self.dtype)
             return self._axpbz(-1, other, result)
 
     def __iadd__(self, other):
@@ -310,18 +313,18 @@ class GPUArray(object):
         return self._axpbyz(1, other, -1, self)
 
     def __neg__(self):
-        result = GPUArray(self.shape, self.dtype)
+        result = self.__class__(self.shape, self.dtype)
         return self._axpbz(-1, 0, result)
 
     def __mul__(self, other):
-        result = GPUArray(self.shape, self.dtype)
+        result = self.__class__(self.shape, self.dtype)
         if isinstance(other, (int, float, complex)):
             return self._axpbz(other, 0, result)
         else:
             return self._elwise_multiply(other, result)
 
     def __rmul__(self, scalar):
-        result = GPUArray(self.shape, self.dtype)
+        result = self.__class__(self.shape, self.dtype)
         return self._axpbz(scalar, 0, result)
 
     def __imul__(self, scalar):
@@ -338,10 +341,10 @@ class GPUArray(object):
                 return self
             else:
                 # create a new array for the result
-                result = GPUArray(self.shape, self.dtype)
+                result = self.__class__(self.shape, self.dtype)
                 return self._axpbz(1/other, 0, result)
         else:
-            result = GPUArray(self.shape, self.dtype)
+            result = self.__class__(self.shape, self.dtype)
             return self._div(other, result)
 
     def __rdiv__(self,other):
@@ -356,10 +359,10 @@ class GPUArray(object):
                 return self
             else:
                 # create a new array for the result
-                result = GPUArray(self.shape, self.dtype)
+                result = self.__class__(self.shape, self.dtype)
                 return self._rdiv_scalar(other, result)
         else:
-            result = GPUArray(self.shape, self.dtype)
+            result = self.__class__(self.shape, self.dtype)
 
             assert self.dtype == numpy.float32
             assert self.shape == other.shape
@@ -390,17 +393,15 @@ class GPUArray(object):
 
 
 
-def to_gpu(ary, stream=None):
-    result = GPUArray(ary.shape, ary.dtype)
+def to_gpu(ary, stream=None, klass=GPUArray):
+    result = klass(ary.shape, ary.dtype)
     result.set(ary, stream)
     return result
 
+def zeros(shape, dtype, stream=None, klass=GPUArray):
+    return klass(shape, dtype, stream)
 
-
-
-empty = GPUArray
-
-def zeros(shape, dtype, stream=None):
-    result = GPUArray(shape, dtype, stream)
+def zeros(shape, dtype, stream=None, klass=GPUArray):
+    result = klass(shape, dtype, stream)
     result.fill(0)
     return result

@@ -220,6 +220,34 @@ class TestCuda(unittest.TestCase):
 
         kernel(arg, block=(1,1,1,), )
 
+    def test_bitlog(self):
+        from pycuda.tools import bitlog2
+        assert bitlog2(17) == 4
+        assert bitlog2(0xaffe) == 15
+        assert bitlog2(0x3affe) == 17
+        assert bitlog2(0xcc3affe) == 27
+
+    def test_mempool(self):
+        from pycuda.tools import bitlog2
+        from pycuda.tools import mem_alloc_pool
+        maxlen = 10
+        queue = []
+        free, total = drv.mem_get_info()
+
+        e0 = bitlog2(free)
+
+        for e in range(e0-4, e0-2):
+            for i in range(100):
+                queue.append(mem_alloc_pool(1<<e))
+                if len(queue) > 10:
+                    queue.pop(0)
+
+        del queue
+
+        mem_alloc_pool.pool.free_all()
+
+
+
 
 
 

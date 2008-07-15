@@ -164,7 +164,9 @@ def main():
             ext_modules=[
                 NumpyExtension("_driver", 
                     [
+                        "src/cpp/cuda.cpp", 
                         "src/wrapper/wrap_cudadrv.cpp", 
+                        "src/wrapper/tools.cpp", 
                         ],
                     include_dirs=INCLUDE_DIRS + EXTRA_INCLUDE_DIRS,
                     library_dirs=LIBRARY_DIRS + conf["CUDADRV_LIB_DIR"],

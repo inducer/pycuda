@@ -63,7 +63,7 @@ namespace cuda
     public:
       error(const char *rout, CUresult c)
         : std::runtime_error(
-            m_routine + std::string(" failed: ") + curesult_to_str(m_code)),
+            rout + std::string(" failed: ") + curesult_to_str(m_code)),
         m_routine(rout), m_code(c)
       { }
 
@@ -178,8 +178,13 @@ namespace cuda
       boost::shared_ptr<context> make_context(unsigned int flags);
   };
 
-  void init(unsigned int flags) { CUDAPP_CALL_GUARDED(cuInit, (flags)); }
+  inline
+  void init(unsigned int flags) 
+  { 
+    CUDAPP_CALL_GUARDED(cuInit, (flags)); 
+  }
 
+  inline
   device *make_device(int ordinal)
   { 
     CUdevice result;
@@ -270,11 +275,10 @@ namespace cuda
       friend void context_push(boost::shared_ptr<context> ctx);
   };
 
-  context::context_stack_t context::m_context_stack;
 
 
 
-
+  inline
   boost::shared_ptr<context> device::make_context(unsigned int flags)
   {
     CUcontext ctx;
@@ -285,6 +289,7 @@ namespace cuda
   }
 
 #if CUDA_VERSION >= 2000
+  inline
   void context_push(boost::shared_ptr<context> ctx)
   { 
     CUDAPP_CALL_GUARDED(cuCtxPushCurrent, (ctx->m_context)); 
@@ -295,17 +300,25 @@ namespace cuda
 
 
 
+  class context_dependent
+  {
+    private:
+      boost::shared_ptr<context> m_ward_context;
+
+    public:
+      context_dependent()
+        : m_ward_context(context::current_context())
+      { }
+  };
 
   // streams ------------------------------------------------------------------
-  class stream : public boost::noncopyable
+  class stream : public boost::noncopyable, public context_dependent
   {
     private:
       CUstream m_stream;
-      boost::shared_ptr<context> m_ward;
 
     public:
       stream(unsigned int flags=0)
-        : m_ward(context::current_context())
       { CUDAPP_CALL_GUARDED(cuStreamCreate, (&m_stream, flags)); }
 
       ~stream()
@@ -339,26 +352,25 @@ namespace cuda
 
 
   // arrays -------------------------------------------------------------------
-  class array : public boost::noncopyable
+  class array : public boost::noncopyable, public context_dependent
   {
     private:
       CUarray m_array;
       bool m_managed;
-      boost::shared_ptr<context> m_ward;
 
     public:
       array(const CUDA_ARRAY_DESCRIPTOR &descr)
-        : m_managed(true), m_ward(context::current_context())
+        : m_managed(true)
       { CUDAPP_CALL_GUARDED(cuArrayCreate, (&m_array, &descr)); }
 
 #if CUDA_VERSION >= 2000
       array(const CUDA_ARRAY3D_DESCRIPTOR &descr)
-        : m_managed(true), m_ward(context::current_context())
+        : m_managed(true)
       { CUDAPP_CALL_GUARDED(cuArray3DCreate, (&m_array, &descr)); }
 #endif
 
       array(CUarray ary, bool managed)
-        : m_array(ary), m_managed(managed), m_ward(context::current_context())
+        : m_array(ary), m_managed(managed)
       { }
 
       ~array()
@@ -504,15 +516,14 @@ namespace cuda
   // module -------------------------------------------------------------------
   class function;
 
-  class module : public boost::noncopyable
+  class module : public boost::noncopyable, public context_dependent
   {
     private:
       CUmodule m_module;
-      boost::shared_ptr<context> m_ward;
 
     public:
       module(CUmodule mod)
-        : m_module(mod), m_ward(context::current_context())
+        : m_module(mod)
       { }
 
       ~module()
@@ -533,6 +544,7 @@ namespace cuda
       }
   };
 
+  inline
   module *module_from_file(const char *filename)
   {
     CUmodule mod;
@@ -540,6 +552,7 @@ namespace cuda
     return new module(mod);
   }
 
+  inline
   texture_reference *module_get_texref(boost::shared_ptr<module> mod, const char *name)
   {
     CUtexref tr;
@@ -593,6 +606,7 @@ namespace cuda
       { CUDAPP_CALL_GUARDED(cuLaunchGridAsync, (m_function, grid_width, grid_height, s.data())); }
   };
 
+  inline
   function module::get_function(const char *name)
   {
     CUfunction func;
@@ -604,27 +618,7 @@ namespace cuda
 
 
   // device memory ------------------------------------------------------------
-  class device_allocation : public boost::noncopyable
-  {
-    private:
-      CUdeviceptr m_devptr;
-      boost::shared_ptr<context> m_ward;
-
-    public:
-      device_allocation(CUdeviceptr devptr)
-        : m_devptr(devptr), m_ward(context::current_context())
-                                                               
-      { }
-
-      ~device_allocation()
-      {
-        CUDAPP_CALL_GUARDED(cuMemFree, (m_devptr));
-      }
-      
-      operator CUdeviceptr()
-      { return m_devptr; }
-  };
-
+  inline
   py::tuple mem_get_info()
   {
     unsigned int free, total;
@@ -632,13 +626,61 @@ namespace cuda
     return py::make_tuple(free, total);
   }
 
-  device_allocation *mem_alloc(unsigned int bytes)
+  inline 
+  CUdeviceptr mem_alloc(unsigned long bytes)
   {
     CUdeviceptr devptr;
     CUDAPP_CALL_GUARDED(cuMemAlloc, (&devptr, bytes));
-    return new device_allocation(devptr);
+    return devptr;
   }
 
+  inline 
+  void mem_free(CUdeviceptr devptr)
+  {
+    CUDAPP_CALL_GUARDED(cuMemFree, (devptr));
+  }
+
+  class device_allocation : public boost::noncopyable, public context_dependent
+  {
+    private:
+      bool m_valid;
+
+    protected:
+      CUdeviceptr m_devptr;
+
+    public:
+      device_allocation(CUdeviceptr devptr)
+        : m_valid(true), m_devptr(devptr)
+      { }
+
+      void free()
+      {
+        if (m_valid)
+        {
+          mem_free(m_devptr);
+          m_valid = false;
+        }
+        else
+          throw cuda::error("device_allocation::free", CUDA_ERROR_INVALID_HANDLE);
+      }
+
+      ~device_allocation()
+      {
+        if (m_valid)
+          mem_free(m_devptr);
+      }
+      
+      operator CUdeviceptr()
+      { return m_devptr; }
+  };
+
+  inline 
+  device_allocation *make_device_allocation(unsigned long bytes)
+  {
+    return new device_allocation(mem_alloc(bytes));
+  }
+
+  inline
   py::tuple mem_alloc_pitch(
       unsigned int width, unsigned int height, unsigned int access_size)
   {
@@ -650,6 +692,7 @@ namespace cuda
         pitch);
   }
 
+  inline
   py::tuple mem_get_address_range(CUdeviceptr ptr)
   {
     CUdeviceptr base;
@@ -658,67 +701,17 @@ namespace cuda
     return py::make_tuple(base, size);
   }
 
-  void memcpy_htod(CUdeviceptr dst, py::object src, py::object stream_py)
-  {
-    const void *buf;
-    Py_ssize_t len;
-    if (PyObject_AsReadBuffer(src.ptr(), &buf, &len))
-      throw py::error_already_set();
+  // missing: htoa, atoh, dtoh, htod
 
-    if (stream_py.ptr() == Py_None)
-    {
-      CUDAPP_CALL_GUARDED(cuMemcpyHtoD, (dst, buf, len));
-    }
-    else
-    {
-      const stream &s = py::extract<const stream &>(stream_py);
-      CUDAPP_CALL_GUARDED(cuMemcpyHtoDAsync, (dst, buf, len, s.data()));
-    }
-  }
-
-  void memcpy_dtoh(py::object dest, CUdeviceptr src, py::object stream_py)
-  {
-    void *buf;
-    Py_ssize_t len;
-    if (PyObject_AsWriteBuffer(dest.ptr(), &buf, &len))
-      throw py::error_already_set();
-
-    if (stream_py.ptr() == Py_None)
-    {
-      CUDAPP_CALL_GUARDED(cuMemcpyDtoH, (buf, src, len));
-    }
-    else
-    {
-      const stream &s = py::extract<const stream &>(stream_py);
-      CUDAPP_CALL_GUARDED(cuMemcpyDtoHAsync, (buf, src, len, s.data()));
-    }
-  }
-
+  inline
   void memcpy_dtoa(array const &ary, unsigned int index, CUdeviceptr src, unsigned int len)
   { CUDAPP_CALL_GUARDED(cuMemcpyDtoA, (ary.data(), index, src, len)); }
+
+  inline
   void memcpy_atod(CUdeviceptr dst, array const &ary, unsigned int index, unsigned int len)
   { CUDAPP_CALL_GUARDED(cuMemcpyAtoD, (dst, ary.data(), index, len)); }
 
-  void memcpy_htoa(array const &ary, unsigned int index, py::object src)
-  {
-    const void *buf;
-    Py_ssize_t len;
-    if (PyObject_AsReadBuffer(src.ptr(), &buf, &len))
-      throw py::error_already_set();
-
-    CUDAPP_CALL_GUARDED(cuMemcpyHtoA, (ary.data(), index, buf, len));
-  }
-
-  void memcpy_atoh(py::object dst, array const &ary, unsigned int index)
-  {
-    void *buf;
-    Py_ssize_t len;
-    if (PyObject_AsWriteBuffer(dst.ptr(), &buf, &len))
-      throw py::error_already_set();
-
-    CUDAPP_CALL_GUARDED(cuMemcpyAtoH, (buf, ary.data(), index, len));
-  }
-
+  inline
   void memcpy_atoa(
       array const &dst, unsigned int dst_index, 
       array const &src, unsigned int src_index, 
@@ -851,15 +844,13 @@ namespace cuda
 
 
   // events -------------------------------------------------------------------
-  class event : public boost::noncopyable
+  class event : public boost::noncopyable, public context_dependent
   {
     private:
       CUevent m_event;
-      boost::shared_ptr<context> m_ward;
 
     public:
       event(unsigned int flags=0)
-        : m_ward(context::current_context())
       { CUDAPP_CALL_GUARDED(cuEventCreate, (&m_event, flags)); }
 
       ~event()

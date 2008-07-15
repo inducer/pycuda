@@ -130,7 +130,77 @@ namespace
 
 
 
+  void py_memcpy_htod(CUdeviceptr dst, py::object src, py::object stream_py)
+  {
+    const void *buf;
+    Py_ssize_t len;
+    if (PyObject_AsReadBuffer(src.ptr(), &buf, &len))
+      throw py::error_already_set();
+
+    if (stream_py.ptr() == Py_None)
+    {
+      CUDAPP_CALL_GUARDED(cuMemcpyHtoD, (dst, buf, len));
+    }
+    else
+    {
+      const stream &s = py::extract<const stream &>(stream_py);
+      CUDAPP_CALL_GUARDED(cuMemcpyHtoDAsync, (dst, buf, len, s.data()));
+    }
+  }
+
+
+
+
+  void py_memcpy_dtoh(py::object dest, CUdeviceptr src, py::object stream_py)
+  {
+    void *buf;
+    Py_ssize_t len;
+    if (PyObject_AsWriteBuffer(dest.ptr(), &buf, &len))
+      throw py::error_already_set();
+
+    if (stream_py.ptr() == Py_None)
+    {
+      CUDAPP_CALL_GUARDED(cuMemcpyDtoH, (buf, src, len));
+    }
+    else
+    {
+      const stream &s = py::extract<const stream &>(stream_py);
+      CUDAPP_CALL_GUARDED(cuMemcpyDtoHAsync, (buf, src, len, s.data()));
+    }
+  }
+
+
+
+
+  void py_memcpy_htoa(array const &ary, unsigned int index, py::object src)
+  {
+    const void *buf;
+    Py_ssize_t len;
+    if (PyObject_AsReadBuffer(src.ptr(), &buf, &len))
+      throw py::error_already_set();
+
+    CUDAPP_CALL_GUARDED(cuMemcpyHtoA, (ary.data(), index, buf, len));
+  }
+
+
+
+
+  void py_memcpy_atoh(py::object dst, array const &ary, unsigned int index)
+  {
+    void *buf;
+    Py_ssize_t len;
+    if (PyObject_AsWriteBuffer(dst.ptr(), &buf, &len))
+      throw py::error_already_set();
+
+    CUDAPP_CALL_GUARDED(cuMemcpyAtoH, (buf, ary.data(), index, len));
+  }
+
 }
+
+
+
+
+void pycuda_expose_tools();
 
 
 
@@ -283,6 +353,7 @@ BOOST_PYTHON_MODULE(_driver)
     typedef device_allocation cl;
     py::class_<cl, boost::noncopyable>("DeviceAllocation", py::no_init)
       .def("__int__", &cl::operator CUdeviceptr)
+      .DEF_SIMPLE_METHOD(free)
       ;
 
     py::implicitly_convertible<device_allocation, CUdeviceptr>();
@@ -295,7 +366,8 @@ BOOST_PYTHON_MODULE(_driver)
   }
 
   DEF_SIMPLE_FUNCTION(mem_get_info);
-  py::def("mem_alloc", mem_alloc, py::return_value_policy<py::manage_new_object>());
+  py::def("mem_alloc", make_device_allocation, 
+      py::return_value_policy<py::manage_new_object>());
   DEF_SIMPLE_FUNCTION(mem_alloc_pitch);
   DEF_SIMPLE_FUNCTION(mem_get_address_range);
 
@@ -310,9 +382,9 @@ BOOST_PYTHON_MODULE(_driver)
   py::def("memset_d2d32", _cuMemsetD2D32, 
       py::args("dest", "pitch", "data", "width", "height"));
 
-  py::def("memcpy_htod", memcpy_htod, 
+  py::def("memcpy_htod", py_memcpy_htod, 
       (py::args("dest"), py::arg("src"), py::arg("stream")=py::object()));
-  py::def("memcpy_dtoh", memcpy_dtoh, 
+  py::def("memcpy_dtoh", py_memcpy_dtoh, 
       (py::args("dest"), py::arg("src"), py::arg("stream")=py::object()));
   py::def("memcpy_dtod", _cuMemcpyDtoD, py::args("dest", "src", "size"));
 
@@ -320,9 +392,9 @@ BOOST_PYTHON_MODULE(_driver)
       ("ary", "index", "src", "len"));
   DEF_SIMPLE_FUNCTION_WITH_ARGS(memcpy_atod,
       ("dest", "ary", "index", "len"));
-  DEF_SIMPLE_FUNCTION_WITH_ARGS(memcpy_htoa,
+  DEF_SIMPLE_FUNCTION_WITH_ARGS(py_memcpy_htoa,
       ("ary", "index", "src"));
-  DEF_SIMPLE_FUNCTION_WITH_ARGS(memcpy_atoh,
+  DEF_SIMPLE_FUNCTION_WITH_ARGS(py_memcpy_atoh,
       ("dest", "ary", "index"));
 
   DEF_SIMPLE_FUNCTION_WITH_ARGS(memcpy_atoa,
@@ -477,4 +549,6 @@ BOOST_PYTHON_MODULE(_driver)
   py::scope().attr("TRSF_READ_AS_INTEGER") = CU_TRSF_READ_AS_INTEGER;
   py::scope().attr("TRSF_NORMALIZED_COORDINATES") = CU_TRSF_NORMALIZED_COORDINATES;
   py::scope().attr("TR_DEFAULT") = CU_PARAM_TR_DEFAULT;
+
+  pycuda_expose_tools();
 }
