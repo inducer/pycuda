@@ -21,29 +21,36 @@
 
 
 
+//#define CUDAPP_TRACE_CUDA
+
+
+
+
 #ifdef CUDAPP_TRACE_CUDA
-#define CUDAPP_CALL_GUARDED(NAME, ARGLIST) \
-  { \
-    std::cerr << #NAME << std::endl; \
-    CUresult cu_status_code; \
-    Py_BEGIN_ALLOW_THREADS \
-      cu_status_code = NAME ARGLIST; \
-    Py_END_ALLOW_THREADS \
-    if (cu_status_code != CUDA_SUCCESS) \
-      throw cuda::error(#NAME, cu_status_code);\
-  }
+  #define CUDAPP_PRINT_CALL_TRACE(NAME) std::cerr << NAME << std::endl;
 #else
-#define CUDAPP_CALL_GUARDED(NAME, ARGLIST) \
-  { \
-    CUresult cu_status_code; \
-    Py_BEGIN_ALLOW_THREADS \
-      cu_status_code = NAME ARGLIST; \
-    Py_END_ALLOW_THREADS \
-    if (cu_status_code != CUDA_SUCCESS) \
-      throw cuda::error(#NAME, cu_status_code);\
-  }
+  #define CUDAPP_PRINT_CALL_TRACE(NAME) /*nothing*/
 #endif
 
+#define CUDAPP_CALL_GUARDED_THREADED(NAME, ARGLIST) \
+  { \
+    CUDAPP_PRINT_CALL_TRACE(#NAME); \
+    CUresult cu_status_code; \
+    Py_BEGIN_ALLOW_THREADS \
+      cu_status_code = NAME ARGLIST; \
+    Py_END_ALLOW_THREADS \
+    if (cu_status_code != CUDA_SUCCESS) \
+      throw cuda::error(#NAME, cu_status_code);\
+  }
+
+#define CUDAPP_CALL_GUARDED(NAME, ARGLIST) \
+  { \
+    CUDAPP_PRINT_CALL_TRACE(#NAME); \
+    CUresult cu_status_code; \
+    cu_status_code = NAME ARGLIST; \
+    if (cu_status_code != CUDA_SUCCESS) \
+      throw cuda::error(#NAME, cu_status_code);\
+  }
 
 
 
@@ -63,7 +70,7 @@ namespace cuda
     public:
       error(const char *rout, CUresult c)
         : std::runtime_error(
-            rout + std::string(" failed: ") + curesult_to_str(m_code)),
+            rout + std::string(" failed: ") + curesult_to_str(c)),
         m_routine(rout), m_code(c)
       { }
 
@@ -264,7 +271,7 @@ namespace cuda
 #endif
 
       static void synchronize()
-      { CUDAPP_CALL_GUARDED(cuCtxSynchronize, ()); }
+      { CUDAPP_CALL_GUARDED_THREADED(cuCtxSynchronize, ()); }
 
       static boost::shared_ptr<context> current_context()
       {
@@ -311,6 +318,24 @@ namespace cuda
       { }
   };
 
+  class explicit_context_dependent
+  {
+    private:
+      boost::shared_ptr<context> m_ward_context;
+
+    public:
+      void acquire_context()
+      {
+        m_ward_context = context::current_context();
+      }
+
+      void release_context()
+      {
+        m_ward_context = boost::shared_ptr<context>();
+      }
+
+  };
+
   // streams ------------------------------------------------------------------
   class stream : public boost::noncopyable, public context_dependent
   {
@@ -325,7 +350,7 @@ namespace cuda
       { CUDAPP_CALL_GUARDED(cuStreamDestroy, (m_stream)); }
 
       void synchronize()
-      { CUDAPP_CALL_GUARDED(cuStreamSynchronize, (m_stream)); }
+      { CUDAPP_CALL_GUARDED_THREADED(cuStreamSynchronize, (m_stream)); }
 
       CUstream data() const
       { return m_stream; }
@@ -599,11 +624,11 @@ namespace cuda
       }
 
       void launch()
-      { CUDAPP_CALL_GUARDED(cuLaunch, (m_function)); }
+      { CUDAPP_CALL_GUARDED_THREADED(cuLaunch, (m_function)); }
       void launch_grid(int grid_width, int grid_height)
-      { CUDAPP_CALL_GUARDED(cuLaunchGrid, (m_function, grid_width, grid_height)); }
+      { CUDAPP_CALL_GUARDED_THREADED(cuLaunchGrid, (m_function, grid_width, grid_height)); }
       void launch_grid_async(int grid_width, int grid_height, const stream &s)
-      { CUDAPP_CALL_GUARDED(cuLaunchGridAsync, (m_function, grid_width, grid_height, s.data())); }
+      { CUDAPP_CALL_GUARDED_THREADED(cuLaunchGridAsync, (m_function, grid_width, grid_height, s.data())); }
   };
 
   inline
@@ -705,18 +730,18 @@ namespace cuda
 
   inline
   void memcpy_dtoa(array const &ary, unsigned int index, CUdeviceptr src, unsigned int len)
-  { CUDAPP_CALL_GUARDED(cuMemcpyDtoA, (ary.data(), index, src, len)); }
+  { CUDAPP_CALL_GUARDED_THREADED(cuMemcpyDtoA, (ary.data(), index, src, len)); }
 
   inline
   void memcpy_atod(CUdeviceptr dst, array const &ary, unsigned int index, unsigned int len)
-  { CUDAPP_CALL_GUARDED(cuMemcpyAtoD, (dst, ary.data(), index, len)); }
+  { CUDAPP_CALL_GUARDED_THREADED(cuMemcpyAtoD, (dst, ary.data(), index, len)); }
 
   inline
   void memcpy_atoa(
       array const &dst, unsigned int dst_index, 
       array const &src, unsigned int src_index, 
       unsigned int len)
-  { CUDAPP_CALL_GUARDED(cuMemcpyAtoA, (dst.data(), dst_index, src.data(), src_index, len)); }
+  { CUDAPP_CALL_GUARDED_THREADED(cuMemcpyAtoA, (dst.data(), dst_index, src.data(), src_index, len)); }
 
 
 
@@ -783,13 +808,13 @@ namespace cuda
     void execute(bool aligned) const
     {
       if (aligned)
-      { CUDAPP_CALL_GUARDED(cuMemcpy2D, (this)); }
+      { CUDAPP_CALL_GUARDED_THREADED(cuMemcpy2D, (this)); }
       else
-      { CUDAPP_CALL_GUARDED(cuMemcpy2DUnaligned, (this)); }
+      { CUDAPP_CALL_GUARDED_THREADED(cuMemcpy2DUnaligned, (this)); }
     }
 
     void execute_async(const stream &s) const
-    { CUDAPP_CALL_GUARDED(cuMemcpy2DAsync, (this, s.data())); }
+    { CUDAPP_CALL_GUARDED_THREADED(cuMemcpy2DAsync, (this, s.data())); }
   };
 
 #if CUDA_VERSION >= 2000
@@ -813,11 +838,11 @@ namespace cuda
 
     void execute() const
     {
-      CUDAPP_CALL_GUARDED(cuMemcpy3D, (this));
+      CUDAPP_CALL_GUARDED_THREADED(cuMemcpy3D, (this));
     }
 
     void execute_async(const stream &s) const
-    { CUDAPP_CALL_GUARDED(cuMemcpy3DAsync, (this, s.data())); }
+    { CUDAPP_CALL_GUARDED_THREADED(cuMemcpy3DAsync, (this, s.data())); }
   };
 #endif
 
@@ -863,7 +888,7 @@ namespace cuda
       { CUDAPP_CALL_GUARDED(cuEventRecord, (m_event, str.data())); }
 
       void synchronize()
-      { CUDAPP_CALL_GUARDED(cuEventSynchronize, (m_event)); }
+      { CUDAPP_CALL_GUARDED_THREADED(cuEventSynchronize, (m_event)); }
 
       bool query() const
       { 

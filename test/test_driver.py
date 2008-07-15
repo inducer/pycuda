@@ -229,25 +229,20 @@ class TestCuda(unittest.TestCase):
 
     def test_mempool(self):
         from pycuda.tools import bitlog2
-        from pycuda.tools import mem_alloc_pool
+        from pycuda.tools import DeviceMemoryPool
+
+        pool = DeviceMemoryPool()
         maxlen = 10
         queue = []
         free, total = drv.mem_get_info()
 
         e0 = bitlog2(free)
 
-        for e in range(e0-4, e0-2):
+        for e in range(e0-5, e0-3):
             for i in range(100):
-                queue.append(mem_alloc_pool(1<<e))
+                queue.append(pool.allocate(1<<e))
                 if len(queue) > 10:
                     queue.pop(0)
-
-        del queue
-
-        mem_alloc_pool.pool.free_all()
-
-
-
 
 
 

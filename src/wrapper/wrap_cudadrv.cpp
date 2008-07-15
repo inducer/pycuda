@@ -1,8 +1,3 @@
-//#define CUDAPP_TRACE_CUDA
-
-
-
-
 #include <cuda.hpp>
 
 #include <utility>
