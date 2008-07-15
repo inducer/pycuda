@@ -9,11 +9,6 @@
 
 
 
-namespace py = boost::python;
-
-
-
-
 #define PYTHON_ERROR(TYPE, REASON) \
 { \
   PyErr_SetString(PyExc_##TYPE, REASON); \

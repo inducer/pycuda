@@ -85,7 +85,7 @@ def main():
     EXTRA_LIBRARY_DIRS = []
     EXTRA_LIBRARIES = []
 
-    INCLUDE_DIRS =  conf["BOOST_INC_DIR"] + conf["CUDA_INC_DIR"]
+    INCLUDE_DIRS = ['src/cpp'] + conf["BOOST_INC_DIR"] + conf["CUDA_INC_DIR"]
     conf["USE_CUDA"] = True
 
     import sys
