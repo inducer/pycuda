@@ -1,6 +1,6 @@
 #! /usr/bin/env python
 import pycuda.cumath as cuma
-import pycuda.kernel as kernel
+import pycuda._kernel as kernel
 import pycuda.gpuarray as cuda
 import pycuda.driver as drv
 import types

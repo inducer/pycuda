@@ -1,5 +1,5 @@
 import pycuda.gpuarray as gpuarray
-import pycuda.kernel as kernel
+import pycuda._kernel as kernel
 import numpy
 import math
 
