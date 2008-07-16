@@ -6,7 +6,7 @@ from matplotlib.pylab import *
 size = 1000
 
 #random data generated on gpu
-a = cuda.array(size).fill_random()
+a = cuda.array(size).randn()
 
 
 subplot(211)

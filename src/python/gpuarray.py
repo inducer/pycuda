@@ -1,6 +1,6 @@
 from __future__ import division
 import numpy
-import pycuda.kernel as kernel
+import pycuda._kernel as kernel
 import random as random
 from pytools import memoize
 import pycuda.driver as drv
@@ -315,7 +315,7 @@ class GPUArray(object):
 
         return self
 
-    def fill_random(self):
+    def randn(self):
         """fills the array with random data
     
             calculates random numbers for each element of the array
@@ -378,11 +378,6 @@ class GPUArray(object):
             stream=self.stream)
             
             return result
-
-    def _shape(self):
-        """returns the shape of the internal array"""
-        return self.shape
-
 
     def is_matrix(self):
         """returns if this is a matrix"""
@@ -486,3 +481,17 @@ def zeros(shape, dtype, stream=None):
     result = GPUArray(shape, dtype, stream)
     result.fill(0)
     return result
+
+def array(size,value=0):
+    """creates a array of the given size"""
+    return fill((size,),value)
+
+def fill(shape,value, dtype=numpy.float32, stream=None):
+    """creates an array of the given shape and fills it with the data"""
+    result = GPUArray(shape, dtype, stream)
+    result.fill(value)
+    return result
+
+def matrix(width,height,value=0):
+    """creates a matrix of the given size"""
+    return fill((width,height),value)

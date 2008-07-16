@@ -3,7 +3,7 @@ import unittest
 import pycuda.cumath as cumath
 import math as math
 
-test_sample =  1<<15
+test_sample =  1<<13
     
 print "sample size: ", test_sample
 

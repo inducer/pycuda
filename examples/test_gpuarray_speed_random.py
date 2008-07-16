@@ -2,6 +2,7 @@
 import pycuda.driver as drv
 import numpy
 import numpy.linalg as la
+from pytools import Table
 
 
 
@@ -41,7 +42,7 @@ def main():
 
         #cuda operation which fills the array with random numbers
         for i in range(count):
-            a.fill_random()
+            a.randn()
             
         #stop timer
         end.record()
@@ -82,8 +83,6 @@ def main():
     flopsCPU = [f/t for f, t in zip(flopsCPU,timesCPU)]
 
     #print the data out
-
-    from pytools import Table
     tbl = Table()
     tbl.add_row(("Size", "Time GPU", "Size/Time GPU", "Time CPU","Size/Time CPU","GPU vs CPU speedup"))
     for s, t, f,tCpu,fCpu in zip(sizes, times, flops,timesCPU,flopsCPU):

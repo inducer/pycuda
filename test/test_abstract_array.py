@@ -18,7 +18,7 @@ class TestAbstractArray(unittest.TestCase):
         for i in range(30):
             a = numpy.arange(100000).astype(numpy.float32)
             a_cpu = self.create_array(a)
-            a_cpu.fill_random()
+            a_cpu.randn()
 
         #no idea how to test it yet, most likley search for double numbers or so
         
@@ -133,13 +133,6 @@ class TestAbstractArray(unittest.TestCase):
         a = numpy.array([1,2,3,4,5,6,7,8,9,10]).astype(numpy.float32)
         a_cpu = self.create_array(a)
         self.assert_(len(a_cpu) == 10)
-
-
-    def test_shape(self):
-        a = numpy.array([1,2,3,4,5,6,7,8,9,10]).astype(numpy.float32)
-        a_cpu = self.create_array(a)
-        self.assert_(len(a_cpu._shape()) == 1)
-
 
     def test_multiply(self):
         """Tests the muliplication of an array with a scalar. """

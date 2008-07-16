@@ -1,13 +1,18 @@
 #! /usr/bin/env python
 import pycuda.cumath as cuma
 import pycuda.kernel as kernel
-import pycuda.simplearray as cuda
+import pycuda.gpuarray as cuda
 import pycuda.driver as drv
 import types
 import numpy as numpy
 from pytools import Table
 
 runs = 10
+
+drv.init()
+assert drv.Device.count() >= 1
+ctx = drv.Device(0).make_context()
+
 
 def time_cpu_execution(size,method,argumentCount):
     """times the execution time on the cpu"""

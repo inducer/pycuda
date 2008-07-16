@@ -404,6 +404,7 @@ def _get_degress_kernel():
             "z[i] = y[i] * 180 / pi",
             "degrees_kernel")         
 
+@memoize
 def _get_radians_kernel():
     return _get_scalar_kernel(
             "float *y, float *z, float pi",
