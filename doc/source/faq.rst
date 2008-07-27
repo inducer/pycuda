@@ -59,8 +59,9 @@ CUDA programming guide:
 
 PyCuda is based on the driver API. CUBLAS uses the high-level API. Once *can*
 violate this rule without crashing immediately. But sketchy stuff does happen.
-Instead, for BLAS-1 operations, PyCuda comes with a class called GPUArray that
-essentially reimplements that part of CUBLAS.
+Instead, for BLAS-1 operations, PyCuda comes with a class called
+:class:`pycuda.gpuarray.GPUArray` that essentially reimplements that part of
+CUBLAS.
 
 If you dig into the history of PyCuda, you'll find that, at one point, I
 did have rudimentary CUBLAS wrappers. I removed them because of the above

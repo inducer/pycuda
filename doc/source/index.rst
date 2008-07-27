@@ -72,6 +72,10 @@ the scenes, a lot more interesting stuff is going on:
   Note that you can just as well keep your data on the card between
   kernel invocations--no need to copy data all the time.
 
+* See how there's no cleanup code in the example? That's not because we
+  were lazy and just skipped it. It simply isn't needed. PyCuda will
+  automatically infer what cleanup is necessary and do it for you.
+
 Curious? Let's get started.
 
 Contents
