@@ -53,7 +53,7 @@ def _add_functionality():
             if numpy is not None and isinstance(arg, numpy.number):
                 arg_data.append(arg)
                 format += arg.dtype.char
-            elif isinstance(arg, DeviceAllocation):
+            elif isinstance(arg, (DeviceAllocation, PooledDeviceAllocation)):
                 arg_data.append(int(arg))
                 format += "P"
             elif isinstance(arg, ArgumentHandler):

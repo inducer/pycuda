@@ -9,11 +9,6 @@
 
 
 
-namespace py = boost::python;
-
-
-
-
 #define PYTHON_ERROR(TYPE, REASON) \
 { \
   PyErr_SetString(PyExc_##TYPE, REASON); \
@@ -36,10 +31,10 @@ namespace py = boost::python;
   boost::python::def(#NAME, &NAME, boost::python::args ARGS)
 
 #define DEF_SIMPLE_RO_MEMBER(NAME) \
-  def_readonly(#NAME, &cl::NAME)
+  def_readonly(#NAME, &cl::m_##NAME)
 
 #define DEF_SIMPLE_RW_MEMBER(NAME) \
-  def_readwrite(#NAME, &cl::NAME)
+  def_readwrite(#NAME, &cl::m_##NAME)
 
 
 

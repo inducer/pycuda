@@ -85,7 +85,7 @@ def main():
     EXTRA_LIBRARY_DIRS = []
     EXTRA_LIBRARIES = []
 
-    INCLUDE_DIRS =  conf["BOOST_INC_DIR"] + conf["CUDA_INC_DIR"]
+    INCLUDE_DIRS = ['src/cpp'] + conf["BOOST_INC_DIR"] + conf["CUDA_INC_DIR"]
     conf["USE_CUDA"] = True
 
     import sys
@@ -164,7 +164,9 @@ def main():
             ext_modules=[
                 NumpyExtension("_driver", 
                     [
+                        "src/cpp/cuda.cpp", 
                         "src/wrapper/wrap_cudadrv.cpp", 
+                        "src/wrapper/tools.cpp", 
                         ],
                     include_dirs=INCLUDE_DIRS + EXTRA_INCLUDE_DIRS,
                     library_dirs=LIBRARY_DIRS + conf["CUDADRV_LIB_DIR"],

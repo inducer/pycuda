@@ -1,4 +1,4 @@
-import pycuda.simplearray as simplearray
+import pycuda.gpuarray as simplearray
 import unittest
 import pycuda.cumath as cumath
 import math as math

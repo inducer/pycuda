@@ -53,18 +53,30 @@ class GPUArray(object):
     work on an element-by-element basis, just like numpy.ndarray.
     """
 
-    def __init__(self, shape, dtype=numpy.float32, stream=None):
-        """init method for the gpu arrray::
-
-           you need to specify at a minimum the shape of an array
-
-        """
+    def __init__(self, shape, dtype=numpy.float32, stream=None, allocator=drv.mem_alloc,cuda_device=0):
+        try:
+            drv.init()
+            ctx = drv.Device(0).make_context()
+        except RuntimeError:
+            "device is already initialized! so we ignore this ugly, but works for now"
+        
+        #which device are we working on
+        self.cuda_device = cuda_device
+        
+        #internal shape
         self.shape = shape
+        
+        #internal type
         self.dtype = numpy.dtype(dtype)
+
         from pytools import product
+        
+        #internal size
         self.size = product(shape)
+
+        self.allocator = allocator
         if self.size:
-            self.gpudata = drv.mem_alloc(self.size * self.dtype.itemsize)
+            self.gpudata = self.allocator(self.size * self.dtype.itemsize)
         else:
             self.gpudata = None
         self.stream = stream
@@ -474,7 +486,6 @@ def to_gpu(ary, stream=None):
 
 
 empty = GPUArray
-
 
 def zeros(shape, dtype, stream=None):
     """creates an array of the given size and fills it with 0's"""
