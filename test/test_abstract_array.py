@@ -13,7 +13,26 @@ class TestAbstractArray(unittest.TestCase):
         """is supposed to create an array and needs to be overwritten"""
         return None
 
+    def test_dot(self):
+        """tests that the dot product works"""
+        m1 = numpy.matrix([[1,2],[3,4]]).astype(numpy.float32)
+        m2 = numpy.matrix([[2,2],[2,2]]).astype(numpy.float32)
+        
+        print " matrix operartion with numpy"
+        print m1 * m2
+        
+        cpu_m1 = self.create_array(m1)
+        cpu_m2 = self.create_array(m2)
 
+        print "normal multiplication with pycuda"
+        
+        print cpu_m1 * cpu_m2
+
+        print "dot multiplication with pycuda"
+        
+        print cpu_m1.dot(cpu_m2)
+        
+        
     def test_random(self):
         for i in range(30):
             a = numpy.arange(100000).astype(numpy.float32)

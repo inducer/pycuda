@@ -1,6 +1,6 @@
 #simple module to show the ploting of random data
 
-import pycuda.simplearray as cuda
+import pycuda.gpuarray as cuda
 from matplotlib.pylab import *
 
 size = 1000

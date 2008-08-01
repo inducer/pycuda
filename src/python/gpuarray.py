@@ -398,6 +398,32 @@ class GPUArray(object):
         return True
 
 
+    def dot(self,matrix):
+        """calculates the dot product of two matrixes::
+        
+           both matrixes need to be on the same gpu and need to have the same
+           shapes
+        """
+        
+        assert self.shape == matrix.shape
+        assert self.dtype == matrix.dtype
+        assert self.is_matrix() == True
+        assert matrix.is_matrix() == True      
+
+        result = GPUArray(self.shape, self.dtype)
+
+        print "shape"
+        print self.shape
+        print "content"
+        print self
+        print "matrix content"
+        print matrix
+        
+        kernel._get_dot_kernel()(self.gpudata,matrix.gpudata,result.gpudata,numpy.int32(self.size),**self._kernel_kwargs)
+
+        print "result"
+        return result
+        
     def reverse(self):
         """Reverse the array::
 

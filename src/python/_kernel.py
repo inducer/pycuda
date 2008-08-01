@@ -410,3 +410,10 @@ def _get_radians_kernel():
             "float *y, float *z, float pi",
             "z[i] = y[i] * pi / 180",
             "radians_kernel")         
+
+@memoize
+def _get_dot_kernel():
+    return _get_scalar_kernel(
+            "float *a,float *b, float *z",
+            "z[i] = a[i] * b[i]",
+            "dot_kernel")  
