@@ -520,8 +520,13 @@ def arange(*args, **kwargs):
         start = 0
     if step is None:
         step = 1
+    if dtype is None:
+        dtype = numpy.array([start, stop, step]).dtype
 
     # actual functionality ----------------------------------------------------
+
+    start = dtype(start)
+    step = dtype(step)
 
     from math import ceil
     size = int(ceil((stop-start)/step))
