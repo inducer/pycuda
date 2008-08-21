@@ -33,7 +33,7 @@ release tar.bz2 file. Then, do this::
 (Whenever you see the "`$`" dollar sign, this means you should enter this at
 your shell prompt. You don't have to be `root`. A few spots are marked with "su
 -c" to show that these *do* require root privileges if you are using a Python
-interpreter that is install globally.)
+interpreter that is installed globally.)
 
 You may adapt the file and directory names to suit your liking, however the
 rest of this tutorial will assume that you use these paths.

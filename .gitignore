@@ -32,3 +32,4 @@ visitlog.py
 dist
 *.egg*
 MANIFEST
+*.patch

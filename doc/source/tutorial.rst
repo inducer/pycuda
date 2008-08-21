@@ -37,7 +37,7 @@ allocate memory on the device::
 
   a_gpu = cuda.mem_alloc(a.size * a.dtype.itemsize)
 
-As a last step, we transfer to the data to the GPU::
+As a last step, we need to transfer the data to the GPU::
 
   cuda.memcpy_htod(a_gpu, a)
 
