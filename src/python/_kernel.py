@@ -92,11 +92,11 @@ def _get_reverse_kernel():
             "reverse")
 
 @memoize
-def _get_arrange_kernel():
+def _get_arange_kernel():
     return _get_scalar_kernel(
-            "float *z",
-            "z[i] = i",
-            "arrange")
+            "float *z, float start, float step",
+            "z[i] = start + i*step",
+            "arange")
 
 
 @memoize

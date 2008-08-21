@@ -1,5 +1,5 @@
 import pycuda.gpuarray as gpuarray
-import pycuda._kernel as kernel
+import pycuda._kernel as _kernel
 import numpy
 import math
 
@@ -25,7 +25,7 @@ def ceil(array):
     if isinstance(array, gpuarray.GPUArray):
         result = gpuarray.GPUArray(array.shape, array.dtype)
         
-        kernel._get_ceil_kernel()(array.gpudata,
+        _kernel._get_ceil_kernel()(array.gpudata,
                 result.gpudata, numpy.int32(array.size),
                 **result._kernel_kwargs)
         
@@ -47,7 +47,7 @@ def floor(array):
     if isinstance(array, gpuarray.GPUArray):
         result = gpuarray.GPUArray(array.shape, array.dtype)
         
-        kernel._get_floor_kernel()(array.gpudata,
+        _kernel._get_floor_kernel()(array.gpudata,
                 result.gpudata, numpy.int32(array.size),
                 **result._kernel_kwargs)
         
@@ -60,7 +60,7 @@ def fmod(array,mod):
     if isinstance(array, gpuarray.GPUArray):
         result = gpuarray.GPUArray(array.shape, array.dtype)
         
-        kernel._get_fmod_kernel()(array.gpudata,
+        _kernel._get_fmod_kernel()(array.gpudata,
                 result.gpudata,numpy.float32(mod), numpy.int32(array.size),
                 **result._kernel_kwargs)
         
@@ -77,7 +77,7 @@ def frexp(array):
         first = gpuarray.GPUArray(array.shape, array.dtype)
         second = gpuarray.GPUArray(array.shape, array.dtype)
         
-        kernel._get_frexp_kernel()(array.gpudata,
+        _kernel._get_frexp_kernel()(array.gpudata,
                 first.gpudata,second.gpudata,numpy.int32(array.size),
                 **first._kernel_kwargs)
         
@@ -90,7 +90,7 @@ def ldexp(array, i):
     if isinstance(array, gpuarray.GPUArray):
         result = gpuarray.GPUArray(array.shape, array.dtype)
         
-        kernel._get_ldexp_kernel()(array.gpudata,
+        _kernel._get_ldexp_kernel()(array.gpudata,
                 result.gpudata,numpy.float32(i), numpy.int32(array.size),
                 **result._kernel_kwargs)
         
@@ -107,7 +107,7 @@ def modf(array):
         first = gpuarray.GPUArray(array.shape, array.dtype)
         second = gpuarray.GPUArray(array.shape, array.dtype)
         
-        kernel._get_modf_kernel()(array.gpudata,
+        _kernel._get_modf_kernel()(array.gpudata,
                 first.gpudata,second.gpudata,numpy.int32(array.size),
                 **first._kernel_kwargs)
         
@@ -124,7 +124,7 @@ def exp(array):
     if isinstance(array, gpuarray.GPUArray):
         result = gpuarray.GPUArray(array.shape, array.dtype)
         
-        kernel._get_exp_kernel()(array.gpudata,
+        _kernel._get_exp_kernel()(array.gpudata,
                 result.gpudata,numpy.int32(array.size),
                 **result._kernel_kwargs)
         
@@ -141,7 +141,7 @@ def log(array):
     if isinstance(array, gpuarray.GPUArray):
         result = gpuarray.GPUArray(array.shape, array.dtype)
         
-        kernel._get_log_kernel()(array.gpudata,
+        _kernel._get_log_kernel()(array.gpudata,
                 result.gpudata,numpy.int32(array.size),
                 **result._kernel_kwargs)
         
@@ -154,7 +154,7 @@ def log10(array):
     if isinstance(array, gpuarray.GPUArray):
         result = gpuarray.GPUArray(array.shape, array.dtype)
         
-        kernel._get_log10_kernel()(array.gpudata,
+        _kernel._get_log10_kernel()(array.gpudata,
                 result.gpudata,numpy.int32(array.size),
                 **result._kernel_kwargs)
         
@@ -174,7 +174,7 @@ def sqrt(array):
     if isinstance(array, gpuarray.GPUArray):
         result = gpuarray.GPUArray(array.shape, array.dtype)
         
-        kernel._get_sqrt_kernel()(array.gpudata,
+        _kernel._get_sqrt_kernel()(array.gpudata,
                 result.gpudata,numpy.int32(array.size),
                 **result._kernel_kwargs)
         
@@ -187,7 +187,7 @@ def acos(array):
     if isinstance(array, gpuarray.GPUArray):
         result = gpuarray.GPUArray(array.shape, array.dtype)
         
-        kernel._get_acos_kernel()(array.gpudata,
+        _kernel._get_acos_kernel()(array.gpudata,
                 result.gpudata,numpy.int32(array.size),
                 **result._kernel_kwargs)
         
@@ -201,7 +201,7 @@ def cos(array):
     if isinstance(array, gpuarray.GPUArray):
         result = gpuarray.GPUArray(array.shape, array.dtype)
         
-        kernel._get_cos_kernel()(array.gpudata,
+        _kernel._get_cos_kernel()(array.gpudata,
                 result.gpudata,numpy.int32(array.size),
                 **result._kernel_kwargs)
         
@@ -215,7 +215,7 @@ def tan(array):
     if isinstance(array, gpuarray.GPUArray):
         result = gpuarray.GPUArray(array.shape, array.dtype)
         
-        kernel._get_tan_kernel()(array.gpudata,
+        _kernel._get_tan_kernel()(array.gpudata,
                 result.gpudata,numpy.int32(array.size),
                 **result._kernel_kwargs)
         
@@ -228,7 +228,7 @@ def atan(array):
     if isinstance(array, gpuarray.GPUArray):
         result = gpuarray.GPUArray(array.shape, array.dtype)
         
-        kernel._get_atan_kernel()(array.gpudata,
+        _kernel._get_atan_kernel()(array.gpudata,
                 result.gpudata,numpy.int32(array.size),
                 **result._kernel_kwargs)
         
@@ -242,7 +242,7 @@ def asin(array):
     if isinstance(array, gpuarray.GPUArray):
         result = gpuarray.GPUArray(array.shape, array.dtype)
         
-        kernel._get_asin_kernel()(array.gpudata,
+        _kernel._get_asin_kernel()(array.gpudata,
                 result.gpudata,numpy.int32(array.size),
                 **result._kernel_kwargs)
         
@@ -256,7 +256,7 @@ def sin(array):
     if isinstance(array, gpuarray.GPUArray):
         result = gpuarray.GPUArray(array.shape, array.dtype)
         
-        kernel._get_sin_kernel()(array.gpudata,
+        _kernel._get_sin_kernel()(array.gpudata,
                 result.gpudata,numpy.int32(array.size),
                 **result._kernel_kwargs)
         
@@ -269,7 +269,7 @@ def sinh(array):
     if isinstance(array, gpuarray.GPUArray):
         result = gpuarray.GPUArray(array.shape, array.dtype)
         
-        kernel._get_sinh_kernel()(array.gpudata,
+        _kernel._get_sinh_kernel()(array.gpudata,
                 result.gpudata,numpy.int32(array.size),
                 **result._kernel_kwargs)
         
@@ -282,7 +282,7 @@ def tanh(array):
     if isinstance(array, gpuarray.GPUArray):
         result = gpuarray.GPUArray(array.shape, array.dtype)
         
-        kernel._get_tanh_kernel()(array.gpudata,
+        _kernel._get_tanh_kernel()(array.gpudata,
                 result.gpudata,numpy.int32(array.size),
                 **result._kernel_kwargs)
         
@@ -295,7 +295,7 @@ def cosh(array):
     if isinstance(array, gpuarray.GPUArray):
         result = gpuarray.GPUArray(array.shape, array.dtype)
         
-        kernel._get_cosh_kernel()(array.gpudata,
+        _kernel._get_cosh_kernel()(array.gpudata,
                 result.gpudata,numpy.int32(array.size),
                 **result._kernel_kwargs)
         
@@ -308,7 +308,7 @@ def degrees(array):
     if isinstance(array, gpuarray.GPUArray):
         result = gpuarray.GPUArray(array.shape, array.dtype)
         
-        kernel._get_degress_kernel()(array.gpudata,
+        _kernel._get_degress_kernel()(array.gpudata,
                 result.gpudata,numpy.float32(pi),numpy.int32(array.size),
                 **result._kernel_kwargs)
         
@@ -322,7 +322,7 @@ def radians(array):
     if isinstance(array, gpuarray.GPUArray):
         result = gpuarray.GPUArray(array.shape, array.dtype)
         
-        kernel._get_radians_kernel()(array.gpudata,
+        _kernel._get_radians_kernel()(array.gpudata,
                 result.gpudata,numpy.float32(pi),numpy.int32(array.size),
                 **result._kernel_kwargs)
         

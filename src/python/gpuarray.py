@@ -1,6 +1,6 @@
 from __future__ import division
 import numpy
-import pycuda._kernel as kernel
+import pycuda._kernel as _kernel
 import random as random
 from pytools import memoize
 import pycuda.driver as drv
@@ -96,7 +96,7 @@ class GPUArray(object):
     @classmethod
     def compile_kernels(cls):
         # useful for benchmarking
-        kernel._compile_kernels(cls)
+        _kernel._compile_kernels(cls)
     
 
     def set(self, ary, stream=None):
@@ -138,7 +138,7 @@ class GPUArray(object):
         if self.stream is not None or other.stream is not None:
             assert self.stream is other.stream
 
-        kernel._get_axpbyz_kernel()(numpy.float32(selffac), self.gpudata, 
+        _kernel._get_axpbyz_kernel()(numpy.float32(selffac), self.gpudata, 
                 numpy.float32(otherfac), other.gpudata, 
                 out.gpudata, numpy.int32(self.size),
                 **self._kernel_kwargs)
@@ -149,7 +149,7 @@ class GPUArray(object):
         """Compute ``out = selffac * self + other``, where `other` is a scalar."""
         assert self.dtype == numpy.float32
 
-        kernel._get_axpbz_kernel()(
+        _kernel._get_axpbz_kernel()(
                 numpy.float32(selffac), self.gpudata,
                 numpy.float32(other),
                 out.gpudata, numpy.int32(self.size),
@@ -161,7 +161,7 @@ class GPUArray(object):
         assert self.dtype == numpy.float32
         assert self.dtype == numpy.float32
 
-        kernel._get_multiply_kernel()(
+        _kernel._get_multiply_kernel()(
                 self.gpudata, other.gpudata,
                 out.gpudata, numpy.int32(self.size),
                 **self._kernel_kwargs)
@@ -176,7 +176,7 @@ class GPUArray(object):
 
         assert self.dtype == numpy.float32
 
-        kernel._get_rdivide_scalar_kernel()(
+        _kernel._get_rdivide_scalar_kernel()(
                 self.gpudata,
                 numpy.float32(other),
                 out.gpudata, numpy.int32(self.size),
@@ -193,7 +193,7 @@ class GPUArray(object):
 
         block_count, threads_per_block, elems_per_block = splay(self.size, WARP_SIZE, 128, 80)
 
-        kernel._get_divide_kernel()(self.gpudata, other.gpudata,
+        _kernel._get_divide_kernel()(self.gpudata, other.gpudata,
                 out.gpudata, numpy.int32(self.size),
                 **self._kernel_kwargs)
 
@@ -315,7 +315,7 @@ class GPUArray(object):
             assert self.shape == other.shape
             assert self.dtype == other.dtype
 
-            kernel._get_divide_kernel()(other.gpudata, self.gpudata,
+            _kernel._get_divide_kernel()(other.gpudata, self.gpudata,
                     out.gpudata, numpy.int32(self.size),
                     **self._kernel_kwargs)
 
@@ -326,7 +326,7 @@ class GPUArray(object):
         """fills the array with the specified value"""
         assert self.dtype == numpy.float32
 
-        kernel._get_fill_kernel()(numpy.float32(value), self.gpudata, numpy.int32(self.size),**self._kernel_kwargs
+        _kernel._get_fill_kernel()(numpy.float32(value), self.gpudata, numpy.int32(self.size),**self._kernel_kwargs
 )
 
         return self
@@ -338,7 +338,7 @@ class GPUArray(object):
             
         """
 
-        kernel._get_random_kernel()(self.gpudata,numpy.float32(random.random()), numpy.int32(self.size),
+        _kernel._get_random_kernel()(self.gpudata,numpy.float32(random.random()), numpy.int32(self.size),
                 **self._kernel_kwargs)
             
         return self
@@ -360,7 +360,7 @@ class GPUArray(object):
         result = GPUArray(self.shape, self.dtype)
         block_count, threads_per_block, elems_per_block = splay(self.size, WARP_SIZE, 128, 80)
 
-        kernel._get_abs_kernel()(self.gpudata,result.gpudata,numpy.int32(self.size),
+        _kernel._get_abs_kernel()(self.gpudata,result.gpudata,numpy.int32(self.size),
                 block=(threads_per_block,1,1), grid=(block_count,1),
                 stream=self.stream)
 
@@ -380,7 +380,7 @@ class GPUArray(object):
 
         if isinstance(other, (int, float, complex)):
 
-            kernel._get_pow_kernel()(numpy.float32(other),self.gpudata,result.gpudata,numpy.int32(self.size),
+            _kernel._get_pow_kernel()(numpy.float32(other),self.gpudata,result.gpudata,numpy.int32(self.size),
             block=(threads_per_block,1,1), grid=(block_count,1),
             stream=self.stream)
 
@@ -389,7 +389,7 @@ class GPUArray(object):
             assert self.shape == other.shape
             assert self.dtype == other.dtype
 
-            kernel._get_pow_array_kernel()(self.gpudata,other.gpudata,result.gpudata,numpy.int32(self.size),
+            _kernel._get_pow_array_kernel()(self.gpudata,other.gpudata,result.gpudata,numpy.int32(self.size),
             block=(threads_per_block,1,1), grid=(block_count,1),
             stream=self.stream)
             
@@ -423,7 +423,7 @@ class GPUArray(object):
         print "matrix content"
         print matrix
         
-        kernel._get_dot_kernel()(self.gpudata,matrix.gpudata,result.gpudata,numpy.int32(self.size),**self._kernel_kwargs)
+        _kernel._get_dot_kernel()(self.gpudata,matrix.gpudata,result.gpudata,numpy.int32(self.size),**self._kernel_kwargs)
 
         print "result"
         return result
@@ -439,26 +439,9 @@ class GPUArray(object):
         
         result = GPUArray(self.shape, self.dtype)
 
-        kernel._get_reverse_kernel()(self.gpudata,result.gpudata,numpy.int32(self.size),**self._kernel_kwargs)
+        _kernel._get_reverse_kernel()(self.gpudata,result.gpudata,numpy.int32(self.size),**self._kernel_kwargs)
 
         return result
-
-
-    def __invert__(self):
-        """does the same as reverse"""
-        return self.reverse()
-
-
-    def fill_arange(self):
-        """fills the array in an arranged way, like numpy"""
-
-        block_count, threads_per_block, elems_per_block = splay(self.size, WARP_SIZE, 128, 80)
-        kernel._get_arrange_kernel()(self.gpudata, numpy.int32(self.size),
-                block=(threads_per_block,1,1), grid=(block_count,1),
-                stream=self.stream)
-
-        return self
-
 
     def __iter__(self):
         """iteration works over the internal array"""
@@ -500,11 +483,71 @@ class GPUIterator:
         return count
 
  
-def arange(limit,dtype=numpy.float32):
-    """arranges an array like the array function from numpy"""
-    result = GPUArray((limit,), dtype)
+def arange(*args, **kwargs):
+    """Create an array filled with numbers spaced `step` apart,
+    starting from `start` and ending at `stop`.
+    
+    For floating point arguments, the length of the result is
+    `ceil((stop - start)/step)`.  This rule may result in the last
+    element of the result being greater than stop.
+    """
+
+    # argument processing -----------------------------------------------------
+
+    # Yuck. Thanks, numpy developers. ;)
+
+    start = None
+    stop = None
+    step = None
+    dtype = None
+
+    if isinstance(args[-1], numpy.dtype):
+        dtype = args[-1]
+        args = args[:-1]
+
+    argc = len(args)
+    if argc == 0:
+        raise ValueError, "stop argument required"
+    elif argc == 1:
+        stop = args[0]
+    elif argc == 2:
+        start = args[0]
+        stop = args[1]
+    elif argc == 3:
+        start = args[0]
+        stop = args[1]
+        step = args[2]
+    else:
+        raise ValueError, "too many arguments"
+
+    admissible_names = ["start", "stop", "step", "dtype"]
+    for k, v in kwargs.iteritems():
+        if k in admissible_names:
+            if locals()[k] is None:
+                locals()[k] = v
+            else:
+                raise ValueError, "may not specify 'dtype' by position and keyword" % k
+        else:
+            raise ValueError, "unexpected keyword argument '%s'" % k
+
+    if start is None:
+        start = 0
+    if step is None:
+        step = 1
+
+    # actual functionality ----------------------------------------------------
+
+    from math import ceil
+    size = int(ceil((stop-start)/step))
   
-    result.fill_arange() 
+    result = GPUArray((size,), dtype)
+
+    block_count, threads_per_block, elems_per_block = splay(size, WARP_SIZE, 128, 80)
+    _kernel._get_arange_kernel()(
+            result.gpudata, start, step, numpy.int32(size),
+            block=(threads_per_block,1,1), grid=(block_count,1),
+            stream=result.stream)
+
     return result
 
 
@@ -513,6 +556,7 @@ def to_gpu(ary, stream=None, allocator=drv.mem_alloc):
     result = GPUArray(ary.shape, ary.dtype, stream, allocator)
     result.set(ary, stream)
     return result
+
 
 def empty(shape, dtype, stream=None, allocator=drv.mem_alloc):
     return GPUArray(shape, dtype, stream, allocator)
