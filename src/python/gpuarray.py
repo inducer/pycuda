@@ -39,10 +39,6 @@ def splay(n, min_threads=None, max_threads=128, max_blocks=80):
 
 
 
-
-
-
-
 WARP_SIZE = 32
 
 
@@ -83,7 +79,6 @@ class GPUArray(object):
     def compile_kernels(cls):
         # useful for benchmarking
         _kernel._compile_kernels(cls)
-    
 
     def set(self, ary, stream=None):
         assert ary.size == self.size
@@ -124,7 +119,7 @@ class GPUArray(object):
         if self.stream is not None or other.stream is not None:
             assert self.stream is other.stream
 
-        _kernel._get_axpbyz_kernel()(numpy.float32(selffac), self.gpudata, 
+        _kernel.get_axpbyz_kernel()(numpy.float32(selffac), self.gpudata, 
                 numpy.float32(otherfac), other.gpudata, 
                 out.gpudata, numpy.int32(self.size),
                 **self._kernel_kwargs)
@@ -135,7 +130,7 @@ class GPUArray(object):
         """Compute ``out = selffac * self + other``, where `other` is a scalar."""
         assert self.dtype == numpy.float32
 
-        _kernel._get_axpbz_kernel()(
+        _kernel.get_axpbz_kernel()(
                 numpy.float32(selffac), self.gpudata,
                 numpy.float32(other),
                 out.gpudata, numpy.int32(self.size),
@@ -147,7 +142,7 @@ class GPUArray(object):
         assert self.dtype == numpy.float32
         assert self.dtype == numpy.float32
 
-        _kernel._get_multiply_kernel()(
+        _kernel.get_multiply_kernel()(
                 self.gpudata, other.gpudata,
                 out.gpudata, numpy.int32(self.size),
                 **self._kernel_kwargs)
@@ -162,7 +157,7 @@ class GPUArray(object):
 
         assert self.dtype == numpy.float32
 
-        _kernel._get_rdivide_scalar_kernel()(
+        _kernel.get_rdivide_scalar_kernel()(
                 self.gpudata,
                 numpy.float32(other),
                 out.gpudata, numpy.int32(self.size),
@@ -179,7 +174,7 @@ class GPUArray(object):
 
         block_count, threads_per_block, elems_per_block = splay(self.size, WARP_SIZE, 128, 80)
 
-        _kernel._get_divide_kernel()(self.gpudata, other.gpudata,
+        _kernel.get_divide_kernel()(self.gpudata, other.gpudata,
                 out.gpudata, numpy.int32(self.size),
                 **self._kernel_kwargs)
 
@@ -301,7 +296,7 @@ class GPUArray(object):
             assert self.shape == other.shape
             assert self.dtype == other.dtype
 
-            _kernel._get_divide_kernel()(other.gpudata, self.gpudata,
+            _kernel.get_divide_kernel()(other.gpudata, self.gpudata,
                     out.gpudata, numpy.int32(self.size),
                     **self._kernel_kwargs)
 
@@ -312,26 +307,16 @@ class GPUArray(object):
         """fills the array with the specified value"""
         assert self.dtype == numpy.float32
 
-        _kernel._get_fill_kernel()(numpy.float32(value), self.gpudata, numpy.int32(self.size),**self._kernel_kwargs
-)
+        _kernel.get_fill_kernel()(
+                numpy.float32(value), 
+                self.gpudata, numpy.int32(self.size),
+                **self._kernel_kwargs
+                )
 
         return self
 
-    def randn(self):
-        """fills the array with random data
-    
-            calculates random numbers for each element of the array
-            
-        """
-
-        _kernel._get_random_kernel()(self.gpudata,numpy.float32(random.random()), numpy.int32(self.size),
-                **self._kernel_kwargs)
-            
-        return self
-        
     def bind_to_texref(self, texref):
         texref.set_address(self.gpudata, self.size*self.dtype.itemsize)
-
 
     def __len__(self):
         """returns the len of the internal array"""
@@ -339,16 +324,18 @@ class GPUArray(object):
 
 
     def __abs__(self):
-        """calculates the abs value of all values in the array"""
+        """Return a `GPUArray` of the absolute values of the elements
+        of `self`.
+        """
 
         assert self.dtype == numpy.float32
 
         result = GPUArray(self.shape, self.dtype)
-        block_count, threads_per_block, elems_per_block = splay(self.size, WARP_SIZE, 128, 80)
 
-        _kernel._get_abs_kernel()(self.gpudata,result.gpudata,numpy.int32(self.size),
-                block=(threads_per_block,1,1), grid=(block_count,1),
-                stream=self.stream)
+        _kernel.get_unary_func_kernel("fabs")(
+                self.gpudata,result.gpudata,
+                numpy.int32(self.size),
+                **self._kernel_kwargs)
 
         return result
 
@@ -366,7 +353,7 @@ class GPUArray(object):
 
         if isinstance(other, (int, float, complex)):
 
-            _kernel._get_pow_kernel()(numpy.float32(other),self.gpudata,result.gpudata,numpy.int32(self.size),
+            _kernel.get_pow_kernel()(numpy.float32(other),self.gpudata,result.gpudata,numpy.int32(self.size),
             block=(threads_per_block,1,1), grid=(block_count,1),
             stream=self.stream)
 
@@ -375,20 +362,13 @@ class GPUArray(object):
             assert self.shape == other.shape
             assert self.dtype == other.dtype
 
-            _kernel._get_pow_array_kernel()(self.gpudata,other.gpudata,result.gpudata,numpy.int32(self.size),
+            _kernel.get_pow_array_kernel()(self.gpudata,other.gpudata,result.gpudata,numpy.int32(self.size),
             block=(threads_per_block,1,1), grid=(block_count,1),
             stream=self.stream)
             
             return result
 
-    def is_matrix(self):
-        """returns if this is a matrix"""
-        if(len(self.shape) == 1):
-            return False
-        return True
-
-
-    def dot(self,matrix):
+    def dot(self, matrix):
         """calculates the dot product of two matrixes::
         
            both matrixes need to be on the same gpu and need to have the same
@@ -397,8 +377,8 @@ class GPUArray(object):
         
         assert self.shape == matrix.shape
         assert self.dtype == matrix.dtype
-        assert self.is_matrix() == True
-        assert matrix.is_matrix() == True      
+        assert len(self.shape) == 2
+        assert len(matrix.shape) == 2
 
         result = GPUArray(self.shape, self.dtype)
 
@@ -409,66 +389,41 @@ class GPUArray(object):
         print "matrix content"
         print matrix
         
-        _kernel._get_dot_kernel()(self.gpudata,matrix.gpudata,result.gpudata,numpy.int32(self.size),**self._kernel_kwargs)
+        _kernel.get_dot_kernel()(self.gpudata,matrix.gpudata,result.gpudata,numpy.int32(self.size),**self._kernel_kwargs)
 
         print "result"
         return result
         
     def reverse(self):
-        """Reverse the array::
-
-           the first entry becomes the last entry. This is only valid for no matrix based arrays!
-
+        """Return this array in reversed order. The array is treated
+        as one-dimensional.
         """
 
         assert self.dtype == numpy.float32
         
         result = GPUArray(self.shape, self.dtype)
 
-        _kernel._get_reverse_kernel()(self.gpudata,result.gpudata,numpy.int32(self.size),**self._kernel_kwargs)
+        _kernel.get_reverse_kernel()(self.gpudata,result.gpudata,numpy.int32(self.size),**self._kernel_kwargs)
 
         return result
 
-    def __iter__(self):
-        """iteration works over the internal array"""
-        return GPUIterator(self.get())
 
-    def __getitem__(self,key):
-        """allows us to get objects using an index::
+def to_gpu(ary, stream=None, allocator=drv.mem_alloc):
+    """converts a numpy array to a GPUArray"""
+    result = GPUArray(ary.shape, ary.dtype, stream, allocator)
+    result.set(ary, stream)
+    return result
 
-           this operation is extremly slow since we need to copy the array from the gpu
-           to the cpu for each access
-        """
+def empty(shape, dtype, stream=None, allocator=drv.mem_alloc):
+    return GPUArray(shape, dtype, stream, allocator)
 
-        if self.is_matrix():
-            #if its a matrix we return a gpu array so that we can calculate on it
-            entry = self.get()[key]
-            return to_gpu(entry)
-        else:
-            return self.get()[key]
+def zeros(shape, dtype, stream=None, allocator=drv.mem_alloc):
+    """Returns an array of the given shape and dtype filled with 0's."""
 
+    result = GPUArray(shape, dtype, stream, allocator)
+    result.fill(0)
+    return result
 
-class GPUIterator:
-    """small helper to support iterations"""
-
-    def __init__(self,target):
-        self.target = target
-        self.size = target.size
-        self.count = 0
-
-    def __iter__(self):
-        return self
-
-    def next(self):
-        count = self.count + 1
-        if count > self.target.size:
-            raise StopIteration
-
-        self.count = count
-
-        return count
-
- 
 def arange(*args, **kwargs):
     """Create an array filled with numbers spaced `step` apart,
     starting from `start` and ending at `stop`.
@@ -537,41 +492,10 @@ def arange(*args, **kwargs):
     result = GPUArray((size,), dtype)
 
     block_count, threads_per_block, elems_per_block = splay(size, WARP_SIZE, 128, 80)
-    _kernel._get_arange_kernel()(
+    _kernel.get_arange_kernel()(
             result.gpudata, start, step, numpy.int32(size),
             block=(threads_per_block,1,1), grid=(block_count,1),
             stream=result.stream)
 
     return result
 
-
-def to_gpu(ary, stream=None, allocator=drv.mem_alloc):
-    """converts a numpy array to a GPUArray"""
-    result = GPUArray(ary.shape, ary.dtype, stream, allocator)
-    result.set(ary, stream)
-    return result
-
-
-def empty(shape, dtype, stream=None, allocator=drv.mem_alloc):
-    return GPUArray(shape, dtype, stream, allocator)
-
-def zeros(shape, dtype, stream=None, allocator=drv.mem_alloc):
-    """creates an array of the given size and fills it with 0's"""
-    result = GPUArray(shape, dtype, stream, allocator)
-
-    result.fill(0)
-    return result
-
-def array(size,value=0):
-    """creates a array of the given size"""
-    return fill((size,),value)
-
-def fill(shape,value, dtype=numpy.float32, stream=None):
-    """creates an array of the given shape and fills it with the data"""
-    result = GPUArray(shape, dtype, stream)
-    result.fill(value)
-    return result
-
-def matrix(width,height,value=0):
-    """creates a matrix of the given size"""
-    return fill((width,height),value)
