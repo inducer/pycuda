@@ -111,17 +111,12 @@ achieved with much less writing::
   print a_gpu
 
 
-Where to Go from Here
+Where to go from here
 ---------------------
 
 Once you feel sufficiently familiar with the basics, feel free to dig into the
-:ref:`reference-doc`. Also check out PyCuda's test suite at
-:file:`test`. It contains examples (and tests!) of many more
-advanced techniques.
-
-More examples
--------------
-
-In case you want to see more examples, you can find them in the :file:`example` folder.
-This folder also contains several benchmarks to see the difference between gpu and
-cpu based calculations.
+:ref:`reference-doc`. For more examples, check the in the :file:`examples/`
+subdirectory of the distribution.  This folder also contains several benchmarks
+to see the difference between GPU and CPU based calculations. As a reference for
+how stuff is done, PyCuda's test suite in the :file:`test/` subdirectory of the
+distribution may also be of help.
