@@ -521,12 +521,15 @@ def arange(*args, **kwargs):
     if step is None:
         step = 1
     if dtype is None:
-        dtype = numpy.array([start, stop, step]).dtype
+        #dtype = numpy.array([start, stop, step]).dtype
+        dtype = numpy.float32
 
     # actual functionality ----------------------------------------------------
+    assert dtype == numpy.float32
 
-    start = dtype(start)
-    step = dtype(step)
+    dtype = numpy.dtype(dtype)
+    start = dtype.type(start)
+    step = dtype.type(step)
 
     from math import ceil
     size = int(ceil((stop-start)/step))
