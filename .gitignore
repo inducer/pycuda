@@ -1,3 +1,6 @@
+.pydevproject
+.project
+.settings
 *~
 .*.sw[po]
 *.dat
