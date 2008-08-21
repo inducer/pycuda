@@ -55,24 +55,10 @@ class GPUArray(object):
     """
 
     def __init__(self, shape, dtype, stream=None, allocator=drv.mem_alloc):
-        try:
-            drv.init()
-            ctx = drv.Device(0).make_context()
-        except RuntimeError:
-            "device is already initialized! so we ignore this ugly, but works for now"
-        
-        #which device are we working on
-        self.cuda_device = cuda_device
-        
-        #internal shape
         self.shape = shape
-        
-        #internal type
         self.dtype = numpy.dtype(dtype)
 
         from pytools import product
-        
-        #internal size
         self.size = product(shape)
 
         self.allocator = allocator
