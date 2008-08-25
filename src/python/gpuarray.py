@@ -105,9 +105,6 @@ class GPUArray(object):
     def __repr__(self):
         return repr(self.get())
 
-
-
-
     # kernel invocation wrappers ----------------------------------------------
     def _axpbyz(self, selffac, other, otherfac, out):
         """Compute ``out = selffac * self + otherfac*other``, 
@@ -186,6 +183,12 @@ class GPUArray(object):
         return self.__class__(self.shape, self.dtype, allocator=self.allocator)
 
     # operators ---------------------------------------------------------------
+    def mul_add(self, selffac, other, otherfac):
+        """Return `selffac * self + otherfac*other`.
+        """
+        result = self._new_like_me()
+        return self._axpbyz(selffac, other, otherfac, result)
+
     def __add__(self, other):
         """Add an array with an array or an array with a scalar."""
 
