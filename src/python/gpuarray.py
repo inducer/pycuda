@@ -356,9 +356,10 @@ class GPUArray(object):
 
         if isinstance(other, (int, float, complex)):
 
-            _kernel.get_pow_kernel()(numpy.float32(other),self.gpudata,result.gpudata,numpy.int32(self.size),
-            block=(threads_per_block,1,1), grid=(block_count,1),
-            stream=self.stream)
+            _kernel.get_pow_kernel()(numpy.float32(other), self.gpudata, result.gpudata,
+                    numpy.int32(self.size),
+                    block=(threads_per_block,1,1), grid=(block_count,1),
+                    stream=self.stream)
 
             return result
         else:

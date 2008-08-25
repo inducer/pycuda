@@ -5,19 +5,19 @@ from pytools import memoize
 NVCC_OPTIONS = []
 
 def _compile_kernels(kernel):
-    """compiles all kernels in this module, which is usefull for benchmarks"""
+    """Compiles all kernels in this module, to remove compile overhead from benchmark
+    timings."""
     for name in dir(kernel):
         if name.startswith("get_") and name.endswith("_kernel"):
             if name is not "get_scalar_kernel":
                 getattr(kernel,name)()
             
                 
-def get_scalar_kernel(arguments, operation, name="kernel"):
-    """a function to generate c functions on the fly::
-    
-       basically it reduces some overhead for the programmer and
-       simplifies the kernel development
+def get_scalar_kernel(arguments, operation, name="kernel", keep=False):
+    """Return a L{pycuda.driver.Function} that performs the same scalar operation
+    on one or several vectors.
     """
+
     mod = drv.SourceModule("""
         __global__ void %(name)s(%(arguments)s, int n)
         {
@@ -36,7 +36,7 @@ def get_scalar_kernel(arguments, operation, name="kernel"):
             "arguments": arguments, 
             "operation": operation,
             "name": name},
-        options=NVCC_OPTIONS)
+        options=NVCC_OPTIONS, keep=keep)
 
     return mod.get_function(name)
 
