@@ -70,6 +70,18 @@ rudiments as a starting point. That said, Arno Pähler's python-cuda has
 complete :mod:`ctypes`-based wrappers for CUBLAS. I don't think they interact natively
 with numpy, though.
 
+I've found some nice undocumented function in PyCuda. Can I use it?
+-------------------------------------------------------------------
+
+Of course you can. But don't come whining if it breaks or goes away in
+a future release. Being open-source, neither of these two should be
+show-stoppers anyway, and we welcome fixes for any functionality,
+documented or not.
+
+The rule is that if something is documented, we will in general make
+every effort to keep future version backward compatible with the present
+interface. If it isn't, there's no such guarantee.
+
 Acknowledgements
 ================
 
