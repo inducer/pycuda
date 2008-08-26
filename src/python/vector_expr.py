@@ -28,6 +28,7 @@ OTHER DEALINGS IN THE SOFTWARE.
 import numpy
 import pycuda.driver as drv
 import pycuda.gpuarray as gpuarray
+import pymbolic.mapper.substitutor
 
 
 
@@ -58,6 +59,15 @@ def dtype_to_ctype(dtype):
 
 
 
+class DefaultingSubstitutionMapper(
+        pymbolic.mapper.substitutor.SubstitutionMapper):
+    def handle_unsupported_expression(self, expr):
+        result = self.subst_func(expr)
+        if result is not None:
+            return result
+        else:
+            return expr
+
 class CompiledVectorExpression(object):
     def __init__(self, vec_expr, type_getter, result_dtype, 
             stream=None, allocator=drv.mem_alloc):
@@ -80,12 +90,17 @@ class CompiledVectorExpression(object):
 
         from pymbolic import substitute, var
         var_i = var("i")
-        subst_expr = substitute(
-                substitute(vec_expr, dict(
-                    zip(self.vector_exprs, 
-                        [var(vecname)[var_i]
-                            for vecname in vector_names]))),
-                dict(zip(self.scalar_exprs, scalar_names)))
+        subst_map = dict(
+                list(zip(self.vector_exprs, [var(vecname)[var_i]
+                    for vecname in vector_names]))
+                +list(zip(self.scalar_exprs, scalar_names)))
+        def subst_func(expr):
+            try:
+                return subst_map[expr]
+            except KeyError:
+                return None
+
+        subst_expr = DefaultingSubstitutionMapper(subst_func)(vec_expr)
 
         from pymbolic.mapper.stringifier import PREC_NONE, PREC_SUM
         from pymbolic.compiler import CompileMapper
@@ -103,13 +118,12 @@ class CompiledVectorExpression(object):
                         for var_expr, var_name in zip(
                             self.vector_exprs+self.scalar_exprs, 
                             vector_names+scalar_names)]),
-                "result[i] = " + CompileMapper()(subst_expr, PREC_NONE),
-                keep=True
+                "result[i] = " + CompileMapper()(subst_expr, PREC_NONE)
                 )
 
-    def __call__(self, context):
-        vectors = [context[vec_expr] for vec_expr in self.vector_exprs]
-        scalars = [context[scal_expr] for scal_expr in self.scalar_exprs]
+    def __call__(self, evaluate_subexpr):
+        vectors = [evaluate_subexpr(vec_expr) for vec_expr in self.vector_exprs]
+        scalars = [evaluate_subexpr(scal_expr) for scal_expr in self.scalar_exprs]
 
         from pytools import single_valued
         shape = single_valued(vec.shape for vec in vectors)
@@ -123,7 +137,6 @@ class CompiledVectorExpression(object):
                 "grid": (block_count,1)
                 }
         self.kernel(*([result]+vectors+scalars+[numpy.int32(size)]), **kwargs)
-                
 
         return result
 
