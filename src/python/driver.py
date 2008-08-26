@@ -81,20 +81,12 @@ def _add_functionality():
         return handlers
 
     def function_call(func, *args, **kwargs):
-        def get_kwarg(name, default=None):
-            if name in kwargs:
-                result = kwargs[name]
-                del kwargs[name]
-                return result
-            else:
-                return default
-
-        grid = get_kwarg("grid", (1,1))
-        stream = get_kwarg("stream")
-        block = get_kwarg("block")
-        shared = get_kwarg("shared")
-        texrefs = get_kwarg("texrefs", [])
-        time_kernel = get_kwarg("time_kernel", False)
+        grid = kwargs.pop("grid", (1,1))
+        stream = kwargs.pop("stream", None)
+        block = kwargs.pop("block", None)
+        shared = kwargs.pop("shared", None)
+        texrefs = kwargs.pop("texrefs", [])
+        time_kernel = kwargs.pop("time_kernel", False)
 
         if kwargs:
             raise ValueError(
@@ -142,7 +134,6 @@ def _add_functionality():
             if post_handlers:
                 for handler in post_handlers:
                     handler.post_call(stream)
-
 
     Device.get_attributes = device_get_attributes
     Function.param_set = function_param_set
