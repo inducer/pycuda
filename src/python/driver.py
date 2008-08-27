@@ -135,9 +135,66 @@ def _add_functionality():
                 for handler in post_handlers:
                     handler.post_call(stream)
 
+    def function_prepare(func, arg_types, block, shared=None, texrefs=[]):
+        func.set_block_shape(*block)
+
+        if shared is not None:
+            func.set_shared_size(shared)
+
+        for texref in texrefs:
+            func.param_set_texref(texref)
+
+        try:
+            import numpy
+        except ImportError:
+            numpy = None
+
+        func.arg_format = ""
+        param_size = 0
+
+        for i, arg_type in enumerate(arg_types):
+            if numpy is not None and numpy.number in arg_type.__mro__:
+                func.arg_format += numpy.dtype(arg_type).char
+            elif isinstance(arg_type, str):
+                func.arg_format += arg_type
+            else:
+                func.arg_format += numpy.dtype(numpy.intp).char
+
+        from struct import calcsize
+        func.param_set_size(caclsize(func.arg_format))
+
+    def function_prepared_call(func, grid, *args):
+        from struct import pack
+        func.param_setv(0, pack(func.arg_format, *args))
+        func.launch_grid(*grid)
+
+    def function_prepared_timed_call(func, grid, *args):
+        from struct import pack
+        func.param_setv(0, pack(func.arg_format, *args))
+
+        from time import time
+        start_time = time()
+        func.launch_grid(*grid)
+
+        Context.synchronize()
+        return time()-start_time
+
+    def function_prepared_async_call(func, grid, stream, *args):
+        from struct import pack
+        func.param_setv(0, pack(func.arg_format, *args))
+
+        if stream is None:
+            func.launch_grid(grid[0], grid[1])
+        else:
+            func.launch_grid_async(grid[0], grid[1], stream)
+
     Device.get_attributes = device_get_attributes
     Function.param_set = function_param_set
     Function.__call__ = function_call
+    Function.prepare = function_prepare
+    Function.prepared_call = function_prepared_call
+    Function.prepared_timed_call = function_prepared_timed_call
+    Function.prepared_async_call = function_prepared_async_call
 
 
 

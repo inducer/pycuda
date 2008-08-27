@@ -13,7 +13,8 @@ def _compile_kernels(kernel):
                 getattr(kernel,name)()
             
                 
-def get_scalar_kernel(arguments, operation, name="kernel", keep=False):
+def get_scalar_kernel(arguments, operation, 
+        name="kernel", keep=False):
     """Return a L{pycuda.driver.Function} that performs the same scalar operation
     on one or several vectors.
     """
@@ -38,7 +39,31 @@ def get_scalar_kernel(arguments, operation, name="kernel", keep=False):
             "name": name},
         options=NVCC_OPTIONS, keep=keep)
 
-    return mod.get_function(name)
+    func = mod.get_function(name)
+    def get_arg_tpye(c_arg):
+        if "*" in c_arg or "[" in c_arg:
+            return "P"
+
+        import re
+        # remove identifier
+        tp = re.sub(r"[a-zA-Z0-9]+(\[[0-9]*\])*$", "", c_arg)
+        tp = tp.replace("const", "").replace("volatile", "").strip()
+        if tp == "float": return "f"
+        elif tp == "double": return "d"
+        elif tp in ["int", "signed int"]: return "i"
+        elif tp in ["unsigned", "unsigned int"]: return "I"
+        elif tp in ["long", "long int"]: return "l"
+        elif tp in ["unsigned long", "unsigned long int"]: return "L"
+        elif tp in ["short", "short int"]: return "h"
+        elif tp in ["unsigned short", "unsigned short int"]: return "H"
+        elif tp in ["char"]: return "b"
+        elif tp in ["unsigned char"]: return "B"
+        else: raise ValueError, "unknown type '%s'" % tp
+    
+    func.prepare(
+            [get_arg_type(arg) for arg in arguments.split(",")],
+            (1,1,1))
+
 
 @memoize
 def get_axpbyz_kernel():
