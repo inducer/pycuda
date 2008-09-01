@@ -19,8 +19,9 @@ def get_scalar_kernel(arguments, operation,
     on one or several vectors.
     """
 
+    arguments += ", int n"
     mod = drv.SourceModule("""
-        __global__ void %(name)s(%(arguments)s, int n)
+        __global__ void %(name)s(%(arguments)s)
         {
 
           int tid = threadIdx.x;
@@ -40,7 +41,7 @@ def get_scalar_kernel(arguments, operation,
         options=NVCC_OPTIONS, keep=keep)
 
     func = mod.get_function(name)
-    def get_arg_tpye(c_arg):
+    def get_arg_type(c_arg):
         if "*" in c_arg or "[" in c_arg:
             return "P"
 
@@ -63,6 +64,8 @@ def get_scalar_kernel(arguments, operation,
     func.prepare(
             [get_arg_type(arg) for arg in arguments.split(",")],
             (1,1,1))
+
+    return func
 
 
 @memoize

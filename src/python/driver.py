@@ -141,8 +141,7 @@ def _add_functionality():
         if shared is not None:
             func.set_shared_size(shared)
 
-        for texref in texrefs:
-            func.param_set_texref(texref)
+        func.texrefs = texrefs
 
         try:
             import numpy
@@ -153,7 +152,7 @@ def _add_functionality():
         param_size = 0
 
         for i, arg_type in enumerate(arg_types):
-            if numpy is not None and numpy.number in arg_type.__mro__:
+            if isinstance(arg_type, type) and numpy is not None and numpy.number in arg_type.__mro__:
                 func.arg_format += numpy.dtype(arg_type).char
             elif isinstance(arg_type, str):
                 func.arg_format += arg_type
@@ -161,16 +160,23 @@ def _add_functionality():
                 func.arg_format += numpy.dtype(numpy.intp).char
 
         from struct import calcsize
-        func.param_set_size(caclsize(func.arg_format))
+        func.param_set_size(calcsize(func.arg_format))
 
     def function_prepared_call(func, grid, *args):
         from struct import pack
         func.param_setv(0, pack(func.arg_format, *args))
+
+        for texref in func.texrefs:
+            func.param_set_texref(texref)
+
         func.launch_grid(*grid)
 
     def function_prepared_timed_call(func, grid, *args):
         from struct import pack
         func.param_setv(0, pack(func.arg_format, *args))
+
+        for texref in func.texrefs:
+            func.param_set_texref(texref)
 
         from time import time
         start_time = time()
@@ -182,11 +188,14 @@ def _add_functionality():
     def function_prepared_async_call(func, grid, stream, *args):
         from struct import pack
         func.param_setv(0, pack(func.arg_format, *args))
+        for texref in func.texrefs:
+            func.param_set_texref(texref)
 
         if stream is None:
-            func.launch_grid(grid[0], grid[1])
+            func.launch_grid(*grid)
         else:
-            func.launch_grid_async(grid[0], grid[1], stream)
+            grid_x, grid_y = grid
+            func.launch_grid_async(grid_x, grid_y, stream)
 
     Device.get_attributes = device_get_attributes
     Function.param_set = function_param_set

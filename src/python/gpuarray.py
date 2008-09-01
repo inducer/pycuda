@@ -117,7 +117,7 @@ class GPUArray(object):
         assert self.dtype == other.dtype
 
         func = _kernel.get_axpbyz_kernel()
-        func.set_block_shape(self._block)
+        func.set_block_shape(*self._block)
         func.prepared_async_call(self._grid, self.stream,
                 selffac, self.gpudata, otherfac, other.gpudata, 
                 out.gpudata, self.size)
@@ -128,8 +128,8 @@ class GPUArray(object):
         """Compute ``out = selffac * self + other``, where `other` is a scalar."""
         assert self.dtype == numpy.float32
 
-        _kernel.get_axpbz_kernel().block(self._block).
-        func.set_block_shape(self._block)
+        func = _kernel.get_axpbz_kernel()
+        func.set_block_shape(*self._block)
         func.prepared_async_call(self._grid, self.stream,
                 selffac, self.gpudata,
                 other, out.gpudata, self.size)
@@ -141,7 +141,7 @@ class GPUArray(object):
         assert self.dtype == numpy.float32
 
         func = _kernel.get_multiply_kernel()
-        func.set_block_shape(self._block)
+        func.set_block_shape(*self._block)
         func.prepared_async_call(self._grid, self.stream,
                 self.gpudata, other.gpudata,
                 out.gpudata, self.size)
@@ -157,7 +157,7 @@ class GPUArray(object):
         assert self.dtype == numpy.float32
 
         func = _kernel.get_rdivide_scalar_kernel()
-        func.set_block_shape(self._block)
+        func.set_block_shape(*self._block)
         func.prepared_async_call(self._grid, self.stream,
                 self.gpudata, other,
                 out.gpudata, self.size)
@@ -174,7 +174,7 @@ class GPUArray(object):
         block_count, threads_per_block, elems_per_block = splay(self.size, WARP_SIZE, 128, 80)
 
         func = _kernel.get_divide_kernel()
-        func.set_block_shape(self._block)
+        func.set_block_shape(*self._block)
         func.prepared_async_call(self._grid, self.stream,
                 self.gpudata, other.gpudata,
                 out.gpudata, numpy.int32(self.size))
@@ -344,7 +344,7 @@ class GPUArray(object):
 
         return result
 
-    def __pow__(self,other):
+    def __pow__(self, other):
         """pow function::
  
            example:
@@ -371,7 +371,7 @@ class GPUArray(object):
             _kernel.get_pow_array_kernel()(self.gpudata,
                     other.gpudata,
                     result.gpudata,
-                    self.size,
+                    numpy.int32(self.size),
                     block=(threads_per_block,1,1), grid=(block_count,1),
                     stream=self.stream)
             

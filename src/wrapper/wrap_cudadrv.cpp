@@ -71,6 +71,14 @@ namespace
 
 
 
+  PyObject *device_allocation_to_long(device_allocation const &da)
+  {
+    return PyLong_FromUnsignedLong((CUdeviceptr) da);
+  }
+
+
+
+
   inline
   npy_intp size_from_dims(int ndim, const npy_intp *dims)
   {
@@ -348,6 +356,7 @@ BOOST_PYTHON_MODULE(_driver)
     typedef device_allocation cl;
     py::class_<cl, boost::noncopyable>("DeviceAllocation", py::no_init)
       .def("__int__", &cl::operator CUdeviceptr)
+      .def("__long__", device_allocation_to_long)
       .DEF_SIMPLE_METHOD(free)
       ;
 

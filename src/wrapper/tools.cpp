@@ -255,7 +255,7 @@ namespace
           m_pool->free(m_devptr, m_size);
       }
 
-      operator CUdeviceptr()
+      operator CUdeviceptr() const
       { return m_devptr; }
   };
 
@@ -267,6 +267,14 @@ namespace
       memory_pool<cuda_allocator>::size_type sz)
   {
     return new pooled_device_allocation(pool, pool->allocate(sz), sz);
+  }
+
+
+
+
+  PyObject *pooled_device_allocation_to_long(pooled_device_allocation const &da)
+  {
+    return PyLong_FromUnsignedLong((CUdeviceptr) da);
   }
 }
 
@@ -294,6 +302,7 @@ void pycuda_expose_tools()
         "PooledDeviceAllocation", py::no_init)
       .DEF_SIMPLE_METHOD(free)
       .def("__int__", &cl::operator CUdeviceptr)
+      .def("__long__", pooled_device_allocation_to_long)
       ;
 
     py::implicitly_convertible<pooled_device_allocation, CUdeviceptr>();

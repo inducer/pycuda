@@ -695,7 +695,7 @@ namespace cuda
           mem_free(m_devptr);
       }
       
-      operator CUdeviceptr()
+      operator CUdeviceptr() const
       { return m_devptr; }
   };
 
