@@ -179,10 +179,3 @@ def get_unary_func_kernel(func_name):
             "float *y, float *z",
             "z[i] = %s(y[i])" % func_name,
             "%s_kernel" % func_name)    
-    
-@memoize
-def get_dot_kernel():
-    return get_scalar_kernel(
-            "float *a,float *b, float *z",
-            "z[i] = a[i] * b[i]",
-            "dot_kernel")  

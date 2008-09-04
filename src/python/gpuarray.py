@@ -7,6 +7,7 @@ import pycuda.driver as drv
 
 
 
+@memoize
 def splay(n, min_threads=None, max_threads=128, max_blocks=80):
     # stolen from cublas
 
@@ -15,26 +16,26 @@ def splay(n, min_threads=None, max_threads=128, max_blocks=80):
 
     if n < min_threads:
         block_count = 1
-        elems_per_block = n
+        #elems_per_block = n
         threads_per_block = min_threads
     elif n < (max_blocks * min_threads):
         block_count = (n + min_threads - 1) // min_threads
         threads_per_block = min_threads
-        elems_per_block = threads_per_block
+        #elems_per_block = threads_per_block
     elif n < (max_blocks * max_threads):
         block_count = max_blocks
         grp = (n + min_threads - 1) // min_threads
         threads_per_block = ((grp + max_blocks -1) // max_blocks) * min_threads
-        elems_per_block = threads_per_block
+        #elems_per_block = threads_per_block
     else:
         block_count = max_blocks
         threads_per_block = max_threads
         grp = (n + min_threads - 1) // min_threads
         grp = (grp + max_blocks - 1) // max_blocks
-        elems_per_block = grp * min_threads
+        #elems_per_block = grp * min_threads
 
     #print "bc:%d tpb:%d epb:%d" % (block_count, threads_per_block, elems_per_block)
-    return block_count, threads_per_block, elems_per_block
+    return (block_count, 1), (threads_per_block, 1, 1)
 
 
 
@@ -55,8 +56,10 @@ class GPUArray(object):
         self.shape = shape
         self.dtype = numpy.dtype(dtype)
 
-        from pytools import product
-        self.size = product(shape)
+        s = 1
+        for dim in shape:
+            s *= dim
+        self.size = s
 
         self.allocator = allocator
         if self.size:
@@ -65,18 +68,7 @@ class GPUArray(object):
             self.gpudata = None
         self.stream = stream
 
-        self._update_kernel_kwargs()
-
-    def _update_kernel_kwargs(self):
-        block_count, threads_per_block, elems_per_block = splay(self.size, WARP_SIZE, 128, 80)
-        self._block = (threads_per_block,1,1)
-        self._grid = (block_count,1)
-
-        self._kernel_kwargs = {
-                "block": self._block, 
-                "grid": self._grid,
-                "stream": self.stream,
-        }
+        self._grid, self._block = splay(self.size, WARP_SIZE, 128, 80)
 
     @classmethod
     def compile_kernels(cls):
@@ -177,7 +169,7 @@ class GPUArray(object):
         func.set_block_shape(*self._block)
         func.prepared_async_call(self._grid, self.stream,
                 self.gpudata, other.gpudata,
-                out.gpudata, numpy.int32(self.size))
+                out.gpudata, self.size)
 
         return out
 
@@ -297,13 +289,11 @@ class GPUArray(object):
         else:
             result = self._new_like_me()
 
-            assert self.dtype == numpy.float32
-            assert self.shape == other.shape
-            assert self.dtype == other.dtype
-
-            _kernel.get_divide_kernel()(other.gpudata, self.gpudata,
-                    out.gpudata, numpy.int32(self.size),
-                    **self._kernel_kwargs)
+            func = _kernel.get_divide_kernel()
+            func.set_block_shape(*self._block)
+            func.prepared_async_call(self._grid, self.stream,
+                    other.gpudata, self.gpudata, out.gpudata, 
+                    self.size)
 
             return result
 
@@ -312,11 +302,10 @@ class GPUArray(object):
         """fills the array with the specified value"""
         assert self.dtype == numpy.float32
 
-        _kernel.get_fill_kernel()(
-                numpy.float32(value), 
-                self.gpudata, numpy.int32(self.size),
-                **self._kernel_kwargs
-                )
+        func = _kernel.get_fill_kernel()
+        func.set_block_shape(*self._block)
+        func.prepared_async_call(self._grid, self.stream,
+                value, self.gpudata, self.size)
 
         return self
 
@@ -327,7 +316,6 @@ class GPUArray(object):
         """returns the len of the internal array"""
         return self.size
 
-
     def __abs__(self):
         """Return a `GPUArray` of the absolute values of the elements
         of `self`.
@@ -337,10 +325,10 @@ class GPUArray(object):
 
         result = GPUArray(self.shape, self.dtype)
 
-        _kernel.get_unary_func_kernel("fabs")(
-                self.gpudata,result.gpudata,
-                numpy.int32(self.size),
-                **self._kernel_kwargs)
+        func = _kernel.get_unary_func_kernel("fabs")
+        func.set_block_shape(*self._block)
+        func.prepared_async_call(self._grid, self.stream,
+                self.gpudata,result.gpudata, self.size)
 
         return result
 
@@ -357,52 +345,25 @@ class GPUArray(object):
         block_count, threads_per_block, elems_per_block = splay(self.size, WARP_SIZE, 128, 80)
 
         if isinstance(other, (int, float, complex)):
-
-            _kernel.get_pow_kernel()(numpy.float32(other), self.gpudata, result.gpudata,
-                    numpy.int32(self.size),
-                    block=(threads_per_block,1,1), grid=(block_count,1),
-                    stream=self.stream)
+            func = _kernel.get_pow_kernel()
+            func.set_block_shape(*self._block)
+            func.prepared_async_call(self._grid, self.stream,
+                    other, self.gpudata, result.gpudata,
+                    self.size)
 
             return result
         else:
             assert self.shape == other.shape
             assert self.dtype == other.dtype
 
-            _kernel.get_pow_array_kernel()(self.gpudata,
-                    other.gpudata,
-                    result.gpudata,
-                    numpy.int32(self.size),
-                    block=(threads_per_block,1,1), grid=(block_count,1),
-                    stream=self.stream)
+            func = _kernel.get_pow_array_kernel()
+            func.set_block_shape(*self._block)
+            func.prepared_async_call(self._grid, self.stream,
+                    self.gpudata, other.gpudata, result.gpudata,
+                    self.size)
             
             return result
 
-    def dot(self, matrix):
-        """calculates the dot product of two matrixes::
-        
-           both matrixes need to be on the same gpu and need to have the same
-           shapes
-        """
-        
-        assert self.shape == matrix.shape
-        assert self.dtype == matrix.dtype
-        assert len(self.shape) == 2
-        assert len(matrix.shape) == 2
-
-        result = GPUArray(self.shape, self.dtype)
-
-        print "shape"
-        print self.shape
-        print "content"
-        print self
-        print "matrix content"
-        print matrix
-        
-        _kernel.get_dot_kernel()(self.gpudata,matrix.gpudata,result.gpudata,numpy.int32(self.size),**self._kernel_kwargs)
-
-        print "result"
-        return result
-        
     def reverse(self):
         """Return this array in reversed order. The array is treated
         as one-dimensional.
@@ -412,7 +373,11 @@ class GPUArray(object):
         
         result = GPUArray(self.shape, self.dtype)
 
-        _kernel.get_reverse_kernel()(self.gpudata,result.gpudata,numpy.int32(self.size),**self._kernel_kwargs)
+        func = _kernel.get_reverse_kernel()
+        func.set_block_shape(*self._block)
+        func.prepared_async_call(self._grid, self.stream,
+                self.gpudata, result.gpudata,
+                self.size)
 
         return result
 
@@ -425,8 +390,7 @@ def to_gpu(ary, stream=None, allocator=drv.mem_alloc):
     result.set(ary, stream)
     return result
 
-def empty(shape, dtype, stream=None, allocator=drv.mem_alloc):
-    return GPUArray(shape, dtype, stream, allocator)
+empty = GPUArray
 
 def zeros(shape, dtype, stream=None, allocator=drv.mem_alloc):
     """Returns an array of the given shape and dtype filled with 0's."""

@@ -130,13 +130,8 @@ class CompiledVectorExpression(object):
         result = gpuarray.empty(shape, self.result_dtype, self.stream, self.allocator)
         size = result.size
         
-        block_count, threads_per_block, elems_per_block = gpuarray.splay(size)
-
-        kwargs = {
-                "block": (threads_per_block,1,1), 
-                "grid": (block_count,1)
-                }
-        self.kernel(*([result]+vectors+scalars+[numpy.int32(size)]), **kwargs)
+        self.kernel.prepared_async_call(vectors[0]._grid, self.stream,
+                *([result.gpudata]+[v.gpudata for v in vectors]+scalars+[numpy.int32(size)]))
 
         return result
 
