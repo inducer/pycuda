@@ -3,6 +3,7 @@ import numpy
 import pycuda._kernel as _kernel
 import random as random
 from pytools import memoize
+from pytools.diskdict import DiskDict
 import pycuda.driver as drv
 
 
@@ -12,35 +13,75 @@ def splay(n, min_threads=None, max_threads=128, max_blocks=80):
     # stolen from cublas
 
     if min_threads is None:
-        min_threads = WARP_SIZE
+        min_threads = 32
 
     if n < min_threads:
         block_count = 1
-        #elems_per_block = n
         threads_per_block = min_threads
     elif n < (max_blocks * min_threads):
         block_count = (n + min_threads - 1) // min_threads
         threads_per_block = min_threads
-        #elems_per_block = threads_per_block
     elif n < (max_blocks * max_threads):
         block_count = max_blocks
         grp = (n + min_threads - 1) // min_threads
         threads_per_block = ((grp + max_blocks -1) // max_blocks) * min_threads
-        #elems_per_block = threads_per_block
     else:
         block_count = max_blocks
         threads_per_block = max_threads
-        grp = (n + min_threads - 1) // min_threads
-        grp = (grp + max_blocks - 1) // max_blocks
-        #elems_per_block = grp * min_threads
 
-    #print "bc:%d tpb:%d epb:%d" % (block_count, threads_per_block, elems_per_block)
+    print "n:%d bc:%d tpb:%d" % (n, block_count, threads_per_block)
     return (block_count, 1), (threads_per_block, 1, 1)
 
 
 
 
-WARP_SIZE = 32
+_splay_cache = DiskDict("pycuda-splay", 
+        dep_modules=[__file__, _kernel])
+
+
+
+
+def splay_old(size, dev=None):
+    if dev is None:
+        dev = drv.Context.get_device()
+
+    try:
+        return _splay_cache[size, dev.name()]
+    except KeyError:
+        from pycuda.tools import DeviceData
+        devdata = DeviceData(dev)
+        kernel = _kernel.get_axpbyz_kernel()
+
+        max_warps = devdata.max_threads/devdata.warp_size
+        data = gpuarray.zeros((size,), dtype=numpy.float32)
+
+        times = []
+        for warp_count in range(1, max_warps+1):
+            block_size = warp_count*devdata.warp_size
+            max_block_count = min(
+                    (size+block_size-1) // block_size,
+                    pycuda.autoinit.device.get_attribute(
+                        drv.device_attribute.MAX_GRID_DIM_X))
+
+            block_step = 1
+            while max_block_count // block_step > 128:
+                block_step *= 2
+
+            for block_count in range(1, max_block_count+1, block_step):
+                kernel.set_block_shape(block_size, 1, 1)
+                t = min(
+                        kernel.prepared_timed_call((block_count,1), 
+                            2, data.gpudata,
+                            2, data.gpudata,
+                            data.gpudata, size)
+                        for i in range(10))
+                times.append((t, warp_count, block_count))
+
+        times.sort()
+        t, warp_count, block_count = times[0]
+        result = (block_count, 1), (threads_per_block, 1, 1)
+        _splay_cache[size, dev.name()] = result
+        return result
 
 
 
@@ -68,7 +109,7 @@ class GPUArray(object):
             self.gpudata = None
         self.stream = stream
 
-        self._grid, self._block = splay(self.size, WARP_SIZE, 128, 80)
+        self._grid, self._block = splay(self.size)
 
     @classmethod
     def compile_kernels(cls):
