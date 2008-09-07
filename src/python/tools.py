@@ -55,6 +55,31 @@ def _int_floor(value, multiple_of=1):
 
 
 
+def get_default_device(default=0):
+    from pycuda.driver import Device
+    import os
+    dev = os.environ.get("CUDA_DEVICE")
+
+    if dev is None:
+        try:
+            dev = (open(os.path.join(os.path.expanduser("~"), ".cuda_device"))
+                    .read().strip())
+        except:
+            pass
+
+    if dev is None:
+        dev = default
+
+    try:
+        dev = int(dev)
+    except TypeError:
+        raise TypeError("CUDA device number (CUDA_DEVICE or ~/.cuda-device) must be an integer")
+        
+    return Device(dev)
+
+
+
+
 class DeviceData:
     def __init__(self, dev):
         import pycuda.driver as drv

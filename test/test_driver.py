@@ -1,4 +1,5 @@
 import unittest
+import pycuda.autoinit
 import pycuda.driver as drv
 import numpy
 import numpy.linalg as la
@@ -6,15 +7,10 @@ import numpy.linalg as la
 
 
 
-drv.init()
-assert drv.Device.count() >= 1
+assert isinstance(pycuda.autoinit.device.name(), str)
+assert isinstance(pycuda.autoinit.device.compute_capability(), tuple)
+assert isinstance(pycuda.autoinit.device.get_attributes(), dict)
 
-dev = drv.Device(0)
-assert isinstance(dev.name(), str)
-assert isinstance(dev.compute_capability(), tuple)
-assert isinstance(dev.get_attributes(), dict)
-
-ctx = dev.make_context()
 
 
 

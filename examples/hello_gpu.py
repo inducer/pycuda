@@ -1,10 +1,8 @@
 import pycuda.driver as drv
+import pycuda.tools
+import pycuda.autoinit
 import numpy
 import numpy.linalg as la
-
-drv.init()
-dev = drv.Device(0)
-ctx = dev.make_context()
 
 mod = drv.SourceModule("""
 __global__ void multiply_them(float *dest, float *a, float *b)
