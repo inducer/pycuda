@@ -113,6 +113,8 @@ def _add_functionality():
 
         if stream is None:
             if time_kernel:
+                Context.synchronize()
+
                 from time import time
                 start_time = time()
             func.launch_grid(*grid)
@@ -178,8 +180,10 @@ def _add_functionality():
         for texref in func.texrefs:
             func.param_set_texref(texref)
 
+        Context.synchronize()
         from time import time
         start_time = time()
+        
         func.launch_grid(*grid)
 
         Context.synchronize()
