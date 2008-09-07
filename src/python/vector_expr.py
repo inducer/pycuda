@@ -118,7 +118,8 @@ class CompiledVectorExpression(object):
                         for var_expr, var_name in zip(
                             self.vector_exprs+self.scalar_exprs, 
                             vector_names+scalar_names)]),
-                "result[i] = " + CompileMapper()(subst_expr, PREC_NONE)
+                "result[i] = " + CompileMapper()(subst_expr, PREC_NONE),
+                name="vector_expression"
                 )
 
     def __call__(self, evaluate_subexpr):
