@@ -182,6 +182,21 @@ namespace cuda
         return result;
       }
 
+      bool operator==(const device &other) const
+      {
+        return m_device == other.m_device;
+      }
+
+      bool operator!=(const device &other) const
+      {
+        return m_device != other.m_device;
+      }
+
+      long hash() const
+      {
+        return m_device;
+      }
+
       boost::shared_ptr<context> make_context(unsigned int flags);
   };
 

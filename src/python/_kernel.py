@@ -11,8 +11,10 @@ def _compile_kernels(kernel):
         if name.startswith("get_") and name.endswith("_kernel"):
             if name is not "get_scalar_kernel":
                 getattr(kernel,name)()
-            
-                
+
+
+
+
 def get_scalar_kernel(arguments, operation, 
         name="kernel", keep=False):
     """Return a L{pycuda.driver.Function} that performs the same scalar operation

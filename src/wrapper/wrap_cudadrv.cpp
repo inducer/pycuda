@@ -287,6 +287,9 @@ BOOST_PYTHON_MODULE(_driver)
       .DEF_SIMPLE_METHOD(compute_capability)
       .DEF_SIMPLE_METHOD(total_memory)
       .DEF_SIMPLE_METHOD(get_attribute)
+      .def(py::self == py::self)
+      .def(py::self != py::self)
+      .def("__hash__", &cl::hash)
       .def("make_context", &cl::make_context, 
           (py::args("self"), py::args("flags")=0))
       ;
