@@ -9,33 +9,6 @@ import pycuda.driver as drv
 
 
 @memoize
-def splay_old(n, min_threads=None, max_threads=128, max_blocks=80):
-    # stolen from cublas
-
-    if min_threads is None:
-        min_threads = 32
-
-    if n < min_threads:
-        block_count = 1
-        threads_per_block = min_threads
-    elif n < (max_blocks * min_threads):
-        block_count = (n + min_threads - 1) // min_threads
-        threads_per_block = min_threads
-    elif n < (max_blocks * max_threads):
-        block_count = max_blocks
-        grp = (n + min_threads - 1) // min_threads
-        threads_per_block = ((grp + max_blocks -1) // max_blocks) * min_threads
-    else:
-        block_count = max_blocks
-        threads_per_block = max_threads
-
-    #print "n:%d bc:%d tpb:%d" % (n, block_count, threads_per_block)
-    return (block_count, 1), (threads_per_block, 1, 1)
-
-
-
-
-@memoize
 def _splay_backend(n, dev):
     # heavily modified from cublas
     from pycuda.tools import DeviceData
@@ -70,77 +43,6 @@ def splay(n, dev=None):
     if dev is None:
         dev = drv.Context.get_device()
     return _splay_backend(n, dev)
-
-
-
-
-_splay_cache = DiskDict("pycuda-splay", 
-        dep_modules=[__file__, _kernel])
-
-
-
-
-def _time_scalar_grid(size, block_size, block_count, reps=60):
-    data = drv.mem_alloc(size*4)
-
-    kernel = _kernel.get_axpbyz_kernel()
-
-    from time import time
-    start_time = time()
-
-    import pycuda.driver as cuda
-
-    cuda.Context.synchronize()
-    for i in range(reps):
-        kernel.prepared_call((block_count,1), 
-            2, data,
-            2, data,
-            data, size)
-    cuda.Context.synchronize()
-
-    return (time()-start_time)/reps
-
-
-
-
-
-def splay_empirical(size, dev=None):
-    if dev is None:
-        dev = drv.Context.get_device()
-
-    try:
-        return _splay_cache[size, dev.name()]
-    except KeyError:
-        print "SPLAYTEST!"
-        from pycuda.tools import DeviceData
-        devdata = DeviceData(dev)
-        kernel = _kernel.get_axpbyz_kernel()
-
-        max_warps = devdata.max_threads//devdata.warp_size
-
-        times = []
-        for warp_count in range(1, max_warps+1):
-            block_size = warp_count*devdata.warp_size
-            max_block_count = min(
-                    (size+block_size-1) // block_size,
-                    dev.get_attribute(drv.device_attribute.MAX_GRID_DIM_X))
-
-            block_step = 1
-            while max_block_count // block_step > 128:
-                block_step *= 2
-
-            for block_count in range(1, max_block_count+1, block_step):
-                kernel.set_block_shape(block_size, 1, 1)
-                times.append((
-                    _time_scalar_grid(size, block_size, block_count), 
-                    warp_count, block_count))
-
-        times.sort()
-        t, warp_count, block_count = times[0]
-
-        result = (block_count, 1), (warp_count*devdata.warp_size, 1, 1)
-        _splay_cache[size, dev.name()] = result
-        return result
 
 
 
