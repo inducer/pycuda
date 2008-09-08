@@ -15,7 +15,7 @@ def time_grid(size, block_size, block_count):
 
     import pycuda.driver as cuda
 
-    count = 10
+    count = 3
     cuda.Context.synchronize()
     for i in range(count):
         kernel.prepared_call((block_count,1), 
@@ -42,7 +42,7 @@ def main():
     for size_exp in range(15, 25):
         size = 2**size_exp
 
-        for rep in range(2):
+        for rep in range(1):
             times = []
             for warp_count in range(1, max_warps+1):
                 block_size = warp_count*devdata.warp_size
@@ -59,10 +59,10 @@ def main():
                     times.append((
                         time_grid(size, block_size, block_count), 
                         warp_count, block_count))
-                    sys.stdout.write(".")
-                    sys.stdout.flush()
-            sys.stdout.write("\n")
-            sys.stdout.flush()
+                    #sys.stdout.write(".")
+                    #sys.stdout.flush()
+            #sys.stdout.write("\n")
+            #sys.stdout.flush()
 
             times.sort()
             print "size=%d" % size
@@ -81,7 +81,7 @@ def main():
             (bc, _), (tpb, _, _) = splay(size)
             print  "new splay:", time_grid(size, tpb, bc), tpb//devdata.warp_size, bc
 
-        raw_input()
+        #raw_input()
 
 
 

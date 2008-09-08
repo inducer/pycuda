@@ -43,7 +43,7 @@ def _splay_backend(n, dev):
 
     min_threads = devdata.warp_size
     max_threads = 128
-    max_blocks = devdata.thread_blocks_per_mp \
+    max_blocks = 4 * devdata.thread_blocks_per_mp \
             * dev.get_attribute(drv.device_attribute.MULTIPROCESSOR_COUNT)
 
     if n < min_threads:
