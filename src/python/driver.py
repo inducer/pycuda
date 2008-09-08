@@ -1,4 +1,6 @@
 from _driver import *
+from pytools.diskdict import DiskDict
+from pytools import memoize
 
 
 
@@ -345,59 +347,87 @@ def from_device_like(devptr, other_ary):
 
 
 
+
+@memoize
+def _get_nvcc_version(nvcc):
+    from subprocess import Popen, PIPE
+    return Popen([nvcc, "--version"], stdout=PIPE).communicate()[0]
+
+
+
+
+_compile_cache = DiskDict("pycuda-compile", 
+        dep_modules=[__file__])
+
+
+
+
+def _do_compile(source, options, keep, nvcc):
+    from tempfile import mkdtemp
+    tempdir = mkdtemp()
+
+    from os.path import join
+    outf = open(join(tempdir, "kernel.cu"), "w")
+    outf.write(str(source))
+    outf.close()
+
+    if keep:
+        options = options[:]
+        options.append("--keep")
+        print "*** compiler output in %s" % tempdir
+
+    from subprocess import call
+    try:
+        result = call([nvcc, "--cubin"] 
+                + options
+                + ["kernel.cu"],
+            cwd=tempdir)
+    except OSError, e:
+        raise OSError, "%s was not found (is it on the PATH?) [%s]" % (
+                nvcc, str(e))
+
+    if result != 0:
+        raise RuntimeError, "module compilation failed"
+
+    cubin = open(join(tempdir, "kernel.cubin"), "r").read()
+
+    if not keep:
+        from os import listdir, unlink, rmdir
+        for name in listdir(tempdir):
+            unlink(join(tempdir, name))
+        rmdir(tempdir)
+
+    return cubin
+
+
+
+
+
 class SourceModule(object):
     def __init__(self, source, nvcc="nvcc",
             options=[], keep=False, 
             no_extern_c=False):
-        from tempfile import mkdtemp
-        tempdir = mkdtemp()
 
-        from os.path import join
-        outf = open(join(tempdir, "kernel.cu"), "w")
         if not no_extern_c:
-            outf.write('extern "C" {\n')
-        outf.write(str(source))
-        if not no_extern_c:
-            outf.write('}\n')
-        outf.write("\n")
-        outf.close()
+            source = 'extern "C" {\n%s\n}\n' % source
 
-        if keep:
-            options = options[:]
-            options.append("--keep")
-            print "*** compiler output in %s" % tempdir
-
-        from subprocess import call
+        cache_key = (source, tuple(options), _get_nvcc_version(nvcc))
         try:
-            result = call([nvcc, "--cubin"] 
-                    + options
-                    + ["kernel.cu"],
-                cwd=tempdir)
-        except OSError, e:
-            raise OSError, "%s was not found (is it on the PATH?) [%s]" % (
-                    nvcc, str(e))
-
-        if result != 0:
-            raise RuntimeError, "module compilation failed"
-
-        data = open(join(tempdir, "kernel.cubin"), "r").read()
+            cubin = _compile_cache[cache_key]
+        except KeyError:
+            cubin = _do_compile(source, options, keep, nvcc)
+            _compile_cache[cache_key] = cubin
 
         import re
-        self.lmem = int(re.search("lmem = ([0-9]+)", data).group(1))
-        self.smem = int(re.search("smem = ([0-9]+)", data).group(1))
-        self.registers = int(re.search("reg = ([0-9]+)", data).group(1))
+        self.lmem = int(re.search("lmem = ([0-9]+)", cubin).group(1))
+        self.smem = int(re.search("smem = ([0-9]+)", cubin).group(1))
+        self.registers = int(re.search("reg = ([0-9]+)", cubin).group(1))
 
         if self.lmem:
             from warnings import warn
             warn("kernel uses local memory")
 
-        self.module = module_from_buffer(data)
-
-        if not keep:
-            from os import listdir, unlink, rmdir
-            for name in listdir(tempdir):
-                unlink(join(tempdir, name))
-            rmdir(tempdir)
+        self.module = module_from_buffer(cubin)
 
         self.get_function = self.module.get_function
         self.get_global = self.module.get_global
