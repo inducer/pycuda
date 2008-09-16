@@ -38,8 +38,6 @@ class DebugMemoryPool(DeviceMemoryPool):
     def __init__(self):
         DeviceMemoryPool.__init__(self)
         self.last_free, _ = cuda.mem_get_info()
-        from weakref import WeakKeyDictionary
-        self.blocks = WeakKeyDictionary()
 
     def allocate(self, size):
         print "Allocation of size %d occurring (mem: last_free:%d, free: %d, total:%d) (pool: held:%d, active:%d):" % (
@@ -47,31 +45,9 @@ class DebugMemoryPool(DeviceMemoryPool):
                 + cuda.mem_get_info()
                 + (self.held_blocks, self.active_blocks))
 
-        def print_referrers(parent):
-            from gc import get_referrers
-            for r in get_referrers(parent):
-                if isinstance(r, dict) and ("self" in r):
-                    if r["self"] is not parent:
-                        print_referrers(r["self"])
-                elif "frame" in str(r) and hasattr(r, "f_code"):
-                    #if r.f_code.co_name not in  ["print_referrers", "allocate", "iterkeys"]:
-                    print r.f_code
-                else:
-                    print r
-
-        import gc
-        gc.collect()
-        import sys
-        #for b in self.blocks:
-            #print "BLOCK", b, len(b), sys.getrefcount(b)
-            #print_referrers(b)
-
-        #from traceback import print_stack
-        #print_stack()
         raw_input("[Enter]")
         result = DeviceMemoryPool.allocate(self, size)
         self.last_free, _ = cuda.mem_get_info()
-        self.blocks[result] = None
         return result
 
 
