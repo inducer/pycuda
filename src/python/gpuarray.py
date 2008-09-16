@@ -72,6 +72,8 @@ class GPUArray(object):
 
         self._grid, self._block = splay(self.size)
 
+        self.self = self
+
     @classmethod
     def compile_kernels(cls):
         # useful for benchmarking

@@ -216,6 +216,11 @@ namespace
         assert(m_held_blocks == 0);
       }
 
+      unsigned active_blocks()
+      { return m_active_blocks; }
+
+      unsigned held_blocks()
+      { return m_held_blocks; }
   };
 
 
@@ -257,6 +262,9 @@ namespace
 
       operator CUdeviceptr() const
       { return m_devptr; }
+
+      unsigned long size() const
+      { return m_size; }
   };
 
 
@@ -293,8 +301,9 @@ void pycuda_expose_tools()
       .DEF_SIMPLE_METHOD(free_held)
       .def("allocate", pool_allocate,
           py::return_value_policy<py::manage_new_object>())
+      .add_property("held_blocks", &cl::held_blocks)
+      .add_property("active_blocks", &cl::active_blocks)
       ;
-
   }
   {
     typedef pooled_device_allocation cl;
@@ -303,6 +312,7 @@ void pycuda_expose_tools()
       .DEF_SIMPLE_METHOD(free)
       .def("__int__", &cl::operator CUdeviceptr)
       .def("__long__", pooled_device_allocation_to_long)
+      .def("__len__", &cl::size)
       ;
 
     py::implicitly_convertible<pooled_device_allocation, CUdeviceptr>();
