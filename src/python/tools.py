@@ -39,16 +39,48 @@ class DebugMemoryPool(DeviceMemoryPool):
         DeviceMemoryPool.__init__(self)
         self.last_free, _ = cuda.mem_get_info()
 
+        from weakref import WeakKeyDictionary
+        self.blocks = WeakKeyDictionary()
+
+        from pytools.diskdict import DiskDict
+        self.stacktrace_mnemonics = DiskDict("pycuda-stacktrace-mnemonics")
+
     def allocate(self, size):
-        print "Allocation of size %d occurring (mem: last_free:%d, free: %d, total:%d) (pool: held:%d, active:%d):" % (
+        print "  Allocation of size %d occurring (mem: last_free:%d, free: %d, total:%d) (pool: held:%d, active:%d):" % (
                 (size, self.last_free) 
                 + cuda.mem_get_info()
                 + (self.held_blocks, self.active_blocks))
+        histogram = {}
+        for bsize, descr in self.blocks.itervalues():
+            histogram[bsize, descr] = histogram.get((bsize, descr), 0) + 1
 
-        raw_input("[Enter]")
+        for (bsize, descr), count in histogram.iteritems():
+            print "  %s (%d bytes): %dx" % (descr, bsize, count)
+
+        from traceback import extract_stack
+        stack = tuple(frm[2] for frm in extract_stack())
+
+        raw_input("  [Enter]")
         result = DeviceMemoryPool.allocate(self, size)
+        self.blocks[result] = size, self.describe(stack, size)
         self.last_free, _ = cuda.mem_get_info()
         return result
+
+    def describe(self, stack, size):
+        try:
+            return self.stacktrace_mnemonics[stack, size]
+        except KeyError:
+            print size, stack
+            while True:
+                mnemonic = raw_input("Enter mnemonic or [Enter] for more info:")
+                if mnemonic == '':
+                    from traceback import print_stack
+                    print_stack()
+                else:
+                    break
+            self.stacktrace_mnemonics[stack, size] = mnemonic
+            return mnemonic
+        
 
 
 
