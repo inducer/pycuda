@@ -119,8 +119,7 @@ class CompiledVectorExpression(object):
                             self.vector_exprs+self.scalar_exprs, 
                             vector_names+scalar_names)]),
                 "result[i] = " + CompileMapper()(subst_expr, PREC_NONE),
-                name="vector_expression"
-                )
+                name="vector_expression")
 
     def __call__(self, evaluate_subexpr):
         vectors = [evaluate_subexpr(vec_expr) for vec_expr in self.vector_exprs]
@@ -131,6 +130,7 @@ class CompiledVectorExpression(object):
         result = gpuarray.empty(shape, self.result_dtype, self.stream, self.allocator)
         size = result.size
         
+        self.kernel.set_block_shape(*vectors[0]._block)
         self.kernel.prepared_async_call(vectors[0]._grid, self.stream,
                 *([result.gpudata]+[v.gpudata for v in vectors]+scalars+[numpy.int32(size)]))
 
