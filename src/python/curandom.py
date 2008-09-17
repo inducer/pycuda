@@ -107,7 +107,7 @@ def _get_random_kernel():
 
 
 
-    __global__ void calculate_random(float *dest,int seed,int n)
+    __global__ void calculate_random(float *dest, int seed, int n)
     {
         int tid = threadIdx.x;
         int total_threads = gridDim.x*blockDim.x;
@@ -134,7 +134,9 @@ def _get_random_kernel():
     """
     )
  
-    return mod.get_function("calculate_random")
+    func = mod.get_function("calculate_random")
+    func.prepare("Pii", (1,1,1))
+    return func
 
 
 
@@ -148,10 +150,9 @@ def rand(shape, dtype=numpy.float32):
     result = GPUArray(shape, dtype)
 
     import random
-    _get_random_kernel()(result.gpudata,
-            numpy.float32(random.random()), 
-
-            numpy.int32(result.size),
-            **result._kernel_kwargs)
+    func = _get_random_kernel()
+    func.set_block_shape(*result._block)
+    func.prepared_async_call(result._grid, result.stream,
+            result.gpudata, random.random(), result.size)
         
     return result

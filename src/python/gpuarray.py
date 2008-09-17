@@ -165,8 +165,6 @@ class GPUArray(object):
         assert self.shape == other.shape
         assert self.dtype == other.dtype
 
-        block_count, threads_per_block, elems_per_block = splay(self.size, WARP_SIZE, 128, 80)
-
         func = _kernel.get_divide_kernel()
         func.set_block_shape(*self._block)
         func.prepared_async_call(self._grid, self.stream,
@@ -344,7 +342,6 @@ class GPUArray(object):
 
         """
         result = GPUArray(self.shape, self.dtype)
-        block_count, threads_per_block, elems_per_block = splay(self.size, WARP_SIZE, 128, 80)
 
         if isinstance(other, (int, float, complex)):
             func = _kernel.get_pow_kernel()
@@ -468,11 +465,10 @@ def arange(*args, **kwargs):
   
     result = GPUArray((size,), dtype)
 
-    block_count, threads_per_block, elems_per_block = splay(size, WARP_SIZE, 128, 80)
-    _kernel.get_arange_kernel()(
-            result.gpudata, start, step, numpy.int32(size),
-            block=(threads_per_block,1,1), grid=(block_count,1),
-            stream=result.stream)
+    func = _kernel.get_arange_kernel()
+    func.set_block_shape(*result._block)
+    func.prepared_async_call(result._grid, result.stream,
+            result.gpudata, start, step, size)
 
     return result
 

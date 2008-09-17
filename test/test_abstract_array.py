@@ -14,26 +14,6 @@ class TestAbstractArray(unittest.TestCase):
         is to be tested."""
         raise NotImplementedError
 
-
-    def test_dot(self):
-        """tests that the dot product works"""
-        m1 = numpy.matrix([[1,2],[3,4]]).astype(numpy.float32)
-        m2 = numpy.matrix([[2,2],[2,2]]).astype(numpy.float32)
-        
-        print " matrix operartion with numpy"
-        print m1 * m2
-        
-        cpu_m1 = self.make_test_array(m1)
-        cpu_m2 = self.make_test_array(m2)
-
-        print "normal multiplication with pycuda"
-        
-        print cpu_m1 * cpu_m2
-
-        print "dot multiplication with pycuda"
-        
-        print cpu_m1.dot(cpu_m2)
-        
     def test_pow_array(self):
         """tests the pow function based on arrays"""
 
