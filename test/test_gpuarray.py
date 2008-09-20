@@ -21,6 +21,30 @@ class TestGPUArray(test_abstract_array.TestAbstractArray):
 
         self.assert_((0 <= a).all())
         self.assert_((a < 1).all())
+
+    def test_nan_arithmetic(self):
+        def make_nan_contaminated_vector(size):
+            shape = (size,)
+            a = numpy.random.randn(*shape).astype(numpy.float32)
+            #for i in range(0, shape[0], 3):
+                #a[i] = float('nan')
+            from random import randrange
+            for i in range(size//10):
+                a[randrange(0, size)] = float('nan')
+            return a
+
+        size = 1 << 20
+
+        a = make_nan_contaminated_vector(size)
+        a_gpu = gpuarray.to_gpu(a)
+        b = make_nan_contaminated_vector(size)
+        b_gpu = gpuarray.to_gpu(b)
+
+        ab = a*b
+        ab_gpu = (a_gpu*b_gpu).get()
+
+        for i in range(size):
+            assert numpy.isnan(ab[i]) == numpy.isnan(ab_gpu[i])
         
 if __name__ == '__main__':
     unittest.main()
