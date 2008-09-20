@@ -406,10 +406,23 @@ def _do_compile(source, options, keep, nvcc):
 class SourceModule(object):
     def __init__(self, source, nvcc="nvcc",
             options=[], keep=False, 
-            no_extern_c=False):
+            no_extern_c=False, arch=None, code=None):
 
         if not no_extern_c:
             source = 'extern "C" {\n%s\n}\n' % source
+
+        options = options[:]
+        if arch is None:
+            try:
+                arch = "sm_%d%d" % Context.get_device().compute_capability()
+            except RuntimeError:
+                pass
+
+        if arch is not None:
+            options.extend(["-arch", arch])
+
+        if code is not None:
+            options.extend(["-code", code])
 
         cache_key = (source, tuple(options), _get_nvcc_version(nvcc))
         try:
