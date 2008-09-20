@@ -223,7 +223,8 @@ Global Device Memory
   
   Allocate enough memory for *buffer*, which adheres to the Python
   :class:`buffer` interface. Copy the contents of *buffer* onto the 
-  device.
+  device. Return a :class:`DeviceAllocation` object representing
+  the newly-allocated memory.
 
 .. function:: mem_alloc_pitch(width, height, access_size)
 
