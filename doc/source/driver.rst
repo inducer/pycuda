@@ -328,6 +328,11 @@ Arrays and Textures
     Bind *self* to the a chunk of linear memory starting at the integer address 
     *devptr*, encompassing a number of *bytes*.
 
+  .. method:: set_format(fmt, num_components)
+    
+    Set the texture to have :class:`array_format` *fmt* and to have
+    *num_components* channels.
+
   .. method:: set_address_mode(dim, am)
 
     Set the address mode of dimension *dim* to *am*, which must be one of the
@@ -344,6 +349,12 @@ Arrays and Textures
   .. method:: get_address_mode(dim)
   .. method:: get_filter_mode()
   .. method:: get_format()
+
+    Return a tuple *(fmt, num_components)*, where *fmt* is
+    of type :class:`array_format`, and *num_components* is the
+    number of channels in this texture.
+
+    (Version 2.0 and above only.)
   .. method:: get_flags()
 
 .. data:: TRSA_OVERRIDE_FORMAT
