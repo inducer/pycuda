@@ -208,6 +208,31 @@ class OccupancyRecord:
 
 
 
+def dtype_to_array_format(dtype):
+    import numpy
+
+    if dtype == numpy.uint8:
+        return cuda.array_format.UNSIGNED_INT8
+    elif dtype == numpy.uint16:
+        return cuda.array_format.UNSIGNED_INT16
+    elif dtype == numpy.uint32:
+        return cuda.array_format.UNSIGNED_INT32
+    elif dtype == numpy.int8:
+        return cuda.array_format.SIGNED_INT8
+    elif dtype == numpy.int16:
+        return cuda.array_format.SIGNED_INT16
+    elif dtype == numpy.int32:
+        return cuda.array_format.SIGNED_INT32
+    elif dtype == numpy.float32:
+        return cuda.array_format.FLOAT
+    else:
+        raise TypeError(
+                "cannot convert dtype '%s' to array format" 
+                % dtype)
+
+
+
+
 def _test_occupancy():
     for threads in range(32, 512, 16):
         for smem in range(1024, 16384+1, 1024):
