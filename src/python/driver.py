@@ -263,14 +263,39 @@ def to_device(bf_obj):
 
 
 
+def dtype_to_array_format(dtype):
+    import numpy
+
+    if dtype == numpy.uint8:
+        return array_format.UNSIGNED_INT8
+    elif dtype == numpy.uint16:
+        return array_format.UNSIGNED_INT16
+    elif dtype == numpy.uint32:
+        return array_format.UNSIGNED_INT32
+    elif dtype == numpy.int8:
+        return array_format.SIGNED_INT8
+    elif dtype == numpy.int16:
+        return array_format.SIGNED_INT16
+    elif dtype == numpy.int32:
+        return array_format.SIGNED_INT32
+    elif dtype == numpy.float32:
+        return array_format.FLOAT
+    else:
+        raise TypeError(
+                "cannot convert dtype '%s' to array format" 
+                % dtype)
+
+
+
+
 def matrix_to_array(matrix):
     import numpy
-    matrix = numpy.asarray(matrix, dtype=numpy.float32, order="F")
+    matrix = numpy.asarray(matrix, dtype=matrix.dtype, order="F")
     descr = ArrayDescriptor()
     h, w = matrix.shape
     descr.width = h # matrices are row-first
     descr.height = w # matrices are row-first
-    descr.format = array_format.FLOAT
+    descr.format = dtype_to_array_format(matrix.dtype)
     descr.num_channels = 1
 
     ary = Array(descr)

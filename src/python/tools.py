@@ -147,6 +147,8 @@ class DeviceData:
         self.registers = dev.get_attribute(drv.device_attribute.MAX_REGISTERS_PER_BLOCK)
         self.shared_memory = dev.get_attribute(drv.device_attribute.MAX_SHARED_MEMORY_PER_BLOCK)
 
+        self.smem_granularity = 16
+
     def align(self, bytes):
         return _int_ceiling(bytes, self.align_bytes())
 
@@ -204,31 +206,6 @@ class OccupancyRecord:
 
         self.warps_per_mp = self.tb_per_mp * alloc_warps
         self.occupancy = self.warps_per_mp / devdata.warps_per_mp
-
-
-
-
-def dtype_to_array_format(dtype):
-    import numpy
-
-    if dtype == numpy.uint8:
-        return cuda.array_format.UNSIGNED_INT8
-    elif dtype == numpy.uint16:
-        return cuda.array_format.UNSIGNED_INT16
-    elif dtype == numpy.uint32:
-        return cuda.array_format.UNSIGNED_INT32
-    elif dtype == numpy.int8:
-        return cuda.array_format.SIGNED_INT8
-    elif dtype == numpy.int16:
-        return cuda.array_format.SIGNED_INT16
-    elif dtype == numpy.int32:
-        return cuda.array_format.SIGNED_INT32
-    elif dtype == numpy.float32:
-        return cuda.array_format.FLOAT
-    else:
-        raise TypeError(
-                "cannot convert dtype '%s' to array format" 
-                % dtype)
 
 
 
