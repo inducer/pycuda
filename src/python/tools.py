@@ -210,6 +210,29 @@ class OccupancyRecord:
 
 
 
+def allow_user_edit(s, filename, descr="the file"):
+    from tempfile import mkdtemp
+    tempdir = mkdtemp()
+
+    from os.path import join
+    full_name = join(tempdir, filename)
+
+    outf = open(full_name, "w")
+    outf.write(str(s))
+    outf.close()
+
+    raw_input("Edit %s at %s now, then hit [Enter]:" 
+            % (descr, full_name))
+
+    inf = open(full_name, "r")
+    result = inf.read()
+    inf.close()
+
+    return result
+
+
+
+
 def _test_occupancy():
     for threads in range(32, 512, 16):
         for smem in range(1024, 16384+1, 1024):
