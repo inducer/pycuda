@@ -323,10 +323,16 @@ Arrays and Textures
   
     Bind *self* to the :class:`Array` *array*.
 
+    As long as *array* remains bound to this texture reference, it will not be
+    freed--the texture reference keeps a reference to the array.
+
   .. method:: set_address(devptr, bytes)
   
     Bind *self* to the a chunk of linear memory starting at the integer address 
     *devptr*, encompassing a number of *bytes*.
+
+    Unlike for :class:`Array`s, no life support is provided for linear memory
+    bound to texture references.
 
   .. method:: set_format(fmt, num_components)
     
