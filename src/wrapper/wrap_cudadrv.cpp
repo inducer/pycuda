@@ -26,6 +26,42 @@ using boost::shared_ptr;
 
 namespace
 {
+  py::handle<> 
+    CudaError, 
+    CudaMemoryError, 
+    CudaLogicError, 
+    CudaRuntimeError,
+    CudaLaunchError;
+
+
+
+
+  void translate_cuda_error(const cuda::error &err)
+  {
+    if (err.code() == CUDA_ERROR_LAUNCH_FAILED
+        || err.code() == CUDA_ERROR_LAUNCH_OUT_OF_RESOURCES
+        || err.code() == CUDA_ERROR_LAUNCH_TIMEOUT
+        || err.code() == CUDA_ERROR_LAUNCH_INCOMPATIBLE_TEXTURING
+       )
+      PyErr_SetString(CudaLaunchError.get(), err.what());
+    else if (err.code() == CUDA_ERROR_OUT_OF_MEMORY)
+      PyErr_SetString(CudaMemoryError.get(), err.what());
+    else if (err.code() == CUDA_ERROR_NO_DEVICE
+        || err.code() == CUDA_ERROR_NO_BINARY_FOR_GPU
+        || err.code() == CUDA_ERROR_NO_BINARY_FOR_GPU
+        || err.code() == CUDA_ERROR_FILE_NOT_FOUND
+        || err.code() == CUDA_ERROR_NOT_READY
+        )
+      PyErr_SetString(CudaRuntimeError.get(), err.what());
+    else if (err.code() == CUDA_ERROR_UNKNOWN)
+      PyErr_SetString(CudaError.get(), err.what());
+    else 
+      PyErr_SetString(CudaLogicError.get(), err.what());
+  }
+
+
+
+
   CUresult  _cuMemsetD8( CUdeviceptr dstDevice, unsigned char uc, unsigned int N ) { return cuMemsetD8( dstDevice, uc, N ); }
   CUresult  _cuMemsetD16( CUdeviceptr dstDevice, unsigned short us, unsigned int N ) { return cuMemsetD16( dstDevice, us, N ); }
   CUresult  _cuMemsetD32( CUdeviceptr dstDevice, unsigned int ui, unsigned int N ) { return cuMemsetD32( dstDevice, ui, N ); }
@@ -210,6 +246,23 @@ void pycuda_expose_tools();
 
 BOOST_PYTHON_MODULE(_driver)
 {
+#define DECLARE_EXC(NAME, BASE) \
+  Cuda##NAME = py::handle<>(PyErr_NewException("pycuda._driver." #NAME, BASE, NULL)); \
+  py::scope().attr(#NAME) = Cuda##NAME;
+
+  {
+    DECLARE_EXC(Error, NULL);
+    py::tuple memerr_bases = py::make_tuple(
+        CudaError, 
+        py::handle<>(py::borrowed(PyExc_MemoryError)));
+    DECLARE_EXC(MemoryError, memerr_bases.ptr());
+    DECLARE_EXC(LogicError, CudaError.get());
+    DECLARE_EXC(LaunchError, CudaError.get());
+    DECLARE_EXC(RuntimeError, CudaError.get());
+
+    py::register_exception_translator<cuda::error>(translate_cuda_error);
+  }
+
 #if CUDA_VERSION >= 2000
   py::enum_<CUctx_flags>("ctx_flags")
     .value("SCHED_AUTO", CU_CTX_SCHED_AUTO)
