@@ -182,14 +182,19 @@ def _add_functionality():
         for texref in func.texrefs:
             func.param_set_texref(texref)
 
-        Context.synchronize()
-        from time import time
-        start_time = time()
+        start_event = Event()
+        end_event = Event()
+        start_event.record()
         
         func.launch_grid(*grid)
 
-        Context.synchronize()
-        return time()-start_time
+        end_event.record()
+
+        def get_time():
+            end_event.synchronize()
+            return 1e-3*end_event.time_since(start_event)
+
+        return get_time
 
     def function_prepared_async_call(func, grid, stream, *args):
         from struct import pack
