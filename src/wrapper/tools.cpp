@@ -155,7 +155,7 @@ namespace
         {
           size_type alloc_sz = alloc_size(bin);
 
-          assert(bin_number(alloc_size) == bin);
+          assert(bin_number(alloc_sz) == bin);
 
           bin_nr freeing_in_bin = bin_count-1;
 

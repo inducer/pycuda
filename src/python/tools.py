@@ -194,6 +194,12 @@ class OccupancyRecord:
         alloc_regs = _int_ceiling(alloc_warps*2, 4)*16*registers
         alloc_smem = _int_ceiling(shared_mem, 512)
 
+        if alloc_regs > devdata.registers:
+            raise ValueError("too many registers")
+
+        if alloc_smem > devdata.shared_memory:
+            raise ValueError("too much smem")
+
         self.tb_per_mp_limits = [(devdata.thread_blocks_per_mp, "device"),
                 (_int_floor(devdata.warps_per_mp/alloc_warps), "warps")
                 ]
