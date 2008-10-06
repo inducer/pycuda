@@ -471,6 +471,16 @@ class SourceModule(object):
 
         self.module = module_from_buffer(cubin)
 
-        self.get_function = self.module.get_function
         self.get_global = self.module.get_global
         self.get_texref = self.module.get_texref
+
+    def get_function(self, name):
+        func = self.module.get_function(name)
+
+        # FIXME: Bzzt, wrong. This should truly be per-function.
+        func.lmem = self.lmem
+        func.smem = self.smem
+        func.registers = self.registers
+
+        return func
+
