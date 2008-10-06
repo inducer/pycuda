@@ -385,8 +385,7 @@ def _get_nvcc_version(nvcc):
 
 
 
-_compile_cache = DiskDict("pycuda-compile", 
-        dep_modules=[__file__])
+_compile_cache = DiskDict("pycuda-compile")
 
 
 
