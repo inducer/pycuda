@@ -121,7 +121,10 @@ class CompiledVectorExpression(object):
                 "result[i] = " + CompileMapper()(subst_expr, PREC_NONE),
                 name="vector_expression")
 
-    def __call__(self, evaluate_subexpr):
+        from pymbolic.mapper.flop_counter import FlopCounter
+        self.flop_count = FlopCounter()(subst_expr)
+
+    def __call__(self, evaluate_subexpr, add_timer=None):
         vectors = [evaluate_subexpr(vec_expr) for vec_expr in self.vector_exprs]
         scalars = [evaluate_subexpr(scal_expr) for scal_expr in self.scalar_exprs]
 
@@ -131,8 +134,13 @@ class CompiledVectorExpression(object):
         size = result.size
         
         self.kernel.set_block_shape(*vectors[0]._block)
-        self.kernel.prepared_async_call(vectors[0]._grid, self.stream,
-                *([result.gpudata]+[v.gpudata for v in vectors]+scalars+[numpy.int32(size)]))
+        args = [result.gpudata]+[v.gpudata for v in vectors]+scalars+[numpy.int32(size)]
+
+        if add_timer is not None:
+            add_timer(vectors[0].size * self.flop_count,
+                    self.kernel.prepared_timed_call(vectors[0]._grid, *args))
+        else:
+            self.kernel.prepared_async_call(vectors[0]._grid, self.stream, *args)
 
         return result
 
