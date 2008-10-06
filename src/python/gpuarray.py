@@ -103,7 +103,7 @@ class GPUArray(object):
         return repr(self.get())
 
     # kernel invocation wrappers ----------------------------------------------
-    def _axpbyz(self, selffac, other, otherfac, out):
+    def _axpbyz(self, selffac, other, otherfac, out, add_timer):
         """Compute ``out = selffac * self + otherfac*other``, 
         where `other` is a vector.."""
         assert self.dtype == numpy.float32
@@ -112,9 +112,15 @@ class GPUArray(object):
 
         func = _kernel.get_axpbyz_kernel()
         func.set_block_shape(*self._block)
-        func.prepared_async_call(self._grid, self.stream,
+
+        if add_timer is not None:
+            add_timer(func.prepared_timed_call(self._grid, 
                 selffac, self.gpudata, otherfac, other.gpudata, 
-                out.gpudata, self.size)
+                out.gpudata, self.size))
+        else:
+            func.prepared_async_call(self._grid, self.stream,
+                    selffac, self.gpudata, otherfac, other.gpudata, 
+                    out.gpudata, self.size)
 
         return out
 
@@ -177,11 +183,11 @@ class GPUArray(object):
         return self.__class__(self.shape, self.dtype, allocator=self.allocator)
 
     # operators ---------------------------------------------------------------
-    def mul_add(self, selffac, other, otherfac):
+    def mul_add(self, selffac, other, otherfac, add_timer=None):
         """Return `selffac * self + otherfac*other`.
         """
         result = self._new_like_me()
-        return self._axpbyz(selffac, other, otherfac, result)
+        return self._axpbyz(selffac, other, otherfac, result, add_timer)
 
     def __add__(self, other):
         """Add an array with an array or an array with a scalar."""
