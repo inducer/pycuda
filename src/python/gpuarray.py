@@ -114,7 +114,7 @@ class GPUArray(object):
         func.set_block_shape(*self._block)
 
         if add_timer is not None:
-            add_timer(func.prepared_timed_call(self._grid, 
+            add_timer(3*self.size, func.prepared_timed_call(self._grid, 
                 selffac, self.gpudata, otherfac, other.gpudata, 
                 out.gpudata, self.size))
         else:
