@@ -5,6 +5,12 @@ from pytools import memoize
 
 
 
+class CompileError(Error):
+    pass
+
+
+
+
 class ArgumentHandler(object):
     def __init__(self, ary):
         self.array = ary
@@ -415,7 +421,7 @@ def _do_compile(source, options, keep, nvcc):
                 nvcc, str(e))
 
     if result != 0:
-        raise RuntimeError, "module compilation failed"
+        raise CompileError, "module compilation failed"
 
     cubin = open(join(tempdir, "kernel.cubin"), "r").read()
 
