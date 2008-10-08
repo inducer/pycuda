@@ -14,7 +14,6 @@ Constants
 
 .. class:: ctx_flags
 
-
   Flags for :meth:`Device.make_context`.
 
   .. attribute:: SCHED_AUTO
@@ -384,9 +383,9 @@ Arrays and Textures
 Initializing Device Memory
 ^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-.. function:: memset_d8(dest, data, size)
-.. function:: memset_d16(dest, data, size)
-.. function:: memset_d32(dest, data, size)
+.. function:: memset_d8(dest, data, count)
+.. function:: memset_d16(dest, data, count)
+.. function:: memset_d32(dest, data, count)
 
 .. function:: memset_d2d8(dest, pitch, data, width, height)
 .. function:: memset_d2d16(dest, pitch, data, width, height)
