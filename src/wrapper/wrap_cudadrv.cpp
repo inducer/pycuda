@@ -62,21 +62,24 @@ namespace
 
 
 
-  CUresult  _cuMemsetD8( CUdeviceptr dstDevice, unsigned char uc, unsigned int N ) { return cuMemsetD8( dstDevice, uc, N ); }
-  CUresult  _cuMemsetD16( CUdeviceptr dstDevice, unsigned short us, unsigned int N ) { return cuMemsetD16( dstDevice, us, N ); }
-  CUresult  _cuMemsetD32( CUdeviceptr dstDevice, unsigned int ui, unsigned int N ) { return cuMemsetD32( dstDevice, ui, N ); }
+  void  _cuMemsetD8( CUdeviceptr dstDevice, unsigned char uc, unsigned int N ) 
+  { CUDAPP_CALL_GUARDED_THREADED(cuMemsetD8, (dstDevice, uc, N )); }
+  void  _cuMemsetD16( CUdeviceptr dstDevice, unsigned short us, unsigned int N ) 
+  { CUDAPP_CALL_GUARDED_THREADED(cuMemsetD16, (dstDevice, us, N )); }
+  void  _cuMemsetD32( CUdeviceptr dstDevice, unsigned int ui, unsigned int N ) 
+  { CUDAPP_CALL_GUARDED_THREADED(cuMemsetD32, (dstDevice, ui, N )); }
 
-  CUresult  _cuMemsetD2D8( CUdeviceptr dstDevice, unsigned int dstPitch, unsigned char uc, unsigned int Width, unsigned int Height )
-  { return cuMemsetD2D8(dstDevice, dstPitch, uc, Width, Height); }
+  void  _cuMemsetD2D8( CUdeviceptr dstDevice, unsigned int dstPitch, unsigned char uc, unsigned int Width, unsigned int Height )
+  { CUDAPP_CALL_GUARDED_THREADED(cuMemsetD2D8, (dstDevice, dstPitch, uc, Width, Height)); }
 
-  CUresult  _cuMemsetD2D16( CUdeviceptr dstDevice, unsigned int dstPitch, unsigned short us, unsigned int Width, unsigned int Height )
-  { return cuMemsetD2D16(dstDevice, dstPitch, us, Width, Height); }
+  void  _cuMemsetD2D16( CUdeviceptr dstDevice, unsigned int dstPitch, unsigned short us, unsigned int Width, unsigned int Height )
+  { CUDAPP_CALL_GUARDED_THREADED(cuMemsetD2D16, (dstDevice, dstPitch, us, Width, Height)); }
 
-  CUresult  _cuMemsetD2D32( CUdeviceptr dstDevice, unsigned int dstPitch, unsigned int ui, unsigned int Width, unsigned int Height )
-  { return cuMemsetD2D32(dstDevice, dstPitch, ui, Width, Height); }
+  void  _cuMemsetD2D32( CUdeviceptr dstDevice, unsigned int dstPitch, unsigned int ui, unsigned int Width, unsigned int Height )
+  { CUDAPP_CALL_GUARDED_THREADED(cuMemsetD2D32, (dstDevice, dstPitch, ui, Width, Height)); }
 
-  CUresult  _cuMemcpyDtoD (CUdeviceptr dstDevice, CUdeviceptr srcDevice, unsigned int ByteCount )
-  { return cuMemcpyDtoD(dstDevice, srcDevice, ByteCount); }
+  void  _cuMemcpyDtoD (CUdeviceptr dstDevice, CUdeviceptr srcDevice, unsigned int ByteCount )
+  { CUDAPP_CALL_GUARDED_THREADED(cuMemcpyDtoD, (dstDevice, srcDevice, ByteCount)); }
 
 
 
