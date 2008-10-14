@@ -172,6 +172,8 @@ def _add_functionality():
         from struct import calcsize
         func.param_set_size(calcsize(func.arg_format))
 
+        return func
+
     def function_prepared_call(func, grid, *args):
         from struct import pack
         func.param_setv(0, pack(func.arg_format, *args))
