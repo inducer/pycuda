@@ -132,8 +132,11 @@ def get_default_device(default=0):
 
 
 class DeviceData:
-    def __init__(self, dev):
+    def __init__(self, dev=None):
         import pycuda.driver as drv
+
+        if dev is None:
+            dev = cuda.Context.get_device()
 
         self.max_threads = dev.get_attribute(drv.device_attribute.MAX_THREADS_PER_BLOCK)
         self.warp_size = dev.get_attribute(drv.device_attribute.WARP_SIZE)
