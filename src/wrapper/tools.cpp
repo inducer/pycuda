@@ -1,6 +1,7 @@
 #include <vector>
 #include "wrap_helpers.hpp"
 #include <cuda.hpp>
+#include <climits>
 
 
 
@@ -45,9 +46,11 @@ static inline unsigned short bitlog2_32(unsigned long v)
 
 static inline unsigned short bitlog2(unsigned long v)
 {
+#if (ULONG_MAX != 4294967295)
   if (unsigned long t = v >> 32)
     return 32+bitlog2_32(t);
   else 
+#endif
     return bitlog2_32(v);
 }
 

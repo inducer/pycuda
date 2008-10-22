@@ -330,7 +330,7 @@ Arrays and Textures
     Bind *self* to the a chunk of linear memory starting at the integer address 
     *devptr*, encompassing a number of *bytes*.
 
-    Unlike for :class:`Array`s, no life support is provided for linear memory
+    Unlike for :class:`Array` objects, no life support is provided for linear memory
     bound to texture references.
 
   .. method:: set_format(fmt, num_components)
