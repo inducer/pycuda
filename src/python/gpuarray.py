@@ -103,7 +103,7 @@ class GPUArray(object):
         return repr(self.get())
 
     # kernel invocation wrappers ----------------------------------------------
-    def _axpbyz(self, selffac, other, otherfac, out, add_timer):
+    def _axpbyz(self, selffac, other, otherfac, out, add_timer=None):
         """Compute ``out = selffac * self + otherfac*other``, 
         where `other` is a vector.."""
         assert self.dtype == numpy.float32
