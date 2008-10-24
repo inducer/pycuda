@@ -393,7 +393,11 @@ def _get_nvcc_version(nvcc):
 
 
 
-_compile_cache = DiskDict("pycuda-compile")
+def _get_cache_filename():
+    from os.path import expanduser, join
+    return join(expanduser('~'), ".pycuda-compiler-cache.diskdict")
+
+_compile_cache = DiskDict(_get_cache_filename())
 
 
 
