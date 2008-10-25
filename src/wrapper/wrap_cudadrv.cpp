@@ -62,6 +62,17 @@ namespace
 
 
 
+  py::tuple cuda_version()
+  {
+    return py::make_tuple(
+        CUDA_VERSION / 1000, 
+        (CUDA_VERSION % 1000)/10, 
+        CUDA_VERSION % 10);
+  }
+
+
+
+
   void  _cuMemsetD8( CUdeviceptr dstDevice, unsigned char uc, unsigned int N ) 
   { CUDAPP_CALL_GUARDED_THREADED(cuMemsetD8, (dstDevice, uc, N )); }
   void  _cuMemsetD16( CUdeviceptr dstDevice, unsigned short us, unsigned int N ) 
@@ -252,6 +263,8 @@ BOOST_PYTHON_MODULE(_driver)
 #define DECLARE_EXC(NAME, BASE) \
   Cuda##NAME = py::handle<>(PyErr_NewException("pycuda._driver." #NAME, BASE, NULL)); \
   py::scope().attr(#NAME) = Cuda##NAME;
+
+  def("get_version", cuda_version);
 
   {
     DECLARE_EXC(Error, NULL);
