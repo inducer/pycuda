@@ -152,7 +152,7 @@ class DeviceData:
 
         self.smem_granularity = 16
 
-    def align(self, bytes, word_size):
+    def align(self, bytes, word_size=4):
         return _int_ceiling(bytes, self.align_bytes(word_size))
 
     def align_dtype(self, elements, dtype_size):
