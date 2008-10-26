@@ -152,8 +152,8 @@ class DeviceData:
 
         self.smem_granularity = 16
 
-    def align(self, bytes):
-        return _int_ceiling(bytes, self.align_bytes())
+    def align(self, bytes, word_size):
+        return _int_ceiling(bytes, self.align_bytes(word_size))
 
     def align_dtype(self, elements, dtype_size):
         return _int_ceiling(elements, 
@@ -162,15 +162,15 @@ class DeviceData:
     def align_words(self, word_size):
         return _exact_div(self.align_bytes(word_size), word_size)
 
-    def align_bytes(self, wordsize=4):
-        if wordsize == 4:
+    def align_bytes(self, word_size=4):
+        if word_size == 4:
             return 64
-        elif wordsize == 8:
+        elif word_size == 8:
             return 128
-        elif wordsize == 16:
+        elif word_size == 16:
             return 128
         else:
-            raise ValueError, "no alignment possible for fetches of size %d" % wordsize
+            raise ValueError, "no alignment possible for fetches of size %d" % word_size
 
     def coalesce(self, thread_count):
         return _int_ceiling(thread_count, 16)

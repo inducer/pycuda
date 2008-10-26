@@ -87,7 +87,7 @@ It worked! That completes our walkthrough. Thankfully, PyCuda takes
 over from here and does all the cleanup for you, so you're done. 
 Stick around for some bonus material in the next section, though.
 
-(You can find the code for this demo as :file:`test/demo.py` in the PyCuda
+(You can find the code for this demo as :file:`examples/demo.py` in the PyCuda
 source distribution.)
 
 Bonus: Abstracting Away the Complications

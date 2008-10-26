@@ -43,7 +43,7 @@ copyright = '2008, Andreas Kloeckner'
 #
 # The short X.Y version.
 import re
-ver_re = re.compile(r'version\s*=\s*"([0-9.]+)"')
+ver_re = re.compile(r'version\s*=\s*"([0-9a-z.]+)"')
 version = [ver_re.search(line).group(1) 
         for line in open("../../setup.py").readlines() 
         if ver_re.search(line)][0]

@@ -1,12 +1,7 @@
 # Sample source code from the Tutorial Introduction in the documentation.
 
 import pycuda.driver as cuda
-
-cuda.init()
-assert cuda.Device.count() >= 1
-
-dev = cuda.Device(0)
-ctx = dev.make_context()
+import pycuda.autoinit
 
 import numpy
 a = numpy.random.randn(4,4)

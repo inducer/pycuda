@@ -30,12 +30,9 @@ CUDA API already exist--so why the need for PyCuda?
 
 Here's an example, to given you an impression::
 
+  import pycuda.autoinit
   import pycuda.driver as drv
   import numpy
-
-  drv.init()
-  dev = drv.Device(0)
-  ctx = dev.make_context()
 
   mod = drv.SourceModule("""
   __global__ void multiply_them(float *dest, float *a, float *b)
@@ -56,6 +53,9 @@ Here's an example, to given you an impression::
           block=(400,1,1))
 
   print dest-a*b
+
+(You can find this example as :file:`examples/hello_gpu.py` in the PyCuda
+source distribution.)
 
 On the surface, this program will print a screenful of zeros. Behind
 the scenes, a lot more interesting stuff is going on:

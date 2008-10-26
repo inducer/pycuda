@@ -82,6 +82,39 @@ The rule is that if something is documented, we will in general make
 every effort to keep future version backward compatible with the present
 interface. If it isn't, there's no such guarantee.
 
+User-visible Changes
+====================
+
+Version 0.91
+------------
+
+* Add support for compiling on CUDA 1.1. 
+  Added version query :func:`pycuda.driver.get_version`.
+  Updated documentation to show 2.0-only functionality.
+* Support for Windows and MacOS X, in addition to Linux. 
+  (Gert Wohlgemuth, Cosmin Stejerean, Znah on the Nvidia forums,
+  and David Gadling)
+* Support more arithmetic operators on :class:`pycuda.gpuarray.GPUArray`. (Gert Wohlgemuth)
+* Add :func:`pycuda.gpuarray.arange`. (Gert Wohlgemuth)
+* Add :mod:`pycuda.curandom`. (Gert Wohlgemuth)
+* Add :mod:`pycuda.cumath`. (Gert Wohlgemuth)
+* Add :mod:`pycuda.autoinit`.
+* Add :mod:`pycuda.tools`.
+* Add :class:`pycuda.tools.DeviceData` and :class:`pycuda.tools.OccupancyRecord`.
+* :class:`pycuda.gpuarray.GPUArray` parallelizes properly on 
+  GTX200-generation devices.
+* Make :class:`pycuda.driver.Function` resource usage available
+  to the program. (See, e.g. :attr:`pycuda.driver.Function.registers`.)
+* Cache kernels compiled by :class:`pycuda.driver.SourceModule`.
+* Allow for faster, prepared kernel invocation. 
+  See :meth:`pycuda.driver.Function.prepare`.
+* Added memory pools, at :class:`pycuda.tools.DeviceMemoryPool` as
+  experimental, undocumented functionality.
+  For some workloads, this can cure the slowness of 
+  :func:`pycuda.driver.mem_alloc`.
+* Fix the :ref:`memset <memset>` family of functions.
+* Improve :ref:`errors`.
+
 Acknowledgements
 ================
 

@@ -9,12 +9,50 @@ Device Interface Reference Documentation
 .. moduleauthor:: Andreas Kloeckner <inform@tiker.net>
 
 
+.. _errors:
+
+Error Reporting
+---------------
+
+.. exception:: Error
+
+  Base class of all PyCuda errors.
+
+.. exception:: CompileError
+
+  Thrown when :class:`SourceModule` compilation fails.
+
+.. exception:: MemoryError
+
+  Thrown when :func:`mem_alloc` or related functionality fails.
+
+.. exception:: LogicError
+
+  Thrown when PyCuda was confronted with a situation where it is likely 
+  that the programmer has made a mistake. :exc:`LogicErrors` do not depend
+  on outer circumstances defined by the run-time environment.
+
+  Example: CUDA was used before it was initialized.
+
+.. exception:: LaunchError
+
+  Thrown when kernel invocation has failed. (Note that this will often be
+  reported by the next call after the actual kernel invocation.)
+
+.. exception:: RuntimeError
+
+  Thrown when a unforeseen run-time failure is encountered that is not 
+  likely due to programmer error.
+
+  Example: A file was not found.
+
+
 Constants
 ---------
 
 .. class:: ctx_flags
 
-  Flags for :meth:`Device.make_context`.
+  Flags for :meth:`Device.make_context`. CUDA 2.0 and above only.
 
   .. attribute:: SCHED_AUTO
     
@@ -46,17 +84,31 @@ Constants
   .. attribute:: MAX_GRID_DIM_X
   .. attribute:: MAX_GRID_DIM_Y
   .. attribute:: MAX_GRID_DIM_Z
-  .. attribute:: MAX_SHARED_MEMORY_PER_BLOCK
-  .. attribute:: SHARED_MEMORY_PER_BLOCK
   .. attribute:: TOTAL_CONSTANT_MEMORY
   .. attribute:: WARP_SIZE
   .. attribute:: MAX_PITCH
-  .. attribute:: MAX_REGISTERS_PER_BLOCK
-  .. attribute:: REGISTERS_PER_BLOCK
   .. attribute:: CLOCK_RATE
   .. attribute:: TEXTURE_ALIGNMENT
   .. attribute:: GPU_OVERLAP
   .. attribute:: MULTIPROCESSOR_COUNT
+
+    CUDA 2.0 and above only.
+
+  .. attribute:: SHARED_MEMORY_PER_BLOCK
+    
+    Deprecated as of CUDA 2.0. See below for replacement.
+
+  .. attribute:: MAX_SHARED_MEMORY_PER_BLOCK
+    
+    CUDA 2.0 and above only.
+
+  .. attribute:: REGISTERS_PER_BLOCK
+
+    Deprecated as of CUDA 2.0. See below for replacement.
+
+  .. attribute:: MAX_REGISTERS_PER_BLOCK
+
+    CUDA 2.0 and above only.
 
 .. class:: array_format
 
@@ -89,17 +141,24 @@ Constants
 Devices and Contexts
 --------------------
 
+.. function:: get_version()
+  
+  Obtain the version of CUDA against which PyCuda was compiled. Returns a
+  3-tuple of integers as *(major, minor, revision)*.
+
 .. function:: init(flags=0)
 
   Initialize CUDA. 
   
   .. warning:: This must be called before any other function in this module.
 
+  See also :mod:`pycuda.autoinit`.
+
 .. class:: Device(number)
 
-  A handle to the *number*'th CUDA device.
+  A handle to the *number*'th CUDA device. See also :mod:`pycuda.autoinit`.
 
-  .. method:: count() [static method]
+  .. staticmethod:: count()
 
     Return the number of CUDA devices found.
 
@@ -132,11 +191,15 @@ Devices and Contexts
 
     Also make the newly-created context the current context.
 
+  .. method:: __hash__()
+  .. method:: __eq__()
+  .. method:: __ne__()
 
 .. class:: Context
   
   An equivalent of a UNIX process on the compute device.
   Create instances of this class using :meth:`Device.make_context`.
+  See also :mod:`pycuda.autoinit`.
 
   .. method:: detach()
 
@@ -146,18 +209,20 @@ Devices and Contexts
   .. method:: push()
     
     Make *self* the active context, pushing it on top of the context stack.
+    CUDA 2.0 and above only.
 
   .. method:: pop()
 
-    Remove *self* from the top of the context stack, deactivating it.
+    Remove *self* from the top of the context stack, deactivating it.  
+    CUDA 2.0 and above only.
 
-  .. method:: get_device() [static method]
+  .. staticmethod:: get_device() 
 
     Return the device that the current context is working on.
 
-  .. method:: synchronize() [static method]
+  .. staticmethod:: synchronize() 
 
-    Wait for all activity in this context to cease, then return.
+    Wait for all activity in the current context to cease, then return.
 
 Concurrency and Streams
 -----------------------
@@ -291,7 +356,7 @@ Arrays and Textures
   .. attribute:: depth
   .. attribute:: format
 
-    A value of type :class:`array_format`.
+    A value of type :class:`array_format`. CUDA 2.0 and above only.
 
   .. attribute:: num_channels
 
@@ -311,7 +376,7 @@ Arrays and Textures
   .. method::  get_descriptor_3d()
 
     Return a :class:`ArrayDescriptor3D` object for this 3D array, 
-    like the one that was used to create it.
+    like the one that was used to create it.  CUDA 2.0 and above only.
 
 .. class:: TextureReference()
   
@@ -379,6 +444,8 @@ Arrays and Textures
   an 2D :class:`Array` with multiple channels, where the number of channels
   is the first dimension, and the remaining dimensions are in the same order
   as they should be used in the :cfunc:`tex2D` argument sequence.
+
+.. _memset:
 
 Initializing Device Memory
 ^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -497,7 +564,7 @@ Structured Memory Transfers
 
 
 .. class:: Memcpy3D()
-
+ 
   :class:`Memcpy3D` has the same members as :class:`Memcpy2D`, and additionally
   all of the following:
 
@@ -514,6 +581,8 @@ Structured Memory Transfers
   .. attribute:: dst_lod
 
   .. attribute:: depth
+
+  :class:`Memcpy3D` is supported on CUDA 2.0 and above only.
 
 Code on the Device: Modules and Functions
 -----------------------------------------
@@ -632,6 +701,67 @@ Code on the Device: Modules and Functions
     Launch a width*height grid of thread blocks of *self*, sequenced
     by the :class:`Stream` *stream*.
 
+  .. method:: prepare(arg_types, block, shared=None, texrefs=[])
+
+    Prepare the invocation of this function by 
+    
+    * setting up the argument types as `arg_types`. `arg_types` is expected
+      to be an iterable containing type characters understood by the 
+      :mod:`struct` module or :class:`numpy.dtype` objects.
+
+    * setting the thread block shape for this function to `block`.
+
+    * Registering the texture references `texrefs` for use with this functions.
+      The :class:`TextureReference` objects in `texrefs` will be retained,
+      and whatever these references are bound to at invocation time will
+      be available through the corresponding texture references within the
+      kernel.
+
+    Return `self`.
+    
+  .. method:: prepared_call(grid, *args)
+
+    Invoke `self` using :meth:`launch_grid`, with `args` and a grid size of `grid`.
+    The texture references given to :meth:`prepare` are set up as parameters, as
+    well.
+
+  .. method:: prepared_timed_call(grid, stream, *args)
+
+    Invoke `self` using :meth:`launch_grid`, with `args` and a grid size of `grid`.
+    The texture references given to :meth:`prepare` are set up as parameters, as
+    well.
+
+    Return a 0-ary callable that can be used to query the GPU time consumed by
+    the call, in seconds. Once called, this callable will block until
+    completion of the invocation.
+
+  .. method:: prepared_async_call(grid, stream, *args)
+
+    Invoke `self` using :meth:`launch_grid_async`, with `args` and a grid 
+    size of `grid`, serialized into the :class:`pycuda.driver.Stream` `stream`.
+    If `stream` is None, do the same as :meth:`prepared_call`.
+    The texture references given to :meth:`prepare` are set up as parameters, as
+    well.
+
+    Return a 0-ary callable that can be used to query the GPU time consumed by
+    the call, in seconds. Once called, this callable will block until
+    completion of the invocation.
+
+  .. attribute:: lmem
+
+    The number of bytes of local memory used by this function.
+    Only available if this function is part of a :class:`SourceModule`.
+
+  .. attribute:: smem
+
+    The number of bytes of shared memory used by this function.
+    Only available if this function is part of a :class:`SourceModule`.
+
+  .. attribute:: registers
+
+    The number of 32-bit registers used by this function.
+    Only available if this function is part of a :class:`SourceModule`.
+
 
 .. class:: ArgumentHandler(array)
 
@@ -651,7 +781,7 @@ Code on the Device: Modules and Functions
   *array* should be copied both onto the compute device before invoking
   the kernel, and off it afterwards.
 
-.. class:: SourceModule(source, nvcc="nvcc", options=[], keep=False, no_extern_c=False)
+.. class:: SourceModule(source, nvcc="nvcc", options=[], keep=False, no_extern_c=False, arch=None, code=None)
   
   Create a :class:`Module` from the CUDA source code *source*. The Nvidia
   compiler *nvcc* is assumed to be on the :envvar:`PATH` if no path to it is
@@ -662,5 +792,127 @@ Code on the Device: Modules and Functions
   Unless *no_extern_c* is *True*, the given source code is wrapped in
   *extern "C" { ... }* to prevent C++ name mangling.
 
+  `arch` and `code` specify the values to be passed for the :option:`-arch`
+  and :option:`-code` options on the :program:`nvcc` command line. If `arch` is
+  `None`, it defaults to the current context's device's compute capability.
+  If `code` is `None`, it will not be specified.
+
   This class exhibits the same public interface as :class:`Module`, but 
   does not inherit from it.
+
+
+
+Automatic Initialization
+------------------------
+
+.. module:: pycuda.autoinit
+
+This module, when imported, automatically performs all the steps necessary
+to get CUDA ready for submission of compute kernels.
+When imported, this module will automatically initialize CUDA and create a
+:class:`pycuda.driver.Context` on the 
+
+.. data:: device
+
+  An instance of :class:`pycuda.driver.Device` that was used for automatic
+  initialization. The appropriate device is found by calling 
+  :func:`pycuda.tools.get_default_device`.
+
+.. data:: context
+
+  A default-constructed instance of :class:`pycuda.driver.Context` 
+  on :data:`device`.
+
+Random Utilities
+----------------
+
+.. module:: pycuda.tools
+
+.. function:: get_default_device(default=0)
+
+  Return a :class:`pycuda.driver.Device` instance chosen according to the
+  following rules:
+
+   * If the environment variable :envvar:`CUDA_DEVICE` is set, its integer
+     value is used as the device number.
+
+   * If the file :file:`.cuda-device` is present in the user's home directory,
+     the integer value of its contents is used as the device number.
+
+   * Otherwise, `default` is used as the device number.
+
+.. class:: DeviceData(dev=None)
+  
+  Gives access to more information on a device than is available through
+  :meth:`pycuda.driver.Device.get_attribute`. If `dev` is `None`, it defaults
+  to the device returned by :meth:`pycuda.driver.Context.get_device`.
+
+  .. attribute:: max_threads
+  .. attribute:: warp_size
+  .. attribute:: warps_per_mp
+  .. attribute:: thread_blocks_per_mp
+  .. attribute:: registers
+  .. attribute:: shared_memory
+  .. attribute:: smem_granularity
+    
+    The number of threads that participate in banked, simultaneous access
+    to shared memory.
+
+  .. method:: align_bytes(word_size=4)
+
+    The distance between global memory base addresses that 
+    allow accesses of word-size `word_size` bytes to get coalesced.
+
+  .. method:: align(bytes, word_size=4)
+
+    Round up `bytes` to the next alignment boundary as given by :meth:`align_bytes`.
+
+  .. method:: align_words(word_size)
+
+    Return `self.align_bytes(word_size)/word_size`, while checking that the division
+    did not yield a remainder.
+
+  .. method:: align_dtype(elements, dtype_size)
+
+    Round up `elements` to the next alignment boundary 
+    as given by :meth:`align_bytes`, where each element is assumed to be
+    `dtype_size` bytes large.
+
+  .. UNDOC coalesce
+
+  .. staticmethod:: make_valid_tex_channel_count(size)
+
+    Round up `size` to a valid texture channel count.
+
+.. class:: OccupancyRecord(devdata, threads, shared_mem=0, registers=0)
+
+  Calculate occupancy for a given kernel workload characterized by 
+
+  * thread count of `threads`
+  * shared memory use of `shared_mem` bytes
+  * register use of `registers` 32-bit registers
+
+  .. attribute:: tb_per_mp
+
+    How many thread blocks execute on each multiprocessor.
+
+  .. attribute:: limited_by
+
+    What :attr:`tb_per_mp` is limited by. One of `"device"`, `"warps"`,
+    `"regs"`, `"smem"`.
+
+  .. attribute:: warps_per_mp
+
+    How many warps execute on each multiprocessor.
+
+  .. attribute:: occupancy
+
+    A `float` value between 0 and 1 indicating how much of each multiprocessor's
+    scheduling capability is occupied by the kernel.
+
+
+
+
+
+
+
