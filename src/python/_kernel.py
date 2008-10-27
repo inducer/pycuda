@@ -4,14 +4,6 @@ from pytools import memoize
 
 NVCC_OPTIONS = []
 
-def _compile_kernels(kernel):
-    """Compiles all kernels in this module, to remove compile overhead from benchmark
-    timings."""
-    for name in dir(kernel):
-        if name.startswith("get_") and name.endswith("_kernel"):
-            if name is not "get_scalar_kernel":
-                getattr(kernel,name)()
-
 
 
 
