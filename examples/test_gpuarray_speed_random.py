@@ -1,5 +1,7 @@
 #! /usr/bin/env python
+import pycuda.autoinit
 import pycuda.driver as drv
+import pycuda.curandom as curandom
 import numpy
 import numpy.linalg as la
 from pytools import Table
@@ -8,15 +10,7 @@ from pytools import Table
 
 
 def main():
-    drv.init()
-    assert drv.Device.count() >= 1
-    ctx = drv.Device(0).make_context()
-
     import pycuda.gpuarray as gpuarray
-
-    # make sure all the kernels are compiled
-    gpuarray.GPUArray.compile_kernels()
-    print "done compiling"
 
     sizes = []
     times = []
@@ -42,7 +36,7 @@ def main():
 
         #cuda operation which fills the array with random numbers
         for i in range(count):
-            a.randn()
+            curandom.rand((size, ))
             
         #stop timer
         end.record()
@@ -64,7 +58,7 @@ def main():
 
         #cpu operation which fills the array with random data        
         for i in range(count):
-            numpy.random.randn(size).astype(numpy.float32)
+            numpy.random.rand(size).astype(numpy.float32)
 
         #stop timer
         end.record()
