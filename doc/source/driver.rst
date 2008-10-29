@@ -810,7 +810,7 @@ Automatic Initialization
 This module, when imported, automatically performs all the steps necessary
 to get CUDA ready for submission of compute kernels.
 When imported, this module will automatically initialize CUDA and create a
-:class:`pycuda.driver.Context` on the 
+:class:`pycuda.driver.Context` on the device.
 
 .. data:: device
 
