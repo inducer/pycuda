@@ -137,7 +137,7 @@ class CompiledVectorExpression(object):
         args = [result.gpudata]+[v.gpudata for v in vectors]+scalars+[numpy.int32(size)]
 
         if add_timer is not None:
-            add_timer(vectors[0].size * self.flop_count,
+            add_timer(vectors[0].size,  self,
                     self.kernel.prepared_timed_call(vectors[0]._grid, *args))
         else:
             self.kernel.prepared_async_call(vectors[0]._grid, self.stream, *args)
