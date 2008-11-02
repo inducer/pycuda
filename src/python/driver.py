@@ -476,10 +476,6 @@ class SourceModule(object):
         self.smem = int(re.search("smem = ([0-9]+)", cubin).group(1))
         self.registers = int(re.search("reg = ([0-9]+)", cubin).group(1))
 
-        if self.lmem:
-            from warnings import warn
-            warn("kernel uses local memory")
-
         self.module = module_from_buffer(cubin)
 
         self.get_global = self.module.get_global
