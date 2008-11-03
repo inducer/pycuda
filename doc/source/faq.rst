@@ -122,6 +122,8 @@ Acknowledgements
   :class:`pycuda.gpuarray.GPUArray`.
 * Znah on the Nvidia forums contributed fixes for Windows XP.
 * Cosmin Stejerean provided multiple patches for PyCuda's build system.
+* Tom Annau contributed an alternative SourceModule compiler cache as well
+  as Windows build insight.
 
 Licensing
 =========

@@ -125,3 +125,23 @@ If you'd like to be extra-careful, you can run PyCuda's unit tests::
     $ python test_driver.py
 
 If it says "OK" at the end, you're golden.
+
+Installing on Windows
+---------------------
+
+First, try renaming :file:`configure` to :file:`configure.py` and running it as above.
+If that fails, create a file called :file:`siteconf.py` containing the following, adapted
+to match your system::
+
+    BOOST_INC_DIR = [r'C:\Program Files\boost\boost_1_36_0']
+    BOOST_LIB_DIR = [r'C:\Program Files\boost\boost_1_36_0\stage\lib']
+    BOOST_PYTHON_LIBNAME = ['boost_python-mgw34']
+    CUDA_ROOT = r'C:\CUDA'
+    CUDADRV_LIB_DIR = [r'C:\CUDAlib']
+    CUDADRV_LIBNAME = ['cuda']
+    CXXFLAGS = []
+    LDFLAGS = []
+
+Subsequently, you may build and install PyCuda by typing::
+
+    $ python setup.py install
