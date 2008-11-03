@@ -449,7 +449,7 @@ Arrays and Textures
   Depending on `order`, the `matrix`'s shape is interpreted as
 
   * `height, width, num_channels` for `order == "C"`,
-  * `num_channels, width, height` for `order == "C"`.
+  * `num_channels, width, height` for `order == "F"`.
   
 .. _memset:
 
