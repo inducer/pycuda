@@ -300,13 +300,23 @@ def dtype_to_array_format(dtype):
 
 
 
-def matrix_to_array(matrix):
+def matrix_to_array(matrix, order):
     import numpy
-    matrix = numpy.asarray(matrix, dtype=matrix.dtype, order="F")
+
+    if order.upper() == "C":
+        h, w = matrix.shape
+        stride = 0
+    elif order.upper() == "F":
+        w, h = matrix.shape
+        stride = -1
+    else: 
+        raise LogicError, "order must be either F or C"
+
+    matrix = numpy.asarray(matrix, order=order)
     descr = ArrayDescriptor()
-    h, w = matrix.shape
-    descr.width = h # matrices are row-first
-    descr.height = w # matrices are row-first
+
+    descr.width = w
+    descr.height = h
     descr.format = dtype_to_array_format(matrix.dtype)
     descr.num_channels = 1
 
@@ -315,8 +325,9 @@ def matrix_to_array(matrix):
     copy = Memcpy2D()
     copy.set_src_host(matrix)
     copy.set_dst_array(ary)
-    copy.width_in_bytes = copy.src_pitch = copy.dst_pitch = matrix.strides[-1]
-    copy.height = w
+    copy.width_in_bytes = copy.src_pitch = copy.dst_pitch = \
+            matrix.strides[stride]
+    copy.height = h
     copy(aligned=True)
 
     return ary
@@ -324,16 +335,25 @@ def matrix_to_array(matrix):
 
 
 
-def make_multichannel_2d_array(ndarray):
+def make_multichannel_2d_array(ndarray, order):
     """Channel count has to be the first dimension of the C{ndarray}."""
 
     import numpy
-    ndarray = numpy.asarray(ndarray, dtype=numpy.float32, order="F")
+    ndarray = numpy.asarray(ndarray, order="F")
     descr = ArrayDescriptor()
-    num_channels, h, w = ndarray.shape
-    descr.width = h # matrices are row-first
-    descr.height = w # matrices are row-first
-    descr.format = array_format.FLOAT
+
+    if order.upper() == "C":
+        h, w, num_channels = ndarray.shape
+        stride = 0
+    elif order.upper() == "F":
+        num_channels, w, h = ndarray.shape
+        stride = 2
+    else: 
+        raise LogicError, "order must be either F or C"
+
+    descr.width = w
+    descr.height = h
+    descr.format = dtype_to_array_format(ndarray.dtype)
     descr.num_channels = num_channels
 
     ary = Array(descr)
@@ -341,8 +361,9 @@ def make_multichannel_2d_array(ndarray):
     copy = Memcpy2D()
     copy.set_src_host(ndarray)
     copy.set_dst_array(ary)
-    copy.width_in_bytes = copy.src_pitch = copy.dst_pitch = ndarray.strides[-1]
-    copy.height = w
+    copy.width_in_bytes = copy.src_pitch = copy.dst_pitch = \
+            ndarray.strides[stride]
+    copy.height = h
     copy(aligned=True)
 
     return ary
@@ -360,8 +381,8 @@ def bind_array_to_texref(ary, texref):
 
 
 
-def matrix_to_texref(matrix, texref):
-    bind_array_to_texref(matrix_to_array(matrix), texref)
+def matrix_to_texref(matrix, texref, order):
+    bind_array_to_texref(matrix_to_array(matrix, order), texref)
 
 
 
