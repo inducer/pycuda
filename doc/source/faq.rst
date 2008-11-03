@@ -106,14 +106,17 @@ Version 0.91
 * Make :class:`pycuda.driver.Function` resource usage available
   to the program. (See, e.g. :attr:`pycuda.driver.Function.registers`.)
 * Cache kernels compiled by :class:`pycuda.driver.SourceModule`.
+  (Tom Annau)
 * Allow for faster, prepared kernel invocation. 
-  See :meth:`pycuda.driver.Function.prepare`.
+  See :meth:`pycuda.driver.Function.prepare`. 
 * Added memory pools, at :class:`pycuda.tools.DeviceMemoryPool` as
   experimental, undocumented functionality.
   For some workloads, this can cure the slowness of 
   :func:`pycuda.driver.mem_alloc`.
 * Fix the :ref:`memset <memset>` family of functions.
 * Improve :ref:`errors`.
+* Add `order` parameter to :func:`pycuda.driver.matrix_to_array` and
+  :func:`pycuda.driver.make_multichannel_2d_array`.
 
 Acknowledgements
 ================

@@ -116,7 +116,7 @@ class TestCuda(unittest.TestCase):
 
         shape = (3,4)
         a = numpy.random.randn(*shape).astype(numpy.float32)
-        drv.matrix_to_texref(a, mtx_tex)
+        drv.matrix_to_texref(a, mtx_tex, order="F")
 
         dest = numpy.zeros(shape, dtype=numpy.float32)
         copy_texture(drv.Out(dest),
@@ -149,8 +149,8 @@ class TestCuda(unittest.TestCase):
         shape = (3,4)
         a = numpy.random.randn(*shape).astype(numpy.float32)
         b = numpy.random.randn(*shape).astype(numpy.float32)
-        drv.matrix_to_texref(a, mtx_tex)
-        drv.matrix_to_texref(b, mtx2_tex)
+        drv.matrix_to_texref(a, mtx_tex, order="F")
+        drv.matrix_to_texref(b, mtx2_tex, order="F")
 
         dest = numpy.zeros(shape, dtype=numpy.float32)
         copy_texture(drv.Out(dest),
@@ -184,7 +184,7 @@ class TestCuda(unittest.TestCase):
         channels = 4
         a = numpy.random.randn(*((channels,)+shape)).astype(numpy.float32)
         drv.bind_array_to_texref(
-            drv.make_multichannel_2d_array(a), mtx_tex)
+            drv.make_multichannel_2d_array(a, order="F"), mtx_tex)
 
         dest = numpy.zeros(shape+(channels,), dtype=numpy.float32)
         copy_texture(drv.Out(dest),

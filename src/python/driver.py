@@ -300,13 +300,23 @@ def dtype_to_array_format(dtype):
 
 
 
-def matrix_to_array(matrix):
+def matrix_to_array(matrix, order):
     import numpy
-    matrix = numpy.asarray(matrix, dtype=matrix.dtype, order="F")
+
+    if order.upper() == "C":
+        h, w = matrix.shape
+        stride = 0
+    elif order.upper() == "F":
+        w, h = matrix.shape
+        stride = -1
+    else: 
+        raise LogicError, "order must be either F or C"
+
+    matrix = numpy.asarray(matrix, order=order)
     descr = ArrayDescriptor()
-    h, w = matrix.shape
-    descr.width = h # matrices are row-first
-    descr.height = w # matrices are row-first
+
+    descr.width = w
+    descr.height = h
     descr.format = dtype_to_array_format(matrix.dtype)
     descr.num_channels = 1
 
@@ -315,8 +325,9 @@ def matrix_to_array(matrix):
     copy = Memcpy2D()
     copy.set_src_host(matrix)
     copy.set_dst_array(ary)
-    copy.width_in_bytes = copy.src_pitch = copy.dst_pitch = matrix.strides[-1]
-    copy.height = w
+    copy.width_in_bytes = copy.src_pitch = copy.dst_pitch = \
+            matrix.strides[stride]
+    copy.height = h
     copy(aligned=True)
 
     return ary
@@ -324,16 +335,25 @@ def matrix_to_array(matrix):
 
 
 
-def make_multichannel_2d_array(ndarray):
+def make_multichannel_2d_array(ndarray, order):
     """Channel count has to be the first dimension of the C{ndarray}."""
 
     import numpy
-    ndarray = numpy.asarray(ndarray, dtype=numpy.float32, order="F")
+    ndarray = numpy.asarray(ndarray, order="F")
     descr = ArrayDescriptor()
-    num_channels, h, w = ndarray.shape
-    descr.width = h # matrices are row-first
-    descr.height = w # matrices are row-first
-    descr.format = array_format.FLOAT
+
+    if order.upper() == "C":
+        h, w, num_channels = ndarray.shape
+        stride = 0
+    elif order.upper() == "F":
+        num_channels, w, h = ndarray.shape
+        stride = 2
+    else: 
+        raise LogicError, "order must be either F or C"
+
+    descr.width = w
+    descr.height = h
+    descr.format = dtype_to_array_format(ndarray.dtype)
     descr.num_channels = num_channels
 
     ary = Array(descr)
@@ -341,8 +361,9 @@ def make_multichannel_2d_array(ndarray):
     copy = Memcpy2D()
     copy.set_src_host(ndarray)
     copy.set_dst_array(ary)
-    copy.width_in_bytes = copy.src_pitch = copy.dst_pitch = ndarray.strides[-1]
-    copy.height = w
+    copy.width_in_bytes = copy.src_pitch = copy.dst_pitch = \
+            ndarray.strides[stride]
+    copy.height = h
     copy(aligned=True)
 
     return ary
@@ -360,8 +381,8 @@ def bind_array_to_texref(ary, texref):
 
 
 
-def matrix_to_texref(matrix, texref):
-    bind_array_to_texref(matrix_to_array(matrix), texref)
+def matrix_to_texref(matrix, texref, order):
+    bind_array_to_texref(matrix_to_array(matrix, order), texref)
 
 
 
@@ -393,35 +414,42 @@ def _get_nvcc_version(nvcc):
 
 
 
-def _get_cache_filename():
-    from os.path import expanduser, join
-    return join(expanduser('~'), ".pycuda-compiler-cache.diskdict")
-
-_compile_cache = DiskDict(_get_cache_filename())
-
-
-
-
-def _do_compile(source, options, keep, nvcc):
-    from tempfile import mkdtemp
-    tempdir = mkdtemp()
-
+def _do_compile(source, options, keep, nvcc, cache_dir):
     from os.path import join
-    outf = open(join(tempdir, "kernel.cu"), "w")
+
+    if cache_dir:
+        import md5
+        checksum = md5.new()
+
+        checksum.update(source)
+        for option in options: checksum.update(option)
+        checksum.update(_get_nvcc_version(nvcc))
+
+        cache_file = checksum.hexdigest()
+        cache_path = join(cache_dir, cache_file + ".cubin")
+
+        try:
+            return open(cache_path, "r").read()
+        except:
+            pass
+
+    from tempfile import mkdtemp
+    file_dir = mkdtemp()
+    file_root = "kernel"
+
+    outf = open(join(file_dir, file_root + ".cu"), "w")
     outf.write(str(source))
     outf.close()
 
     if keep:
-        options = options[:]
-        options.append("--keep")
-        print "*** compiler output in %s" % tempdir
+        print "*** compiler output in %s" % file_dir
 
     from subprocess import call
     try:
-        result = call([nvcc, "--cubin"] 
+        result = call([nvcc, "--cubin"]
                 + options
-                + ["kernel.cu"],
-            cwd=tempdir)
+                + [file_root + ".cu"],
+            cwd=file_dir)
     except OSError, e:
         raise OSError, "%s was not found (is it on the PATH?) [%s]" % (
                 nvcc, str(e))
@@ -429,7 +457,12 @@ def _do_compile(source, options, keep, nvcc):
     if result != 0:
         raise CompileError, "module compilation failed"
 
-    cubin = open(join(tempdir, "kernel.cubin"), "r").read()
+    cubin = open(join(file_dir, file_root + ".cubin"), "r").read()
+
+    if cache_dir:
+        outf = open(cache_path, "w")
+        outf.write(cubin)
+        outf.close()
 
     if not keep:
         from os import listdir, unlink, rmdir
@@ -445,8 +478,9 @@ def _do_compile(source, options, keep, nvcc):
 
 class SourceModule(object):
     def __init__(self, source, nvcc="nvcc",
-            options=[], keep=False, 
-            no_extern_c=False, arch=None, code=None):
+            options=[], keep=False,
+            no_extern_c=False, arch=None, code=None,
+            cache_dir=None):
 
         if not no_extern_c:
             source = 'extern "C" {\n%s\n}\n' % source
@@ -458,26 +492,39 @@ class SourceModule(object):
             except RuntimeError:
                 pass
 
+        if cache_dir is None:
+            from os.path import expanduser, join, exists
+            cache_dir = join(expanduser("~"), 
+                    ".pycuda-compiler-cache")
+
+            if not exists(cache_dir):
+                from os import mkdir
+                mkdir(cache_dir)
+
+        options = options[:]
         if arch is not None:
             options.extend(["-arch", arch])
 
         if code is not None:
             options.extend(["-code", code])
 
-        cache_key = (source, tuple(options), _get_nvcc_version(nvcc))
-        try:
-            cubin = _compile_cache[cache_key]
-        except KeyError:
-            cubin = _do_compile(source, options, keep, nvcc)
-            _compile_cache[cache_key] = cubin
+        if keep:
+            options.append("--keep")
+
+        cubin = _do_compile(source, options, keep, nvcc, cache_dir)
 
         import re
         self.lmem = int(re.search("lmem = ([0-9]+)", cubin).group(1))
         self.smem = int(re.search("smem = ([0-9]+)", cubin).group(1))
         self.registers = int(re.search("reg = ([0-9]+)", cubin).group(1))
 
+        if self.lmem:
+            from warnings import warn
+            warn("kernel uses local memory")
+
         self.module = module_from_buffer(cubin)
 
+        self.get_function = self.module.get_function
         self.get_global = self.module.get_global
         self.get_texref = self.module.get_texref
 
@@ -490,4 +537,3 @@ class SourceModule(object):
         func.registers = self.registers
 
         return func
-

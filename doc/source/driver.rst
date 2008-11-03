@@ -432,19 +432,25 @@ Arrays and Textures
 .. data:: TRSF_NORMALIZED_COORDINATES
 .. data:: TR_DEFAULT
 
-.. function:: matrix_to_array(matrix)
+.. function:: matrix_to_array(matrix, order)
 
   Turn the two-dimensional :class:`numpy.ndarray` object *matrix* into an
-  :class:`Array`. The dimensions are in the same order as they should be used
-  in the :cfunc:`tex2D` argument sequence.
+  :class:`Array`. 
+  The `order` argument can be either `"C"` or `"F"`. If
+  it is `"C"`, then `tex2D(x,y)` is going to map to fetch `matrix[y,x],
+  and vice versa for for `"F"`.
 
-.. function:: make_multichannel_2d_array(matrix)
+
+.. function:: make_multichannel_2d_array(matrix, order)
 
   Turn the three-dimensional :class:`numpy.ndarray` object *matrix* into
-  an 2D :class:`Array` with multiple channels, where the number of channels
-  is the first dimension, and the remaining dimensions are in the same order
-  as they should be used in the :cfunc:`tex2D` argument sequence.
+  an 2D :class:`Array` with multiple channels. 
 
+  Depending on `order`, the `matrix`'s shape is interpreted as
+
+  * `height, width, num_channels` for `order == "C"`,
+  * `num_channels, width, height` for `order == "C"`.
+  
 .. _memset:
 
 Initializing Device Memory
@@ -781,7 +787,7 @@ Code on the Device: Modules and Functions
   *array* should be copied both onto the compute device before invoking
   the kernel, and off it afterwards.
 
-.. class:: SourceModule(source, nvcc="nvcc", options=[], keep=False, no_extern_c=False, arch=None, code=None)
+.. class:: SourceModule(source, nvcc="nvcc", options=[], keep=False, no_extern_c=False, arch=None, code=None, cache_dir=None)
   
   Create a :class:`Module` from the CUDA source code *source*. The Nvidia
   compiler *nvcc* is assumed to be on the :envvar:`PATH` if no path to it is
@@ -796,6 +802,10 @@ Code on the Device: Modules and Functions
   and :option:`-code` options on the :program:`nvcc` command line. If `arch` is
   `None`, it defaults to the current context's device's compute capability.
   If `code` is `None`, it will not be specified.
+
+  `cache_dir` gives the directory used for compiler caching. It has a
+  sensible per-user default. If it is set to `False`, caching is
+  disabled.
 
   This class exhibits the same public interface as :class:`Module`, but 
   does not inherit from it.
