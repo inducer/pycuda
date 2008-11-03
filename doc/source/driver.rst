@@ -787,7 +787,7 @@ Code on the Device: Modules and Functions
   *array* should be copied both onto the compute device before invoking
   the kernel, and off it afterwards.
 
-.. class:: SourceModule(source, nvcc="nvcc", options=[], keep=False, no_extern_c=False, arch=None, code=None)
+.. class:: SourceModule(source, nvcc="nvcc", options=[], keep=False, no_extern_c=False, arch=None, code=None, cache_dir=None)
   
   Create a :class:`Module` from the CUDA source code *source*. The Nvidia
   compiler *nvcc* is assumed to be on the :envvar:`PATH` if no path to it is
@@ -802,6 +802,10 @@ Code on the Device: Modules and Functions
   and :option:`-code` options on the :program:`nvcc` command line. If `arch` is
   `None`, it defaults to the current context's device's compute capability.
   If `code` is `None`, it will not be specified.
+
+  `cache_dir` gives the directory used for compiler caching. It has a
+  sensible per-user default. If it is set to `False`, caching is
+  disabled.
 
   This class exhibits the same public interface as :class:`Module`, but 
   does not inherit from it.
