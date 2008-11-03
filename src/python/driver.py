@@ -414,35 +414,43 @@ def _get_nvcc_version(nvcc):
 
 
 
-def _get_cache_filename():
-    from os.path import expanduser, join
-    return join(expanduser('~'), ".pycuda-compiler-cache.diskdict")
-
-_compile_cache = DiskDict(_get_cache_filename())
-
-
-
-
-def _do_compile(source, options, keep, nvcc):
-    from tempfile import mkdtemp
-    tempdir = mkdtemp()
+def _do_compile(source, options, keep, nvcc, cache_dir):
 
     from os.path import join
-    outf = open(join(tempdir, "kernel.cu"), "w")
+
+    if cache_dir and not keep:
+        import md5
+        checksum = md5.new()
+
+        checksum.update(source)
+        for option in options: checksum.update(option)
+        checksum.update(_get_nvcc_version(nvcc))
+
+        file_dir = cache_dir
+        file_root = checksum.hexdigest()
+
+        try:
+            return open(join(file_dir, file_root + ".cubin"), "r").read()
+        except:
+            pass
+    else:
+        from tempfile import mkdtemp
+        file_dir = mkdtemp()
+        file_root = "kernel"
+
+    outf = open(join(file_dir, file_root + ".cu"), "w")
     outf.write(str(source))
     outf.close()
 
     if keep:
-        options = options[:]
-        options.append("--keep")
-        print "*** compiler output in %s" % tempdir
+        print "*** compiler output in %s" % file_dir
 
     from subprocess import call
     try:
-        result = call([nvcc, "--cubin"] 
+        result = call([nvcc, "--cubin"]
                 + options
-                + ["kernel.cu"],
-            cwd=tempdir)
+                + [file_root + ".cu"],
+            cwd=file_dir)
     except OSError, e:
         raise OSError, "%s was not found (is it on the PATH?) [%s]" % (
                 nvcc, str(e))
@@ -450,9 +458,9 @@ def _do_compile(source, options, keep, nvcc):
     if result != 0:
         raise CompileError, "module compilation failed"
 
-    cubin = open(join(tempdir, "kernel.cubin"), "r").read()
+    cubin = open(join(file_dir, file_root + ".cubin"), "r").read()
 
-    if not keep:
+    if not keep and not cache_dir:
         from os import listdir, unlink, rmdir
         for name in listdir(tempdir):
             unlink(join(tempdir, name))
@@ -466,8 +474,9 @@ def _do_compile(source, options, keep, nvcc):
 
 class SourceModule(object):
     def __init__(self, source, nvcc="nvcc",
-            options=[], keep=False, 
-            no_extern_c=False, arch=None, code=None):
+            options=[], keep=False,
+            no_extern_c=False, arch=None, code=None,
+            cache_dir=None):
 
         if not no_extern_c:
             source = 'extern "C" {\n%s\n}\n' % source
@@ -479,26 +488,30 @@ class SourceModule(object):
             except RuntimeError:
                 pass
 
+        options = options[:]
         if arch is not None:
             options.extend(["-arch", arch])
 
         if code is not None:
             options.extend(["-code", code])
 
-        cache_key = (source, tuple(options), _get_nvcc_version(nvcc))
-        try:
-            cubin = _compile_cache[cache_key]
-        except KeyError:
-            cubin = _do_compile(source, options, keep, nvcc)
-            _compile_cache[cache_key] = cubin
+        if keep:
+            options.append("--keep")
+
+        cubin = _do_compile(source, options, keep, nvcc, cache_dir)
 
         import re
         self.lmem = int(re.search("lmem = ([0-9]+)", cubin).group(1))
         self.smem = int(re.search("smem = ([0-9]+)", cubin).group(1))
         self.registers = int(re.search("reg = ([0-9]+)", cubin).group(1))
 
+        if self.lmem:
+            from warnings import warn
+            warn("kernel uses local memory")
+
         self.module = module_from_buffer(cubin)
 
+        self.get_function = self.module.get_function
         self.get_global = self.module.get_global
         self.get_texref = self.module.get_texref
 
@@ -511,4 +524,3 @@ class SourceModule(object):
         func.registers = self.registers
 
         return func
-
