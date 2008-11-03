@@ -415,10 +415,9 @@ def _get_nvcc_version(nvcc):
 
 
 def _do_compile(source, options, keep, nvcc, cache_dir):
-
     from os.path import join
 
-    if cache_dir and not keep:
+    if cache_dir:
         import md5
         checksum = md5.new()
 
@@ -426,17 +425,17 @@ def _do_compile(source, options, keep, nvcc, cache_dir):
         for option in options: checksum.update(option)
         checksum.update(_get_nvcc_version(nvcc))
 
-        file_dir = cache_dir
-        file_root = checksum.hexdigest()
+        cache_file = checksum.hexdigest()
+        cache_path = join(cache_dir, cache_file + ".cubin")
 
         try:
-            return open(join(file_dir, file_root + ".cubin"), "r").read()
+            return open(cache_path, "r").read()
         except:
             pass
-    else:
-        from tempfile import mkdtemp
-        file_dir = mkdtemp()
-        file_root = "kernel"
+
+    from tempfile import mkdtemp
+    file_dir = mkdtemp()
+    file_root = "kernel"
 
     outf = open(join(file_dir, file_root + ".cu"), "w")
     outf.write(str(source))
@@ -460,7 +459,12 @@ def _do_compile(source, options, keep, nvcc, cache_dir):
 
     cubin = open(join(file_dir, file_root + ".cubin"), "r").read()
 
-    if not keep and not cache_dir:
+    if cache_dir:
+        outf = open(cache_path, "w")
+        outf.write(cubin)
+        outf.close()
+
+    if not keep:
         from os import listdir, unlink, rmdir
         for name in listdir(tempdir):
             unlink(join(tempdir, name))
@@ -487,6 +491,15 @@ class SourceModule(object):
                 arch = "sm_%d%d" % Context.get_device().compute_capability()
             except RuntimeError:
                 pass
+
+        if cache_dir is None:
+            from os.path import expanduser, join, exists
+            cache_dir = join(expanduser("~"), 
+                    ".pycuda-compiler-cache")
+
+            if not exists(cache_dir):
+                from os import mkdir
+                mkdir(cache_dir)
 
         options = options[:]
         if arch is not None:
