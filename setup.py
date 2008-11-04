@@ -99,7 +99,7 @@ def main():
 
     setup(name="pycuda",
             # metadata
-            version="0.91rc2",
+            version="0.91rc3",
             description="Python wrapper for Nvidia CUDA",
             long_description="""
             PyCuda lets you access `Nvidia <http://nvidia.com>`_'s `CUDA
