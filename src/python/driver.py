@@ -466,9 +466,9 @@ def _do_compile(source, options, keep, nvcc, cache_dir):
 
     if not keep:
         from os import listdir, unlink, rmdir
-        for name in listdir(tempdir):
-            unlink(join(tempdir, name))
-        rmdir(tempdir)
+        for name in listdir(file_dir):
+            unlink(join(file_dir, name))
+        rmdir(file_dir)
 
     return cubin
 
@@ -524,7 +524,6 @@ class SourceModule(object):
 
         self.module = module_from_buffer(cubin)
 
-        self.get_function = self.module.get_function
         self.get_global = self.module.get_global
         self.get_texref = self.module.get_texref
 
