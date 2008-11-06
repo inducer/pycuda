@@ -422,7 +422,8 @@ def _do_compile(source, options, keep, nvcc, cache_dir):
         checksum = md5.new()
 
         checksum.update(source)
-        for option in options: checksum.update(option)
+        for option in options: 
+            checksum.update(option)
         checksum.update(_get_nvcc_version(nvcc))
 
         cache_file = checksum.hexdigest()
@@ -517,10 +518,6 @@ class SourceModule(object):
         self.lmem = int(re.search("lmem = ([0-9]+)", cubin).group(1))
         self.smem = int(re.search("smem = ([0-9]+)", cubin).group(1))
         self.registers = int(re.search("reg = ([0-9]+)", cubin).group(1))
-
-        if self.lmem:
-            from warnings import warn
-            warn("kernel uses local memory")
 
         self.module = module_from_buffer(cubin)
 
