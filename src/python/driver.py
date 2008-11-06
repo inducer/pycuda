@@ -443,6 +443,9 @@ def _do_compile(source, options, keep, nvcc, cache_dir):
     outf.close()
 
     if keep:
+        options = options[:]
+        options.append("--keep")
+
         print "*** compiler output in %s" % file_dir
 
     from subprocess import call
@@ -508,9 +511,6 @@ class SourceModule(object):
 
         if code is not None:
             options.extend(["-code", code])
-
-        if keep:
-            options.append("--keep")
 
         cubin = _do_compile(source, options, keep, nvcc, cache_dir)
 
