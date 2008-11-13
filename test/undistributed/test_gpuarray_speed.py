@@ -13,15 +13,11 @@ def main():
 
     import pycuda.gpuarray as gpuarray
 
-    # make sure all the kernels are compiled
-    gpuarray.GPUArray.compile_kernels()
-    print "done compiling"
-
     sizes = []
-    times = []
-    flops = []
-    flopsCPU = []
-    timesCPU = []
+    times_gpu = []
+    flops_gpu = []
+    flops_cpu = []
+    times_cpu = []
     
     for power in range(10, 25): # 24
         size = 1<<power
@@ -36,61 +32,47 @@ def main():
         else:
             count = 1000
 
-        #start timer
+        # gpu -----------------------------------------------------------------
         start = drv.Event()
         end = drv.Event()
         start.record()
 
-        #cuda operation which adds two arrays over count time to get an average
         for i in range(count):
             a+b
             
-        #stop timer
         end.record()
         end.synchronize()
         
-        #calculate used time
         secs = start.time_till(end)*1e-3
 
-        times.append(secs/count)
-        flops.append(size)
+        times_gpu.append(secs/count)
+        flops_gpu.append(size)
 
-        #cpu operations which adds two arrays
-        aCpu = numpy.random.randn(size).astype(numpy.float32)
-        bCpu = numpy.random.randn(size).astype(numpy.float32)
+        # cpu -----------------------------------------------------------------
+        a_cpu = numpy.random.randn(size).astype(numpy.float32)
+        b_cpu = numpy.random.randn(size).astype(numpy.float32)
 
         #start timer
-        start = drv.Event()
-        end = drv.Event()
-        start.record()
-
-        #cpu operation which adds two arrays over count time to get an average        
+        from time import time
+        start = time()
         for i in range(count):
-            aCpu + bCpu
+            a_cpu + b_cpu
+        secs = time() - start
 
-        #stop timer
-        end.record()
-        end.synchronize()
-        
-        #calculate used time
-        secs = start.time_till(end)*1e-3
-
-        #add results to variable
-        timesCPU.append(secs/count)
-        flopsCPU.append(size)
+        times_cpu.append(secs/count)
+        flops_cpu.append(size)
             
             
-    #calculate pseudo flops
-    flops = [f/t for f, t in zip(flops,times)]
-    flopsCPU = [f/t for f, t in zip(flopsCPU,timesCPU)]
-
-    #print the data out
+    # calculate pseudo flops
+    flops_gpu = [f/t for f, t in zip(flops_gpu,times_gpu)]
+    flops_cpu = [f/t for f, t in zip(flops_cpu,times_cpu)]
 
     from pytools import Table
     tbl = Table()
-    tbl.add_row(("Size", "Time GPU", "Size/Time GPU", "Time CPU","Size/Time CPU","GPU vs CPU speedup"))
-    for s, t, f,tCpu,fCpu in zip(sizes, times, flops,timesCPU,flopsCPU):
-        tbl.add_row((s,t,f,tCpu,fCpu,f/fCpu))
+    tbl.add_row(("Size", "Time GPU", "Size/Time GPU", 
+        "Time CPU","Size/Time CPU","GPU vs CPU speedup"))
+    for s, t, f, t_cpu, f_cpu in zip(sizes, times_gpu, flops_gpu, times_cpu, flops_cpu):
+        tbl.add_row((s, t, f, t_cpu, f_cpu, f/f_cpu))
     print tbl
         
 
