@@ -39,3 +39,5 @@ MANIFEST
 *.LOCAL.[0-9]*
 *.REMOTE.[0-9]*
 *.BASE.[0-9]*
+tmp
+temp*
