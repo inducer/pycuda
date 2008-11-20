@@ -13,6 +13,7 @@
 #include <stdexcept>
 #include <boost/shared_ptr.hpp>
 #include <boost/weak_ptr.hpp>
+#include <utility>
 #include <stack>
 #include <iostream>
 #include <vector>
@@ -720,16 +721,15 @@ namespace cuda
     return new device_allocation(mem_alloc(bytes));
   }
 
-  inline
-  py::tuple mem_alloc_pitch(
-      unsigned int width, unsigned int height, unsigned int access_size)
+  inline unsigned int mem_alloc_pitch(
+      std::auto_ptr<device_allocation> &da,
+        unsigned int width, unsigned int height, unsigned int access_size)
   {
     CUdeviceptr devptr;
     unsigned int pitch;
     CUDAPP_CALL_GUARDED(cuMemAllocPitch, (&devptr, &pitch, width, height, access_size));
-    return py::make_tuple(
-        new device_allocation(devptr),
-        pitch);
+    da = std::auto_ptr<device_allocation>(new device_allocation(devptr));
+    return pitch;
   }
 
   inline

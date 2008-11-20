@@ -72,6 +72,18 @@ namespace
 
 
 
+  py::tuple mem_alloc_pitch_wrap(
+      unsigned int width, unsigned int height, unsigned int access_size)
+  {
+    std::auto_ptr<device_allocation> da;
+    unsigned int pitch = mem_alloc_pitch(
+        da, width, height, access_size);
+    return py::make_tuple(
+        handle_from_new_ptr(da.release()), pitch);
+  }
+
+
+
 
   void  _cuMemsetD8( CUdeviceptr dstDevice, unsigned char uc, unsigned int N ) 
   { CUDAPP_CALL_GUARDED_THREADED(cuMemsetD8, (dstDevice, uc, N )); }
@@ -444,7 +456,8 @@ BOOST_PYTHON_MODULE(_driver)
   DEF_SIMPLE_FUNCTION(mem_get_info);
   py::def("mem_alloc", make_device_allocation, 
       py::return_value_policy<py::manage_new_object>());
-  DEF_SIMPLE_FUNCTION(mem_alloc_pitch);
+  py::def("mem_alloc_pitch", mem_alloc_pitch_wrap,
+      py::args("width", "height", "access_size"));
   DEF_SIMPLE_FUNCTION(mem_get_address_range);
 
   py::def("memset_d8", _cuMemsetD8, py::args("dest", "data", "size"));
