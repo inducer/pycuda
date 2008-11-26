@@ -632,7 +632,7 @@ Code on the Device: Modules and Functions
     of integers.
 
     *arg1* through *argn* are the positional C arguments to the kernel. See
-    :meth:`param_set` for details.
+    :meth:`param_set` for details. See especially the warnings there.
     
     *grid* specifies, as a 2-tuple, the number of thread blocks to launch, as a
     two-dimensional grid.
@@ -647,7 +647,10 @@ Code on the Device: Modules and Functions
     The function returns either *None* or the number of seconds spent
     executing the kernel, depending on whether *time_kernel* is *True*.
 
-    This is a convenience interface that replaces all the following functions.
+    This is a convenience interface that can be used instead of the
+    :meth:`param_*` and :meth:`launch_*` methods below.  For a faster (but
+    mildly less convenient) way of invoking kernels, see :meth:`prepare` and
+    :meth:`prepared_call`.
 
   .. method:: param_set(arg1, ... argn)
 
@@ -667,6 +670,19 @@ Code on the Device: Modules and Functions
       of bytes will be copied into the parameter space verbatim.
 
     * :class:`GPUArray` instances.
+
+    .. warning::
+
+      You cannot pass values of Python's native :class:`int` or :class:`float`
+      types to param_set. Since there is no unambiguous way to guess the size
+      of these integers or floats, it complains with a :exc:`TypeError`.
+
+    .. note::
+      
+      This method has to guess the types of the arguments passed to it,
+      which can make it somewhat slow. For a kernel that is invoked often,
+      this can be inconvenient. For a faster (but mildly less convenient) way
+      of invoking kernels, see :meth:`prepare` and :meth:`prepared_call`.
 
   .. method:: set_block_shape(x, y, z)
     
@@ -728,12 +744,14 @@ Code on the Device: Modules and Functions
   .. method:: prepared_call(grid, *args)
 
     Invoke `self` using :meth:`launch_grid`, with `args` and a grid size of `grid`.
+    Assumes that :meth:`prepare` was called on *self*.
     The texture references given to :meth:`prepare` are set up as parameters, as
     well.
 
   .. method:: prepared_timed_call(grid, stream, *args)
 
     Invoke `self` using :meth:`launch_grid`, with `args` and a grid size of `grid`.
+    Assumes that :meth:`prepare` was called on *self*.
     The texture references given to :meth:`prepare` are set up as parameters, as
     well.
 
@@ -746,6 +764,7 @@ Code on the Device: Modules and Functions
     Invoke `self` using :meth:`launch_grid_async`, with `args` and a grid 
     size of `grid`, serialized into the :class:`pycuda.driver.Stream` `stream`.
     If `stream` is None, do the same as :meth:`prepared_call`.
+    Assumes that :meth:`prepare` was called on *self*.
     The texture references given to :meth:`prepare` are set up as parameters, as
     well.
 
