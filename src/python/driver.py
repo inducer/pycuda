@@ -514,10 +514,20 @@ class SourceModule(object):
 
         cubin = _do_compile(source, options, keep, nvcc, cache_dir)
 
-        import re
-        self.lmem = int(re.search("lmem = ([0-9]+)", cubin).group(1))
-        self.smem = int(re.search("smem = ([0-9]+)", cubin).group(1))
-        self.registers = int(re.search("reg = ([0-9]+)", cubin).group(1))
+        def failsafe_extract(key, cubin):
+            pattern = r"%s\s*=\s*([0-9]+)" % key
+            import re
+            match = re.search(pattern, cubin)
+            if match is None:
+                from warnings import warn
+                warn("Reading '%s' from cubin failed--SourceModule metadata may be unavailable." % key)
+                return None
+            else:
+                return int(match.group(1))
+
+        self.lmem = failsafe_extract("lmem", cubin)
+        self.smem = failsafe_extract("smem", cubin)
+        self.registers = failsafe_extract("reg", cubin)
 
         self.module = module_from_buffer(cubin)
 
