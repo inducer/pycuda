@@ -82,7 +82,11 @@ class CompiledVectorExpression(object):
         self.allocator = allocator
 
         from pymbolic import get_dependencies
-        deps = get_dependencies(vec_expr, composite_leaves=True)
+        deps = get_dependencies(vec_expr, 
+                include_subscripts=True,
+                include_lookups=True,
+                include_calls=False,
+                )
         self.vector_exprs = [dep for dep in deps if type_getter(dep)[0]]
         self.scalar_exprs = [dep for dep in deps if not type_getter(dep)[0]]
         vector_names = ["v%d" % i for i in range(len(self.vector_exprs))]
@@ -93,7 +97,9 @@ class CompiledVectorExpression(object):
         subst_map = dict(
                 list(zip(self.vector_exprs, [var(vecname)[var_i]
                     for vecname in vector_names]))
-                +list(zip(self.scalar_exprs, scalar_names)))
+                +list(zip(self.scalar_exprs, 
+                    [var(scaname) for scaname in scalar_names])))
+
         def subst_func(expr):
             try:
                 return subst_map[expr]
@@ -103,7 +109,7 @@ class CompiledVectorExpression(object):
         subst_expr = DefaultingSubstitutionMapper(subst_func)(vec_expr)
 
         from pymbolic.mapper.stringifier import PREC_NONE, PREC_SUM
-        from pymbolic.compiler import CompileMapper
+        from pymbolic.mapper.c_code import CCodeMapper
 
         def get_c_declarator(name, is_vector, dtype):
             if is_vector:
@@ -118,7 +124,7 @@ class CompiledVectorExpression(object):
                         for var_expr, var_name in zip(
                             self.vector_exprs+self.scalar_exprs, 
                             vector_names+scalar_names)]),
-                "result[i] = " + CompileMapper()(subst_expr, PREC_NONE),
+                "result[i] = " + CCodeMapper()(subst_expr, PREC_NONE),
                 name="vector_expression")
 
         from pymbolic.mapper.flop_counter import FlopCounter
