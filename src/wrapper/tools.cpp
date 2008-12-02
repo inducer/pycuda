@@ -1,6 +1,9 @@
 #include <vector>
 #include "wrap_helpers.hpp"
 #include <cuda.hpp>
+#include <boost/ptr_container/ptr_map.hpp>
+#include <boost/cstdint.hpp>
+#include <boost/foreach.hpp>
 #include <climits>
 
 
@@ -28,7 +31,7 @@ static const char log_table_8[] =
   7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7
 };
 
-static inline unsigned short bitlog2_16(unsigned long v)
+static inline unsigned bitlog2_16(boost::uint16_t v)
 {
   if (unsigned long t = v >> 8)
     return 8+log_table_8[t];
@@ -36,18 +39,18 @@ static inline unsigned short bitlog2_16(unsigned long v)
     return log_table_8[v];
 }
 
-static inline unsigned short bitlog2_32(unsigned long v)
+static inline unsigned bitlog2_32(boost::uint32_t v)
 {
-  if (unsigned long t = v >> 16)
+  if (uint16_t t = v >> 16)
     return 16+bitlog2_16(t);
   else 
     return bitlog2_16(v);
 }
 
-static inline unsigned short bitlog2(unsigned long v)
+static inline unsigned bitlog2(unsigned long v)
 {
 #if (ULONG_MAX != 4294967295)
-  if (unsigned long t = v >> 32)
+  if (boost::uint32_t t = v >> 32)
     return 32+bitlog2_32(t);
   else 
 #endif
@@ -94,9 +97,13 @@ namespace
       typedef typename Allocator::size_type size_type;
 
     private:
-      typedef signed short bin_nr;
-      static const bin_nr bin_count = 64;
-      std::vector<std::vector<pointer> > m_bins;
+      typedef boost::uint32_t bin_nr_t;
+      typedef std::vector<pointer> bin_t;
+
+      typedef boost::ptr_map<bin_nr_t, bin_t > container_t;
+      container_t m_container;
+      typedef typename container_t::value_type bin_pair_t;
+
       Allocator m_allocator;
 
       // A held block is one that's been released by the application, but that
@@ -110,7 +117,6 @@ namespace
       memory_pool()
         : m_held_blocks(0), m_active_blocks(0)
       {
-        m_bins.resize(bin_count);
       }
       
       ~memory_pool()
@@ -118,14 +124,65 @@ namespace
         free_held();
       }
 
-    protected:
-      bin_nr bin_number(size_type size)
+      static const unsigned mantissa_bits = 2;
+      static const unsigned mantissa_mask = (1 << mantissa_bits) - 1;
+
+      static size_type signed_left_shift(size_type x, signed shift_amount)
       {
-        return bitlog2(size);
+        if (shift_amount < 0)
+          return x >> -shift_amount;
+        else
+          return x << shift_amount;
       }
-      size_type alloc_size(bin_nr bin)
+
+      static size_type signed_right_shift(size_type x, signed shift_amount)
       {
-        return (1<<(bin+1)) - 1;
+        if (shift_amount < 0)
+          return x << -shift_amount;
+        else
+          return x >> shift_amount;
+      }
+
+      static bin_nr_t bin_number(size_type size)
+      {
+        signed l = bitlog2(size);
+        size_type shifted = signed_right_shift(size, l-signed(mantissa_bits));
+        if (size && (shifted & (1 << mantissa_bits)) == 0)
+          throw std::runtime_error("memory_pool::bin_number: bitlog2 fault");
+        size_type chopped = shifted & mantissa_mask;
+        return l << mantissa_bits | chopped;
+      }
+
+      static size_type alloc_size(bin_nr_t bin)
+      {
+        bin_nr_t exponent = bin >> mantissa_bits;
+        bin_nr_t mantissa = bin & mantissa_mask;
+
+        size_type ones = signed_left_shift(1, 
+            signed(exponent)-signed(mantissa_bits)
+            );
+        if (ones) ones -= 1;
+
+        size_type head = signed_left_shift(
+           (1<<mantissa_bits) | mantissa, 
+            signed(exponent)-signed(mantissa_bits));
+        if (ones & head)
+          throw std::runtime_error("memory_pool::alloc_size: bit-counting fault");
+        return head | ones;
+      }
+
+    protected:
+      bin_t &get_bin(bin_nr_t bin_nr)
+      {
+        typename container_t::iterator it = m_container.find(bin_nr);
+        if (it == m_container.end())
+        {
+          bin_t *new_bin = new bin_t;
+          m_container.insert(bin_nr, new_bin);
+          return *new_bin;
+        }
+        else
+          return *it->second;
       }
 
       void inc_held_blocks()
@@ -145,22 +202,22 @@ namespace
     public:
       pointer allocate(size_type size)
       {
-        bin_nr bin = bin_number(size);
-        if (m_bins[bin].size())
+        bin_nr_t bin_nr = bin_number(size);
+        bin_t &bin = get_bin(bin_nr);
+        
+        if (bin.size())
         {
-          pointer result = m_bins[bin].back();
-          m_bins[bin].pop_back();
+          pointer result = bin.back();
+          bin.pop_back();
           dec_held_blocks();
           ++m_active_blocks;
           return result;
         }
         else
         {
-          size_type alloc_sz = alloc_size(bin);
+          size_type alloc_sz = alloc_size(bin_nr);
 
           assert(bin_number(alloc_sz) == bin);
-
-          bin_nr freeing_in_bin = bin_count-1;
 
           while (true)
           {
@@ -175,16 +232,24 @@ namespace
             {
               // allocation failed, free up some memory
 
-              while (m_bins[freeing_in_bin].size() == 0 && freeing_in_bin >= 0)
-                --freeing_in_bin;
-
-              if (freeing_in_bin >= 0)
+              bool freed_some = false;
+              BOOST_FOREACH(bin_pair_t bin_pair, 
+                  // free largest stuff first
+                  std::make_pair(m_container.rbegin(), m_container.rend()))
               {
-                m_allocator.free(m_bins[freeing_in_bin].back());
-                m_bins[freeing_in_bin].pop_back();
-                dec_held_blocks();
+                bin_t &bin = *bin_pair.second;
+
+                if (bin.size())
+                {
+                  m_allocator.free(bin.back());
+                  bin.pop_back();
+                  dec_held_blocks();
+                  freed_some = true;
+                  break;
+                }
               }
-              else
+
+              if (!freed_some)
                 throw;
             }
           }
@@ -195,7 +260,7 @@ namespace
       {
         --m_active_blocks;
         inc_held_blocks();
-        m_bins[bin_number(size)].push_back(p);
+        get_bin(bin_number(size)).push_back(p);
 
         if (m_active_blocks == 0)
         {
@@ -206,12 +271,14 @@ namespace
 
       void free_held()
       {
-        for (bin_nr bin = 0; bin < bin_count; ++bin)
+        BOOST_FOREACH(bin_pair_t bin_pair, m_container)
         {
-          while (m_bins[bin].size())
+          bin_t &bin = *bin_pair.second;
+
+          while (bin.size())
           {
-            m_allocator.free(m_bins[bin].back());
-            m_bins[bin].pop_back();
+            m_allocator.free(bin.back());
+            bin.pop_back();
             dec_held_blocks();
           }
         }
@@ -224,6 +291,7 @@ namespace
 
       unsigned held_blocks()
       { return m_held_blocks; }
+
   };
 
 
@@ -306,6 +374,10 @@ void pycuda_expose_tools()
           py::return_value_policy<py::manage_new_object>())
       .add_property("held_blocks", &cl::held_blocks)
       .add_property("active_blocks", &cl::active_blocks)
+      .DEF_SIMPLE_METHOD(bin_number)
+      .DEF_SIMPLE_METHOD(alloc_size)
+      .staticmethod("bin_number")
+      .staticmethod("alloc_size")
       ;
   }
   {

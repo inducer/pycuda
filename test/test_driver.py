@@ -1,3 +1,4 @@
+from __future__ import division
 import unittest
 import pycuda.autoinit
 import pycuda.driver as drv
@@ -223,6 +224,19 @@ class TestCuda(unittest.TestCase):
         assert bitlog2(0x3affe) == 17
         assert bitlog2(0xcc3affe) == 27
 
+    def test_mempool_2(self):
+        from pycuda.tools import DeviceMemoryPool as DMP
+        from random import randrange
+
+        for i in range(2000):
+            s = randrange(1<<31) >> randrange(32)
+            bin_nr = DMP.bin_number(s)
+            asize = DMP.alloc_size(bin_nr)
+
+            assert asize >= s, s
+            assert DMP.bin_number(asize) == bin_nr, s
+            assert asize < asize*(1+1/8)
+            
     def test_mempool(self):
         from pycuda.tools import bitlog2
         from pycuda.tools import DeviceMemoryPool
