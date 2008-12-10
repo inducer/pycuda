@@ -291,7 +291,19 @@ namespace cuda
 
       static boost::shared_ptr<context> current_context()
       {
-        return boost::shared_ptr<context>(m_context_stack.top());
+        while (true)
+        {
+          if (m_context_stack.size() == 0)
+            throw error("current_context", CUDA_ERROR_INVALID_CONTEXT);
+          boost::shared_ptr<context> result(m_context_stack.top());
+          if (result.get())
+          {
+            // good, weak pointer was not invalidated
+            return result;
+          }
+
+          // weak pointer invalidated, try again.
+        }
       }
 
       friend class device;
@@ -323,17 +335,6 @@ namespace cuda
 
 
 
-  class context_dependent
-  {
-    private:
-      boost::shared_ptr<context> m_ward_context;
-
-    public:
-      context_dependent()
-        : m_ward_context(context::current_context())
-      { }
-  };
-
   class explicit_context_dependent
   {
     private:
@@ -347,7 +348,53 @@ namespace cuda
 
       void release_context()
       {
-        m_ward_context = boost::shared_ptr<context>();
+        m_ward_context.reset();
+      }
+
+      boost::shared_ptr<context> get_context()
+      {
+        return m_ward_context;
+      }
+  };
+
+  class context_dependent : public explicit_context_dependent
+  {
+    private:
+      boost::shared_ptr<context> m_ward_context;
+
+    public:
+      context_dependent()
+      { acquire_context(); }
+  };
+
+
+  class scoped_context_activation
+  {
+    private:
+      boost::shared_ptr<context> m_context;
+      bool m_did_switch;
+
+    public:
+      scoped_context_activation(boost::shared_ptr<context> ctx)
+        : m_context(ctx)
+      { 
+        m_did_switch = context::current_context() != m_context;
+        if (m_did_switch)
+        {
+#if CUDA_VERSION >= 2000
+          context_push(m_context);
+#else
+          throw cuda::error("scoped_context_activation (not available in <2.0)", CUDA_ERROR_INVALID_CONTEXT)
+#endif
+        }
+      }
+
+      ~scoped_context_activation()
+      {
+#if CUDA_VERSION >= 2000
+        if (m_did_switch)
+          m_context->pop();
+#endif
       }
 
   };
@@ -363,7 +410,10 @@ namespace cuda
       { CUDAPP_CALL_GUARDED(cuStreamCreate, (&m_stream, flags)); }
 
       ~stream()
-      { CUDAPP_CALL_GUARDED(cuStreamDestroy, (m_stream)); }
+      { 
+        scoped_context_activation ca(get_context());
+        CUDAPP_CALL_GUARDED(cuStreamDestroy, (m_stream)); 
+      }
 
       void synchronize()
       { CUDAPP_CALL_GUARDED_THREADED(cuStreamSynchronize, (m_stream)); }
@@ -418,6 +468,7 @@ namespace cuda
       { 
         if (m_managed)
         {
+          scoped_context_activation ca(get_context());
           CUDAPP_CALL_GUARDED(cuArrayDestroy, (m_array)); 
         }
       }
@@ -569,6 +620,7 @@ namespace cuda
 
       ~module()
       {
+        scoped_context_activation ca(get_context());
         CUDAPP_CALL_GUARDED(cuModuleUnload, (m_module));
       }
 
@@ -698,7 +750,9 @@ namespace cuda
       {
         if (m_valid)
         {
+          scoped_context_activation ca(get_context());
           mem_free(m_devptr);
+          release_context();
           m_valid = false;
         }
         else
@@ -708,7 +762,7 @@ namespace cuda
       ~device_allocation()
       {
         if (m_valid)
-          mem_free(m_devptr);
+          free();
       }
       
       operator CUdeviceptr() const
@@ -894,7 +948,10 @@ namespace cuda
       { CUDAPP_CALL_GUARDED(cuEventCreate, (&m_event, flags)); }
 
       ~event()
-      { CUDAPP_CALL_GUARDED(cuEventDestroy, (m_event)); }
+      { 
+        scoped_context_activation ca(get_context());
+        CUDAPP_CALL_GUARDED(cuEventDestroy, (m_event)); 
+      }
 
       void record()
       { CUDAPP_CALL_GUARDED(cuEventRecord, (m_event, 0)); }
