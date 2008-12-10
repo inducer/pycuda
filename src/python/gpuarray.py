@@ -192,50 +192,42 @@ class GPUArray(object):
     def __add__(self, other):
         """Add an array with an array or an array with a scalar."""
 
-        if isinstance(other, (int, float, complex)):
+        if isinstance(other, GPUArray):
+            # add another vector
+            result = self._new_like_me()
+            return self._axpbyz(1, other, 1, result)
+        else:
             # add a scalar
             if other == 0:
                 return self
             else:
                 result = self._new_like_me()
                 return self._axpbz(1, other, result)
-        else:
-            # add another vector
-            result = self._new_like_me()
-            return self._axpbyz(1, other, 1, result)
 
     __radd__ = __add__
 
     def __sub__(self, other):
         """Substract an array from an array or a scalar from an array."""
 
-        if isinstance(other, (int, float, complex)):
-            # if array - 0 than just return the array since its the same anyway
-
+        if isinstance(other, GPUArray):
+            result = self._new_like_me()
+            return self._axpbyz(1, other, -1, result)
+        else:
             if other == 0:
                 return self
             else:
                 # create a new array for the result
                 result = self._new_like_me()
                 return self._axpbz(1, -other, result)
-        else:
-            result = self._new_like_me()
-            return self._axpbyz(1, other, -1, result)
 
     def __rsub__(self,other):
         """Substracts an array by a scalar or an array:: 
 
            x = n - self
         """
-        assert isinstance(other, (int, float, complex))
-
-        # if array - 0 than just return the array since its the same anyway
-        if other == 0:
-            return self
-        else:
-            # create a new array for the result
-            result = self._new_like_me()
-            return self._axpbz(-1, other, result)
+        # other must be a scalar
+        result = self._new_like_me()
+        return self._axpbz(-1, other, result)
 
     def __iadd__(self, other):
         return self._axpbyz(1, other, 1, self)
@@ -249,10 +241,10 @@ class GPUArray(object):
 
     def __mul__(self, other):
         result = self._new_like_me()
-        if isinstance(other, (int, float, complex)):
-            return self._axpbz(other, 0, result)
-        else:
+        if isinstance(other, GPUArray):
             return self._elwise_multiply(other, result)
+        else:
+            return self._axpbz(other, 0, result)
 
     def __rmul__(self, scalar):
         result = self._new_like_me()
@@ -266,17 +258,18 @@ class GPUArray(object):
 
            x = self / n
         """
-        if isinstance(other, (int, float, complex)):
-            # if array - 0 than just return the array since its the same anyway
-            if other == 0:
+        if isinstance(other, GPUArray):
+            result = self._new_like_me()
+            return self._div(other, result)
+        else:
+            if other == 1:
                 return self
             else:
                 # create a new array for the result
                 result = self._new_like_me()
                 return self._axpbz(1/other, 0, result)
-        else:
-            result = self._new_like_me()
-            return self._div(other, result)
+
+    __truediv__ = __div__
 
     def __rdiv__(self,other):
         """Divides an array by a scalar or an array::
@@ -284,15 +277,7 @@ class GPUArray(object):
            x = n / self
         """
 
-        if isinstance(other, (int, float, complex)):
-            # if array - 0 than just return the array since its the same anyway
-            if other == 0:
-                return self
-            else:
-                # create a new array for the result
-                result = self._new_like_me()
-                return self._rdiv_scalar(other, result)
-        else:
+        if isinstance(other, GPUArray):
             result = self._new_like_me()
 
             func = _kernel.get_divide_kernel()
@@ -302,7 +287,15 @@ class GPUArray(object):
                     self.size)
 
             return result
+        else:
+            if other == 1:
+                return self
+            else:
+                # create a new array for the result
+                result = self._new_like_me()
+                return self._rdiv_scalar(other, result)
 
+    __rtruediv__ = __div__
 
     def fill(self, value):
         """fills the array with the specified value"""
@@ -349,15 +342,7 @@ class GPUArray(object):
         """
         result = GPUArray(self.shape, self.dtype)
 
-        if isinstance(other, (int, float, complex)):
-            func = _kernel.get_pow_kernel()
-            func.set_block_shape(*self._block)
-            func.prepared_async_call(self._grid, self.stream,
-                    other, self.gpudata, result.gpudata,
-                    self.size)
-
-            return result
-        else:
+        if isinstance(other, GPUArray):
             assert self.shape == other.shape
             assert self.dtype == other.dtype
 
@@ -367,6 +352,14 @@ class GPUArray(object):
                     self.gpudata, other.gpudata, result.gpudata,
                     self.size)
             
+            return result
+        else:
+            func = _kernel.get_pow_kernel()
+            func.set_block_shape(*self._block)
+            func.prepared_async_call(self._grid, self.stream,
+                    other, self.gpudata, result.gpudata,
+                    self.size)
+
             return result
 
     def reverse(self):
