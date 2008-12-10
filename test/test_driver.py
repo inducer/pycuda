@@ -254,6 +254,19 @@ class TestCuda(unittest.TestCase):
                 if len(queue) > 10:
                     queue.pop(0)
 
+    def test_multi_context(self):
+        if drv.get_version() < (2,0,0):
+            return
+
+        mem_a = drv.mem_alloc(50)
+        ctx2 = pycuda.autoinit.device.make_context()
+        mem_b = drv.mem_alloc(60)
+
+        del mem_a
+        del mem_b
+        ctx2.detach()
+
+
 
 
 

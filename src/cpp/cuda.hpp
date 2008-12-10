@@ -12,6 +12,7 @@
 #include <cuda.h>
 #include <stdexcept>
 #include <boost/shared_ptr.hpp>
+#include <boost/foreach.hpp>
 #include <boost/weak_ptr.hpp>
 #include <utility>
 #include <stack>
@@ -22,7 +23,7 @@
 
 
 
-//#define CUDAPP_TRACE_CUDA
+// #define CUDAPP_TRACE_CUDA
 
 
 
@@ -68,10 +69,23 @@ namespace cuda
       const char *m_routine;
       CUresult m_code;
 
+    private:
+      static std::string make_message(const char *rout, CUresult c, const char *msg)
+      {
+        std::string result = rout;
+        result += " failed: ";
+        result += curesult_to_str(c);
+        if (msg)
+        {
+          result += " - ";
+          result += msg;
+        }
+        return result;
+      }
+
     public:
-      error(const char *rout, CUresult c)
-        : std::runtime_error(
-            rout + std::string(" failed: ") + curesult_to_str(c)),
+      error(const char *rout, CUresult c, const char *msg=0)
+        : std::runtime_error(make_message(rout, c, msg)),
         m_routine(rout), m_code(c)
       { }
 
@@ -219,63 +233,72 @@ namespace cuda
 
 
   // context ------------------------------------------------------------------
-  class context
+  /* A word on context management: We don't let CUDA's context stack get more
+   * than one deep. CUDA only supports pushing floating contexts. We may wish
+   * to push contexts that are already active at a deeper stack level, so we
+   * maintain all contexts floating other than the top one.
+   */
+  class context : boost::noncopyable
   {
     private:
       CUcontext m_context;
       bool m_valid;
+      unsigned m_use_count;
       typedef std::stack<boost::weak_ptr<context>,
         std::vector<boost::weak_ptr<context> > > context_stack_t;
       
       static context_stack_t m_context_stack;
 
     public:
-      context(CUcontext ctx, bool borrowed)
-        : m_context(ctx), m_valid(!borrowed)
+      context(CUcontext ctx)
+        : m_context(ctx), m_valid(true), m_use_count(1)
+      { }
+
+
+      ~context()
       { 
-        if (borrowed)
+        if (m_valid)
         {
-          CUDAPP_CALL_GUARDED(cuCtxAttach, (&m_context, 0));
-          m_valid = true;
+          if (m_use_count)
+            std::cerr 
+              << "----------------------------------------------------" << std::endl
+              << "PyCuda WARNING: I'm being asked to destroy a " << std::endl
+              << "context that's part of the current context stack." << std::endl
+              << "----------------------------------------------------" << std::endl
+              << "I will pick a new active context from the" << std::endl
+              << "context stack. Since this destruction happened" << std::endl
+              << "at an unspecified point in your code, your code" << std::endl
+              << "is making false assumptions about which" << std::endl
+              << "context is active at what point." << std::endl
+              << "Call detach() explicitly to avoid this warning." << std::endl
+              << "----------------------------------------------------" << std::endl;
+          detach();
         }
       }
 
-      context(context const &src)
-        : m_context(src.m_context), m_valid(false)
-      { 
-        CUDAPP_CALL_GUARDED(cuCtxAttach, (&m_context, 0));
-        m_valid = true;
-      }
-
-      context &operator=(const context &src)
-      {
-        detach();
-        m_context = src.m_context;
-        CUDAPP_CALL_GUARDED(cuCtxAttach, (&m_context, 0));
-        m_valid = true;
-      }
-
-      ~context()
-      { detach(); }
+      CUcontext data() const
+      { return m_context; }
 
       void detach()
       {
         if (m_valid)
         {
-          CUDAPP_CALL_GUARDED(cuCtxDetach, (m_context));
-          m_valid = false;
-          m_context_stack.pop();
-        }
-      }
+          if (current_context().get() == this)
+          {
+            CUDAPP_CALL_GUARDED(cuCtxDetach, (m_context));
+          }
+          else
+            CUDAPP_CALL_GUARDED(cuCtxDestroy, (m_context));
 
-#if CUDA_VERSION >= 2000
-      void pop()
-      { 
-        CUcontext popped;
-        CUDAPP_CALL_GUARDED(cuCtxPopCurrent, (&popped)); 
-        if (popped != m_context)
-          throw std::runtime_error("popped the wrong context");
-        m_context_stack.pop();
+          m_valid = false;
+
+          boost::shared_ptr<context> new_active = current_context(this);
+          if (new_active.get())
+            CUDAPP_CALL_GUARDED(cuCtxPushCurrent, (new_active->m_context)); 
+        }
+        else
+          throw error("context::detach", CUDA_ERROR_INVALID_CONTEXT,
+              "cannot detach from invalid context");
       }
 
       static device get_device()
@@ -284,25 +307,53 @@ namespace cuda
         CUDAPP_CALL_GUARDED(cuCtxGetDevice, (&dev)); 
         return device(dev);
       }
+
+#if CUDA_VERSION >= 2000
+
+      static void prepare_context_switch()
+      {
+        if (context::m_context_stack.size())
+        {
+          CUcontext popped;
+          CUDAPP_CALL_GUARDED(cuCtxPopCurrent, (&popped)); 
+        }
+      }
+
+      void pop()
+      { 
+        prepare_context_switch();
+        m_context_stack.pop();
+        --m_use_count;
+
+        boost::shared_ptr<context> current = current_context();
+        if (current)
+          CUDAPP_CALL_GUARDED(cuCtxPushCurrent, (current_context()->m_context)); 
+      }
+#else
+      static void prepare_context_switch() { }
 #endif
 
       static void synchronize()
       { CUDAPP_CALL_GUARDED_THREADED(cuCtxSynchronize, ()); }
 
-      static boost::shared_ptr<context> current_context()
+      static boost::shared_ptr<context> current_context(context *except=0)
       {
         while (true)
         {
           if (m_context_stack.size() == 0)
-            throw error("current_context", CUDA_ERROR_INVALID_CONTEXT);
-          boost::shared_ptr<context> result(m_context_stack.top());
-          if (result.get())
+            return boost::shared_ptr<context>();
+          boost::weak_ptr<context> result(m_context_stack.top());
+          if (!result.expired() && result.lock().get() != except)
           {
-            // good, weak pointer was not invalidated
-            return result;
+            // good, weak pointer didn't expire
+            // (treating except as expired weak pointer)
+            return result.lock();
           }
-
-          // weak pointer invalidated, try again.
+          else
+          {
+            // weak pointer invalidated, pop it and try again.
+            m_context_stack.pop();
+          }
         }
       }
 
@@ -316,19 +367,27 @@ namespace cuda
   inline
   boost::shared_ptr<context> device::make_context(unsigned int flags)
   {
+    context::prepare_context_switch();
+
     CUcontext ctx;
     CUDAPP_CALL_GUARDED(cuCtxCreate, (&ctx, flags, m_device));
-    boost::shared_ptr<context> result(new context(ctx, false));
+    boost::shared_ptr<context> result(new context(ctx));
     context::m_context_stack.push(result);
     return result;
   }
+
+
+
 
 #if CUDA_VERSION >= 2000
   inline
   void context_push(boost::shared_ptr<context> ctx)
   { 
+    context::prepare_context_switch();
+
     CUDAPP_CALL_GUARDED(cuCtxPushCurrent, (ctx->m_context)); 
     context::m_context_stack.push(ctx);
+    ++ctx->m_use_count;
   }
 #endif
 
@@ -344,6 +403,10 @@ namespace cuda
       void acquire_context()
       {
         m_ward_context = context::current_context();
+        if (m_ward_context.get() == 0)
+          throw error("explicit_context_dependent",
+              CUDA_ERROR_INVALID_CONTEXT,
+              "no currently active context?");
       }
 
       void release_context()
@@ -384,7 +447,8 @@ namespace cuda
 #if CUDA_VERSION >= 2000
           context_push(m_context);
 #else
-          throw cuda::error("scoped_context_activation (not available in <2.0)", CUDA_ERROR_INVALID_CONTEXT)
+          throw cuda::error("scoped_context_activation", CUDA_ERROR_INVALID_CONTEXT,
+              "not available in CUDA < 2.0");
 #endif
         }
       }

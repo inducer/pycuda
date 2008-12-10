@@ -378,7 +378,7 @@ BOOST_PYTHON_MODULE(_driver)
 
   {
     typedef context cl;
-    py::class_<cl, shared_ptr<cl> >("Context", py::no_init)
+    py::class_<cl, shared_ptr<cl>, boost::noncopyable >("Context", py::no_init)
       .DEF_SIMPLE_METHOD(detach)
 
 #if CUDA_VERSION >= 2000
