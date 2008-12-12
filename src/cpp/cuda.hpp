@@ -261,17 +261,20 @@ namespace cuda
         {
           if (m_use_count)
             std::cerr 
-              << "----------------------------------------------------" << std::endl
+              << "-----------------------------------------------------------" << std::endl
               << "PyCuda WARNING: I'm being asked to destroy a " << std::endl
               << "context that's part of the current context stack." << std::endl
-              << "----------------------------------------------------" << std::endl
-              << "I will pick a new active context from the" << std::endl
-              << "context stack. Since this destruction happened" << std::endl
-              << "at an unspecified point in your code, your code" << std::endl
-              << "is making false assumptions about which" << std::endl
+              << "-----------------------------------------------------------" << std::endl
+              << "I will pick the next lower active context from the" << std::endl
+              << "context stack. Since this choice is happening" << std::endl
+              << "at an unspecified point in time, your code" << std::endl
+              << "may be making false assumptions about which" << std::endl
               << "context is active at what point." << std::endl
               << "Call detach() explicitly to avoid this warning." << std::endl
-              << "----------------------------------------------------" << std::endl;
+              << "-----------------------------------------------------------" << std::endl
+              << "If Python is terminating abnormally (eg. exiting upon an" << std::endl
+              << "unhandled exception), you may ignore this." << std::endl
+              << "-----------------------------------------------------------" << std::endl;
           detach();
         }
       }
