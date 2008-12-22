@@ -1,13 +1,12 @@
-#simple module to show the ploting of random data
+# simple module to show the plotting of random data
 
-import pycuda.gpuarray as cuda
 from matplotlib.pylab import *
+import pycuda.curandom as curandom
 
 size = 1000
 
 #random data generated on gpu
-a = cuda.array(size).randn()
-
+a = curandom.rand((size,)).get()
 
 subplot(211)
 plot(a)
