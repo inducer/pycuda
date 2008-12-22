@@ -883,11 +883,17 @@ namespace cuda
 
 
   // structured memcpy --------------------------------------------------------
+#if PY_VERSION_HEX >= 0x02050000
+  typedef Py_ssize_t PYCUDA_BUFFER_SIZE_T;
+#else
+  typedef int PYCUDA_BUFFER_SIZE_T;
+#endif
+
 #define MEMCPY_SETTERS \
     void set_src_host(py::object buf_py) \
     { \
       srcMemoryType = CU_MEMORYTYPE_HOST; \
-      Py_ssize_t len; \
+      PYCUDA_BUFFER_SIZE_T len; \
       if (PyObject_AsReadBuffer(buf_py.ptr(), &srcHost, &len)) \
         throw py::error_already_set(); \
     } \
@@ -907,7 +913,7 @@ namespace cuda
     void set_dst_host(py::object buf_py) \
     { \
       dstMemoryType = CU_MEMORYTYPE_HOST; \
-      Py_ssize_t len; \
+      PYCUDA_BUFFER_SIZE_T len; \
       if (PyObject_AsWriteBuffer(buf_py.ptr(), &dstHost, &len)) \
         throw py::error_already_set(); \
     } \

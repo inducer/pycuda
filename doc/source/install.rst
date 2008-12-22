@@ -66,7 +66,7 @@ or, if you are still using a C Shell, use this::
 
     setenv LD_LIBRARY_PATH $HOME/pool/lib:${LD_LIBRARY_PATH}
 
-or, if you're on OS X, use this:
+or, if you're on OS X, use this::
 
     export DYLD_LIBRARY_PATH=$HOME/pool/lib:${DYLD_LIBRARY_PATH}
 

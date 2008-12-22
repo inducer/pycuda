@@ -110,7 +110,7 @@ namespace
   void function_param_setv(function &f, int offset, py::object buffer)
   { 
     const void *buf;
-    Py_ssize_t len;
+    PYCUDA_BUFFER_SIZE_T len;
     if (PyObject_AsReadBuffer(buffer.ptr(), &buf, &len))
       throw py::error_already_set();
     f.param_setv(offset, const_cast<void *>(buf), len);
@@ -122,7 +122,7 @@ namespace
   module *module_from_buffer(py::object buffer)
   {
     const char *buf;
-    Py_ssize_t len;
+    PYCUDA_BUFFER_SIZE_T len;
     if (PyObject_AsCharBuffer(buffer.ptr(), &buf, &len))
       throw py::error_already_set();
     CUmodule mod;
@@ -198,7 +198,7 @@ namespace
   void py_memcpy_htod(CUdeviceptr dst, py::object src, py::object stream_py)
   {
     const void *buf;
-    Py_ssize_t len;
+    PYCUDA_BUFFER_SIZE_T len;
     if (PyObject_AsReadBuffer(src.ptr(), &buf, &len))
       throw py::error_already_set();
 
@@ -219,7 +219,7 @@ namespace
   void py_memcpy_dtoh(py::object dest, CUdeviceptr src, py::object stream_py)
   {
     void *buf;
-    Py_ssize_t len;
+    PYCUDA_BUFFER_SIZE_T len;
     if (PyObject_AsWriteBuffer(dest.ptr(), &buf, &len))
       throw py::error_already_set();
 
@@ -240,7 +240,7 @@ namespace
   void py_memcpy_htoa(array const &ary, unsigned int index, py::object src)
   {
     const void *buf;
-    Py_ssize_t len;
+    PYCUDA_BUFFER_SIZE_T len;
     if (PyObject_AsReadBuffer(src.ptr(), &buf, &len))
       throw py::error_already_set();
 
@@ -253,7 +253,7 @@ namespace
   void py_memcpy_atoh(py::object dst, array const &ary, unsigned int index)
   {
     void *buf;
-    Py_ssize_t len;
+    PYCUDA_BUFFER_SIZE_T len;
     if (PyObject_AsWriteBuffer(dst.ptr(), &buf, &len))
       throw py::error_already_set();
 
