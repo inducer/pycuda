@@ -270,7 +270,7 @@ namespace cuda
               << "at an unspecified point in time, your code" << std::endl
               << "may be making false assumptions about which" << std::endl
               << "context is active at what point." << std::endl
-              << "Call detach() explicitly to avoid this warning." << std::endl
+              << "Call Context.pop() to avoid this warning." << std::endl
               << "-----------------------------------------------------------" << std::endl
               << "If Python is terminating abnormally (eg. exiting upon an" << std::endl
               << "unhandled exception), you may ignore this." << std::endl
