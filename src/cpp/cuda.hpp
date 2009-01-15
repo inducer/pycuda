@@ -970,10 +970,12 @@ namespace cuda
       srcXInBytes = 0;
       srcY = 0;
       srcZ = 0;
+      srcLOD = 0;
 
       dstXInBytes = 0;
       dstY = 0;
       dstZ = 0;
+      dstLOD = 0;
     }
 
     MEMCPY_SETTERS;

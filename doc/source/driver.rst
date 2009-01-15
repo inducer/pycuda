@@ -437,7 +437,7 @@ Arrays and Textures
   Turn the two-dimensional :class:`numpy.ndarray` object *matrix* into an
   :class:`Array`. 
   The `order` argument can be either `"C"` or `"F"`. If
-  it is `"C"`, then `tex2D(x,y)` is going to map to fetch `matrix[y,x],
+  it is `"C"`, then `tex2D(x,y)` is going to fetch `matrix[y,x]`,
   and vice versa for for `"F"`.
 
 
@@ -574,17 +574,21 @@ Structured Memory Transfers
   :class:`Memcpy3D` has the same members as :class:`Memcpy2D`, and additionally
   all of the following:
 
+  .. attribute:: src_height
+   
+    Ignored when source is an :class:`Array`. May be 0 if Depth==1.
+
   .. attribute:: src_z
     
     Z offset of the origin of the copy. (initialized to 0)
 
-  .. attribute:: src_lod
-    
+  .. attribute:: dst_height
+   
+    Ignored when destination is an :class:`Array`. May be 0 if Depth==1.
+
   .. attribute:: dst_z
     
     Z offset of the destination of the copy. (initialized to 0)
-
-  .. attribute:: dst_lod
 
   .. attribute:: depth
 

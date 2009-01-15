@@ -266,6 +266,61 @@ class TestCuda(unittest.TestCase):
         del mem_b
         ctx2.detach()
 
+    def test_3d_texture(self):
+        # adapted from code by Nicolas Pinto
+        w = 2
+        h = 4
+        d = 8
+        shape = (w, h, d)
+
+        a = numpy.asarray(
+                numpy.random.randn(*shape),
+                dtype=numpy.float32, order="F")
+
+        descr = drv.ArrayDescriptor3D()
+        descr.width = w
+        descr.height = h
+        descr.depth = d
+        descr.format = drv.dtype_to_array_format(a.dtype)
+        descr.num_channels = 1
+        descr.flags = 0
+
+        ary = drv.Array(descr)
+
+        copy = drv.Memcpy3D()
+        copy.set_src_host(a)
+        copy.set_dst_array(ary)
+        copy.width_in_bytes = copy.src_pitch = a.strides[1]
+        copy.src_height = copy.height = h
+        copy.depth = d
+
+        copy()
+
+        mod = drv.SourceModule("""
+        texture<float, 3, cudaReadModeElementType> mtx_tex;
+
+        __global__ void copy_texture(float *dest)
+        {
+          int x = threadIdx.x;
+          int y = threadIdx.y;
+          int z = threadIdx.z;
+          int dx = blockDim.x;
+          int dy = blockDim.y;
+          int i = (z*dy + y)*dx + x;
+          dest[i] = tex3D(mtx_tex, x, y, z);
+          //dest[i] = x;
+        }
+        """)
+
+        copy_texture = mod.get_function("copy_texture")
+        mtx_tex = mod.get_texref("mtx_tex")
+
+        mtx_tex.set_array(ary)
+
+        dest = numpy.zeros(shape, dtype=numpy.float32, order="F")
+        copy_texture(drv.Out(dest), block=shape, texrefs=[mtx_tex])
+        assert la.norm(dest-a) == 0
+
 
 
 
