@@ -62,14 +62,16 @@ static inline unsigned bitlog2(unsigned long v)
 
 namespace
 {
-  class cuda_allocator
+  class cuda_allocator : public cuda::context_dependent
   {
     public:
       typedef CUdeviceptr pointer;
       typedef unsigned long size_type;
 
-      static pointer allocate(size_type s)
+      pointer allocate(size_type s)
       {
+        cuda::scoped_context_activation ca(get_context());
+
         CUdeviceptr devptr;
         CUresult status = cuMemAlloc(&devptr, s);
         if (status == CUDA_SUCCESS)
@@ -80,8 +82,9 @@ namespace
           throw cuda::error("cuda_allocator::allocate", status);
       }
 
-      static void free(pointer p)
+      void free(pointer p)
       {
+        cuda::scoped_context_activation ca(get_context());
         cuda::mem_free(p);
       }
   };
