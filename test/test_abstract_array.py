@@ -1,4 +1,5 @@
 #! /usr/bin/env python
+import pycuda.autoinit
 import pycuda.driver as drv
 import numpy
 import numpy.linalg as la
@@ -7,6 +8,7 @@ import pycuda.gpuarray as gpuarray
 import sys
 
 class TestAbstractArray(unittest.TestCase):                                      
+    __test__ = False
     """tests the array classes"""
 
     def make_test_array(self, array):
