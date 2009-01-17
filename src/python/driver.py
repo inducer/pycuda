@@ -409,7 +409,11 @@ def from_device_like(devptr, other_ary):
 @memoize
 def _get_nvcc_version(nvcc):
     from subprocess import Popen, PIPE
-    return Popen([nvcc, "--version"], stdout=PIPE).communicate()[0]
+    try:
+        return Popen([nvcc, "--version"], stdout=PIPE).communicate()[0]
+    except OSError, e:
+        raise OSError, "%s was not found (is it on the PATH?) [%s]" % (
+                nvcc, str(e))
 
 
 
