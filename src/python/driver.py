@@ -442,7 +442,10 @@ def _do_compile(source, options, keep, nvcc, cache_dir):
     file_dir = mkdtemp()
     file_root = "kernel"
 
-    outf = open(join(file_dir, file_root + ".cu"), "w")
+    cu_file_name = file_root + ".cu"
+    cu_file_path = join(file_dir, cu_file_name)
+
+    outf = open(cu_file_path, "w")
     outf.write(str(source))
     outf.close()
 
@@ -456,14 +459,14 @@ def _do_compile(source, options, keep, nvcc, cache_dir):
     try:
         result = call([nvcc, "--cubin"]
                 + options
-                + [file_root + ".cu"],
+                + [cu_file_name],
             cwd=file_dir)
     except OSError, e:
         raise OSError, "%s was not found (is it on the PATH?) [%s]" % (
                 nvcc, str(e))
 
     if result != 0:
-        raise CompileError, "module compilation failed"
+        raise CompileError, "nvcc compilation of %s failed" % cu_file_path
 
     cubin = open(join(file_dir, file_root + ".cubin"), "r").read()
 

@@ -1,4 +1,5 @@
 #include <vector>
+#include "tools.hpp"
 #include "wrap_helpers.hpp"
 #include <cuda.hpp>
 #include <boost/ptr_container/ptr_map.hpp>
@@ -72,14 +73,7 @@ namespace
       {
         cuda::scoped_context_activation ca(get_context());
 
-        CUdeviceptr devptr;
-        CUresult status = cuMemAlloc(&devptr, s);
-        if (status == CUDA_SUCCESS)
-          return devptr;
-        else if (status == CUDA_ERROR_OUT_OF_MEMORY)
-          throw std::bad_alloc();
-        else 
-          throw cuda::error("cuda_allocator::allocate", status);
+        return cuda::mem_alloc(s);
       }
 
       void free(pointer p)
@@ -115,6 +109,7 @@ namespace
 
       // An active block is one that is in use by the application.
       unsigned m_active_blocks;
+
 
     public:
       memory_pool()
@@ -209,60 +204,48 @@ namespace
         bin_t &bin = get_bin(bin_nr);
         
         if (bin.size())
+          return pop_block_from_bin(bin, size);
+
+        size_type alloc_sz = alloc_size(bin_nr);
+
+        assert(bin_number(alloc_sz) == bin);
+
+        try { return get_from_allocator(alloc_sz); }
+        catch (cuda::error &e)
         {
-          pointer result = bin.back();
-          bin.pop_back();
-          dec_held_blocks();
-          ++m_active_blocks;
-          return result;
+          // Not OOM? Propagate.
+          if (e.code() != CUDA_ERROR_OUT_OF_MEMORY)
+            throw;
         }
-        else
+
+        pycuda::run_python_gc();
+        if (bin.size())
+          return pop_block_from_bin(bin, size);
+
+        while (try_to_free_memory())
         {
-          size_type alloc_sz = alloc_size(bin_nr);
-
-          assert(bin_number(alloc_sz) == bin);
-
-          while (true)
+          try { return get_from_allocator(alloc_sz); }
+          catch (cuda::error &e)
           {
-            try
-            {
-              pointer result = m_allocator.allocate(alloc_sz);
-              ++m_active_blocks;
-
-              return result;
-            }
-            catch (std::bad_alloc)
-            {
-              // allocation failed, free up some memory
-
-              bool freed_some = false;
-              BOOST_FOREACH(bin_pair_t bin_pair, 
-                  // free largest stuff first
-                  std::make_pair(m_container.rbegin(), m_container.rend()))
-              {
-                bin_t &bin = *bin_pair.second;
-
-                if (bin.size())
-                {
-                  m_allocator.free(bin.back());
-                  bin.pop_back();
-                  dec_held_blocks();
-                  freed_some = true;
-                  break;
-                }
-              }
-
-              if (!freed_some)
-                throw;
-            }
+            // Not OOM? Propagate.
+            if (e.code() != CUDA_ERROR_OUT_OF_MEMORY)
+              throw;
           }
+
         }
+
+        throw cuda::error(
+            "memory_pool::allocate",
+            CUDA_ERROR_OUT_OF_MEMORY,
+            "failed to free memory for allocation");
       }
 
       void free(pointer p, size_type size)
       {
         --m_active_blocks;
+
         inc_held_blocks();
+
         get_bin(bin_number(size)).push_back(p);
 
         if (m_active_blocks == 0)
@@ -282,6 +265,7 @@ namespace
           {
             m_allocator.free(bin.back());
             bin.pop_back();
+            
             dec_held_blocks();
           }
         }
@@ -295,6 +279,47 @@ namespace
       unsigned held_blocks()
       { return m_held_blocks; }
 
+      bool try_to_free_memory()
+      {
+        BOOST_FOREACH(bin_pair_t bin_pair, 
+            // free largest stuff first
+            std::make_pair(m_container.rbegin(), m_container.rend()))
+        {
+          bin_t &bin = *bin_pair.second;
+
+          if (bin.size())
+          {
+            m_allocator.free(bin.back());
+            bin.pop_back();
+
+            dec_held_blocks();
+
+            return true;
+          }
+        }
+
+        return false;
+      }
+
+    private:
+      pointer get_from_allocator(size_type alloc_sz)
+      {
+        pointer result = m_allocator.allocate(alloc_sz);
+        ++m_active_blocks;
+
+        return result;
+      }
+
+      pointer pop_block_from_bin(bin_t &bin, size_type size)
+      {
+        pointer result = bin.back();
+        bin.pop_back();
+
+        dec_held_blocks();
+        ++m_active_blocks;
+
+        return result;
+      }
   };
 
 

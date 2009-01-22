@@ -166,7 +166,7 @@ def main():
                     [
                         "src/cpp/cuda.cpp", 
                         "src/wrapper/wrap_cudadrv.cpp", 
-                        "src/wrapper/tools.cpp", 
+                        "src/wrapper/mempool.cpp", 
                         ],
                     include_dirs=INCLUDE_DIRS + EXTRA_INCLUDE_DIRS,
                     library_dirs=LIBRARY_DIRS + conf["CUDADRV_LIB_DIR"],

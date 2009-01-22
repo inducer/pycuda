@@ -4,6 +4,7 @@
 #include <numeric>
 #include <algorithm>
 
+#include "tools.hpp"
 #include "wrap_helpers.hpp"
 #include <boost/python/stl_iterator.hpp>
 #include "numpy_init.hpp"
@@ -71,6 +72,11 @@ namespace
   }
 
 
+
+  device_allocation *mem_alloc_wrap(unsigned long bytes)
+  {
+    return new device_allocation(pycuda::mem_alloc_gc(bytes));
+  }
 
   py::tuple mem_alloc_pitch_wrap(
       unsigned int width, unsigned int height, unsigned int access_size)
@@ -454,7 +460,7 @@ BOOST_PYTHON_MODULE(_driver)
   }
 
   DEF_SIMPLE_FUNCTION(mem_get_info);
-  py::def("mem_alloc", make_device_allocation, 
+  py::def("mem_alloc", mem_alloc_wrap, 
       py::return_value_policy<py::manage_new_object>());
   py::def("mem_alloc_pitch", mem_alloc_pitch_wrap,
       py::args("width", "height", "access_size"));

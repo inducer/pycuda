@@ -836,12 +836,6 @@ namespace cuda
       { return m_devptr; }
   };
 
-  inline 
-  device_allocation *make_device_allocation(unsigned long bytes)
-  {
-    return new device_allocation(mem_alloc(bytes));
-  }
-
   inline unsigned int mem_alloc_pitch(
       std::auto_ptr<device_allocation> &da,
         unsigned int width, unsigned int height, unsigned int access_size)
