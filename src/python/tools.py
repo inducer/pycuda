@@ -35,52 +35,76 @@ from pycuda._driver import bitlog2
 
 
 class DebugMemoryPool(DeviceMemoryPool):
-    def __init__(self):
+    def __init__(self, interactive=True, logfile=None):
         DeviceMemoryPool.__init__(self)
         self.last_free, _ = cuda.mem_get_info()
+        self.interactive = interactive
+
+        if logfile is None:
+            import sys
+            logfile = sys.stdout
+
+        self.logfile = logfile
 
         from weakref import WeakKeyDictionary
         self.blocks = WeakKeyDictionary()
 
-        from pytools.diskdict import DiskDict
-        self.stacktrace_mnemonics = DiskDict("pycuda-stacktrace-mnemonics")
+        if interactive:
+            from pytools.diskdict import DiskDict
+            self.stacktrace_mnemonics = DiskDict("pycuda-stacktrace-mnemonics")
 
     def allocate(self, size):
-        print "  Allocation of size %d occurring (mem: last_free:%d, free: %d, total:%d) (pool: held:%d, active:%d):" % (
-                (size, self.last_free) 
-                + cuda.mem_get_info()
-                + (self.held_blocks, self.active_blocks))
+        from traceback import extract_stack
+        stack = tuple(frm[2] for frm in extract_stack())
+        description = self.describe(stack, size)
+
         histogram = {}
         for bsize, descr in self.blocks.itervalues():
             histogram[bsize, descr] = histogram.get((bsize, descr), 0) + 1
 
-        for (bsize, descr), count in histogram.iteritems():
-            print "  %s (%d bytes): %dx" % (descr, bsize, count)
+        from pytools import common_prefix
+        cpfx = common_prefix(descr for bsize, descr in histogram)
 
-        from traceback import extract_stack
-        stack = tuple(frm[2] for frm in extract_stack())
+        print >> self.logfile, \
+                "\n  Allocation of size %d occurring " \
+                "(mem: last_free:%d, free: %d, total:%d) (pool: held:%d, active:%d):" \
+                "\n      at: %s" % (
+                (size, self.last_free) 
+                + cuda.mem_get_info()
+                + (self.held_blocks, self.active_blocks, 
+                    description))
 
-        raw_input("  [Enter]")
+        hist_items = sorted(list(histogram.iteritems()))
+        for (bsize, descr), count in hist_items:
+            print >> self.logfile, \
+                    "  %s (%d bytes): %dx" % (descr[len(cpfx):], bsize, count)
+
+        if self.interactive:
+            raw_input("  [Enter]")
+
         result = DeviceMemoryPool.allocate(self, size)
-        self.blocks[result] = size, self.describe(stack, size)
+        self.blocks[result] = size, description
         self.last_free, _ = cuda.mem_get_info()
         return result
 
     def describe(self, stack, size):
-        try:
-            return self.stacktrace_mnemonics[stack, size]
-        except KeyError:
-            print size, stack
-            while True:
-                mnemonic = raw_input("Enter mnemonic or [Enter] for more info:")
-                if mnemonic == '':
-                    from traceback import print_stack
-                    print_stack()
-                else:
-                    break
-            self.stacktrace_mnemonics[stack, size] = mnemonic
-            return mnemonic
-        
+        if not self.interactive:
+            return "|".join(stack)
+        else:
+            try:
+                return self.stacktrace_mnemonics[stack, size]
+            except KeyError:
+                print size, stack
+                while True:
+                    mnemonic = raw_input("Enter mnemonic or [Enter] for more info:")
+                    if mnemonic == '':
+                        from traceback import print_stack
+                        print_stack()
+                    else:
+                        break
+                self.stacktrace_mnemonics[stack, size] = mnemonic
+                return mnemonic
+
 
 
 
