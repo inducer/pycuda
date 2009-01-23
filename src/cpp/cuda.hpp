@@ -986,6 +986,21 @@ namespace cuda
 
 
   // host memory --------------------------------------------------------------
+  inline void *mem_alloc_host(unsigned int size)
+  {
+    void *m_data;
+    CUDAPP_CALL_GUARDED(cuMemAllocHost, (&m_data, size));
+    return m_data;
+  }
+
+  inline void mem_free_host(void *ptr)
+  {
+    CUDAPP_CALL_GUARDED(cuMemFreeHost, (ptr));
+  }
+
+
+
+
   struct host_allocation : public boost::noncopyable
   {
     private:
@@ -993,11 +1008,11 @@ namespace cuda
 
     public:
       host_allocation(unsigned bytesize)
-        : m_data(0)
-      { CUDAPP_CALL_GUARDED(cuMemAllocHost, (&m_data, bytesize)); }
+        : m_data(mem_alloc_host(bytesize))
+      { }
 
       ~host_allocation()
-      { CUDAPP_CALL_GUARDED(cuMemFreeHost, (m_data)); }
+      { mem_free_host(m_data); }
       
       void *data()
       { return m_data; }

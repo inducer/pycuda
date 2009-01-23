@@ -29,8 +29,10 @@ OTHER DEALINGS IN THE SOFTWARE.
 
 import pycuda.driver as cuda
 import pycuda.gpuarray as gpuarray
-from pycuda._driver import DeviceMemoryPool 
-from pycuda._driver import bitlog2
+from pycuda._driver import \
+        bitlog2, \
+        DeviceMemoryPool, \
+        PageLockedMemoryPool
 
 
 

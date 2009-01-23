@@ -165,6 +165,7 @@ def main():
                 NumpyExtension("_driver", 
                     [
                         "src/cpp/cuda.cpp", 
+                        "src/cpp/bitlog.cpp", 
                         "src/wrapper/wrap_cudadrv.cpp", 
                         "src/wrapper/mempool.cpp", 
                         ],

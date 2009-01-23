@@ -7,7 +7,6 @@
 #include "tools.hpp"
 #include "wrap_helpers.hpp"
 #include <boost/python/stl_iterator.hpp>
-#include "numpy_init.hpp"
 
 
 
@@ -147,18 +146,6 @@ namespace
 
 
 
-  inline
-  npy_intp size_from_dims(int ndim, const npy_intp *dims)
-  {
-    if (ndim != 0)
-      return std::accumulate(dims, dims+ndim, 1, std::multiplies<npy_intp>());
-    else
-      return 1;
-  }
-
-
-
-
   py::handle<> pagelocked_empty(py::object shape, py::object dtype, py::object order_py)
   {
     PyArray_Descr *tp_descr;
@@ -173,7 +160,7 @@ namespace
 
     std::auto_ptr<host_allocation> alloc(
         new host_allocation(
-          tp_descr->elsize*size_from_dims(dims.size(), &dims.front())));
+          tp_descr->elsize*pycuda::size_from_dims(dims.size(), &dims.front())));
 
     NPY_ORDER order = PyArray_CORDER;
     PyArray_OrderConverter(order_py.ptr(), &order);

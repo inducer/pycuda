@@ -2,84 +2,66 @@
 #include "tools.hpp"
 #include "wrap_helpers.hpp"
 #include <cuda.hpp>
-#include <boost/ptr_container/ptr_map.hpp>
-#include <boost/cstdint.hpp>
-#include <boost/foreach.hpp>
-#include <climits>
+#include <mempool.hpp>
+#include <boost/python/stl_iterator.hpp>
 
 
 
 
-/* from http://graphics.stanford.edu/~seander/bithacks.html */
-static const char log_table_8[] = 
-{
-
-  0, 0, 1, 1, 2, 2, 2, 2, 3, 3, 3, 3, 3, 3, 3, 3,
-  4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4,
-  5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5,
-  5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5,
-  6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6,
-  6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6,
-  6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6,
-  6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6,
-  7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7,
-  7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7,
-  7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7,
-  7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7,
-  7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7,
-  7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7,
-  7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7,
-  7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7
-};
-
-static inline unsigned bitlog2_16(boost::uint16_t v)
-{
-  if (unsigned long t = v >> 8)
-    return 8+log_table_8[t];
-  else 
-    return log_table_8[v];
-}
-
-static inline unsigned bitlog2_32(boost::uint32_t v)
-{
-  if (uint16_t t = v >> 16)
-    return 16+bitlog2_16(t);
-  else 
-    return bitlog2_16(v);
-}
-
-static inline unsigned bitlog2(unsigned long v)
-{
-#if (ULONG_MAX != 4294967295)
-  if (boost::uint32_t t = v >> 32)
-    return 32+bitlog2_32(t);
-  else 
-#endif
-    return bitlog2_32(v);
-}
+namespace py = boost::python;
 
 
 
 
 namespace
 {
-  class cuda_allocator : public cuda::context_dependent
+  class device_allocator : public cuda::context_dependent
   {
     public:
-      typedef CUdeviceptr pointer;
+      typedef CUdeviceptr pointer_type;
       typedef unsigned long size_type;
 
-      pointer allocate(size_type s)
+      pointer_type allocate(size_type s)
       {
         cuda::scoped_context_activation ca(get_context());
 
         return cuda::mem_alloc(s);
       }
 
-      void free(pointer p)
+      void free(pointer_type p)
       {
         cuda::scoped_context_activation ca(get_context());
         cuda::mem_free(p);
+      }
+
+      void try_release_blocks()
+      {
+        pycuda::run_python_gc();
+      }
+  };
+
+
+
+
+  class host_allocator
+  {
+    public:
+      typedef void *pointer_type;
+      typedef unsigned int size_type;
+
+      pointer_type allocate(size_type s)
+      {
+        return cuda::mem_alloc_host(s);
+      }
+
+      void free(pointer_type p)
+      {
+        cuda::mem_free_host(p);
+      }
+
+      void try_release_blocks()
+      {
+        pycuda::run_python_gc();
       }
   };
 
@@ -87,293 +69,48 @@ namespace
 
 
   template<class Allocator>
-  class memory_pool : public cuda::explicit_context_dependent
+  class context_dependent_memory_pool : 
+    public pycuda::memory_pool<Allocator>,
+    public cuda::explicit_context_dependent
   {
-    public:
-      typedef typename Allocator::pointer pointer;
-      typedef typename Allocator::size_type size_type;
-
-    private:
-      typedef boost::uint32_t bin_nr_t;
-      typedef std::vector<pointer> bin_t;
-
-      typedef boost::ptr_map<bin_nr_t, bin_t > container_t;
-      container_t m_container;
-      typedef typename container_t::value_type bin_pair_t;
-
-      Allocator m_allocator;
-
-      // A held block is one that's been released by the application, but that
-      // we are keeping around to dish out again.
-      unsigned m_held_blocks;
-
-      // An active block is one that is in use by the application.
-      unsigned m_active_blocks;
-
-
-    public:
-      memory_pool()
-        : m_held_blocks(0), m_active_blocks(0)
-      {
-      }
-      
-      ~memory_pool()
-      {
-        free_held();
-      }
-
-      static const unsigned mantissa_bits = 2;
-      static const unsigned mantissa_mask = (1 << mantissa_bits) - 1;
-
-      static size_type signed_left_shift(size_type x, signed shift_amount)
-      {
-        if (shift_amount < 0)
-          return x >> -shift_amount;
-        else
-          return x << shift_amount;
-      }
-
-      static size_type signed_right_shift(size_type x, signed shift_amount)
-      {
-        if (shift_amount < 0)
-          return x << -shift_amount;
-        else
-          return x >> shift_amount;
-      }
-
-      static bin_nr_t bin_number(size_type size)
-      {
-        signed l = bitlog2(size);
-        size_type shifted = signed_right_shift(size, l-signed(mantissa_bits));
-        if (size && (shifted & (1 << mantissa_bits)) == 0)
-          throw std::runtime_error("memory_pool::bin_number: bitlog2 fault");
-        size_type chopped = shifted & mantissa_mask;
-        return l << mantissa_bits | chopped;
-      }
-
-      static size_type alloc_size(bin_nr_t bin)
-      {
-        bin_nr_t exponent = bin >> mantissa_bits;
-        bin_nr_t mantissa = bin & mantissa_mask;
-
-        size_type ones = signed_left_shift(1, 
-            signed(exponent)-signed(mantissa_bits)
-            );
-        if (ones) ones -= 1;
-
-        size_type head = signed_left_shift(
-           (1<<mantissa_bits) | mantissa, 
-            signed(exponent)-signed(mantissa_bits));
-        if (ones & head)
-          throw std::runtime_error("memory_pool::alloc_size: bit-counting fault");
-        return head | ones;
-      }
-
     protected:
-      bin_t &get_bin(bin_nr_t bin_nr)
-      {
-        typename container_t::iterator it = m_container.find(bin_nr);
-        if (it == m_container.end())
-        {
-          bin_t *new_bin = new bin_t;
-          m_container.insert(bin_nr, new_bin);
-          return *new_bin;
-        }
-        else
-          return *it->second;
-      }
+      void start_holding_blocks()
+      { acquire_context(); }
 
-      void inc_held_blocks()
-      {
-        if (m_held_blocks == 0)
-          acquire_context();
-        ++m_held_blocks;
-      }
-
-      void dec_held_blocks()
-      {
-        --m_held_blocks;
-        if (m_held_blocks == 0)
-          release_context();
-      }
-
-    public:
-      pointer allocate(size_type size)
-      {
-        bin_nr_t bin_nr = bin_number(size);
-        bin_t &bin = get_bin(bin_nr);
-        
-        if (bin.size())
-          return pop_block_from_bin(bin, size);
-
-        size_type alloc_sz = alloc_size(bin_nr);
-
-        assert(bin_number(alloc_sz) == bin);
-
-        try { return get_from_allocator(alloc_sz); }
-        catch (cuda::error &e)
-        {
-          // Not OOM? Propagate.
-          if (e.code() != CUDA_ERROR_OUT_OF_MEMORY)
-            throw;
-        }
-
-        pycuda::run_python_gc();
-        if (bin.size())
-          return pop_block_from_bin(bin, size);
-
-        while (try_to_free_memory())
-        {
-          try { return get_from_allocator(alloc_sz); }
-          catch (cuda::error &e)
-          {
-            // Not OOM? Propagate.
-            if (e.code() != CUDA_ERROR_OUT_OF_MEMORY)
-              throw;
-          }
-
-        }
-
-        throw cuda::error(
-            "memory_pool::allocate",
-            CUDA_ERROR_OUT_OF_MEMORY,
-            "failed to free memory for allocation");
-      }
-
-      void free(pointer p, size_type size)
-      {
-        --m_active_blocks;
-
-        inc_held_blocks();
-
-        get_bin(bin_number(size)).push_back(p);
-
-        if (m_active_blocks == 0)
-        {
-          // last deallocation, allow context to go away.
-          free_held();
-        }
-      }
-
-      void free_held()
-      {
-        BOOST_FOREACH(bin_pair_t bin_pair, m_container)
-        {
-          bin_t &bin = *bin_pair.second;
-
-          while (bin.size())
-          {
-            m_allocator.free(bin.back());
-            bin.pop_back();
-            
-            dec_held_blocks();
-          }
-        }
-
-        assert(m_held_blocks == 0);
-      }
-
-      unsigned active_blocks()
-      { return m_active_blocks; }
-
-      unsigned held_blocks()
-      { return m_held_blocks; }
-
-      bool try_to_free_memory()
-      {
-        BOOST_FOREACH(bin_pair_t bin_pair, 
-            // free largest stuff first
-            std::make_pair(m_container.rbegin(), m_container.rend()))
-        {
-          bin_t &bin = *bin_pair.second;
-
-          if (bin.size())
-          {
-            m_allocator.free(bin.back());
-            bin.pop_back();
-
-            dec_held_blocks();
-
-            return true;
-          }
-        }
-
-        return false;
-      }
-
-    private:
-      pointer get_from_allocator(size_type alloc_sz)
-      {
-        pointer result = m_allocator.allocate(alloc_sz);
-        ++m_active_blocks;
-
-        return result;
-      }
-
-      pointer pop_block_from_bin(bin_t &bin, size_type size)
-      {
-        pointer result = bin.back();
-        bin.pop_back();
-
-        dec_held_blocks();
-        ++m_active_blocks;
-
-        return result;
-      }
+      void stop_holding_blocks()
+      { release_context(); }
   };
 
 
 
 
   class pooled_device_allocation 
-    : public cuda::context_dependent, public boost::noncopyable
-  {
+    : public cuda::context_dependent, 
+    public pycuda::pooled_allocation<context_dependent_memory_pool<device_allocator> >
+  { 
     private:
-      typedef memory_pool<cuda_allocator> pool_type;
-      boost::shared_ptr<pool_type> m_pool;
-
-      CUdeviceptr m_devptr;
-      unsigned long m_size;
-      bool m_valid;
+      typedef 
+        pycuda::pooled_allocation<context_dependent_memory_pool<device_allocator> >
+        super;
 
     public:
-      typedef pool_type::size_type size_type;
+      pooled_device_allocation(
+          boost::shared_ptr<super::pool_type> p, super::size_type s)
+        : super(p, s)
+      { }
 
-      pooled_device_allocation(boost::shared_ptr<pool_type> p, 
-          CUdeviceptr devptr, size_type size)
-        : m_pool(p), m_devptr(devptr), m_size(size), m_valid(true)
-      { 
-      }
-
-      void free()
-      {
-        if (m_valid)
-          m_pool->free(m_devptr, m_size);
-        else
-          throw cuda::error("pooled_device_allocation::free", CUDA_ERROR_INVALID_HANDLE);
-      }
-
-      ~pooled_device_allocation()
-      {
-        if (m_valid)
-          m_pool->free(m_devptr, m_size);
-      }
-
-      operator CUdeviceptr() const
-      { return m_devptr; }
-
-      unsigned long size() const
-      { return m_size; }
+      operator CUdeviceptr()
+      { return ptr(); }
   };
 
 
 
 
-  pooled_device_allocation *pool_allocate(
-      boost::shared_ptr<memory_pool<cuda_allocator> > pool,
-      memory_pool<cuda_allocator>::size_type sz)
+  pooled_device_allocation *device_pool_allocate(
+      boost::shared_ptr<context_dependent_memory_pool<device_allocator> > pool,
+      context_dependent_memory_pool<device_allocator>::size_type sz)
   {
-    return new pooled_device_allocation(pool, pool->allocate(sz), sz);
+    return new pooled_device_allocation(pool, sz);
   }
 
 
@@ -381,7 +118,86 @@ namespace
 
   PyObject *pooled_device_allocation_to_long(pooled_device_allocation const &da)
   {
-    return PyLong_FromUnsignedLong((CUdeviceptr) da);
+    return PyLong_FromUnsignedLong(da.ptr());
+  }
+
+
+  
+  class pooled_host_allocation 
+    : public pycuda::pooled_allocation<pycuda::memory_pool<host_allocator> >
+  {
+    private:
+      typedef 
+        pycuda::pooled_allocation<pycuda::memory_pool<host_allocator> >
+        super;
+
+    public:
+      pooled_host_allocation(
+          boost::shared_ptr<super::pool_type> p, super::size_type s)
+        : super(p, s)
+      { }
+  };
+
+
+
+
+  py::handle<> host_pool_allocate(
+      boost::shared_ptr<pycuda::memory_pool<host_allocator> > pool,
+      py::object shape, py::object dtype, py::object order_py)
+  {
+    PyArray_Descr *tp_descr;
+    if (PyArray_DescrConverter(dtype.ptr(), &tp_descr) != NPY_SUCCEED)
+      throw py::error_already_set();
+
+    std::vector<npy_intp> dims;
+    std::copy(
+        py::stl_input_iterator<npy_intp>(shape),
+        py::stl_input_iterator<npy_intp>(),
+        back_inserter(dims));
+
+    std::auto_ptr<pooled_host_allocation> alloc(
+        new pooled_host_allocation(
+          pool, tp_descr->elsize*pycuda::size_from_dims(dims.size(), &dims.front())));
+
+    NPY_ORDER order = PyArray_CORDER;
+    PyArray_OrderConverter(order_py.ptr(), &order);
+
+    int flags = 0;
+    if (order == PyArray_FORTRANORDER)
+      flags |= NPY_FARRAY;
+    else if (order == PyArray_CORDER)
+      flags |= NPY_CARRAY;
+    else
+      throw std::runtime_error("unrecognized order specifier");
+
+    py::handle<> result = py::handle<>(PyArray_NewFromDescr(
+        &PyArray_Type, tp_descr,
+        dims.size(), &dims.front(), /*strides*/ NULL,
+        alloc->ptr(), flags, /*obj*/NULL));
+
+    py::handle<> alloc_py(handle_from_new_ptr(alloc.release()));
+    PyArray_BASE(result.get()) = alloc_py.get();
+    Py_INCREF(alloc_py.get());
+
+    return result;
+  }
+
+
+
+  template<class Wrapper>
+  void expose_memory_pool(Wrapper &wrapper)
+  {
+    typedef typename Wrapper::wrapped_type cl;
+    wrapper
+      .add_property("held_blocks", &cl::held_blocks)
+      .add_property("active_blocks", &cl::active_blocks)
+      .DEF_SIMPLE_METHOD(bin_number)
+      .DEF_SIMPLE_METHOD(alloc_size)
+      .DEF_SIMPLE_METHOD(free_held)
+      .DEF_SIMPLE_METHOD(stop_holding)
+      .staticmethod("bin_number")
+      .staticmethod("alloc_size")
+      ;
   }
 }
 
@@ -390,34 +206,54 @@ namespace
 
 void pycuda_expose_tools()
 {
-  namespace py = boost::python;
-
-  py::def("bitlog2", bitlog2);
+  py::def("bitlog2", pycuda::bitlog2);
 
   {
-    typedef memory_pool<cuda_allocator> cl;
-    py::class_<cl, boost::noncopyable, boost::shared_ptr<cl> >("DeviceMemoryPool")
-      .DEF_SIMPLE_METHOD(free_held)
-      .def("allocate", pool_allocate,
+    typedef context_dependent_memory_pool<device_allocator> cl;
+
+    py::class_<
+      cl, boost::noncopyable, 
+      boost::shared_ptr<cl> > wrapper("DeviceMemoryPool");
+    wrapper
+      .def("allocate", device_pool_allocate,
           py::return_value_policy<py::manage_new_object>())
-      .add_property("held_blocks", &cl::held_blocks)
-      .add_property("active_blocks", &cl::active_blocks)
-      .DEF_SIMPLE_METHOD(bin_number)
-      .DEF_SIMPLE_METHOD(alloc_size)
-      .staticmethod("bin_number")
-      .staticmethod("alloc_size")
       ;
+
+    expose_memory_pool(wrapper);
   }
+
+  {
+    typedef pycuda::memory_pool<host_allocator> cl;
+
+    py::class_<
+      cl, boost::noncopyable, 
+      boost::shared_ptr<cl> > wrapper("PageLockedMemoryPool");
+    wrapper
+      .def("allocate", host_pool_allocate,
+          (py::arg("shape"), py::arg("dtype"), py::arg("order")="C"));
+      ;
+
+    expose_memory_pool(wrapper);
+  }
+
   {
     typedef pooled_device_allocation cl;
     py::class_<cl, boost::noncopyable>(
         "PooledDeviceAllocation", py::no_init)
       .DEF_SIMPLE_METHOD(free)
-      .def("__int__", &cl::operator CUdeviceptr)
+      .def("__int__", &cl::ptr)
       .def("__long__", pooled_device_allocation_to_long)
       .def("__len__", &cl::size)
       ;
 
     py::implicitly_convertible<pooled_device_allocation, CUdeviceptr>();
+  }
+
+  {
+    typedef pooled_host_allocation cl;
+    py::class_<cl, boost::noncopyable>(
+        "PooledHostAllocation", py::no_init)
+      .DEF_SIMPLE_METHOD(free)
+      ;
   }
 }
