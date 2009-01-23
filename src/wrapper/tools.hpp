@@ -6,12 +6,26 @@
 
 #include <cuda.hpp>
 #include <boost/python.hpp>
+#include <numeric>
+#include "numpy_init.hpp"
 
 
 
 
 namespace pycuda
 {
+  inline
+  npy_intp size_from_dims(int ndim, const npy_intp *dims)
+  {
+    if (ndim != 0)
+      return std::accumulate(dims, dims+ndim, 1, std::multiplies<npy_intp>());
+    else
+      return 1;
+  }
+
+
+
+
   inline void run_python_gc()
   {
     namespace py = boost::python;
