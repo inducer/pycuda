@@ -308,6 +308,12 @@ Global Device Memory
   Objects of this type can be cast to :class:`int` to obtain a linear index
   into this :class:`Context`'s memory.
 
+  .. method:: free()
+    
+    Release the held device memory now instead of when this object
+    becomes unreachable. Any further use of the object is an error
+    and will lead to undefined behavior.
+
 
 Pagelocked Host Memory
 ^^^^^^^^^^^^^^^^^^^^^^
@@ -335,6 +341,22 @@ Pagelocked Host Memory
 
   Allocate a pagelocked :mod:`numpy` array with the same shape, dtype and order
   as *array*. Initialize it to 0.
+
+The :class:`numpy.ndarray` instances returned by these functions 
+have an attribute *base* that references an object of type
+
+.. class:: HostAllocation
+
+  An object representing an allocation of pagelocked 
+  host memory.  Once this object is deleted, its associated 
+  device memory is freed. 
+
+  .. method:: free()
+    
+    Release the held memory now instead of when this object
+    becomes unreachable. Any further use of the object (or its 
+    associated :module:`numpy` array) is an error
+    and will lead to undefined behavior.
 
 Arrays and Textures
 ^^^^^^^^^^^^^^^^^^^
@@ -367,6 +389,12 @@ Arrays and Textures
 
   *descriptor* can be of type :class:`ArrayDescriptor` or
   :class:`ArrayDescriptor3D`.
+
+  .. method::  free()
+
+    Release the array and its device memory now instead of when 
+    this object becomes unreachable. Any further use of the 
+    object is an error and will lead to undefined behavior.
 
   .. method::  get_descriptor()
 

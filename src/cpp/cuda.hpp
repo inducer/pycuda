@@ -532,11 +532,19 @@ namespace cuda
       { }
 
       ~array()
-      { 
+      { free(); }
+
+      void free()
+      {
         if (m_managed)
         {
-          scoped_context_activation ca(get_context());
-          CUDAPP_CALL_GUARDED(cuArrayDestroy, (m_array)); 
+          {
+            scoped_context_activation ca(get_context());
+            CUDAPP_CALL_GUARDED(cuArrayDestroy, (m_array)); 
+          }
+
+          m_managed = false;
+          release_context();
         }
       }
 
@@ -1012,7 +1020,16 @@ namespace cuda
       { }
 
       ~host_allocation()
-      { mem_free_host(m_data); }
+      { free(); }
+
+      void free()
+      {
+        if (m_data)
+        {
+          mem_free_host(m_data); 
+          m_data = 0;
+        }
+      }
       
       void *data()
       { return m_data; }

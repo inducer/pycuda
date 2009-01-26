@@ -443,6 +443,7 @@ BOOST_PYTHON_MODULE(_driver)
   {
     typedef host_allocation cl;
     py::class_<cl, boost::noncopyable>("HostAllocation", py::no_init)
+      .DEF_SIMPLE_METHOD(free)
       ;
   }
 
@@ -596,6 +597,7 @@ BOOST_PYTHON_MODULE(_driver)
     typedef array cl;
     py::class_<cl, shared_ptr<cl>, boost::noncopyable>
       ("Array", py::init<const CUDA_ARRAY_DESCRIPTOR &>())
+      .DEF_SIMPLE_METHOD(free)
       .DEF_SIMPLE_METHOD(get_descriptor)
 #if CUDA_VERSION >= 2000
       .def(py::init<const CUDA_ARRAY3D_DESCRIPTOR &>())
