@@ -12,6 +12,11 @@ The :class:`GPUArray` Array Class
   :class:`pycuda.driver.Stream` *stream* is specified, all computations on
   *self* are sequenced into it.
 
+  .. attribute :: gpudata
+    
+    The :class:`DeviceAllocation` instance created for the memory that backs
+    this :class:`GPUArray`.
+
   .. method :: set(ary, stream=None)
 
     Transfer the contents the :class:`numpy.ndarray` object *ary*
