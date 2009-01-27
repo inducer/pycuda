@@ -13,6 +13,7 @@ def get_config_schema():
         LibraryDir("BOOST", []),
         Libraries("BOOST_PYTHON", ["boost_python-gcc42-mt"]),
 
+        Switch("CUDA_TRACE", False, "Enable CUDA API tracing"),
         Option("CUDA_ROOT", help="Path to the CUDA toolkit"),
         IncludeDir("CUDA", None),
 
@@ -56,7 +57,7 @@ def search_on_path(filename):
 def main():
     import glob
     from aksetup_helper import hack_distutils, get_config, setup, \
-            PyUblasExtension, NumpyExtension
+            NumpyExtension
 
     hack_distutils()
     conf = get_config(get_config_schema())
@@ -84,6 +85,9 @@ def main():
     EXTRA_INCLUDE_DIRS = []
     EXTRA_LIBRARY_DIRS = []
     EXTRA_LIBRARIES = []
+
+    if conf["CUDA_TRACE"]:
+        EXTRA_DEFINES["CUDAPP_TRACE_CUDA"] = 1
 
     INCLUDE_DIRS = ['src/cpp'] + conf["BOOST_INC_DIR"] + conf["CUDA_INC_DIR"]
     conf["USE_CUDA"] = True
