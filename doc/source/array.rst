@@ -14,7 +14,7 @@ The :class:`GPUArray` Array Class
 
   .. attribute :: gpudata
     
-    The :class:`DeviceAllocation` instance created for the memory that backs
+    The :class:`pycuda.driver.DeviceAllocation` instance created for the memory that backs
     this :class:`GPUArray`.
 
   .. method :: set(ary, stream=None)
