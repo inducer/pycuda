@@ -35,7 +35,7 @@ devices only support single precision as of this writing::
 Finally, we need somewhere to transfer data to, so we need to 
 allocate memory on the device::
 
-  a_gpu = cuda.mem_alloc(a.size * a.dtype.itemsize)
+  a_gpu = cuda.mem_alloc(a.nbytes)
 
 As a last step, we need to transfer the data to the GPU::
 

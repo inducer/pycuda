@@ -43,6 +43,37 @@ class TestCuda(unittest.TestCase):
                 block=(400,1,1))
         self.assert_(la.norm(dest-a*b) == 0)
 
+    def test_simple_kernel_2(self):
+        mod = drv.SourceModule("""
+        __global__ void multiply_them(float *dest, float *a, float *b)
+        {
+          const int i = threadIdx.x;
+          dest[i] = a[i] * b[i];
+        }
+        """)
+
+        multiply_them = mod.get_function("multiply_them")
+
+        import numpy
+        a = numpy.random.randn(400).astype(numpy.float32)
+        b = numpy.random.randn(400).astype(numpy.float32)
+        a_gpu = drv.to_device(a)
+        b_gpu = drv.to_device(b)
+
+        dest = numpy.zeros_like(a)
+        multiply_them(
+                drv.Out(dest), a_gpu, b_gpu,
+                block=(400,1,1))
+        self.assert_(la.norm(dest-a*b) == 0)
+
+        # now try with offsets
+        dest = numpy.zeros_like(a)
+        multiply_them(
+                drv.Out(dest), numpy.intp(a_gpu)+1, b_gpu,
+                block=(399,1,1))
+
+        self.assert_(la.norm(dest-a*b) == 0)
+
     def test_streamed_kernel(self):
         # this differs from the "simple_kernel" case in that *all* computation
         # and data copying is asynchronous. Observe how this necessitates the
@@ -321,7 +352,33 @@ class TestCuda(unittest.TestCase):
         copy_texture(drv.Out(dest), block=shape, texrefs=[mtx_tex])
         assert la.norm(dest-a) == 0
 
+    def test_prepared_invocation(self):
+        a = numpy.random.randn(4,4).astype(numpy.float32)
+        a_gpu = drv.mem_alloc(a.size * a.dtype.itemsize)
 
+        drv.memcpy_htod(a_gpu, a)
+
+        mod = drv.SourceModule("""
+            __global__ void doublify(float *a)
+            {
+              int idx = threadIdx.x + threadIdx.y*blockDim.x;
+              a[idx] *= 2;
+            }
+            """)
+
+        func = mod.get_function("doublify")
+        func.prepare("P", (4,4,1))
+        func.prepared_call((1, 1), a_gpu)
+        a_doubled = numpy.empty_like(a)
+        drv.memcpy_dtoh(a_doubled, a_gpu)
+        assert la.norm(a_doubled-2*a) == 0
+
+        # now with offsets
+        func.prepare("P", (15,1,1))
+        a_quadrupled = numpy.empty_like(a)
+        func.prepared_call((1, 1), int(a_gpu)+a.dtype.itemsize)
+        drv.memcpy_dtoh(a_quadrupled, a_gpu)
+        assert la.norm(a_quadrupled[1:]-4*a[1:]) == 0
 
 
 
