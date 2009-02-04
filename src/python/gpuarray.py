@@ -62,6 +62,7 @@ class GPUArray(object):
         for dim in shape:
             s *= dim
         self.size = s
+        self.nbytes = self.dtype.itemsize * self.size
 
         self.allocator = allocator
         if self.size:

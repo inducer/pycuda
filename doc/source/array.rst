@@ -17,6 +17,24 @@ The :class:`GPUArray` Array Class
     The :class:`DeviceAllocation` instance created for the memory that backs
     this :class:`GPUArray`.
 
+  .. attribute :: shape
+
+    The tuple of lengths of each dimension in the array.
+
+  .. attribute :: dtype 
+    
+    The numpy :class:`numpy.dtype` of the items in the GPU array.
+    
+  .. attribute :: size
+    
+    The number of individual entries in the array. Can also be computed by
+    multiplying up the numbers in :attr:`shape`.
+
+  .. attribute :: nbytes
+    
+    The size of the entire array in bytes. Computed as :attr:`size` times 
+    ``dtype.itemsize``.
+
   .. method :: set(ary, stream=None)
 
     Transfer the contents the :class:`numpy.ndarray` object *ary*

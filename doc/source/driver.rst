@@ -506,8 +506,8 @@ Unstructured Memory Transfers
 
 .. function:: memcpy_dtoh(dest, src, stream=None)
 
-  Copy from the device pointer *dest* (an :class:`int` or a
-  :class:`DeviceAllocation`) to the Python buffer *src*. The size of the copy
+  Copy from the device pointer *src* (an :class:`int` or a
+  :class:`DeviceAllocation`) to the Python buffer *dest*. The size of the copy
   is determined by the size of the buffer.
 
   Optionally execute asynchronously, serialized via *stream*. In
