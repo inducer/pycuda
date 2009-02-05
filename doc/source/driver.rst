@@ -320,13 +320,13 @@ Pagelocked Host Memory
 
 .. function:: pagelocked_empty(shape, dtype, order="C")
 
-  Allocate a pagelocked :mod:`numpy` array of *shape*, *dtype* and *order*.
+  Allocate a pagelocked :class:`numpy.ndarray` of *shape*, *dtype* and *order*.
   For the meaning of these parameters, please refer to the :mod:`numpy` 
   documentation.
 
 .. function:: pagelocked_zeros(shape, dtype, order="C")
 
-  Allocate a pagelocked :mod:`numpy` array of *shape*, *dtype* and *order* that
+  Allocate a pagelocked :class:`numpy.ndarray` of *shape*, *dtype* and *order* that
   is zero-initialized.
 
   For the meaning of these parameters, please refer to the :mod:`numpy` 
@@ -334,12 +334,12 @@ Pagelocked Host Memory
 
 .. function:: pagelocked_empty_like(array)
 
-  Allocate a pagelocked :mod:`numpy` array with the same shape, dtype and order
+  Allocate a pagelocked :class:`numpy.ndarray` with the same shape, dtype and order
   as *array*.
 
 .. function:: pagelocked_zeros_like(array)
 
-  Allocate a pagelocked :mod:`numpy` array with the same shape, dtype and order
+  Allocate a pagelocked :class:`numpy.ndarray` with the same shape, dtype and order
   as *array*. Initialize it to 0.
 
 The :class:`numpy.ndarray` instances returned by these functions 
@@ -355,7 +355,7 @@ have an attribute *base* that references an object of type
     
     Release the held memory now instead of when this object
     becomes unreachable. Any further use of the object (or its 
-    associated :module:`numpy` array) is an error
+    associated :mod:`numpy` array) is an error
     and will lead to undefined behavior.
 
 Arrays and Textures
