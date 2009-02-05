@@ -127,6 +127,7 @@ Acknowledgements
 * Cosmin Stejerean provided multiple patches for PyCuda's build system.
 * Tom Annau contributed an alternative SourceModule compiler cache as well
   as Windows build insight.
+* Nicholas Tung improved PyCuda's documentation.
 
 Licensing
 =========

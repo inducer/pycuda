@@ -285,10 +285,21 @@ Global Device Memory
 
 .. function:: to_device(buffer)
   
-  Allocate enough memory for *buffer*, which adheres to the Python
-  :class:`buffer` interface. Copy the contents of *buffer* onto the 
-  device. Return a :class:`DeviceAllocation` object representing
-  the newly-allocated memory.
+  Allocate enough device memory for *buffer*, which adheres to the Python
+  :class:`buffer` interface. Copy the contents of *buffer* onto the device.
+  Return a :class:`DeviceAllocation` object representing the newly-allocated
+  memory.
+
+.. function:: from_device(devptr, shape, dtype, order="C")
+  
+  Make a new :class:`numpy.ndarray` from the data at *devptr* on the
+  GPU, interpreting them using *shape*, *dtype* and *order*.
+
+.. function:: from_device_like(devptr, other_ary)
+  
+  Make a new :class:`numpy.ndarray` from the data at *devptr* on the
+  GPU, interpreting them as having the same shape, dtype and order
+  as *other_ary*.
 
 .. function:: mem_alloc_pitch(width, height, access_size)
 
@@ -487,6 +498,10 @@ Initializing Device Memory
 .. function:: memset_d8(dest, data, count)
 .. function:: memset_d16(dest, data, count)
 .. function:: memset_d32(dest, data, count)
+
+  .. note::
+      
+      *count* is the number of elements, not bytes.
 
 .. function:: memset_d2d8(dest, pitch, data, width, height)
 .. function:: memset_d2d16(dest, pitch, data, width, height)

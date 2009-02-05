@@ -8,6 +8,13 @@ Before you can use PyCuda, you have to initialize it and create a
 context::
 
   import pycuda.driver as cuda
+  import pycuda.autoinit
+
+Pretty much equivalently, you could have used the following, wordier
+initialization sequence::
+
+  import pycuda.driver as cuda
+  import pycuda.autoinit
 
   cuda.init()
   assert cuda.Device.count() >= 1
@@ -20,15 +27,15 @@ Transferring Data
 
 The next step in most programs is to transfer data onto the device.
 In PyCuda, you will mostly transfer data from :mod:`numpy` arrays
-on the host. (But indeed, everything that satifies the Python buffer
+on the host. (But indeed, everything that satisfies the Python buffer
 interface will work, even a :class:`str`.) Let's make a 4x4 array 
 of random numbers::
 
   import numpy
   a = numpy.random.randn(4,4)
 
-But wait--*a* consists of double precision numbers, but Nvidia 
-devices only support single precision as of this writing::
+But wait--*a* consists of double precision numbers, but most nVidia
+devices only support single precision::
 
   a = a.astype(numpy.float32)
 
@@ -90,6 +97,29 @@ Stick around for some bonus material in the next section, though.
 (You can find the code for this demo as :file:`examples/demo.py` in the PyCuda
 source distribution.)
 
+Shortcuts for Explicit Memory Copies
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+The :class:`pycuda.driver.In`, :class:`pycuda.driver.Out`, and
+:class:`pycuda.driver.InOut` argument handlers can simplify some of the memory
+transfers. For example, instead of creating *a_gpu*, if replacing *a* is fine,
+the following code can be used::
+
+  func(cuda.InOut(a), block=(4, 4, 1))
+
+Prepared Invocations
+^^^^^^^^^^^^^^^^^^^^
+
+Function invocation using the built-in :meth:`pycuda.driver.Function.__call__`
+method incurs overhead for type identification (see :ref:`reference-doc`). To
+achieve the same effect as above without this overhead, the function is bound
+to argument types (as designated by Python's standard library :mod:`struct`
+module), and then called. This also avoids having to assign explicit argument
+sizes using the `numpy.number` classes::
+
+    func.prepare("P", block=(4,4,1))
+    func.prepared_call((1, 1), a_gpu)
+
 Bonus: Abstracting Away the Complications
 -----------------------------------------
   
@@ -98,18 +128,73 @@ achieved with much less writing::
 
   import pycuda.gpuarray as gpuarray
   import pycuda.driver as cuda
+  import cuda.autoinit
 
-  cuda.init()
-  assert cuda.Device.count() >= 1
-
-  dev = cuda.Device(0)
-  ctx = dev.make_context()
-  
   a_gpu = gpuarray.to_gpu(numpy.random.randn(4,4).astype(numpy.float32))
   a_doubled = (2*a_gpu).get()
   print a_doubled
   print a_gpu
 
+Advanced Topics
+---------------
+
+Structures
+^^^^^^^^^^
+
+(contributed by Nicholas Tung, find the code in :file:`examples/demo_struct.py`)
+
+Suppose we have the following structure, for doubling a number of variable
+length arrays::
+
+  mod = cuda.SourceModule("""
+      struct DoubleOperation {
+          int datalen, __padding; // so 64-bit ptrs can be aligned
+          float *ptr;
+      };
+  
+      __global__ void double_array(DoubleOperation *a) {
+          a = &a[blockIdx.x];
+          for (int idx = threadIdx.x; idx < a->datalen; idx += blockDim.x) {
+              a->ptr[idx] *= 2;
+          }
+      }
+      """)
+
+Each block in the grid (see CUDA documentation) will double one of the arrays.
+The `for` loop allows for more data elements than threads to be doubled,
+though is not efficient if one can guarantee that there will be a sufficient
+number of threads. Next, a wrapper class for the structure is created, and
+two arrays are instantiated::
+
+  class DoubleOpStruct:
+      mem_size = 8 + numpy.intp(0).nbytes
+      def __init__(self, array, struct_arr_ptr):
+          self.data = cuda.to_device(array)
+          self.shape, self.dtype = array.shape, array.dtype
+          cuda.memcpy_htod(int(struct_arr_ptr), numpy.int32(array.size))
+          cuda.memcpy_htod(int(struct_arr_ptr) + 8, numpy.intp(int(self.data)))
+      def __str__(self):
+          return str(cuda.from_device(self.data, self.shape, self.dtype))
+  
+  struct_arr = cuda.mem_alloc(2 * DoubleOpStruct.mem_size)
+  do2_ptr = int(struct_arr) + DoubleOpStruct.mem_size
+  
+  array1 = DoubleOpStruct(numpy.array([1, 2, 3], dtype=numpy.float32), struct_arr)
+  array2 = DoubleOpStruct(numpy.array([0, 4], dtype=numpy.float32), do2_ptr)
+  print("original arrays", array1, array2)
+
+This code uses the :func:`pycuda.driver.to_device` and
+:func:`pycuda.driver.from_device` functions to allocate and copy values, and
+demonstrates how offsets to an allocated block of memory can be used. Finally,
+the code can be executed; the following demonstrates doubling both arrays, then
+only the second::
+
+  func = mod.get_function("double_array")
+  func(struct_arr, block = (32, 1, 1), grid=(2, 1))
+  print("doubled arrays", array1, array2)
+  
+  func(numpy.intp(do2_ptr), block = (32, 1, 1), grid=(1, 1))
+  print("doubled second only", array1, array2, "\n")
 
 Where to go from here
 ---------------------
