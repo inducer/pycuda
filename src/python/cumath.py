@@ -1,5 +1,5 @@
 import pycuda.gpuarray as gpuarray
-import pycuda._kernel as _kernel
+import pycuda.elementwise as elementwise
 import numpy
 import math
 
@@ -7,7 +7,7 @@ def _make_unary_array_func(name):
     def f(array):
         result = gpuarray.GPUArray(array.shape, array.dtype, array.stream)
         
-        func = _kernel.get_unary_func_kernel(name)
+        func = elementwise.get_unary_func_kernel(name)
         func.set_block_shape(*array._block)
         func.prepared_async_call(array._grid, array.stream,
                 array.gpudata, result.gpudata, array.size)
@@ -39,7 +39,7 @@ def fmod(arg, mod):
     for each element in `arg` and `mod`."""
     result = gpuarray.GPUArray(arg.shape, arg.dtype)
     
-    func = _kernel.get_fmod_kernel()
+    func = elementwise.get_fmod_kernel()
     func.set_block_shape(*arg._block)
     func.prepared_async_call(arg._grid, arg.stream,
             arg.gpudata, mod.gpudata, result.gpudata, arg.size)
@@ -53,7 +53,7 @@ def frexp(arg):
     sig = gpuarray.GPUArray(arg.shape, arg.dtype)
     expt = gpuarray.GPUArray(arg.shape, arg.dtype)
     
-    func = _kernel.get_frexp_kernel()
+    func = elementwise.get_frexp_kernel()
     func.set_block_shape(*arg._block)
     func.prepared_async_call(arg._grid, arg.stream,
             arg.gpudata, sig.gpudata, expt.gpudata, arg.size)
@@ -67,7 +67,7 @@ def ldexp(significand, exponent):
     """
     result = gpuarray.GPUArray(significand.shape, significand.dtype)
     
-    func = _kernel.get_ldexp_kernel()
+    func = elementwise.get_ldexp_kernel()
     func.set_block_shape(*significand._block)
     func.prepared_async_call(significand._grid, significand.stream,
             significand.gpudata, exponent.gpudata, result.gpudata, 
@@ -83,7 +83,7 @@ def modf(arg):
     intpart = gpuarray.GPUArray(arg.shape, arg.dtype)
     fracpart = gpuarray.GPUArray(arg.shape, arg.dtype)
     
-    func = _kernel.get_modf_kernel()
+    func = elementwise.get_modf_kernel()
     func.set_block_shape(*arg._block),
     func.prepared_async_call(arg._grid, arg.stream,
             arg.gpudata, intpart.gpudata, fracpart.gpudata,
