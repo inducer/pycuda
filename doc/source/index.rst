@@ -87,6 +87,7 @@ Contents
     install
     tutorial
     driver
+    util
     array
     faq
 

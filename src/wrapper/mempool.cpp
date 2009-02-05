@@ -254,6 +254,7 @@ void pycuda_expose_tools()
     py::class_<cl, boost::noncopyable>(
         "PooledHostAllocation", py::no_init)
       .DEF_SIMPLE_METHOD(free)
+      .def("__len__", &cl::size)
       ;
   }
 }
