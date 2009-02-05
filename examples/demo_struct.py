@@ -2,6 +2,7 @@
 
 import pycuda.driver as cuda
 import pycuda.autoinit
+import numpy
 
 class DoubleOpStruct:
     mem_size = 8 + numpy.intp(0).nbytes
@@ -27,14 +28,14 @@ print array2
 mod = cuda.SourceModule("""
     struct DoubleOperation {
         int datalen, __padding; // so 64-bit ptrs can be aligned
-        float *ptr;
+        __global__ float *ptr;
     };
 
-    __global__ void double_array(DoubleOperation *a) {
-        a = &a[blockIdx.x];
-        for (int idx = threadIdx.x; idx < a->datalen; idx += blockDim.x) {
+    __global__ void double_array(DoubleOperation *a) 
+    {
+        a = a + blockIdx.x;
+        for (int idx = threadIdx.x; idx < a->datalen; idx += blockDim.x) 
             a->ptr[idx] *= 2;
-        }
     }
     """)
 func = mod.get_function("double_array")
