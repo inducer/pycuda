@@ -1,6 +1,6 @@
 from __future__ import division
 import numpy
-import pycuda._kernel as _kernel
+import pycuda.elementwise as elementwise
 import random as random
 from pytools import memoize
 from pytools.diskdict import DiskDict
@@ -76,7 +76,7 @@ class GPUArray(object):
     @classmethod
     def compile_kernels(cls):
         # useful for benchmarking
-        _kernel._compile_kernels(cls)
+        elementwise._compile_kernels(cls)
 
     def set(self, ary, stream=None):
         assert ary.size == self.size
@@ -111,7 +111,7 @@ class GPUArray(object):
         assert self.shape == other.shape
         assert self.dtype == other.dtype
 
-        func = _kernel.get_axpbyz_kernel()
+        func = elementwise.get_axpbyz_kernel()
         func.set_block_shape(*self._block)
 
         if add_timer is not None:
@@ -129,7 +129,7 @@ class GPUArray(object):
         """Compute ``out = selffac * self + other``, where `other` is a scalar."""
         assert self.dtype == numpy.float32
 
-        func = _kernel.get_axpbz_kernel()
+        func = elementwise.get_axpbz_kernel()
         func.set_block_shape(*self._block)
         func.prepared_async_call(self._grid, self.stream,
                 selffac, self.gpudata,
@@ -141,7 +141,7 @@ class GPUArray(object):
         assert self.dtype == numpy.float32
         assert self.dtype == numpy.float32
 
-        func = _kernel.get_multiply_kernel()
+        func = elementwise.get_multiply_kernel()
         func.set_block_shape(*self._block)
         func.prepared_async_call(self._grid, self.stream,
                 self.gpudata, other.gpudata,
@@ -157,7 +157,7 @@ class GPUArray(object):
 
         assert self.dtype == numpy.float32
 
-        func = _kernel.get_rdivide_scalar_kernel()
+        func = elementwise.get_rdivide_scalar_kernel()
         func.set_block_shape(*self._block)
         func.prepared_async_call(self._grid, self.stream,
                 self.gpudata, other,
@@ -172,7 +172,7 @@ class GPUArray(object):
         assert self.shape == other.shape
         assert self.dtype == other.dtype
 
-        func = _kernel.get_divide_kernel()
+        func = elementwise.get_divide_kernel()
         func.set_block_shape(*self._block)
         func.prepared_async_call(self._grid, self.stream,
                 self.gpudata, other.gpudata,
@@ -281,7 +281,7 @@ class GPUArray(object):
         if isinstance(other, GPUArray):
             result = self._new_like_me()
 
-            func = _kernel.get_divide_kernel()
+            func = elementwise.get_divide_kernel()
             func.set_block_shape(*self._block)
             func.prepared_async_call(self._grid, self.stream,
                     other.gpudata, self.gpudata, out.gpudata, 
@@ -302,7 +302,7 @@ class GPUArray(object):
         """fills the array with the specified value"""
         assert self.dtype == numpy.float32
 
-        func = _kernel.get_fill_kernel()
+        func = elementwise.get_fill_kernel()
         func.set_block_shape(*self._block)
         func.prepared_async_call(self._grid, self.stream,
                 value, self.gpudata, self.size)
@@ -325,7 +325,7 @@ class GPUArray(object):
 
         result = GPUArray(self.shape, self.dtype)
 
-        func = _kernel.get_unary_func_kernel("fabs")
+        func = elementwise.get_unary_func_kernel("fabs")
         func.set_block_shape(*self._block)
         func.prepared_async_call(self._grid, self.stream,
                 self.gpudata,result.gpudata, self.size)
@@ -347,7 +347,7 @@ class GPUArray(object):
             assert self.shape == other.shape
             assert self.dtype == other.dtype
 
-            func = _kernel.get_pow_array_kernel()
+            func = elementwise.get_pow_array_kernel()
             func.set_block_shape(*self._block)
             func.prepared_async_call(self._grid, self.stream,
                     self.gpudata, other.gpudata, result.gpudata,
@@ -355,7 +355,7 @@ class GPUArray(object):
             
             return result
         else:
-            func = _kernel.get_pow_kernel()
+            func = elementwise.get_pow_kernel()
             func.set_block_shape(*self._block)
             func.prepared_async_call(self._grid, self.stream,
                     other, self.gpudata, result.gpudata,
@@ -372,7 +372,7 @@ class GPUArray(object):
         
         result = GPUArray(self.shape, self.dtype)
 
-        func = _kernel.get_reverse_kernel()
+        func = elementwise.get_reverse_kernel()
         func.set_block_shape(*self._block)
         func.prepared_async_call(self._grid, self.stream,
                 self.gpudata, result.gpudata,
@@ -465,7 +465,7 @@ def arange(*args, **kwargs):
   
     result = GPUArray((size,), dtype)
 
-    func = _kernel.get_arange_kernel()
+    func = elementwise.get_arange_kernel()
     func.set_block_shape(*result._block)
     func.prepared_async_call(result._grid, result.stream,
             result.gpudata, start, step, size)

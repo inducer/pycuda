@@ -1,6 +1,5 @@
 import pycuda.driver as cuda
 import pycuda.autoinit
-from jinja2 import Template
 import numpy
 import numpy.linalg as la
 

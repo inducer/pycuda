@@ -2,9 +2,6 @@ import pycuda.driver as drv
 from pytools import memoize
 
 
-NVCC_OPTIONS = []
-
-
 
 
 def get_arg_type(c_arg):
@@ -28,7 +25,7 @@ def get_arg_type(c_arg):
     else: raise ValueError, "unknown type '%s'" % tp
     
 def get_scalar_kernel(arguments, operation, 
-        name="kernel", keep=False):
+        name="kernel", keep=False, options=[]):
     """Return a L{pycuda.driver.Function} that performs the same scalar operation
     on one or several vectors.
     """
@@ -52,7 +49,7 @@ def get_scalar_kernel(arguments, operation,
             "arguments": arguments, 
             "operation": operation,
             "name": name},
-        options=NVCC_OPTIONS, keep=keep)
+        options=options, keep=keep)
 
     func = mod.get_function(name)
     func.prepare(
