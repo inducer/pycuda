@@ -63,7 +63,7 @@ the scenes, a lot more interesting stuff is going on:
 * PyCuda has compiled the CUDA source code and uploaded it to the card. 
   
   .. note:: This code doesn't have to be a constant--you can easily have Python
-    generate the code you want to compile.
+    generate the code you want to compile. See :ref:`metaprog`.
 
 * PyCuda's numpy interaction code has automatically allocated
   space on the device, copied the numpy arrays *a* and *b* over,
@@ -89,6 +89,7 @@ Contents
     driver
     util
     array
+    metaprog
     faq
 
 Note that this guide will not explain CUDA programming and technology.  Please
