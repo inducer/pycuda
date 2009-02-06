@@ -649,6 +649,14 @@ Code on the Device: Modules and Functions
     
     Return the :class:`Function` *name* in this module.
 
+    .. warning::
+
+        While you can obtain different handles to the same function using this
+        method, these handles all share the same state that is set through
+        the ``set_XXX`` methods of :class:`Function`. This means that you
+        can't obtain two different handles to the same funciton and 
+        :meth:`Function.prepare` them in two different ways.
+
   .. method:: get_global(name)
 
     Return the device address of the global *name* as an :class:`int`.
