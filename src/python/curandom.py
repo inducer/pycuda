@@ -194,8 +194,11 @@ __global__ void md5(float *dest, uint seed, int n){
     func.prepare("Pii", (1,1,1))
     return func
 
-def rand(shape):
+def rand(shape, dtype=numpy.float32):
     from pycuda.gpuarray import GPUArray
+
+    if dtype != numpy.float32:
+        raise NotImplementedError, "only float32 supported so far."
 
     result = GPUArray(shape, numpy.float32)
 
