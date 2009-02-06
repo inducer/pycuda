@@ -128,6 +128,8 @@ Acknowledgements
 * Tom Annau contributed an alternative SourceModule compiler cache as well
   as Windows build insight.
 * Nicholas Tung improved PyCuda's documentation.
+* Jozef Vesely contributed an improved random number generator derived from 
+  the RSA Data Security, Inc. MD5 Message Digest Algorithm.
 
 Licensing
 =========
