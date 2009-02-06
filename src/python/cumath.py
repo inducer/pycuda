@@ -10,7 +10,7 @@ def _make_unary_array_func(name):
         func = elementwise.get_unary_func_kernel(name)
         func.set_block_shape(*array._block)
         func.prepared_async_call(array._grid, array.stream,
-                array.gpudata, result.gpudata, array.size)
+                array.gpudata, result.gpudata, array.mem_size)
         
         return result
     return f
@@ -42,7 +42,7 @@ def fmod(arg, mod):
     func = elementwise.get_fmod_kernel()
     func.set_block_shape(*arg._block)
     func.prepared_async_call(arg._grid, arg.stream,
-            arg.gpudata, mod.gpudata, result.gpudata, arg.size)
+            arg.gpudata, mod.gpudata, result.gpudata, arg.mem_size)
     
     return result
 
@@ -56,7 +56,7 @@ def frexp(arg):
     func = elementwise.get_frexp_kernel()
     func.set_block_shape(*arg._block)
     func.prepared_async_call(arg._grid, arg.stream,
-            arg.gpudata, sig.gpudata, expt.gpudata, arg.size)
+            arg.gpudata, sig.gpudata, expt.gpudata, arg.mem_size)
     
     return sig, expt
     
@@ -71,7 +71,7 @@ def ldexp(significand, exponent):
     func.set_block_shape(*significand._block)
     func.prepared_async_call(significand._grid, significand.stream,
             significand.gpudata, exponent.gpudata, result.gpudata, 
-            significand.size)
+            significand.mem_size)
     
     return result
         
@@ -87,6 +87,6 @@ def modf(arg):
     func.set_block_shape(*arg._block),
     func.prepared_async_call(arg._grid, arg.stream,
             arg.gpudata, intpart.gpudata, fracpart.gpudata,
-            arg.size)
+            arg.mem_size)
     
     return fracpart, intpart

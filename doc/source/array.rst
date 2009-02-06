@@ -27,8 +27,14 @@ The :class:`GPUArray` Array Class
     
   .. attribute :: size
     
-    The number of individual entries in the array. Can also be computed by
+    The number of meaningful entries in the array. Can also be computed by
     multiplying up the numbers in :attr:`shape`.
+
+  .. attribute :: mem_size
+    
+    The total number of entries, including padding, that are present in
+    the array. Padding may arise for example because of pitch adjustment by 
+    :func:`pycuda.driver.mem_alloc_pitch`.
 
   .. attribute :: nbytes
     

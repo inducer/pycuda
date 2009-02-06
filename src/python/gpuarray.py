@@ -61,7 +61,7 @@ class GPUArray(object):
         s = 1
         for dim in shape:
             s *= dim
-        self.size = s
+        self.mem_size = self.size = s
         self.nbytes = self.dtype.itemsize * self.size
 
         self.allocator = allocator
@@ -71,7 +71,7 @@ class GPUArray(object):
             self.gpudata = None
         self.stream = stream
 
-        self._grid, self._block = splay(self.size)
+        self._grid, self._block = splay(self.mem_size)
 
     @classmethod
     def compile_kernels(cls):
@@ -117,11 +117,11 @@ class GPUArray(object):
         if add_timer is not None:
             add_timer(3*self.size, func.prepared_timed_call(self._grid, 
                 selffac, self.gpudata, otherfac, other.gpudata, 
-                out.gpudata, self.size))
+                out.gpudata, self.mem_size))
         else:
             func.prepared_async_call(self._grid, self.stream,
                     selffac, self.gpudata, otherfac, other.gpudata, 
-                    out.gpudata, self.size)
+                    out.gpudata, self.mem_size)
 
         return out
 
@@ -133,7 +133,7 @@ class GPUArray(object):
         func.set_block_shape(*self._block)
         func.prepared_async_call(self._grid, self.stream,
                 selffac, self.gpudata,
-                other, out.gpudata, self.size)
+                other, out.gpudata, self.mem_size)
 
         return out
 
@@ -145,7 +145,7 @@ class GPUArray(object):
         func.set_block_shape(*self._block)
         func.prepared_async_call(self._grid, self.stream,
                 self.gpudata, other.gpudata,
-                out.gpudata, self.size)
+                out.gpudata, self.mem_size)
 
         return out
 
@@ -161,7 +161,7 @@ class GPUArray(object):
         func.set_block_shape(*self._block)
         func.prepared_async_call(self._grid, self.stream,
                 self.gpudata, other,
-                out.gpudata, self.size)
+                out.gpudata, self.mem_size)
 
         return out
 
@@ -176,7 +176,7 @@ class GPUArray(object):
         func.set_block_shape(*self._block)
         func.prepared_async_call(self._grid, self.stream,
                 self.gpudata, other.gpudata,
-                out.gpudata, self.size)
+                out.gpudata, self.mem_size)
 
         return out
 
@@ -285,7 +285,7 @@ class GPUArray(object):
             func.set_block_shape(*self._block)
             func.prepared_async_call(self._grid, self.stream,
                     other.gpudata, self.gpudata, out.gpudata, 
-                    self.size)
+                    self.mem_size)
 
             return result
         else:
@@ -305,7 +305,7 @@ class GPUArray(object):
         func = elementwise.get_fill_kernel()
         func.set_block_shape(*self._block)
         func.prepared_async_call(self._grid, self.stream,
-                value, self.gpudata, self.size)
+                value, self.gpudata, self.mem_size)
 
         return self
 
@@ -328,7 +328,7 @@ class GPUArray(object):
         func = elementwise.get_unary_func_kernel("fabs")
         func.set_block_shape(*self._block)
         func.prepared_async_call(self._grid, self.stream,
-                self.gpudata,result.gpudata, self.size)
+                self.gpudata,result.gpudata, self.mem_size)
 
         return result
 
@@ -351,7 +351,7 @@ class GPUArray(object):
             func.set_block_shape(*self._block)
             func.prepared_async_call(self._grid, self.stream,
                     self.gpudata, other.gpudata, result.gpudata,
-                    self.size)
+                    self.mem_size)
             
             return result
         else:
@@ -359,7 +359,7 @@ class GPUArray(object):
             func.set_block_shape(*self._block)
             func.prepared_async_call(self._grid, self.stream,
                     other, self.gpudata, result.gpudata,
-                    self.size)
+                    self.mem_size)
 
             return result
 
@@ -376,7 +376,7 @@ class GPUArray(object):
         func.set_block_shape(*self._block)
         func.prepared_async_call(self._grid, self.stream,
                 self.gpudata, result.gpudata,
-                self.size)
+                self.mem_size)
 
         return result
 
