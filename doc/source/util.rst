@@ -184,7 +184,6 @@ Device-based Memory Pool
         This is useful as a cleanup action when a memory pool falls out
         of use.
 
-
 Memory Pool for pagelocked memory
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 

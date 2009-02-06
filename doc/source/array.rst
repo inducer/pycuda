@@ -187,3 +187,64 @@ Generating Arrays of Random Numbers
   Return an array of `shape` filled with random values of `dtype`
   in the range [0,1).
 
+Single-pass Expression Evaluation
+---------------------------------
+
+.. warning::
+
+  The following functionality is included in this documentation in the 
+  hope that it may be useful, but its interface may change in future
+  revisions. Feedback is welcome.
+
+.. module:: pycuda.elementwise
+
+Evaluating involved expressions on :class:`GPUArray` instances can be
+somewhat inefficient, because a new temporary is created for each 
+intermediate result. The functionality in the module :mod:`pycuda.elementwise`
+contains tools to help generate kernels that evaluate multi-stage expressions
+on one or several operands in a single pass.
+
+.. function:: get_scalar_kernel(arguments, operation, name="kernel", keep=False, options=[])
+
+    Return a :class:`pycuda.driver.Function` that performs 
+    the takes the *arguments* plus a total size argument `n`, and performs the
+    scalar *operation* on each entry of its arguments, if that argument is a
+    vector.
+
+    *arguments* is specified as a C argument list. *operation* is specified
+    as a C assignment statement, without a semicolon. Vectors in *operation*
+    should be indexed by the variable *i*.
+
+    *name* specifies the name as which the kernel is compiled, *keep*
+    and *options* are passed unmodified to :class:`pycuda.driver.SourceModule`.
+
+    The :class:`pycuda.driver.Function` returned is already prepared for 
+    invocation. (see :meth:`pycuda.driver.Function.prepare`)
+
+    Suggested block and grid size tuples can be found in the 
+    :attr:`pycuda.gpuarray.GPUArray._grid` and 
+    :attr:`pycuda.gpuarray.GPUArray._block` attributes of a
+    :class:`pycuda.gpuarray.GPUArray`.
+
+Here's a usage example::
+
+    import pycuda.gpuarray as gpuarray
+    import pycuda.driver as cuda
+    import pycuda.autoinit
+    import numpy
+
+    a_gpu = gpuarray.to_gpu(numpy.random.randn(50).astype(numpy.float32))
+    b_gpu = gpuarray.to_gpu(numpy.random.randn(50).astype(numpy.float32))
+
+    from pycuda.elementwise import get_scalar_kernel
+    lin_comb = get_scalar_kernel(
+            "float a, float *x, float b, float *y, float *z",
+            "z[i] = a*x[i] + b*y[i]",
+            "linear_combination")
+
+    c_gpu = gpuarray.empty_like(a_gpu)
+    lin_comb.set_block_shape(*a_gpu._block)
+    lin_comb.prepared_call(a_gpu._grid, 5, a_gpu.gpudata, 6, b_gpu.gpudata, c_gpu.gpudata, a_gpu.mem_size)
+
+    import numpy.linalg as la
+    assert la.norm((c_gpu - (5*a_gpu+6*b_gpu)).get()) < 1e-5
