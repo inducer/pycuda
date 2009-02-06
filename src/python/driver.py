@@ -505,8 +505,10 @@ class SourceModule(object):
 
         if cache_dir is None:
             from os.path import expanduser, join, exists
-            cache_dir = join(expanduser("~"), 
-                    ".pycuda-compiler-cache")
+            import os
+            from tempfile import gettempdir
+            cache_dir = join(gettempdir(), 
+                    "pycuda-compiler-cache-v1-uid%s" % os.getuid())
 
             if not exists(cache_dir):
                 from os import mkdir
