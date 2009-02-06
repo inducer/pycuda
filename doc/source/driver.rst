@@ -654,7 +654,7 @@ Code on the Device: Modules and Functions
         While you can obtain different handles to the same function using this
         method, these handles all share the same state that is set through
         the ``set_XXX`` methods of :class:`Function`. This means that you
-        can't obtain two different handles to the same funciton and 
+        can't obtain two different handles to the same function and 
         :meth:`Function.prepare` them in two different ways.
 
   .. method:: get_global(name)
