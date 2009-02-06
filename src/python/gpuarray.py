@@ -398,6 +398,20 @@ def zeros(shape, dtype, stream=None, allocator=drv.mem_alloc):
     result.fill(0)
     return result
 
+def empty_like(other_ary):
+    result = GPUArray(
+            other_ary.shape, other_ary.dtype, 
+            other_ary.stream, other_ary.allocator)
+    return result
+
+def zeros_like(other_ary):
+    result = GPUArray(
+            other_ary.shape, other_ary.dtype, 
+            other_ary.stream, other_ary.allocator)
+    result.fill(0)
+    return result
+
+
 def arange(*args, **kwargs):
     """Create an array filled with numbers spaced `step` apart,
     starting from `start` and ending at `stop`.
