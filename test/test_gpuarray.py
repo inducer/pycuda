@@ -46,5 +46,21 @@ class TestGPUArray(test_abstract_array.TestAbstractArray):
         for i in range(size):
             assert numpy.isnan(ab[i]) == numpy.isnan(ab_gpu[i])
         
-if __name__ == '__main__':
-    unittest.main()
+    def test_scalar_kernel(self):
+        from pycuda.curandom import rand as curand
+
+        a_gpu = curand((50,))
+        b_gpu = curand((50,))
+
+        from pycuda.elementwise import ScalarKernel
+        lin_comb = ScalarKernel(
+                "float a, float *x, float b, float *y, float *z",
+                "z[i] = a*x[i] + b*y[i]",
+                "linear_combination")
+
+        c_gpu = gpuarray.empty_like(a_gpu)
+        lin_comb(5, a_gpu, 6, b_gpu, c_gpu)
+
+        assert la.norm((c_gpu - (5*a_gpu+6*b_gpu)).get()) < 1e-5
+        if __name__ == '__main__':
+            unittest.main()
