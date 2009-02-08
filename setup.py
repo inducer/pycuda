@@ -103,7 +103,7 @@ def main():
 
     setup(name="pycuda",
             # metadata
-            version="0.91.1",
+            version="0.92rc",
             description="Python wrapper for Nvidia CUDA",
             long_description="""
             PyCuda lets you access `Nvidia <http://nvidia.com>`_'s `CUDA
@@ -140,7 +140,7 @@ def main():
             url="http://mathema.tician.de/software/pycuda",
             classifiers=[
               'Environment :: Console',
-              'Development Status :: 4 - Beta',
+              'Development Status :: 5 - Mature',
               'Intended Audience :: Developers',
               'Intended Audience :: Other Audience',
               'Intended Audience :: Science/Research',
