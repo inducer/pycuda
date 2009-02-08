@@ -24,7 +24,7 @@ def get_arg_type(c_arg):
     elif tp in ["unsigned char"]: return "B"
     else: raise ValueError, "unknown type '%s'" % tp
     
-def get_scalar_kernel_and_types(arguments, operation, 
+def get_elwise_kernel_and_types(arguments, operation, 
         name="kernel", keep=False, options=[]):
     arguments += ", int n"
     mod = drv.SourceModule("""
@@ -53,12 +53,12 @@ def get_scalar_kernel_and_types(arguments, operation,
 
     return func, arg_types
 
-def get_scalar_kernel(arguments, operation, 
+def get_elwise_kernel(arguments, operation, 
         name="kernel", keep=False, options=[]):
     """Return a L{pycuda.driver.Function} that performs the same scalar operation
     on one or several vectors.
     """
-    func, arg_types = get_scalar_kernel_and_types(
+    func, arg_types = get_elwise_kernel_and_types(
             arguments, operation, name, keep, options)
 
     return func
@@ -66,14 +66,14 @@ def get_scalar_kernel(arguments, operation,
 
 
 
-class ScalarKernel:
+class ElementwiseKernel:
     def __init__(self, arguments, operation, 
             name="kernel", keep=False, options=[]):
-        self.func, self.arg_types = get_scalar_kernel_and_types(
+        self.func, self.arg_types = get_elwise_kernel_and_types(
             arguments, operation, name, keep, options)
 
         assert [i for i, arg_tp in enumerate(self.arg_types) if arg_tp == "P"], \
-                "ScalarKernel can only be used with functions that have at least one " \
+                "ElementwiseKernel can only be used with functions that have at least one " \
                 "vector argument"
 
     def __call__(self, *args):
@@ -98,35 +98,35 @@ class ScalarKernel:
 
 @memoize
 def get_axpbyz_kernel():
-    return get_scalar_kernel(
+    return get_elwise_kernel(
             "float a, float *x, float b, float *y, float *z",
             "z[i] = a*x[i] + b*y[i]",
             "axpbyz")
 
 @memoize
 def get_axpbz_kernel():
-    return get_scalar_kernel(
+    return get_elwise_kernel(
             "float a, float *x,float b, float *z",
             "z[i] = a * x[i] + b",
             "axpb")
 
 @memoize
 def get_multiply_kernel():
-    return get_scalar_kernel(
+    return get_elwise_kernel(
             "float *x, float *y, float *z",
             "z[i] = x[i] * y[i]",
             "multiply")
 
 @memoize
 def get_divide_kernel():
-    return get_scalar_kernel(
+    return get_elwise_kernel(
             "float *x, float *y, float *z",
             "z[i] = x[i] / y[i]",
             "divide")
 
 @memoize
-def get_rdivide_scalar_kernel():
-    return get_scalar_kernel(
+def get_rdivide_elwise_kernel():
+    return get_elwise_kernel(
             "float *x, float y, float *z",
             "z[i] = y / x[i]",
             "divide_r")
@@ -135,21 +135,21 @@ def get_rdivide_scalar_kernel():
 
 @memoize
 def get_fill_kernel():
-    return get_scalar_kernel(
+    return get_elwise_kernel(
             "float a, float *z",
             "z[i] = a",
             "fill")
 
 @memoize
 def get_reverse_kernel():
-    return get_scalar_kernel(
+    return get_elwise_kernel(
             "float *y, float *z",
             "z[i] = y[n-1-i]",
             "reverse")
 
 @memoize
 def get_arange_kernel():
-    return get_scalar_kernel(
+    return get_elwise_kernel(
             "float *z, float start, float step",
             "z[i] = start + i*step",
             "arange")
@@ -157,35 +157,35 @@ def get_arange_kernel():
 
 @memoize
 def get_pow_kernel():
-    return get_scalar_kernel(
+    return get_elwise_kernel(
             "float value, float *y, float *z",
             "z[i] = pow(y[i], value)",
             "pow_method")
 
 @memoize
 def get_pow_array_kernel():
-    return get_scalar_kernel(
+    return get_elwise_kernel(
             "float *x, float *y, float *z",
             "z[i] = pow(x[i], y[i])",
             "pow_method")
 
 @memoize
 def get_fmod_kernel():
-    return get_scalar_kernel(
+    return get_elwise_kernel(
             "float *arg, float *mod, float *z",
             "z[i] = fmod(arg[i], mod[i])",
             "fmod_kernel")
     
 @memoize
 def get_modf_kernel():
-    return get_scalar_kernel(
+    return get_elwise_kernel(
             "float *x, float *intpart ,float *fracpart",
             "fracpart[i] = modf(x[i], &intpart[i])",
             "modf_kernel")
 
 @memoize
 def get_frexp_kernel():
-    return get_scalar_kernel(
+    return get_elwise_kernel(
             "float *x, float *significand, float *exponent",
             """
                 int expt = 0;
@@ -196,14 +196,14 @@ def get_frexp_kernel():
 
 @memoize
 def get_ldexp_kernel():
-    return get_scalar_kernel(
+    return get_elwise_kernel(
             "float *sig, float *expt, float *z",
             "z[i] = ldexp(sig[i], int(expt[i]))",
             "ldexp_kernel")
 
 @memoize
 def get_unary_func_kernel(func_name):
-    return get_scalar_kernel(
+    return get_elwise_kernel(
             "float *y, float *z",
             "z[i] = %s(y[i])" % func_name,
             "%s_kernel" % func_name)    

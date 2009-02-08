@@ -177,12 +177,12 @@ import numpy
 
 def rand(shape, dtype=numpy.float32):
     from pycuda.gpuarray import GPUArray
-    from pycuda.elementwise import get_scalar_kernel
+    from pycuda.elementwise import get_elwise_kernel
 
     result = GPUArray(shape, dtype)
     
     if dtype == numpy.float32:
-        func = get_scalar_kernel(
+        func = get_elwise_kernel(
             "float *dest, unsigned int seed", 
             md5_code + """
             dest[i] = a/4294967296.0;
@@ -195,7 +195,7 @@ def rand(shape, dtype=numpy.float32):
             """,
             "md5_rng_float")
     elif dtype in [numpy.int32, numpy.uint32]:
-        func = get_scalar_kernel(
+        func = get_elwise_kernel(
             "unsigned int *dest, unsigned int seed", 
             md5_code + """
             dest[i] = a;

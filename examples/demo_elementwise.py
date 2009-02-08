@@ -6,8 +6,8 @@ from pycuda.curandom import rand as curand
 a_gpu = curand((50,))
 b_gpu = curand((50,))
 
-from pycuda.elementwise import ScalarKernel
-lin_comb = ScalarKernel(
+from pycuda.elementwise import ElementwiseKernel
+lin_comb = ElementwiseKernel(
         "float a, float *x, float b, float *y, float *z",
         "z[i] = a*x[i] + b*y[i]",
         "linear_combination")

@@ -157,7 +157,7 @@ class GPUArray(object):
 
         assert self.dtype == numpy.float32
 
-        func = elementwise.get_rdivide_scalar_kernel()
+        func = elementwise.get_rdivide_elwise_kernel()
         func.set_block_shape(*self._block)
         func.prepared_async_call(self._grid, self.stream,
                 self.gpudata, other,
