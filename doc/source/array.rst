@@ -244,3 +244,6 @@ Here's a usage example::
 
     import numpy.linalg as la
     assert la.norm((c_gpu - (5*a_gpu+6*b_gpu)).get()) < 1e-5
+
+(You can find this example as :file:`examples/demo_elementwise.py` in the PyCuda 
+distribution.)
