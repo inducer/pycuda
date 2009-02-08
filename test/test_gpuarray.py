@@ -17,7 +17,7 @@ class TestGPUArray(test_abstract_array.TestAbstractArray):
 
     def test_random(self):
         from pycuda.curandom import rand as curand
-        a = curand((5, 5)).get()
+        a = curand((10, 100)).get()
 
         self.assert_((0 <= a).all())
         self.assert_((a < 1).all())
