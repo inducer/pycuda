@@ -24,12 +24,8 @@ def get_arg_type(c_arg):
     elif tp in ["unsigned char"]: return "B"
     else: raise ValueError, "unknown type '%s'" % tp
     
-def get_scalar_kernel(arguments, operation, 
+def get_scalar_kernel_and_types(arguments, operation, 
         name="kernel", keep=False, options=[]):
-    """Return a L{pycuda.driver.Function} that performs the same scalar operation
-    on one or several vectors.
-    """
-
     arguments += ", int n"
     mod = drv.SourceModule("""
         __global__ void %(name)s(%(arguments)s)
@@ -52,11 +48,52 @@ def get_scalar_kernel(arguments, operation,
         options=options, keep=keep)
 
     func = mod.get_function(name)
-    func.prepare(
-            [get_arg_type(arg) for arg in arguments.split(",")],
-            (1,1,1))
+    arg_types = [get_arg_type(arg) for arg in arguments.split(",")]
+    func.prepare("".join(arg_types), (1,1,1))
+
+    return func, arg_types
+
+def get_scalar_kernel(arguments, operation, 
+        name="kernel", keep=False, options=[]):
+    """Return a L{pycuda.driver.Function} that performs the same scalar operation
+    on one or several vectors.
+    """
+    func, arg_types = get_scalar_kernel_and_types(
+            arguments, operation, name, keep, options)
 
     return func
+
+
+
+
+class ScalarKernel:
+    def __init__(self, arguments, operation, 
+            name="kernel", keep=False, options=[]):
+        self.func, self.arg_types = get_scalar_kernel_and_types(
+            arguments, operation, name, keep, options)
+
+        assert [i for i, arg_tp in enumerate(self.arg_types) if arg_tp == "P"], \
+                "ScalarKernel can only be used with functions that have at least one " \
+                "vector argument"
+
+    def __call__(self, *args):
+        from pytools import single_valued
+        vectors = []
+
+        invocation_args = []
+        for arg, arg_tp in zip(args, self.arg_types):
+            if arg_tp == "P":
+                vectors.append(arg)
+                invocation_args.append(arg.gpudata)
+            else:
+                invocation_args.append(arg)
+
+        repr_vec = vectors[0]
+        invocation_args.append(repr_vec.mem_size)
+        self.func.set_block_shape(*repr_vec._block)
+        self.func.prepared_call(repr_vec._grid, *invocation_args)
+
+
 
 
 @memoize
