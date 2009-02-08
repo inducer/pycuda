@@ -1,13 +1,6 @@
-import numpy
-import pycuda.driver as drv
-from pytools import memoize
 
 
-
-
-@memoize
-def _get_random_kernel():
-    mod = drv.SourceModule("""
+md5_code = """
 /*
  **********************************************************************
  ** Copyright (C) 1990, RSA Data Security, Inc. All rights reserved. **
@@ -81,17 +74,10 @@ def _get_random_kernel():
 #define X14 gridDim.z
 #define X15 0
 
-
-__global__ void md5(float *dest, uint seed, int n){
-  const int start = blockDim.x*blockIdx.x + threadIdx.x;
-  const int step = gridDim.x*blockDim.x;
-  int i;
-
-  for (i = start; i<n; i += step) {
-  uint a = 0x67452301;
-  uint b = 0xefcdab89;
-  uint c = 0x98badcfe;
-  uint d = 0x10325476;
+  unsigned int a = 0x67452301;
+  unsigned int b = 0xefcdab89;
+  unsigned int c = 0x98badcfe;
+  unsigned int d = 0x10325476;
    
   /* Round 1 */
 #define S11 7
@@ -185,55 +171,71 @@ __global__ void md5(float *dest, uint seed, int n){
   b += 0xefcdab89;
   c += 0x98badcfe;
   d += 0x10325476;
-    
-  dest[i] = a/4294967296.0;
-  }
-}
-""")
-    func = mod.get_function("md5")
-    func.prepare("Pii", (1,1,1))
-    return func
+"""
+
+import numpy
 
 def rand(shape, dtype=numpy.float32):
     from pycuda.gpuarray import GPUArray
+    from pycuda.elementwise import get_scalar_kernel
 
-    if dtype != numpy.float32:
-        raise NotImplementedError, "only float32 supported so far."
+    result = GPUArray(shape, dtype)
+    
+    if dtype == numpy.float32:
+        func = get_scalar_kernel(
+            "float *dest, unsigned int seed", 
+            md5_code + """
+            dest[i] = a/4294967296.0;
+            if ((i += total_threads) < n)
+                dest[i] = b/4294967296.0;
+            if ((i += total_threads) < n)
+                dest[i] = c/4294967296.0;
+            if ((i += total_threads) < n)
+                dest[i] = d/4294967296.0;
+            """,
+            "md5_rng_float")
+    elif dtype in [numpy.int32, numpy.uint32]:
+        func = get_scalar_kernel(
+            "unsigned int *dest, unsigned int seed", 
+            md5_code + """
+            dest[i] = a;
+            if ((i += total_threads) < n)
+                dest[i] = b;
+            if ((i += total_threads) < n)
+                dest[i] = c;
+            if ((i += total_threads) < n)
+                dest[i] = d;
+            """,
+            "md5_rng_int")
+    else:
+        raise NotImplementedError;
 
-    result = GPUArray(shape, numpy.float32)
-
-    import random
-    func = _get_random_kernel()
     func.set_block_shape(*result._block)
     func.prepared_async_call(result._grid, result.stream,
-            result.gpudata, random.random(), result.size)
-
+            result.gpudata, numpy.random.randint(2**32), result.size)
+    
     return result
 
 
-
-
 if __name__ == "__main__":
-    import pycuda.autoinit
-    from pylab import *
-    from pycuda.curandom import rand
+    import sys, pycuda.autoinit
 
-    if 0:
-        N = 2**27
-        print N*4./1024/1024, "MB"
-        r = md5_rand((N,))
+    if "generate" in sys.argv[1:]:
+        N = 256
+        print N, "MB"
+        r = rand((N*2**18,), numpy.uint32)
         print "generated"
-        r.get().tofile("diehard/random.dat")
+        r.get().tofile("random.dat")
         print "written"
+
+    else: 
+        from pylab import plot, show, subplot
+        N = 250
+        r1 = rand((N,), numpy.uint32)
+        r2 = rand((N,), numpy.int32)
+        r3 = rand((N,), numpy.float32)
     
-    if 1:
-        N = 500
-        
-        subplot(211)
-        r1 = md5_rand((N,))
-        plot( r1.get(),"x-")
-        
-        subplot(212)
-        r2 = rand((N,))
-        plot( r2.get(),"x-")
+        subplot(131); plot( r1.get(),"x-")
+        subplot(132); plot( r2.get(),"x-")
+        subplot(133); plot( r3.get(),"x-")
         show()

@@ -154,7 +154,7 @@ namespace pycuda
 
         size_type alloc_sz = alloc_size(bin_nr);
 
-        assert(bin_number(alloc_sz) == bin);
+        assert(bin_number(alloc_sz) == bin_nr);
 
         try { return get_from_allocator(alloc_sz); }
         catch (cuda::error &e)
