@@ -69,7 +69,7 @@ variable-variable multiplications.
 Loop Unrolling
 ^^^^^^^^^^^^^^
 
-The CUDA programming guide says great things about :cmd:`nvcc` and how
+The CUDA programming guide says great things about :command:`nvcc` and how
 it will unroll loops for you. As of Version 2.1, that's simply not true, and
 ``#pragma unroll`` is simply a no-op, at least according to my experience.
 With metaprogramming, you can dynamically unroll your loops to the needed

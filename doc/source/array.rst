@@ -104,6 +104,16 @@ Constructing :class:`GPUArray` Instances
   Same as :func:`empty`, but the :class:`GPUArray` is zero-initialized before
   being returned.
 
+.. function:: empty_like(other_ary)
+
+  Make a new, uninitialized :class:`GPUArray` having the same properties 
+  as *other_ary*.
+
+.. function:: zeros_like(other_ary)
+
+  Make a new, zero-initialized :class:`GPUArray` having the same properties
+  as *other_ary*.
+
 .. function:: arange(start, stop, step, dtype=numpy.float32)
 
   Create a :class:`GPUArray` filled with numbers spaced `step` apart,

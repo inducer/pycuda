@@ -9,7 +9,7 @@ include doc/Makefile
 include doc/source/conf.py
 
 include ez_setup.py
-include configure
+include configure.py
 include Makefile.in
 include aksetup_helper.py
 include README_SETUP.txt

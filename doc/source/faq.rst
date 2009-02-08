@@ -94,6 +94,56 @@ to your :file:`pycuda/siteconf.py` or :file:`$HOME/.aksetup-defaults.py`.
 User-visible Changes
 ====================
 
+Version 0.92
+------------
+
+.. note::
+
+    If you're upgrading from prior versions, 
+    you may delete the directory :file:`$HOME/.pycuda-compiler-cache`
+    to recover now-unused disk space.
+
+.. note::
+
+    During this release time frame, I had the honor of giving a talk on PyCuda
+    for a `class <http://sites.google.com/site/cudaiap2009/>`_ that a group around 
+    Nicolas Pinto was teaching at MIT.
+    If you're interested, the slides for it are 
+    `available <http://mathema.tician.de/dl/pub/pycuda-mit.pdf>`_.
+
+.. warning:: 
+
+    Version 0.92 is currently a release candidate and therefore has a 
+    somewhat higher likelihood of bugs.
+
+* Make :class:`pycuda.tools.DeviceMemoryPool` official functionality,
+  after numerous improvements. Add :class:`pycuda.tools.PageLockedMemoryPool`
+  for pagelocked memory, too.
+* Properly deal with automatic cleanup in the face of several contexts.
+* Fix compilation on Python 2.4.
+* Fix 3D arrays. (Nicolas Pinto)
+* Improve error message when :command:`nvcc` is not found.
+* Automatically run Python GC before throwing out-of-memory errors.
+* Allow explicit release of memory using 
+  :meth:`pycuda.driver.DeviceAllocation.free`,
+  :meth:`pycuda.driver.HostAllocation.free`,
+  :meth:`pycuda.driver.Array.free`,
+  :meth:`pycuda.tools.PooledDeviceAllocation.free`,
+  :meth:`pycuda.tools.PooledHostAllocation.free`.
+* Make configure switch ``./configure.py --cuda-trace`` to enable API tracing.
+* Add a documentation chapter and examples on :ref:`metaprog`.
+* Add :func:`pycuda.gpuarray.empty_like` and 
+  :func:`pycuda.gpuarray.zeros_like`.
+* Add and document :attr:`pycuda.gpuarray.GPUArray.mem_size` in anticipation of
+  stride/pitch support in :class:`pycuda.gpuarray.GPUArray`.
+* Merge Jozef Vesely's MD5-based RNG.
+* Document :func:`pycuda.driver.from_device` 
+  and :func:`pycuda.driver.from_device_like`.
+* Add :class:`pycuda.elementwise.ElementwiseKernel`.
+* Various documentation improvements. (many of them from Nicholas Tung)
+* Move PyCuda's compiler cache to the system temporary directory, rather
+  than the users home directory.
+
 Version 0.91
 ------------
 
@@ -127,7 +177,7 @@ Version 0.91
 * Add `order` parameter to :func:`pycuda.driver.matrix_to_array` and
   :func:`pycuda.driver.make_multichannel_2d_array`.
 
-Acknowledgements
+Acknowledgments
 ================
 
 * Gert Wohlgemuth ported PyCuda to MacOS X and contributed large parts of
@@ -145,7 +195,7 @@ Licensing
 
 PyCuda is licensed to you under the MIT/X Consortium license:
 
-Copyright (c) 2008 Andreas Klöckner
+Copyright (c) 2009 Andreas Klöckner and Contributors.
 
 Permission is hereby granted, free of charge, to any person
 obtaining a copy of this software and associated documentation

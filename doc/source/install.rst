@@ -16,68 +16,11 @@ you really only need four basic things:
 Step 1: Install Boost
 ---------------------
 
-You may already have a working copy of the `Boost C++
-libraries <http://www.boost.org>`_. If so, make sure that it's version 1.35.0 or
-newer. If not, no problem, we'll build it now. Before you start, make sure you
-have the Python headers (i.e. development information) installed. Your
-operating system may call this package something like `python-dev` or
-`python-devel`. Next, `download <http://boost.org/users/download>`_ the Boost
-release tar.bz2 file. Then, do this::
-
-    $ tar xfj ~/download/boost_1_35_0.tar.bz2
-    $ cd boost_1_35_0
-    $ ./configure --prefix=$HOME/pool
-    $ make
-    $ make install
-
-(Whenever you see the "`$`" dollar sign, this means you should enter this at
-your shell prompt. You don't have to be `root`. A few spots are marked with "su
--c" to show that these *do* require root privileges if you are using a Python
-interpreter that is installed globally.)
-
-You may adapt the file and directory names to suit your liking, however the
-rest of this tutorial will assume that you use these paths.
-
-
-.. warning::
-
-  Please make sure that the Boost.Python configuration process finds
-  the version of Python you intend to use. It is output during the configure/make
-  stage.
-
-If you see something like::
-
-    ...failed updating 30 targets...
-    ...skipped 2 targets...
-
-at the end of the build process, please double-check that you have the Python
-headers installed. If you failed fewer targets (up to 5), you're probably ok
-for hedge, but you might still want to install `libz-dev` and `libbz2-dev` for
-that "perfect score".
-
-Tell the Dynamic Linker about Boost
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-
-If you use a bash or /bin/sh or another POSIX-compliant shell, use this command::
-
-    export LD_LIBRARY_PATH=$HOME/pool/lib:${LD_LIBRARY_PATH}
-
-or, if you are still using a C Shell, use this::
-
-    setenv LD_LIBRARY_PATH $HOME/pool/lib:${LD_LIBRARY_PATH}
-
-or, if you're on OS X, use this::
-
-    export DYLD_LIBRARY_PATH=$HOME/pool/lib:${DYLD_LIBRARY_PATH}
-
-You might want to put this command in your startup script, so you don't have to
-type this over and over. If you forget this step, you will see errors like this
-one later on::
-
-    ...gibberish...
-    ImportError: libboost_python-gcc42-mt-1_35.so.1.35.0: 
-    cannot open shared object file: No such file or directory
-    ...gibberish...
+You may already have a working copy of the `Boost C++ libraries
+<http://www.boost.org>`_. If so, make sure that it's version 1.35.0 or newer.
+If not, no problem, please follow this link to the simple `build and install instructions
+<http://mathema.tician.de/software/install-boost>`_ that I wrote for Boost. 
+Continue here when you're done.
 
 Step 2: Download and unpack PyCuda
 -----------------------------------
@@ -106,7 +49,7 @@ Step 4: Build PyCuda
 Next, just type::
 
     $ cd PyCuda-VERSION # if you're not there already
-    $ ./configure \
+    $ python configure.py \
       --boost-inc-dir=$HOME/pool/include/boost-1_35 \
       --boost-lib-dir=$HOME/pool/lib \
       --boost-python-libname=boost_python-gcc42-mt \
@@ -133,7 +76,7 @@ If it says "OK" at the end, you're golden.
 Installing on Windows
 ---------------------
 
-First, try renaming :file:`configure` to :file:`configure.py` and running it as above.
+First, try running :command:`configure.py` as above.
 If that fails, create a file called :file:`siteconf.py` containing the following, adapted
 to match your system::
 
