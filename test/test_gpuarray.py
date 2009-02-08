@@ -62,5 +62,6 @@ class TestGPUArray(test_abstract_array.TestAbstractArray):
         lin_comb(5, a_gpu, 6, b_gpu, c_gpu)
 
         assert la.norm((c_gpu - (5*a_gpu+6*b_gpu)).get()) < 1e-5
-        if __name__ == '__main__':
-            unittest.main()
+
+if __name__ == '__main__':
+    unittest.main()
