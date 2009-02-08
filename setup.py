@@ -140,7 +140,7 @@ def main():
             url="http://mathema.tician.de/software/pycuda",
             classifiers=[
               'Environment :: Console',
-              'Development Status :: 5 - Mature',
+              'Development Status :: 5 - Production/Stable',
               'Intended Audience :: Developers',
               'Intended Audience :: Other Audience',
               'Intended Audience :: Science/Research',

@@ -27,7 +27,7 @@ Step 2: Download and unpack PyCuda
 
 `Download PyCuda <http://pypi.python.org/pypi/pycuda>`_ and unpack it::
 
-    $ tar xfz PyCuda-VERSION.tar.gz
+    $ tar xfz pycuda-VERSION.tar.gz
 
 Step 3: Install Numpy
 ---------------------
@@ -37,7 +37,7 @@ Python's array package.
 
 Here's an easy way to install it, if you do not have it already::
 
-    $ cd PyCuda-VERSION
+    $ cd pycuda-VERSION
     $ su -c "python ez_setup.py" # this will install setuptools
     $ su -c "easy_install numpy" # this will install numpy using setuptools
 
@@ -48,7 +48,7 @@ Step 4: Build PyCuda
 
 Next, just type::
 
-    $ cd PyCuda-VERSION # if you're not there already
+    $ cd pycuda-VERSION # if you're not there already
     $ python configure.py \
       --boost-inc-dir=$HOME/pool/include/boost-1_35 \
       --boost-lib-dir=$HOME/pool/lib \
@@ -68,7 +68,7 @@ Step 5: Test PyCuda
 
 If you'd like to be extra-careful, you can run PyCuda's unit tests::
 
-    $ cd PyCuda-VERSION/test
+    $ cd pycuda-VERSION/test
     $ python test_driver.py
 
 If it says "OK" at the end, you're golden.
