@@ -82,6 +82,15 @@ The rule is that if something is documented, we will in general make
 every effort to keep future version backward compatible with the present
 interface. If it isn't, there's no such guarantee.
 
+I have <insert random compilation problem> with gcc 4.1 or older. Help!
+-----------------------------------------------------------------------
+
+Try adding::
+
+    CXXFLAGS = ['-DBOOST_PYTHON_NO_PY_SIGNATURES']
+
+to your :file:`pycuda/siteconf.py` or :file:`$HOME/.aksetup-defaults.py`.
+
 User-visible Changes
 ====================
 
