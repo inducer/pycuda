@@ -1,4 +1,4 @@
-// A C++ wrapper for CUDA (not quite yet)
+// A C++ wrapper for CUDA
 
 
 
@@ -213,6 +213,10 @@ namespace cuda
       }
 
       boost::shared_ptr<context> make_context(unsigned int flags);
+
+      CUdevice handle() const
+      { return m_device; }
+
   };
 
   inline
@@ -254,7 +258,6 @@ namespace cuda
         : m_context(ctx), m_valid(true), m_use_count(1)
       { }
 
-
       ~context()
       { 
         if (m_valid)
@@ -279,7 +282,7 @@ namespace cuda
         }
       }
 
-      CUcontext data() const
+      CUcontext handle() const
       { return m_context; }
 
       void detach()
@@ -485,7 +488,7 @@ namespace cuda
       void synchronize()
       { CUDAPP_CALL_GUARDED_THREADED(cuStreamSynchronize, (m_stream)); }
 
-      CUstream data() const
+      CUstream handle() const
       { return m_stream; }
 
       bool is_done() const
@@ -564,7 +567,7 @@ namespace cuda
       }
 #endif
 
-      CUarray data() const
+      CUarray handle() const
       { return m_array; }
   };
 
@@ -604,13 +607,13 @@ namespace cuda
       void set_module(boost::shared_ptr<module> mod)
       { m_module = mod; }
 
-      CUtexref data() const
+      CUtexref handle() const
       { return m_texref; }
 
       void set_array(boost::shared_ptr<array> ary)
       { 
         CUDAPP_CALL_GUARDED(cuTexRefSetArray, (m_texref, 
-            ary->data(), CU_TRSA_OVERRIDE_FORMAT)); 
+            ary->handle(), CU_TRSA_OVERRIDE_FORMAT)); 
         m_array = ary;
       }
 
@@ -699,7 +702,7 @@ namespace cuda
         CUDAPP_CALL_GUARDED(cuModuleUnload, (m_module));
       }
 
-      CUmodule data() const
+      CUmodule handle() const
       { return m_module; }
 
       function get_function(const char *name);
@@ -724,7 +727,7 @@ namespace cuda
   texture_reference *module_get_texref(boost::shared_ptr<module> mod, const char *name)
   {
     CUtexref tr;
-    CUDAPP_CALL_GUARDED(cuModuleGetTexRef, (&tr, mod->data(), name));
+    CUDAPP_CALL_GUARDED(cuModuleGetTexRef, (&tr, mod->handle(), name));
     std::auto_ptr<texture_reference> result(
         new texture_reference(tr, false));
     result->set_module(mod);
@@ -763,7 +766,7 @@ namespace cuda
       void param_set_texref(const texture_reference &tr)
       { 
         CUDAPP_CALL_GUARDED(cuParamSetTexRef, (m_function, 
-            CU_PARAM_TR_DEFAULT, tr.data())); 
+            CU_PARAM_TR_DEFAULT, tr.handle())); 
       }
 
       void launch()
@@ -771,7 +774,7 @@ namespace cuda
       void launch_grid(int grid_width, int grid_height)
       { CUDAPP_CALL_GUARDED_THREADED(cuLaunchGrid, (m_function, grid_width, grid_height)); }
       void launch_grid_async(int grid_width, int grid_height, const stream &s)
-      { CUDAPP_CALL_GUARDED_THREADED(cuLaunchGridAsync, (m_function, grid_width, grid_height, s.data())); }
+      { CUDAPP_CALL_GUARDED_THREADED(cuLaunchGridAsync, (m_function, grid_width, grid_height, s.handle())); }
   };
 
   inline
@@ -868,18 +871,18 @@ namespace cuda
 
   inline
   void memcpy_dtoa(array const &ary, unsigned int index, CUdeviceptr src, unsigned int len)
-  { CUDAPP_CALL_GUARDED_THREADED(cuMemcpyDtoA, (ary.data(), index, src, len)); }
+  { CUDAPP_CALL_GUARDED_THREADED(cuMemcpyDtoA, (ary.handle(), index, src, len)); }
 
   inline
   void memcpy_atod(CUdeviceptr dst, array const &ary, unsigned int index, unsigned int len)
-  { CUDAPP_CALL_GUARDED_THREADED(cuMemcpyAtoD, (dst, ary.data(), index, len)); }
+  { CUDAPP_CALL_GUARDED_THREADED(cuMemcpyAtoD, (dst, ary.handle(), index, len)); }
 
   inline
   void memcpy_atoa(
       array const &dst, unsigned int dst_index, 
       array const &src, unsigned int src_index, 
       unsigned int len)
-  { CUDAPP_CALL_GUARDED_THREADED(cuMemcpyAtoA, (dst.data(), dst_index, src.data(), src_index, len)); }
+  { CUDAPP_CALL_GUARDED_THREADED(cuMemcpyAtoA, (dst.handle(), dst_index, src.handle(), src_index, len)); }
 
 
 
@@ -903,7 +906,7 @@ namespace cuda
     void set_src_array(array const &ary)  \
     {  \
       srcMemoryType = CU_MEMORYTYPE_ARRAY; \
-      srcArray = ary.data();  \
+      srcArray = ary.handle();  \
     } \
     \
     void set_src_device(CUdeviceptr devptr)  \
@@ -923,7 +926,7 @@ namespace cuda
     void set_dst_array(array const &ary) \
     { \
       dstMemoryType = CU_MEMORYTYPE_ARRAY; \
-      dstArray = ary.data(); \
+      dstArray = ary.handle(); \
     } \
     \
     void set_dst_device(CUdeviceptr devptr)  \
@@ -958,7 +961,7 @@ namespace cuda
     }
 
     void execute_async(const stream &s) const
-    { CUDAPP_CALL_GUARDED_THREADED(cuMemcpy2DAsync, (this, s.data())); }
+    { CUDAPP_CALL_GUARDED_THREADED(cuMemcpy2DAsync, (this, s.handle())); }
   };
 
 #if CUDA_VERSION >= 2000
@@ -988,7 +991,7 @@ namespace cuda
     }
 
     void execute_async(const stream &s) const
-    { CUDAPP_CALL_GUARDED_THREADED(cuMemcpy3DAsync, (this, s.data())); }
+    { CUDAPP_CALL_GUARDED_THREADED(cuMemcpy3DAsync, (this, s.handle())); }
   };
 #endif
 
@@ -1058,7 +1061,7 @@ namespace cuda
       { CUDAPP_CALL_GUARDED(cuEventRecord, (m_event, 0)); }
 
       void record_in_stream(stream const &str)
-      { CUDAPP_CALL_GUARDED(cuEventRecord, (m_event, str.data())); }
+      { CUDAPP_CALL_GUARDED(cuEventRecord, (m_event, str.handle())); }
 
       void synchronize()
       { CUDAPP_CALL_GUARDED_THREADED(cuEventSynchronize, (m_event)); }

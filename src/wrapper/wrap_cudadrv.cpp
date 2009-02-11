@@ -202,7 +202,7 @@ namespace
     else
     {
       const stream &s = py::extract<const stream &>(stream_py);
-      CUDAPP_CALL_GUARDED(cuMemcpyHtoDAsync, (dst, buf, len, s.data()));
+      CUDAPP_CALL_GUARDED(cuMemcpyHtoDAsync, (dst, buf, len, s.handle()));
     }
   }
 
@@ -223,7 +223,7 @@ namespace
     else
     {
       const stream &s = py::extract<const stream &>(stream_py);
-      CUDAPP_CALL_GUARDED(cuMemcpyDtoHAsync, (buf, src, len, s.data()));
+      CUDAPP_CALL_GUARDED(cuMemcpyDtoHAsync, (buf, src, len, s.handle()));
     }
   }
 
@@ -237,7 +237,7 @@ namespace
     if (PyObject_AsReadBuffer(src.ptr(), &buf, &len))
       throw py::error_already_set();
 
-    CUDAPP_CALL_GUARDED(cuMemcpyHtoA, (ary.data(), index, buf, len));
+    CUDAPP_CALL_GUARDED(cuMemcpyHtoA, (ary.handle(), index, buf, len));
   }
 
 
@@ -250,7 +250,7 @@ namespace
     if (PyObject_AsWriteBuffer(dst.ptr(), &buf, &len))
       throw py::error_already_set();
 
-    CUDAPP_CALL_GUARDED(cuMemcpyAtoH, (buf, ary.data(), index, len));
+    CUDAPP_CALL_GUARDED(cuMemcpyAtoH, (buf, ary.handle(), index, len));
   }
 
 }
