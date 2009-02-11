@@ -104,27 +104,12 @@ def main():
             conf["LDFLAGS"].extend(['-arch', 'i386'])
 
     ext_kwargs = dict(
-            include_dirs=INCLUDE_DIRS + EXTRA_INCLUDE_DIRS,
-            library_dirs=LIBRARY_DIRS + conf["CUDADRV_LIB_DIR"],
-            libraries=LIBRARIES + conf["CUDADRV_LIBNAME"],
-            define_macros=list(EXTRA_DEFINES.iteritems()),
-            extra_compile_args=conf["CXXFLAGS"],
-            extra_link_args=conf["LDFLAGS"],
             )
 
-    ext_modules=[
-        NumpyExtension("_driver", 
-            [
-                "src/cpp/cuda.cpp", 
-                "src/cpp/bitlog.cpp", 
-                "src/wrapper/wrap_cudadrv.cpp", 
-                "src/wrapper/mempool.cpp", 
-                ], **ext_kwargs),
-        ]
-
+    extra_sources = []
     if conf["CUDA_ENABLE_GL"]:
-        ext_modules.append(NumpyExtension("_gl", 
-                    [ "src/wrapper/wrap_cudagl.cpp", ], **ext_kwargs))
+        extra_sources.append("src/wrapper/wrap_cudagl.cpp")
+        EXTRA_DEFINES["HAVE_GL"] = 1
 
     setup(name="pycuda",
             # metadata
@@ -180,7 +165,7 @@ def main():
               ],
 
             # build info
-            packages=["pycuda"],
+            packages=["pycuda", "pycuda.gl"],
             zip_safe=False,
 
             install_requires=[
@@ -189,7 +174,22 @@ def main():
 
             package_dir={"pycuda": "src/python"},
             ext_package="pycuda",
-            ext_modules=ext_modules)
+            ext_modules=[
+                NumpyExtension("_driver", 
+                    [
+                        "src/cpp/cuda.cpp", 
+                        "src/cpp/bitlog.cpp", 
+                        "src/wrapper/wrap_cudadrv.cpp", 
+                        "src/wrapper/mempool.cpp", 
+                        ]+extra_sources, 
+                    include_dirs=INCLUDE_DIRS + EXTRA_INCLUDE_DIRS,
+                    library_dirs=LIBRARY_DIRS + conf["CUDADRV_LIB_DIR"],
+                    libraries=LIBRARIES + conf["CUDADRV_LIBNAME"],
+                    define_macros=list(EXTRA_DEFINES.iteritems()),
+                    extra_compile_args=conf["CXXFLAGS"],
+                    extra_link_args=conf["LDFLAGS"],
+                    ),
+                ])
 
 
 

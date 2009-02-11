@@ -14,7 +14,7 @@ using boost::shared_ptr;
 
 
 
-BOOST_PYTHON_MODULE(_gl)
+void pycuda_expose_gl()
 {
   using py::arg;
   using py::args;

@@ -22,3 +22,11 @@ GL Interoperability
     .. method :: unmap()
     .. method :: device_ptr()
     .. method :: size()
+
+Automatic Initialization
+------------------------
+
+.. module:: pycuda.gl.autoinit
+
+.. data:: device
+.. data:: context
