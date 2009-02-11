@@ -93,9 +93,25 @@ The :class:`GPUArray` Array Class
 
     Fill the array with *scalar*.
 
-  .. method:: bind_to_texref(texref)
+:class:`GPUArrays` as Textures
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-    Bind *self* to the :class:`TextureReference` *texref*.
+.. method:: bind_to_texref(texref)
+
+  Bind *self* to the :class:`pycuda.driver.TextureReference` *texref*.
+
+  .. note::
+
+    For more comprehensive functionality, consider using
+    :meth:`bind_to_texref_ext`.
+
+.. method:: bind_to_texref_ext(texref, channels=1)
+
+  Bind *self* to the :class:`pycuda.driver.TextureReference` *texref*.
+  In addition, set the texture reference's format to match :attr:`dtype`
+  and its channel count to *channels*. This routine also sets the
+  texture reference's :data:`pycuda.driver.TRSF_READ_AS_INTEGER` flag, 
+  if necessary.
     
 Constructing :class:`GPUArray` Instances
 ----------------------------------------
