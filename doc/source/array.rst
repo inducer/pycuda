@@ -41,6 +41,16 @@ The :class:`GPUArray` Array Class
     The size of the entire array in bytes. Computed as :attr:`size` times 
     ``dtype.itemsize``.
 
+  .. method :: __len__()
+    
+    Returns the size of the leading dimension of *self*.
+
+    .. warning ::
+      
+      This method existed in version 0.93 and below, but it returned the value
+      of :attr:`size` instead of its current value. The change was made in order
+      to match :mod:`numpy`.
+
   .. method :: set(ary, stream=None)
 
     Transfer the contents the :class:`numpy.ndarray` object *ary*

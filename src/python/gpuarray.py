@@ -313,8 +313,11 @@ class GPUArray(object):
         texref.set_address(self.gpudata, self.size*self.dtype.itemsize)
 
     def __len__(self):
-        """returns the len of the internal array"""
-        return self.size
+        """Return the size of the leading dimension of self."""
+        if len(self.shape):
+            return self.shape[0]
+        else:
+            return 1
 
     def __abs__(self):
         """Return a `GPUArray` of the absolute values of the elements

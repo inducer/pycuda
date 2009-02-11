@@ -107,6 +107,20 @@ it's done cleaning up.
 User-visible Changes
 ====================
 
+Version 0.93
+------------
+
+.. note:: 
+
+    Version 0.93 is currently in active development. If you'd like to try a
+    snapshot, you may access PyCuda's source control archive via the
+    PyCuda homepage.
+
+* OpenGL interoperability in :mod:`pycuda.gl`.
+* Document :meth:`pycuda.gpuarray.GPUArray.__len__`. Change its definition
+  to match :mod:`numpy`.
+* Added :meth:`pycuda.gpuarray.GPUArray.bind_to_texref_ext`.
+
 Version 0.92
 ------------
 
