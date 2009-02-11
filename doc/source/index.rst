@@ -87,8 +87,8 @@ Contents
     install
     tutorial
     driver
-    gl
     util
+    gl
     array
     metaprog
     faq

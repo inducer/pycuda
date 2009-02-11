@@ -3,8 +3,8 @@ GL Interoperability
 
 .. note::
 
-    This functionality is scheduled for release 0.93 and only available from 
-    source-built versions from PyCuda's git tree.
+    This functionality is scheduled for release 0.93 and only available in
+    source-built versions of PyCuda's git tree.
 
 .. module:: pycuda.gl
 
@@ -17,7 +17,7 @@ GL Interoperability
     .. method :: handle()
     .. method :: map()
     
-.. class :: BufferObjectMapping(bufobj)
+.. class :: BufferObjectMapping
 
     .. method :: unmap()
     .. method :: device_ptr()
