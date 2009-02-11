@@ -310,11 +310,21 @@ class GPUArray(object):
         return self
 
     def bind_to_texref(self, texref):
-        texref.set_address(self.gpudata, self.size*self.dtype.itemsize)
+        texref.set_address(self.gpudata, self.nbytes)
+
+    def bind_to_texref_ext(self, texref, channels=1):
+        texref.set_address(self.gpudata, self.nbytes)
+        texref.set_format(drv.dtype_to_array_format(self.dtype), channels)
+
+        if isinstance(self.dtype, (numpy.integer, int)):
+            texref.set_flags(texref.get_flags() | drv.TRSF_READ_AS_INTEGER)
 
     def __len__(self):
-        """returns the len of the internal array"""
-        return self.size
+        """Return the size of the leading dimension of self."""
+        if len(self.shape):
+            return self.shape[0]
+        else:
+            return 1
 
     def __abs__(self):
         """Return a `GPUArray` of the absolute values of the elements
