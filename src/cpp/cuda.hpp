@@ -242,6 +242,13 @@ namespace cuda
    * to push contexts that are already active at a deeper stack level, so we
    * maintain all contexts floating other than the top one.
    */
+
+  // for friend decl
+  namespace gl { 
+    boost::shared_ptr<context> 
+        make_gl_context(device const &dev, unsigned int flags);
+  }
+
   class context : boost::noncopyable
   {
     private:
@@ -365,6 +372,8 @@ namespace cuda
 
       friend class device;
       friend void context_push(boost::shared_ptr<context> ctx);
+      friend boost::shared_ptr<context> 
+          gl::make_gl_context(device const &dev, unsigned int flags);
   };
 
 
