@@ -91,6 +91,19 @@ Try adding::
 
 to your :file:`pycuda/siteconf.py` or :file:`$HOME/.aksetup-defaults.py`.
 
+Does PyCuda automatically activate the right context for the object I'm talking to?
+-----------------------------------------------------------------------------------
+
+No. It *does* know which context each object belongs, and it does implicitly
+activate contexts for cleanup purposes. Since I'm not entirely sure how costly
+context activation is supposed to be, PyCuda will not juggle contexts for you
+if you're talking to an object from a context that's not currently active.
+Here's a rule of thumb: As long as you have control over invocation order, you
+have to manage contexts yourself. Since you mostly don't have control over
+cleanup, PyCuda manages contexts for you in this case. To make this transparent
+to you, the user, PyCuda will automatically restore the previous context once
+it's done cleaning up.
+
 User-visible Changes
 ====================
 
