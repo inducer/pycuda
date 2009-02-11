@@ -259,6 +259,7 @@ namespace
 
 
 void pycuda_expose_tools();
+void pycuda_expose_gl();
 
 
 
@@ -635,4 +636,7 @@ BOOST_PYTHON_MODULE(_driver)
   py::scope().attr("TR_DEFAULT") = CU_PARAM_TR_DEFAULT;
 
   pycuda_expose_tools();
+#ifdef HAVE_GL
+  pycuda_expose_gl();
+#endif
 }
