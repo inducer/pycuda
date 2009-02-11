@@ -8,8 +8,8 @@ GL Interoperability
 
 .. module:: pycuda.gl
 
-.. func :: init()
-.. func :: make_context(dev, flags=0)
+.. function :: init()
+.. function :: make_context(dev, flags=0)
 
 .. class :: BufferObject(bufobj)
 
