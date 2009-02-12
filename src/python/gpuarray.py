@@ -436,11 +436,15 @@ def arange(*args, **kwargs):
     # argument processing -----------------------------------------------------
 
     # Yuck. Thanks, numpy developers. ;)
+    from pytools import Record
+    class Info(Record):
+        pass
 
-    start = None
-    stop = None
-    step = None
-    dtype = None
+    inf = Info()
+    inf.start = None
+    inf.stop = None
+    inf.step = None
+    inf.dtype = None
 
     if isinstance(args[-1], numpy.dtype):
         dtype = args[-1]
@@ -450,39 +454,39 @@ def arange(*args, **kwargs):
     if argc == 0:
         raise ValueError, "stop argument required"
     elif argc == 1:
-        stop = args[0]
+        inf.stop = args[0]
     elif argc == 2:
-        start = args[0]
-        stop = args[1]
+        inf.start = args[0]
+        inf.stop = args[1]
     elif argc == 3:
-        start = args[0]
-        stop = args[1]
-        step = args[2]
+        inf.start = args[0]
+        inf.stop = args[1]
+        inf.step = args[2]
     else:
         raise ValueError, "too many arguments"
 
     admissible_names = ["start", "stop", "step", "dtype"]
     for k, v in kwargs.iteritems():
         if k in admissible_names:
-            if locals()[k] is None:
-                locals()[k] = v
+            if getattr(inf, k) is None:
+                setattr(inf, k, v)
             else:
-                raise ValueError, "may not specify 'dtype' by position and keyword" % k
+                raise ValueError, "may not specify '%s' by position and keyword" % k
         else:
             raise ValueError, "unexpected keyword argument '%s'" % k
 
-    if start is None:
-        start = 0
-    if step is None:
-        step = 1
-    if dtype is None:
-        #dtype = numpy.array([start, stop, step]).dtype
-        dtype = numpy.float32
+    if inf.start is None:
+        inf.start = 0
+    if inf.step is None:
+        inf.step = 1
+    if inf.dtype is None:
+        inf.dtype = numpy.array([inf.start, inf.stop, inf.step]).dtype
 
     # actual functionality ----------------------------------------------------
-    dtype = numpy.dtype(dtype)
-    start = dtype.type(start)
-    step = dtype.type(step)
+    dtype = numpy.dtype(inf.dtype)
+    start = dtype.type(inf.start)
+    step = dtype.type(inf.step)
+    stop = dtype.type(inf.stop)
 
     from math import ceil
     size = int(ceil((stop-start)/step))

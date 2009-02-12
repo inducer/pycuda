@@ -2,7 +2,8 @@ import pycuda.autoinit
 import pycuda.gpuarray as gpuarray
 import unittest
 import pycuda.cumath as cumath
-import math as math
+import math
+import numpy
 
 test_sample =  1<<13
     
@@ -11,7 +12,7 @@ print "sample size: ", test_sample
 class TestMath(unittest.TestCase):
     def test_ceil(self):
         """tests if the ceil function works"""
-        a = gpuarray.arange(test_sample)/10        
+        a = gpuarray.arange(test_sample, dtype=numpy.float32)/10        
         b = cumath.ceil(a)
         
         a = a.get()
@@ -22,7 +23,7 @@ class TestMath(unittest.TestCase):
                
     def test_fabs(self):
         """tests if the fabs function works"""
-        a = gpuarray.arange(test_sample) * -1    
+        a = gpuarray.arange(test_sample, dtype=numpy.float32) * -1    
         b = cumath.fabs(a)
         
         a = a.get()
@@ -34,7 +35,7 @@ class TestMath(unittest.TestCase):
                
     def test_floor(self):
         """tests if the floor function works"""
-        a = gpuarray.arange(test_sample)/10        
+        a = gpuarray.arange(test_sample, dtype=numpy.float32)/10        
         b = cumath.floor(a)
 
         a = a.get()
@@ -45,8 +46,8 @@ class TestMath(unittest.TestCase):
                
     def test_fmod(self):
         """tests if the fmod function works"""
-        a = gpuarray.arange(test_sample)/10        
-        a2 = gpuarray.arange(test_sample)/45.2 + 0.1
+        a = gpuarray.arange(test_sample, dtype=numpy.float32)/10        
+        a2 = gpuarray.arange(test_sample, dtype=numpy.float32)/45.2 + 0.1
         b = cumath.fmod(a, a2)
         
         a = a.get()
@@ -58,8 +59,8 @@ class TestMath(unittest.TestCase):
 
     def test_ldexp(self):
         """tests if the ldexp function works"""
-        a = gpuarray.arange(test_sample)       
-        a2 = gpuarray.arange(test_sample)*1e-3
+        a = gpuarray.arange(test_sample, dtype=numpy.float32)       
+        a2 = gpuarray.arange(test_sample, dtype=numpy.float32)*1e-3
         b = cumath.ldexp(a,a2)
         
         a = a.get()
@@ -71,7 +72,7 @@ class TestMath(unittest.TestCase):
                
     def test_modf(self):
         """tests if the modf function works"""
-        a = gpuarray.arange(test_sample)/10  
+        a = gpuarray.arange(test_sample, dtype=numpy.float32)/10  
         fracpart, intpart = cumath.modf(a)
     
         a = a.get()
@@ -86,7 +87,7 @@ class TestMath(unittest.TestCase):
                          
     def test_frexp(self):
         """tests if the frexp function works"""
-        a = gpuarray.arange(test_sample)/10  
+        a = gpuarray.arange(test_sample, dtype=numpy.float32)/10  
         significands, exponents = cumath.frexp(a)
     
         a = a.get()
@@ -101,7 +102,7 @@ class TestMath(unittest.TestCase):
 
     def test_exp(self):
         """tests if the exp function works"""
-        a = gpuarray.arange(100)/10        
+        a = gpuarray.arange(100, dtype=numpy.float32)/10        
         b = cumath.exp(a)
         
         a = a.get()
@@ -112,7 +113,7 @@ class TestMath(unittest.TestCase):
 
     def test_log(self):
         """tests if the log function works"""
-        a = gpuarray.arange(test_sample)+1       
+        a = gpuarray.arange(test_sample, dtype=numpy.float32)+1       
         b = cumath.log(a)
         
         a = a.get()
@@ -123,7 +124,7 @@ class TestMath(unittest.TestCase):
 
     def test_log10(self):
         """tests if the log function works"""
-        a = gpuarray.arange(test_sample)+1       
+        a = gpuarray.arange(test_sample, dtype=numpy.float32)+1       
         b = cumath.log10(a)
         
         a = a.get()
@@ -134,7 +135,7 @@ class TestMath(unittest.TestCase):
          
     def test_pow(self):
         """tests if the pow function works"""
-        a = gpuarray.arange(10)+1       
+        a = gpuarray.arange(10, dtype=numpy.float32)+1       
         b = a**2
         
         a = a.get()
@@ -145,7 +146,7 @@ class TestMath(unittest.TestCase):
          
     def test_sqrt(self):
         """tests if the sqrt function works"""
-        a = gpuarray.arange(10)+1       
+        a = gpuarray.arange(10, dtype=numpy.float32)+1       
         b = cumath.sqrt(a)
         
         a = a.get()
@@ -156,7 +157,7 @@ class TestMath(unittest.TestCase):
          
     def test_acos(self):
         """tests if the acos function works"""
-        a = (gpuarray.arange(10)+1)/100      
+        a = (gpuarray.arange(10, dtype=numpy.float32)+1)/100      
         b = cumath.acos(a)
         
         a = a.get()
@@ -167,7 +168,7 @@ class TestMath(unittest.TestCase):
           
     def test_cos(self):
         """tests if the cos function works"""
-        a = (gpuarray.arange(10)+1)/100      
+        a = (gpuarray.arange(10, dtype=numpy.float32)+1)/100      
         b = cumath.cos(a)
         
         a = a.get()
@@ -178,7 +179,7 @@ class TestMath(unittest.TestCase):
          
     def test_sin(self):
         """tests if the sin function works"""
-        a = (gpuarray.arange(10)+1)/100      
+        a = (gpuarray.arange(10, dtype=numpy.float32)+1)/100      
         b = cumath.sin(a)
         
         a = a.get()
@@ -188,7 +189,7 @@ class TestMath(unittest.TestCase):
             self.assert_(abs(math.sin(a[i]) - b[i]) < 1e-2)
           
     def test_asin(self):
-        a = (gpuarray.arange(10)+1)/100      
+        a = (gpuarray.arange(10, dtype=numpy.float32)+1)/100      
         b = cumath.asin(a)
         
         a = a.get()
@@ -199,7 +200,7 @@ class TestMath(unittest.TestCase):
 
          
     def test_tan(self):
-        a = (gpuarray.arange(10)+1)/100      
+        a = (gpuarray.arange(10, dtype=numpy.float32)+1)/100      
         b = cumath.tan(a)
         
         a = a.get()
@@ -209,7 +210,7 @@ class TestMath(unittest.TestCase):
             self.assert_(abs(math.tan(a[i]) - b[i]) < 1e-2)
           
     def test_atan(self):
-        a = (gpuarray.arange(10)+1)/100      
+        a = (gpuarray.arange(10, dtype=numpy.float32)+1)/100      
         b = cumath.atan(a)
         
         a = a.get()
@@ -219,7 +220,7 @@ class TestMath(unittest.TestCase):
             self.assert_(abs(math.atan(a[i]) - b[i]) < 1e-2)         
 
     def test_cosh(self):
-        a = (gpuarray.arange(10)+1)/100      
+        a = (gpuarray.arange(10, dtype=numpy.float32)+1)/100      
         b = cumath.cosh(a)
         
         a = a.get()
@@ -229,7 +230,7 @@ class TestMath(unittest.TestCase):
             self.assert_(abs(math.cosh(a[i]) - b[i]) < 1e-2)         
          
     def test_sinh(self):
-        a = (gpuarray.arange(10)+1)/100      
+        a = (gpuarray.arange(10, dtype=numpy.float32)+1)/100      
         b = cumath.sinh(a)
         
         a = a.get()
@@ -240,7 +241,7 @@ class TestMath(unittest.TestCase):
 
          
     def test_tanh(self):
-        a = (gpuarray.arange(10)+1)/100      
+        a = (gpuarray.arange(10, dtype=numpy.float32)+1)/100      
         b = cumath.tanh(a)
         
         a = a.get()
