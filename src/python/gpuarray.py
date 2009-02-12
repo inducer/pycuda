@@ -47,6 +47,12 @@ def splay(n, dev=None):
 
 
 
+def _get_common_dtype(obj1, obj2):
+    return (obj1.dtype.type(0) + obj2.dtype.type(0)).dtype
+
+
+
+
 class GPUArray(object): 
     """A GPUArray is used to do array based calculation on the GPU. 
 
@@ -107,11 +113,9 @@ class GPUArray(object):
     def _axpbyz(self, selffac, other, otherfac, out, add_timer=None):
         """Compute ``out = selffac * self + otherfac*other``, 
         where `other` is a vector.."""
-        assert self.dtype == numpy.float32
         assert self.shape == other.shape
-        assert self.dtype == other.dtype
 
-        func = elementwise.get_axpbyz_kernel()
+        func = elementwise.get_axpbyz_kernel(self.dtype, other.dtype, out.dtype)
         func.set_block_shape(*self._block)
 
         if add_timer is not None:
@@ -127,9 +131,7 @@ class GPUArray(object):
 
     def _axpbz(self, selffac, other, out):
         """Compute ``out = selffac * self + other``, where `other` is a scalar."""
-        assert self.dtype == numpy.float32
-
-        func = elementwise.get_axpbz_kernel()
+        func = elementwise.get_axpbz_kernel(self.dtype)
         func.set_block_shape(*self._block)
         func.prepared_async_call(self._grid, self.stream,
                 selffac, self.gpudata,
@@ -138,10 +140,7 @@ class GPUArray(object):
         return out
 
     def _elwise_multiply(self, other, out):
-        assert self.dtype == numpy.float32
-        assert self.dtype == numpy.float32
-
-        func = elementwise.get_multiply_kernel()
+        func = elementwise.get_multiply_kernel(self.dtype, other.dtype, out.dtype)
         func.set_block_shape(*self._block)
         func.prepared_async_call(self._grid, self.stream,
                 self.gpudata, other.gpudata,
@@ -157,7 +156,7 @@ class GPUArray(object):
 
         assert self.dtype == numpy.float32
 
-        func = elementwise.get_rdivide_elwise_kernel()
+        func = elementwise.get_rdivide_elwise_kernel(self.dtype)
         func.set_block_shape(*self._block)
         func.prepared_async_call(self._grid, self.stream,
                 self.gpudata, other,
@@ -168,11 +167,9 @@ class GPUArray(object):
     def _div(self, other, out):
         """Divides an array by another array."""
 
-        assert self.dtype == numpy.float32
         assert self.shape == other.shape
-        assert self.dtype == other.dtype
 
-        func = elementwise.get_divide_kernel()
+        func = elementwise.get_divide_kernel(self.dtype, other.dtype, out.dtype)
         func.set_block_shape(*self._block)
         func.prepared_async_call(self._grid, self.stream,
                 self.gpudata, other.gpudata,
@@ -180,14 +177,14 @@ class GPUArray(object):
 
         return out
 
-    def _new_like_me(self):
-        return self.__class__(self.shape, self.dtype, allocator=self.allocator)
+    def _new_like_me(self, dtype=None):
+        return self.__class__(self.shape, dtype or self.dtype, allocator=self.allocator)
 
     # operators ---------------------------------------------------------------
     def mul_add(self, selffac, other, otherfac, add_timer=None):
         """Return `selffac * self + otherfac*other`.
         """
-        result = self._new_like_me()
+        result = self._new_like_me(_get_common_dtype(self, other))
         return self._axpbyz(selffac, other, otherfac, result, add_timer)
 
     def __add__(self, other):
@@ -195,7 +192,7 @@ class GPUArray(object):
 
         if isinstance(other, GPUArray):
             # add another vector
-            result = self._new_like_me()
+            result = self._new_like_me(_get_common_dtype(self, other))
             return self._axpbyz(1, other, 1, result)
         else:
             # add a scalar
@@ -211,7 +208,7 @@ class GPUArray(object):
         """Substract an array from an array or a scalar from an array."""
 
         if isinstance(other, GPUArray):
-            result = self._new_like_me()
+            result = self._new_like_me(_get_common_dtype(self, other))
             return self._axpbyz(1, other, -1, result)
         else:
             if other == 0:
@@ -241,10 +238,11 @@ class GPUArray(object):
         return self._axpbz(-1, 0, result)
 
     def __mul__(self, other):
-        result = self._new_like_me()
         if isinstance(other, GPUArray):
+            result = self._new_like_me(_get_common_dtype(self, other))
             return self._elwise_multiply(other, result)
         else:
+            result = self._new_like_me()
             return self._axpbz(other, 0, result)
 
     def __rmul__(self, scalar):
@@ -260,7 +258,7 @@ class GPUArray(object):
            x = self / n
         """
         if isinstance(other, GPUArray):
-            result = self._new_like_me()
+            result = self._new_like_me(_get_common_dtype(self, other))
             return self._div(other, result)
         else:
             if other == 1:
@@ -279,7 +277,7 @@ class GPUArray(object):
         """
 
         if isinstance(other, GPUArray):
-            result = self._new_like_me()
+            result = self._new_like_me(_get_common_dtype(self, other))
 
             func = elementwise.get_divide_kernel()
             func.set_block_shape(*self._block)
@@ -300,9 +298,7 @@ class GPUArray(object):
 
     def fill(self, value):
         """fills the array with the specified value"""
-        assert self.dtype == numpy.float32
-
-        func = elementwise.get_fill_kernel()
+        func = elementwise.get_fill_kernel(self.dtype)
         func.set_block_shape(*self._block)
         func.prepared_async_call(self._grid, self.stream,
                 value, self.gpudata, self.mem_size)
@@ -316,7 +312,7 @@ class GPUArray(object):
         texref.set_address(self.gpudata, self.nbytes)
         texref.set_format(drv.dtype_to_array_format(self.dtype), channels)
 
-        if isinstance(self.dtype, (numpy.integer, int)):
+        if numpy.integer in self.dtype.type.__mro__:
             texref.set_flags(texref.get_flags() | drv.TRSF_READ_AS_INTEGER)
 
     def __len__(self):
@@ -331,11 +327,16 @@ class GPUArray(object):
         of `self`.
         """
 
-        assert self.dtype == numpy.float32
+        result = self._new_like_me()
 
-        result = GPUArray(self.shape, self.dtype)
+        if self.dtype == numpy.float32:
+            fname = "fabsf"
+        elif self.dtype == numpy.float64:
+            fname = "fabs"
+        else:
+            fname = "abs"
 
-        func = elementwise.get_unary_func_kernel("fabs")
+        func = elementwise.get_unary_func_kernel(fname, self.dtype)
         func.set_block_shape(*self._block)
         func.prepared_async_call(self._grid, self.stream,
                 self.gpudata,result.gpudata, self.mem_size)
@@ -351,13 +352,15 @@ class GPUArray(object):
                    array = pow(array,array)
 
         """
-        result = GPUArray(self.shape, self.dtype)
 
         if isinstance(other, GPUArray):
             assert self.shape == other.shape
-            assert self.dtype == other.dtype
 
-            func = elementwise.get_pow_array_kernel()
+            result = self._new_like_me(_get_common_dtype(self, other))
+
+            func = elementwise.get_pow_array_kernel(
+                    self.dtype, other.dtype, result.dtype)
+
             func.set_block_shape(*self._block)
             func.prepared_async_call(self._grid, self.stream,
                     self.gpudata, other.gpudata, result.gpudata,
@@ -365,7 +368,8 @@ class GPUArray(object):
             
             return result
         else:
-            func = elementwise.get_pow_kernel()
+            result = self._new_like_me()
+            func = elementwise.get_pow_kernel(self.dtype)
             func.set_block_shape(*self._block)
             func.prepared_async_call(self._grid, self.stream,
                     other, self.gpudata, result.gpudata,
@@ -378,11 +382,9 @@ class GPUArray(object):
         as one-dimensional.
         """
 
-        assert self.dtype == numpy.float32
-        
-        result = GPUArray(self.shape, self.dtype)
+        result = self._new_like_me()
 
-        func = elementwise.get_reverse_kernel()
+        func = elementwise.get_reverse_kernel(self.dtype)
         func.set_block_shape(*self._block)
         func.prepared_async_call(self._grid, self.stream,
                 self.gpudata, result.gpudata,
@@ -478,8 +480,6 @@ def arange(*args, **kwargs):
         dtype = numpy.float32
 
     # actual functionality ----------------------------------------------------
-    assert dtype == numpy.float32
-
     dtype = numpy.dtype(dtype)
     start = dtype.type(start)
     step = dtype.type(step)
@@ -489,7 +489,7 @@ def arange(*args, **kwargs):
   
     result = GPUArray((size,), dtype)
 
-    func = elementwise.get_arange_kernel()
+    func = elementwise.get_arange_kernel(dtype)
     func.set_block_shape(*result._block)
     func.prepared_async_call(result._grid, result.stream,
             result.gpudata, start, step, size)

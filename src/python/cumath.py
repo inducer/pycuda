@@ -5,9 +5,14 @@ import math
 
 def _make_unary_array_func(name):
     def f(array):
-        result = gpuarray.GPUArray(array.shape, array.dtype, array.stream)
+        result = array._new_like_me()
         
-        func = elementwise.get_unary_func_kernel(name)
+        if array.dtype == numpy.float32:
+            func_name = name + "f"
+        else:
+            func_name = name
+
+        func = elementwise.get_unary_func_kernel(func_name, array.dtype)
         func.set_block_shape(*array._block)
         func.prepared_async_call(array._grid, array.stream,
                 array.gpudata, result.gpudata, array.mem_size)
