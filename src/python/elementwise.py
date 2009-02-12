@@ -1,5 +1,32 @@
 import pycuda.driver as drv
 from pytools import memoize
+import numpy
+
+
+
+
+def dtype_to_ctype(dtype):
+    dtype = numpy.dtype(dtype)
+    if dtype == numpy.int32:
+        return "int"
+    elif dtype == numpy.uint32:
+        return "unsigned int"
+    elif dtype == numpy.int16:
+        return "short int"
+    elif dtype == numpy.uint16:
+        return "short unsigned int"
+    elif dtype == numpy.int8:
+        return "signed char"
+    elif dtype == numpy.uint8:
+        return "unsigned char"
+    elif dtype == numpy.intp or dtype == numpy.uintp:
+        return "void *"
+    elif dtype == numpy.float32:
+        return "float"
+    elif dtype == numpy.float64:
+        return "double"
+    else:
+        raise ValueError, "unable to map dtype '%s'" % dtype
 
 
 
@@ -97,76 +124,123 @@ class ElementwiseKernel:
 
 
 @memoize
-def get_axpbyz_kernel():
+def get_copy_kernel(dtype_dest, dtype_src):
     return get_elwise_kernel(
-            "float a, float *x, float b, float *y, float *z",
+            "%(tp_dest)s *dest, %(tp_src)s *src" % {
+                "tp_dest": dtype_to_ctype(dtype_dest),
+                "tp_src": dtype_to_ctype(dtype_src),
+                },
+            "dest[i] = src[i]",
+            "copy")
+
+@memoize
+def get_axpbyz_kernel(dtype_x, dtype_y, dtype_z):
+    return get_elwise_kernel(
+            "%(tp_x)s a, %(tp_x)s *x, %(tp_y)s b, %(tp_y)s *y, %(tp_z)s *z" % {
+                "tp_x": dtype_to_ctype(dtype_x),
+                "tp_y": dtype_to_ctype(dtype_y),
+                "tp_z": dtype_to_ctype(dtype_z),
+                },
             "z[i] = a*x[i] + b*y[i]",
             "axpbyz")
 
 @memoize
-def get_axpbz_kernel():
+def get_axpbz_kernel(dtype):
     return get_elwise_kernel(
-            "float a, float *x,float b, float *z",
+            "%(tp)s a, %(tp)s *x,%(tp)s b, %(tp)s *z" % {
+                "tp": dtype_to_ctype(dtype)},
             "z[i] = a * x[i] + b",
             "axpb")
 
 @memoize
-def get_multiply_kernel():
+def get_multiply_kernel(dtype_x, dtype_y, dtype_z):
     return get_elwise_kernel(
-            "float *x, float *y, float *z",
+            "%(tp_x)s *x, %(tp_y)s *y, %(tp_z)s *z" % {
+                "tp_x": dtype_to_ctype(dtype_x),
+                "tp_y": dtype_to_ctype(dtype_y),
+                "tp_z": dtype_to_ctype(dtype_z),
+                },
             "z[i] = x[i] * y[i]",
             "multiply")
 
 @memoize
-def get_divide_kernel():
+def get_divide_kernel(dtype_x, dtype_y, dtype_z):
     return get_elwise_kernel(
-            "float *x, float *y, float *z",
+            "%(tp_x)s *x, %(tp_y)s *y, %(tp_z)s *z" % {
+                "tp_x": dtype_to_ctype(dtype_x),
+                "tp_y": dtype_to_ctype(dtype_y),
+                "tp_z": dtype_to_ctype(dtype_z),
+                },
             "z[i] = x[i] / y[i]",
             "divide")
 
 @memoize
-def get_rdivide_elwise_kernel():
+def get_rdivide_elwise_kernel(dtype):
     return get_elwise_kernel(
-            "float *x, float y, float *z",
+            "%(tp)s *x, %(tp)s y, %(tp)s *z" % {
+                "tp": dtype_to_ctype(dtype),
+                },
             "z[i] = y / x[i]",
             "divide_r")
 
 
 
 @memoize
-def get_fill_kernel():
+def get_fill_kernel(dtype):
     return get_elwise_kernel(
-            "float a, float *z",
+            "%(tp)s a, %(tp)s *z" % {
+                "tp": dtype_to_ctype(dtype),
+                },
             "z[i] = a",
             "fill")
 
 @memoize
-def get_reverse_kernel():
+def get_reverse_kernel(dtype):
     return get_elwise_kernel(
-            "float *y, float *z",
+            "%(tp)s *y, %(tp)s *z" % {
+                "tp": dtype_to_ctype(dtype),
+                },
             "z[i] = y[n-1-i]",
             "reverse")
 
 @memoize
-def get_arange_kernel():
+def get_arange_kernel(dtype):
     return get_elwise_kernel(
-            "float *z, float start, float step",
+            "%(tp)s *z, %(tp)s start, %(tp)s step" % {
+                "tp": dtype_to_ctype(dtype),
+                },
             "z[i] = start + i*step",
             "arange")
 
 
 @memoize
-def get_pow_kernel():
+def get_pow_kernel(dtype):
+    if dtype == numpy.float64:
+        func = "pow"
+    else:
+        func = "powf"
+
     return get_elwise_kernel(
-            "float value, float *y, float *z",
-            "z[i] = pow(y[i], value)",
+            "%(tp)s value, %(tp)s *y, %(tp)s *z" % {
+                "tp": dtype_to_ctype(dtype),
+                },
+            "z[i] = %s(y[i], value)" % func,
             "pow_method")
 
 @memoize
-def get_pow_array_kernel():
+def get_pow_array_kernel(dtype_x, dtype_y, dtype_z):
+    if numpy.float64 in [dtype_x, dtype_y]:
+        func = "pow"
+    else:
+        func = "powf"
+
     return get_elwise_kernel(
-            "float *x, float *y, float *z",
-            "z[i] = pow(x[i], y[i])",
+            "%(tp_x)s *x, %(tp_y)s *y, %(tp_z)s *z" % {
+                "tp_x": dtype_to_ctype(dtype_x),
+                "tp_y": dtype_to_ctype(dtype_y),
+                "tp_z": dtype_to_ctype(dtype_z),
+                },
+            "z[i] = %s(x[i], y[i])" % func,
             "pow_method")
 
 @memoize
@@ -202,8 +276,14 @@ def get_ldexp_kernel():
             "ldexp_kernel")
 
 @memoize
-def get_unary_func_kernel(func_name):
+def get_unary_func_kernel(func_name, in_dtype, out_dtype=None):
+    if out_dtype is None:
+        out_dtype = in_dtype
+
     return get_elwise_kernel(
-            "float *y, float *z",
+            "%(tp_in)s *y, %(tp_out)s *z" % {
+                "tp_in": dtype_to_ctype(in_dtype),
+                "tp_out": dtype_to_ctype(out_dtype),
+                },
             "z[i] = %s(y[i])" % func_name,
             "%s_kernel" % func_name)    

@@ -120,6 +120,8 @@ Version 0.93
 * Document :meth:`pycuda.gpuarray.GPUArray.__len__`. Change its definition
   to match :mod:`numpy`.
 * Added :meth:`pycuda.gpuarray.GPUArray.bind_to_texref_ext`.
+* Let :class:`pycuda.gpuarray.GPUArray` operators deal with generic
+  data types, including type promotion.
 
 Version 0.92
 ------------
