@@ -500,3 +500,20 @@ def arange(*args, **kwargs):
 
     return result
 
+
+
+
+def take(a, indices):
+    result = GPUArray(indices.shape, a.dtype, a.stream)
+
+    func, tex_src = elementwise.get_take_kernel(a.dtype, indices.dtype)
+    a.bind_to_texref_ext(tex_src)
+
+    func.set_block_shape(*result._block)
+    func.prepared_async_call(result._grid, result.stream,
+            indices.gpudata, result.gpudata, indices.mem_size)
+
+    return result
+
+
+

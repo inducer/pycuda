@@ -142,6 +142,23 @@ class ElementwiseKernel:
 
 
 @memoize
+def get_take_kernel(dtype, idx_dtype):
+    ctx = {
+            "idx_tp": dtype_to_ctype(idx_dtype),
+            "tp": dtype_to_ctype(dtype),
+            }
+
+    mod = get_elwise_module(
+            "%(idx_tp)s *idx, %(tp)s *dest, unsigned n" % ctx,
+            "dest[i] = tex1Dfetch(tex_src, idx[i])",
+            "take",
+            preamble="texture <%(tp)s, 1, cudaReadModeElementType> tex_src;" % ctx)
+    func = mod.get_function("take")
+    tex_src = mod.get_texref("tex_src")
+    func.prepare("PPI", (1,1,1), texrefs=[tex_src])
+    return func, tex_src
+            
+@memoize
 def get_copy_kernel(dtype_dest, dtype_src):
     return get_elwise_kernel(
             "%(tp_dest)s *dest, %(tp_src)s *src" % {

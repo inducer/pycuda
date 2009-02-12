@@ -63,5 +63,33 @@ class TestGPUArray(test_abstract_array.TestAbstractArray):
 
         assert la.norm((c_gpu - (5*a_gpu+6*b_gpu)).get()) < 1e-5
 
+    def test_take(self):
+        idx = gpuarray.arange(0, 200000, 2, dtype=numpy.uint32)
+        a = gpuarray.arange(0, 600000, 3, dtype=numpy.float32)
+        result = gpuarray.take(a, idx)
+        assert ((3*idx).get() == result.get()).all()
+
+    def test_arange(self):
+        a = gpuarray.arange(12)
+
+        res = a.get()
+
+        for i in range(12):
+            self.assert_(res[i] ==i)
+
+    def test_reverse(self):
+        """test if the reverse works"""
+        a = numpy.array([1,2,3,4,5,6,7,8,9,10]).astype(numpy.float32)
+        a_cpu = self.make_test_array(a)
+
+        a_cpu = a_cpu.reverse()
+
+
+        b = a_cpu.get()
+
+        for i in range(0,10):
+            self.assert_(a[len(a)-1-i] == b[i])
+        
+
 if __name__ == '__main__':
     unittest.main()

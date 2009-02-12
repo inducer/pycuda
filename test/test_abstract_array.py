@@ -60,28 +60,6 @@ class TestAbstractArray(unittest.TestCase):
             self.assert_(abs(res[i]) >= 0)
             self.assert_(res[i] == i)
 
-    def test_arange(self):
-        """test the arrangement of the array"""
-        a = gpuarray.arange(12)
-
-        res = a.get()
-
-        for i in range(12):
-            self.assert_(res[i] ==i)
-
-    def test_reverse(self):
-        """test if the reverse works"""
-        a = numpy.array([1,2,3,4,5,6,7,8,9,10]).astype(numpy.float32)
-        a_cpu = self.make_test_array(a)
-
-        a_cpu = a_cpu.reverse()
-
-
-        b = a_cpu.get()
-
-        for i in range(0,10):
-            self.assert_(a[len(a)-1-i] == b[i])
-        
 
     def test_len(self):
         """test the len"""
