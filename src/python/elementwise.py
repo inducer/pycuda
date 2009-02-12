@@ -61,17 +61,18 @@ def get_arg_type(c_arg):
     elif tp in ["unsigned char"]: return "B"
     else: raise ValueError, "unknown type '%s'" % tp
     
-def get_elwise_kernel_and_types(arguments, operation, 
-        name="kernel", keep=False, options=[]):
-    arguments += ", int n"
-    mod = drv.SourceModule("""
+def get_elwise_module(arguments, operation, 
+        name="kernel", keep=False, options=[], preamble=""):
+    return drv.SourceModule("""
+        %(preamble)s
+
         __global__ void %(name)s(%(arguments)s)
         {
 
-          int tid = threadIdx.x;
-          int total_threads = gridDim.x*blockDim.x;
-          int cta_start = blockDim.x*blockIdx.x;
-          int i;
+          unsigned tid = threadIdx.x;
+          unsigned total_threads = gridDim.x*blockDim.x;
+          unsigned cta_start = blockDim.x*blockIdx.x;
+          unsigned i;
                 
           for (i = cta_start + tid; i < n; i += total_threads) 
           {
@@ -81,8 +82,15 @@ def get_elwise_kernel_and_types(arguments, operation,
         """ % {
             "arguments": arguments, 
             "operation": operation,
-            "name": name},
+            "name": name,
+            "preamble": preamble},
         options=options, keep=keep)
+
+def get_elwise_kernel_and_types(arguments, operation, 
+        name="kernel", keep=False, options=[]):
+    arguments += ", unsigned n"
+    mod = get_elwise_module(arguments, operation, name,
+            keep, options)
 
     func = mod.get_function(name)
     arg_types = [get_arg_type(arg) for arg in arguments.split(",")]
