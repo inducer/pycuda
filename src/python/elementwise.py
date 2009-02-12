@@ -5,9 +5,21 @@ import numpy
 
 
 
+@memoize
+def is_64_bit_platform():
+    from struct import calcsize
+    return calcsize('l') == 8
+
+
+
+
 def dtype_to_ctype(dtype):
     dtype = numpy.dtype(dtype)
-    if dtype == numpy.int32:
+    if dtype == numpy.int64 and is_64_bit_platform():
+        return "long"
+    elif dtype == numpy.uint64 and is_64_bit_platform():
+        return "unsinged long"
+    elif dtype == numpy.int32:
         return "int"
     elif dtype == numpy.uint32:
         return "unsigned int"
@@ -19,8 +31,6 @@ def dtype_to_ctype(dtype):
         return "signed char"
     elif dtype == numpy.uint8:
         return "unsigned char"
-    elif dtype == numpy.intp or dtype == numpy.uintp:
-        return "void *"
     elif dtype == numpy.float32:
         return "float"
     elif dtype == numpy.float64:
