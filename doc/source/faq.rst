@@ -119,9 +119,10 @@ Version 0.93
 * OpenGL interoperability in :mod:`pycuda.gl`.
 * Document :meth:`pycuda.gpuarray.GPUArray.__len__`. Change its definition
   to match :mod:`numpy`.
-* Added :meth:`pycuda.gpuarray.GPUArray.bind_to_texref_ext`.
+* Add :meth:`pycuda.gpuarray.GPUArray.bind_to_texref_ext`.
 * Let :class:`pycuda.gpuarray.GPUArray` operators deal with generic
   data types, including type promotion.
+* Add :func:`pycuda.gpuarray.take`.
 
 Version 0.92
 ------------

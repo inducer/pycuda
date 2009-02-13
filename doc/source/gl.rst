@@ -22,7 +22,7 @@ GL Interoperability
         This will fail with a rather unhelpful error message if you don't already 
         have a GL context created and active.
 
-.. func :: make_context(dev, flags=0)
+.. function :: make_context(dev, flags=0)
 
     Create and return a :class:`pycuda.driver.Context` that has GL interoperability
     enabled. Note that this is an *alternative* to calling :func:`init` on an 

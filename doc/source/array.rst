@@ -23,7 +23,7 @@ The :class:`GPUArray` Array Class
 
   .. attribute :: dtype 
     
-    The numpy :class:`numpy.dtype` of the items in the GPU array.
+    The :class:`numpy.dtype` of the items in the GPU array.
     
   .. attribute :: size
     
@@ -93,25 +93,24 @@ The :class:`GPUArray` Array Class
 
     Fill the array with *scalar*.
 
-:class:`GPUArrays` as Textures
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  .. method:: bind_to_texref(texref)
 
-.. method:: bind_to_texref(texref)
+    Bind *self* to the :class:`pycuda.driver.TextureReference` *texref*.
 
-  Bind *self* to the :class:`pycuda.driver.TextureReference` *texref*.
+    .. note::
 
-  .. note::
+      For more comprehensive functionality, consider using
+      :meth:`bind_to_texref_ext`.
 
-    For more comprehensive functionality, consider using
-    :meth:`bind_to_texref_ext`.
+  .. method:: bind_to_texref_ext(texref, channels=1)
 
-.. method:: bind_to_texref_ext(texref, channels=1)
+    Bind *self* to the :class:`pycuda.driver.TextureReference` *texref*.
+    In addition, set the texture reference's format to match :attr:`dtype`
+    and its channel count to *channels*. This routine also sets the
+    texture reference's :data:`pycuda.driver.TRSF_READ_AS_INTEGER` flag, 
+    if necessary.
 
-  Bind *self* to the :class:`pycuda.driver.TextureReference` *texref*.
-  In addition, set the texture reference's format to match :attr:`dtype`
-  and its channel count to *channels*. This routine also sets the
-  texture reference's :data:`pycuda.driver.TRSF_READ_AS_INTEGER` flag, 
-  if necessary.
+    (Added in version 0.93.)
     
 Constructing :class:`GPUArray` Instances
 ----------------------------------------
@@ -140,7 +139,7 @@ Constructing :class:`GPUArray` Instances
   Make a new, zero-initialized :class:`GPUArray` having the same properties
   as *other_ary*.
 
-.. function:: arange(start, stop, step, dtype=numpy.float32)
+.. function:: arange(start, stop, step, dtype=None)
 
   Create a :class:`GPUArray` filled with numbers spaced `step` apart,
   starting from `start` and ending at `stop`.
@@ -148,6 +147,14 @@ Constructing :class:`GPUArray` Instances
   For floating point arguments, the length of the result is
   `ceil((stop - start)/step)`.  This rule may result in the last
   element of the result being greater than `stop`.
+
+  *dtype*, if not specified, is taken as the largest common type
+  of *start*, *stop* and *step*.
+
+.. function:: take(a, indices)
+  
+  Return the :class:`GPUArray` ``[a[indices[0]], ..., a[indices[n]]]``.
+  For the moment, *a* must be a type that can be bound to a texture.
 
 Elementwise Functions on :class:`GPUArrray` Instances
 -----------------------------------------------------
