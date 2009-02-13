@@ -440,6 +440,8 @@ def arange(*args, **kwargs):
     class Info(Record):
         pass
 
+    explicit_dtype = False
+
     inf = Info()
     inf.start = None
     inf.stop = None
@@ -449,6 +451,7 @@ def arange(*args, **kwargs):
     if isinstance(args[-1], numpy.dtype):
         dtype = args[-1]
         args = args[:-1]
+        explicit_dtype = True
 
     argc = len(args)
     if argc == 0:
@@ -470,6 +473,8 @@ def arange(*args, **kwargs):
         if k in admissible_names:
             if getattr(inf, k) is None:
                 setattr(inf, k, v)
+                if k == "dtype":
+                    explicit_dtype = True
             else:
                 raise ValueError, "may not specify '%s' by position and keyword" % k
         else:
@@ -487,6 +492,11 @@ def arange(*args, **kwargs):
     start = dtype.type(inf.start)
     step = dtype.type(inf.step)
     stop = dtype.type(inf.stop)
+
+    if not explicit_dtype and dtype != numpy.float32:
+        from warnings import warn
+        warn("behavior change: arange guessed dtype other than float32. "
+                "suggest specifying explicit dtype.")
 
     from math import ceil
     size = int(ceil((stop-start)/step))
