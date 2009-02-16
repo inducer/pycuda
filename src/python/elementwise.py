@@ -63,7 +63,8 @@ def get_arg_type(c_arg):
     
 def get_elwise_module(arguments, operation, 
         name="kernel", keep=False, options=[], preamble=""):
-    return drv.SourceModule("""
+    from pycuda.compiler import SourceModule
+    return SourceModule("""
         %(preamble)s
 
         __global__ void %(name)s(%(arguments)s)

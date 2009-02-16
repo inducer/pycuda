@@ -2,6 +2,7 @@ from __future__ import division
 import unittest
 import pycuda.autoinit
 import pycuda.driver as drv
+from pycuda.compiler import SourceModule
 import numpy
 import numpy.linalg as la
 
@@ -23,7 +24,7 @@ class TestCuda(unittest.TestCase):
         assert la.norm(new_z-z) == 0
 
     def test_simple_kernel(self):
-        mod = drv.SourceModule("""
+        mod = SourceModule("""
         __global__ void multiply_them(float *dest, float *a, float *b)
         {
           const int i = threadIdx.x;
@@ -44,7 +45,7 @@ class TestCuda(unittest.TestCase):
         self.assert_(la.norm(dest-a*b) == 0)
 
     def test_simple_kernel_2(self):
-        mod = drv.SourceModule("""
+        mod = SourceModule("""
         __global__ void multiply_them(float *dest, float *a, float *b)
         {
           const int i = threadIdx.x;
@@ -79,7 +80,7 @@ class TestCuda(unittest.TestCase):
         # and data copying is asynchronous. Observe how this necessitates the
         # use of page-locked memory.
 
-        mod = drv.SourceModule("""
+        mod = SourceModule("""
         __global__ void multiply_them(float *dest, float *a, float *b)
         {
           const int i = threadIdx.x*blockDim.y + threadIdx.y;
@@ -131,7 +132,7 @@ class TestCuda(unittest.TestCase):
         self.test_streamed_kernel()
 
     def test_2d_texture(self):
-        mod = drv.SourceModule("""
+        mod = SourceModule("""
         texture<float, 2, cudaReadModeElementType> mtx_tex;
 
         __global__ void copy_texture(float *dest)
@@ -158,7 +159,7 @@ class TestCuda(unittest.TestCase):
         assert la.norm(dest-a) == 0
 
     def test_multiple_2d_textures(self):
-        mod = drv.SourceModule("""
+        mod = SourceModule("""
         texture<float, 2, cudaReadModeElementType> mtx_tex;
         texture<float, 2, cudaReadModeElementType> mtx2_tex;
 
@@ -192,7 +193,7 @@ class TestCuda(unittest.TestCase):
         assert la.norm(dest-a-b) < 1e-6
 
     def test_multichannel_2d_texture(self):
-        mod = drv.SourceModule("""
+        mod = SourceModule("""
         #define CHANNELS 4
         texture<float4, 2, cudaReadModeElementType> mtx_tex;
 
@@ -230,7 +231,7 @@ class TestCuda(unittest.TestCase):
 
     def test_large_smem(self):
         n = 4000
-        mod = drv.SourceModule("""
+        mod = SourceModule("""
         #include <stdio.h>
 
         __global__ void kernel(int *d_data)
@@ -327,7 +328,7 @@ class TestCuda(unittest.TestCase):
 
         copy()
 
-        mod = drv.SourceModule("""
+        mod = SourceModule("""
         texture<float, 3, cudaReadModeElementType> mtx_tex;
 
         __global__ void copy_texture(float *dest)
@@ -358,7 +359,7 @@ class TestCuda(unittest.TestCase):
 
         drv.memcpy_htod(a_gpu, a)
 
-        mod = drv.SourceModule("""
+        mod = SourceModule("""
             __global__ void doublify(float *a)
             {
               int idx = threadIdx.x + threadIdx.y*blockDim.x;

@@ -2,6 +2,7 @@ import pycuda.driver as cuda
 import pycuda.autoinit
 import numpy
 import numpy.linalg as la
+from pycuda.compiler import SourceModule
 
 block_size = 16
 thread_block_size = 32
@@ -41,7 +42,7 @@ mod = Module([
         )
     ])
 
-mod = cuda.SourceModule(mod)
+mod = SourceModule(mod)
 
 func = mod.get_function("add")
 func(c_gpu, a_gpu, b_gpu, 

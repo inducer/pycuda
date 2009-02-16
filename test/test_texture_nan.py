@@ -1,6 +1,7 @@
 import pycuda.autoinit
 import pycuda.driver as drv
 import pycuda.gpuarray as gpuarray
+from pycuda.compiler import SourceModule
 import numpy
 import numpy.linalg as la
 
@@ -9,7 +10,7 @@ import numpy.linalg as la
 
 def test():
     expt = 20
-    mod = drv.SourceModule("""
+    mod = SourceModule("""
     texture<float, 1, cudaReadModeElementType> ary_tex;
 
     __global__ void copy_texture(float *dest)

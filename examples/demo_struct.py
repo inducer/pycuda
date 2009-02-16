@@ -3,6 +3,7 @@
 import pycuda.driver as cuda
 import pycuda.autoinit
 import numpy
+from pycuda.compiler import SourceModule
 
 class DoubleOpStruct:
     mem_size = 8 + numpy.intp(0).nbytes
@@ -25,7 +26,7 @@ print "original arrays"
 print array1
 print array2
 
-mod = cuda.SourceModule("""
+mod = SourceModule("""
     struct DoubleOperation {
         int datalen, __padding; // so 64-bit ptrs can be aligned
         __global__ float *ptr;

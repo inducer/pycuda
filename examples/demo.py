@@ -2,6 +2,7 @@
 
 import pycuda.driver as cuda
 import pycuda.autoinit
+from pycuda.compiler import SourceModule
 
 import numpy
 a = numpy.random.randn(4,4)
@@ -12,7 +13,7 @@ a_gpu = cuda.mem_alloc(a.size * a.dtype.itemsize)
 
 cuda.memcpy_htod(a_gpu, a)
 
-mod = cuda.SourceModule("""
+mod = SourceModule("""
     __global__ void doublify(float *a)
     {
       int idx = threadIdx.x + threadIdx.y*4;

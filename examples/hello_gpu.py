@@ -3,8 +3,9 @@ import pycuda.tools
 import pycuda.autoinit
 import numpy
 import numpy.linalg as la
+from pycuda.compiler import SourceModule
 
-mod = drv.SourceModule("""
+mod = SourceModule("""
 __global__ void multiply_them(float *dest, float *a, float *b)
 {
   const int i = threadIdx.x;
