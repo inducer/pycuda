@@ -141,11 +141,6 @@ Version 0.92
     If you're interested, the slides for it are 
     `available <http://mathema.tician.de/dl/pub/pycuda-mit.pdf>`_.
 
-.. warning:: 
-
-    Version 0.92 is currently a release candidate and therefore has a 
-    somewhat higher likelihood of bugs.
-
 * Make :class:`pycuda.tools.DeviceMemoryPool` official functionality,
   after numerous improvements. Add :class:`pycuda.tools.PageLockedMemoryPool`
   for pagelocked memory, too.
