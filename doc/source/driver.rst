@@ -803,7 +803,7 @@ Code on the Device: Modules and Functions
     The texture references given to :meth:`prepare` are set up as parameters, as
     well.
 
-  .. method:: prepared_timed_call(grid, stream, *args)
+  .. method:: prepared_timed_call(grid, *args)
 
     Invoke `self` using :meth:`launch_grid`, with `args` and a grid size of `grid`.
     Assumes that :meth:`prepare` was called on *self*.
@@ -822,10 +822,6 @@ Code on the Device: Modules and Functions
     Assumes that :meth:`prepare` was called on *self*.
     The texture references given to :meth:`prepare` are set up as parameters, as
     well.
-
-    Return a 0-ary callable that can be used to query the GPU time consumed by
-    the call, in seconds. Once called, this callable will block until
-    completion of the invocation.
 
   .. attribute:: lmem
 
