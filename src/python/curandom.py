@@ -212,7 +212,7 @@ def rand(shape, dtype=numpy.float32):
 
     func.set_block_shape(*result._block)
     func.prepared_async_call(result._grid, result.stream,
-            result.gpudata, numpy.random.randint(2**32), result.size)
+            result.gpudata, numpy.random.randint(2**31-1), result.size)
     
     return result
 
