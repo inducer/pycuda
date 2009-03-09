@@ -171,8 +171,8 @@ Rounding and Absolute Value
 .. function:: ceil(array)
 .. function:: floor(array)
 
-General Transcendental Functions
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+Exponentials, Logarithms and Roots
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 .. function:: exp(array)
 .. function:: log(array)
