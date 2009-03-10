@@ -1,6 +1,6 @@
 .. _metaprog:
 
-Metaprogramming with PyCuda
+Metaprogramming with PyCUDA
 ===========================
 
 In 'conventional' programming, one writes a program that accomplishes a
@@ -28,15 +28,15 @@ If you are lucky, you'll be able to find a pattern in the execution
 time of your code and come up with a heuristic that will allow you to
 reliably pick the fastest version. Unfortunately, this heuristic may
 become unreliable or even fail entirely with new hardware generations.
-The solution to this problem that PyCuda tries to promote is:
+The solution to this problem that PyCUDA tries to promote is:
 
    Forget heuristics. Benchmark at run time and use whatever works fastest.
 
-This is an important advantage of PyCuda over the CUDA runtime API: It lets
+This is an important advantage of PyCUDA over the CUDA runtime API: It lets
 you make these decisions *while your code is running*. A number of prominent
 computing packages make use of a similar technique, among them ATLAS and 
 FFTW. And while those require rather complicated optimization driver 
-routines, you can drive PyCuda from the comfort of Python.
+routines, you can drive PyCUDA from the comfort of Python.
 
 Data Types
 ^^^^^^^^^^
@@ -53,7 +53,7 @@ If you are writing a library, then your users will ask your library
 to perform a number of tasks. Imagine how liberating it would be if you
 could generate code purposely for the problem you're being asked to 
 solve, instead of having to keep code unnecessarily generic and thereby
-slow. PyCuda makes this a reality.
+slow. PyCUDA makes this a reality.
 
 Constants are Faster than Variables
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^

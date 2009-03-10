@@ -1,4 +1,3 @@
 #include "cuda.hpp"
 
-cuda::context::context_stack_t cuda::context::m_context_stack;
-
+boost::thread_specific_ptr<cuda::context_stack_t> cuda::context_stack_ptr;

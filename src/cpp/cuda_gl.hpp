@@ -26,7 +26,7 @@ namespace cuda { namespace gl {
     CUcontext ctx;
     CUDAPP_CALL_GUARDED(cuGLCtxCreate, (&ctx, flags, dev.handle()));
     boost::shared_ptr<context> result(new context(ctx));
-    context::m_context_stack.push(result);
+    get_context_stack().push(result);
     return result;
   }
 
@@ -54,9 +54,13 @@ namespace cuda { namespace gl {
       {
         if (m_valid)
         {
-          scoped_context_activation ca(get_context());
-          CUDAPP_CALL_GUARDED(cuGLUnregisterBufferObject, (m_handle));
-          m_valid = false;
+          try
+          {
+            scoped_context_activation ca(get_context());
+            CUDAPP_CALL_GUARDED(cuGLUnregisterBufferObject, (m_handle));
+            m_valid = false;
+          }
+          CUDA_CATCH_WARN_OOT_LEAK(buffer_object);
         }
         else
           throw cuda::error("buffer_object::unregister", CUDA_ERROR_INVALID_HANDLE);
@@ -91,9 +95,13 @@ namespace cuda { namespace gl {
       {
         if (m_valid)
         {
-          scoped_context_activation ca(get_context());
-          CUDAPP_CALL_GUARDED(cuGLUnmapBufferObject, (m_buffer_object->handle()));
-          m_valid = false;
+          try
+          {
+            scoped_context_activation ca(get_context());
+            CUDAPP_CALL_GUARDED(cuGLUnmapBufferObject, (m_buffer_object->handle()));
+            m_valid = false;
+          }
+          CUDA_CATCH_WARN_OOT_LEAK(buffer_object_mapping)
         }
         else
           throw cuda::error("buffer_object_mapping::unmap", CUDA_ERROR_INVALID_HANDLE);

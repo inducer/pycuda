@@ -1,15 +1,15 @@
-Welcome to PyCuda's documentation!
+Welcome to PyCUDA's documentation!
 ==================================
 
-PyCuda gives you easy, Pythonic access to `Nvidia <http://nvidia.com>`_'s `CUDA
+PyCUDA gives you easy, Pythonic access to `Nvidia <http://nvidia.com>`_'s `CUDA
 <http://nvidia.com/cuda/>`_ parallel computation API. Several wrappers of the
-CUDA API already exist--so why the need for PyCuda?
+CUDA API already exist--so why the need for PyCUDA?
 
 * Object cleanup tied to lifetime of objects. This idiom,
   often called 
   `RAII <http://en.wikipedia.org/wiki/Resource_Acquisition_Is_Initialization>`_
   in C++, makes it much easier to write correct, leak- and
-  crash-free code. PyCuda knows about dependencies, too, so (for example)
+  crash-free code. PyCUDA knows about dependencies, too, so (for example)
   it won't detach from a context before all memory allocated in it is also
   freed.
 
@@ -17,13 +17,13 @@ CUDA API already exist--so why the need for PyCuda?
   :class:`pycuda.gpuarray.GPUArray` make CUDA programming even more convenient
   than with Nvidia's C-based runtime.
 
-* Completeness. PyCuda puts the full power of CUDA's driver API at your
+* Completeness. PyCUDA puts the full power of CUDA's driver API at your
   disposal, if you wish. 
 
 * Automatic Error Checking. All CUDA errors are automatically translated
   into Python exceptions.
 
-* Speed. PyCuda's base layer is written in C++, so all the niceties above
+* Speed. PyCUDA's base layer is written in C++, so all the niceties above
   are virtually free.
 
 * Helpful Documentation. You're looking at it. ;)
@@ -54,18 +54,18 @@ Here's an example, to given you an impression::
 
   print dest-a*b
 
-(You can find this example as :file:`examples/hello_gpu.py` in the PyCuda
+(You can find this example as :file:`examples/hello_gpu.py` in the PyCUDA
 source distribution.)
 
 On the surface, this program will print a screenful of zeros. Behind
 the scenes, a lot more interesting stuff is going on:
 
-* PyCuda has compiled the CUDA source code and uploaded it to the card. 
+* PyCUDA has compiled the CUDA source code and uploaded it to the card. 
   
   .. note:: This code doesn't have to be a constant--you can easily have Python
     generate the code you want to compile. See :ref:`metaprog`.
 
-* PyCuda's numpy interaction code has automatically allocated
+* PyCUDA's numpy interaction code has automatically allocated
   space on the device, copied the numpy arrays *a* and *b* over,
   launched a 400x1x1 single-block grid, and copied *dest* back.
 
@@ -73,7 +73,7 @@ the scenes, a lot more interesting stuff is going on:
   kernel invocations--no need to copy data all the time.
 
 * See how there's no cleanup code in the example? That's not because we
-  were lazy and just skipped it. It simply isn't needed. PyCuda will
+  were lazy and just skipped it. It simply isn't needed. PyCUDA will
   automatically infer what cleanup is necessary and do it for you.
 
 Curious? Let's get started.
@@ -97,7 +97,7 @@ Note that this guide will not explain CUDA programming and technology.  Please
 refer to Nvidia's `programming documentation
 <http://www.nvidia.com/object/cuda_learn.html>`_ for that.
 
-PyCuda also has its own `web site <http://mathema.tician.de/software/pycuda>`_,
+PyCUDA also has its own `web site <http://mathema.tician.de/software/pycuda>`_,
 where you can find updates, new versions, documentation, and support.
 
 Indices and tables

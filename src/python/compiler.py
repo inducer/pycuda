@@ -1,4 +1,5 @@
 from pytools import memoize
+from pycuda.driver import CompileError
 
 
 

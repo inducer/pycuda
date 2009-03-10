@@ -3,12 +3,12 @@
 Installation
 ============
 
-This tutorial will walk you through the process of building PyCuda. To follow,
+This tutorial will walk you through the process of building PyCUDA. To follow,
 you really only need four basic things:
 
 * A UNIX-like machine with web access.
 * `Nvidia <http://nvidia.com/>`_'s `CUDA <http://nvidia.com/cuda/>`_ toolkit.
-  PyCuda was developed against version 2.0 beta. It may work with other versions,
+  PyCUDA was developed against version 2.0 beta. It may work with other versions,
   too.
 * A C++ compiler, preferably a Version 4.x gcc.
 * A working `Python <http://www.python.org>`_ installation, Version 2.4 or newer.
@@ -22,17 +22,17 @@ If not, no problem, please follow this link to the simple `build and install ins
 <http://mathema.tician.de/software/install-boost>`_ that I wrote for Boost. 
 Continue here when you're done.
 
-Step 2: Download and unpack PyCuda
+Step 2: Download and unpack PyCUDA
 -----------------------------------
 
-`Download PyCuda <http://pypi.python.org/pypi/pycuda>`_ and unpack it::
+`Download PyCUDA <http://pypi.python.org/pypi/pycuda>`_ and unpack it::
 
     $ tar xfz pycuda-VERSION.tar.gz
 
 Step 3: Install Numpy
 ---------------------
 
-PyCuda is designed to work in conjunction with `numpy <http://numpy.org>`_,
+PyCUDA is designed to work in conjunction with `numpy <http://numpy.org>`_,
 Python's array package. 
 
 Here's an easy way to install it, if you do not have it already::
@@ -43,7 +43,7 @@ Here's an easy way to install it, if you do not have it already::
 
 (If you're not sure, repeating these commands will not hurt.)
 
-Step 4: Build PyCuda
+Step 4: Build PyCUDA
 --------------------
 
 Next, just type::
@@ -53,6 +53,7 @@ Next, just type::
       --boost-inc-dir=$HOME/pool/include/boost-1_35 \
       --boost-lib-dir=$HOME/pool/lib \
       --boost-python-libname=boost_python-gcc42-mt \
+      --boost-thread-libname=boost_thread-gcc42-mt (0.93 and above only) \
       --cuda-root=/where/ever/you/installed/cuda
     $ su -c "make install"
 
@@ -61,12 +62,12 @@ with which you built boost. Check the contents of your boost
 library directory to find out what the correct tag is. Also note that
 you will (probably) have to change the value of :option:`--cuda-root`.
 
-Once that works, congratulations! You've successfully built PyCuda.
+Once that works, congratulations! You've successfully built PyCUDA.
 
-Step 5: Test PyCuda
+Step 5: Test PyCUDA
 --------------------
 
-If you'd like to be extra-careful, you can run PyCuda's unit tests::
+If you'd like to be extra-careful, you can run PyCUDA's unit tests::
 
     $ cd pycuda-VERSION/test
     $ python test_driver.py
@@ -89,6 +90,6 @@ to match your system::
     CXXFLAGS = []
     LDFLAGS = []
 
-Subsequently, you may build and install PyCuda by typing::
+Subsequently, you may build and install PyCUDA by typing::
 
     $ python setup.py install

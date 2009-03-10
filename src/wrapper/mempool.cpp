@@ -24,14 +24,17 @@ namespace
       pointer_type allocate(size_type s)
       {
         cuda::scoped_context_activation ca(get_context());
-
         return cuda::mem_alloc(s);
       }
 
       void free(pointer_type p)
       {
-        cuda::scoped_context_activation ca(get_context());
-        cuda::mem_free(p);
+        try
+        {
+          cuda::scoped_context_activation ca(get_context());
+          cuda::mem_free(p);
+        }
+        CUDA_CATCH_WARN_OOT_LEAK(pooled_device_allocation);
       }
 
       void try_release_blocks()
