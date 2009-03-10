@@ -8,9 +8,12 @@ Two ways:
 
 * Allocate two contexts, juggle (:meth:`pycuda.driver.Context.push` and
   :meth:`pycuda.driver.Context.pop`) them from that one process.
-* Work with several threads. As of Version 0.90.2, PyCuda will actually 
+* Work with several processes or threads, using MPI, :mod:`multiprocesing` 
+  or :mod:`threading`. As of Version 0.90.2, PyCUDA will 
   release the `GIL <http://en.wikipedia.org/wiki/Global_Interpreter_Lock>`_
-  while it is waiting for CUDA operations to finish.
+  while it is waiting for CUDA operations to finish. As of version 0.93,
+  PyCUDA will actually *work* when used together with threads. Also see
+  :ref:`pycuda-threading`, below.
 
 My program terminates after a launch failure. Why?
 --------------------------------------------------
@@ -32,8 +35,8 @@ the failed kernel.
 
 Next, as far as I can tell, a CUDA context becomes invalid after a launch
 failure, and all following CUDA calls in that context fail. Now, that includes
-cleanup (see the :cfunc:`cuMemFree` in the traceback?) that PyCuda tries to perform
-automatically. Here, a bit of PyCuda's C++ heritage shows through. While 
+cleanup (see the :cfunc:`cuMemFree` in the traceback?) that PyCUDA tries to perform
+automatically. Here, a bit of PyCUDA's C++ heritage shows through. While 
 performing cleanup, we are processing an exception (the launch failure
 reported by :cfunc:`cuMemcpyDtoH`). If another exception occurs during 
 exception processing, C++ gives up and aborts the program with a message.
@@ -41,11 +44,11 @@ exception processing, C++ gives up and aborts the program with a message.
 In principle, this could be handled better. If you're willing to dedicate time
 to this, I'll likely take your patch.
 
-Are the CUBLAS APIs available via PyCuda?  
+Are the CUBLAS APIs available via PyCUDA?  
 -----------------------------------------
 
 No. I would be more than happy to make them available, but that would be mostly
-either-or with the rest of PyCuda, because of the following sentence in the
+either-or with the rest of PyCUDA, because of the following sentence in the
 CUDA programming guide:
 
    [CUDA] is composed of two APIs:
@@ -57,20 +60,20 @@ CUDA programming guide:
    These APIs are mutually exclusive: An application should use either one or the
    other.
 
-PyCuda is based on the driver API. CUBLAS uses the high-level API. Once *can*
+PyCUDA is based on the driver API. CUBLAS uses the high-level API. Once *can*
 violate this rule without crashing immediately. But sketchy stuff does happen.
-Instead, for BLAS-1 operations, PyCuda comes with a class called
+Instead, for BLAS-1 operations, PyCUDA comes with a class called
 :class:`pycuda.gpuarray.GPUArray` that essentially reimplements that part of
 CUBLAS.
 
-If you dig into the history of PyCuda, you'll find that, at one point, I
+If you dig into the history of PyCUDA, you'll find that, at one point, I
 did have rudimentary CUBLAS wrappers. I removed them because of the above
 issue. If you would like to make CUBLAS wrappers, feel free to use these
 rudiments as a starting point. That said, Arno Pähler's python-cuda has
 complete :mod:`ctypes`-based wrappers for CUBLAS. I don't think they interact natively
 with numpy, though.
 
-I've found some nice undocumented function in PyCuda. Can I use it?
+I've found some nice undocumented function in PyCUDA. Can I use it?
 -------------------------------------------------------------------
 
 Of course you can. But don't come whining if it breaks or goes away in
@@ -91,18 +94,46 @@ Try adding::
 
 to your :file:`pycuda/siteconf.py` or :file:`$HOME/.aksetup-defaults.py`.
 
-Does PyCuda automatically activate the right context for the object I'm talking to?
+Does PyCUDA automatically activate the right context for the object I'm talking to?
 -----------------------------------------------------------------------------------
 
 No. It *does* know which context each object belongs, and it does implicitly
 activate contexts for cleanup purposes. Since I'm not entirely sure how costly
-context activation is supposed to be, PyCuda will not juggle contexts for you
+context activation is supposed to be, PyCUDA will not juggle contexts for you
 if you're talking to an object from a context that's not currently active.
 Here's a rule of thumb: As long as you have control over invocation order, you
 have to manage contexts yourself. Since you mostly don't have control over
-cleanup, PyCuda manages contexts for you in this case. To make this transparent
-to you, the user, PyCuda will automatically restore the previous context once
+cleanup, PyCUDA manages contexts for you in this case. To make this transparent
+to you, the user, PyCUDA will automatically restore the previous context once
 it's done cleaning up.
+
+.. _pycuda-threading:
+How does PyCUDA handle threading?
+---------------------------------
+
+As of version 0.93, PyCUDA supports :mod:`threading`. There is an example of how this
+can be done in :file:`examples/multiple_threads.py` in the PyCUDA distribution.
+When you use threading in PyCUDA, you should be aware of one peculiarity, though.
+Contexts in CUDA are a per-thread affair, and as such all contexts associated with
+a thread as well as GPU memory, arrays and other resources in that context will
+be automatically freed when the thread exits. PyCUDA will notice this and will not
+try to free the corresponding resource--it's already gone after all.
+
+There is another, less intended consequence, though: If Python's garbage collector
+finds a PyCUDA object it wishes to dispose of, and PyCUDA, upon trying to free it,
+determines that the object was allocated outside of the current thread of execution,
+then that object is quietly leaked. This properly handles the above situation, but
+it mishandles a situation where:
+
+ * You use reference cycles in a GPU driver thread, necessitating the GC (over just
+   regular reference counts).
+ * You require cleanup to be performed before thread exit.
+ * You rely on PyCUDA to perform this cleanup.
+
+To entirely avoid the problem, do one of the following:
+
+ * Use :mod:`processing` instead of :mod:`threading`.
+ * Explicitly call :meth:`free` on the objects you want cleaned up.
 
 User-visible Changes
 ====================
@@ -113,8 +144,8 @@ Version 0.93
 .. note:: 
 
     Version 0.93 is currently in active development. If you'd like to try a
-    snapshot, you may access PyCuda's source control archive via the
-    PyCuda homepage.
+    snapshot, you may access PyCUDA's source control archive via the
+    PyCUDA homepage.
 
 * OpenGL interoperability in :mod:`pycuda.gl`.
 * Document :meth:`pycuda.gpuarray.GPUArray.__len__`. Change its definition
@@ -123,6 +154,7 @@ Version 0.93
 * Let :class:`pycuda.gpuarray.GPUArray` operators deal with generic
   data types, including type promotion.
 * Add :func:`pycuda.gpuarray.take`.
+* Fix thread handling by making internal context stack thread-local.
 
 Version 0.92
 ------------
@@ -135,7 +167,7 @@ Version 0.92
 
 .. note::
 
-    During this release time frame, I had the honor of giving a talk on PyCuda
+    During this release time frame, I had the honor of giving a talk on PyCUDA
     for a `class <http://sites.google.com/site/cudaiap2009/>`_ that a group around 
     Nicolas Pinto was teaching at MIT.
     If you're interested, the slides for it are 
@@ -166,7 +198,7 @@ Version 0.92
   and :func:`pycuda.driver.from_device_like`.
 * Add :class:`pycuda.elementwise.ElementwiseKernel`.
 * Various documentation improvements. (many of them from Nicholas Tung)
-* Move PyCuda's compiler cache to the system temporary directory, rather
+* Move PyCUDA's compiler cache to the system temporary directory, rather
   than the users home directory.
 
 Version 0.91
@@ -205,20 +237,21 @@ Version 0.91
 Acknowledgments
 ================
 
-* Gert Wohlgemuth ported PyCuda to MacOS X and contributed large parts of
+* Gert Wohlgemuth ported PyCUDA to MacOS X and contributed large parts of
   :class:`pycuda.gpuarray.GPUArray`.
 * Znah on the Nvidia forums contributed fixes for Windows XP.
-* Cosmin Stejerean provided multiple patches for PyCuda's build system.
+* Cosmin Stejerean provided multiple patches for PyCUDA's build system.
 * Tom Annau contributed an alternative SourceModule compiler cache as well
   as Windows build insight.
-* Nicholas Tung improved PyCuda's documentation.
+* Nicholas Tung improved PyCUDA's documentation.
 * Jozef Vesely contributed a massively improved random number generator derived from 
   the RSA Data Security, Inc. MD5 Message Digest Algorithm.
+* Chris Heuser provided a test cases for multi-threaded PyCUDA.
 
 Licensing
 =========
 
-PyCuda is licensed to you under the MIT/X Consortium license:
+PyCUDA is licensed to you under the MIT/X Consortium license:
 
 Copyright (c) 2009 Andreas Klöckner and Contributors.
 

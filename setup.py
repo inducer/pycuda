@@ -5,13 +5,12 @@
 
 def get_config_schema():
     from aksetup_helper import ConfigSchema, Option, \
-            IncludeDir, LibraryDir, Libraries, \
-            Switch, StringListOption
+            IncludeDir, LibraryDir, Libraries, BoostLibraries, \
+            Switch, StringListOption, make_boost_base_options
 
-    return ConfigSchema([
-        IncludeDir("BOOST", []),
-        LibraryDir("BOOST", []),
-        Libraries("BOOST_PYTHON", ["boost_python-gcc42-mt"]),
+    return ConfigSchema(make_boost_base_options() + [
+        BoostLibraries("python"),
+        BoostLibraries("thread"),
 
         Switch("CUDA_TRACE", False, "Enable CUDA API tracing"),
         Option("CUDA_ROOT", help="Path to the CUDA toolkit"),
@@ -65,7 +64,7 @@ def main():
     conf = get_config(get_config_schema())
 
     LIBRARY_DIRS = conf["BOOST_LIB_DIR"]
-    LIBRARIES = conf["BOOST_PYTHON_LIBNAME"]
+    LIBRARIES = conf["BOOST_PYTHON_LIBNAME"] + conf["BOOST_THREAD_LIBNAME"]
 
     from os.path import dirname, join, normpath
 
@@ -103,8 +102,7 @@ def main():
         if "-arch" not in conf["LDFLAGS"]:
             conf["LDFLAGS"].extend(['-arch', 'i386'])
 
-    ext_kwargs = dict(
-            )
+    ext_kwargs = dict()
 
     extra_sources = []
     if conf["CUDA_ENABLE_GL"]:

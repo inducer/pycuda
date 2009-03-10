@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 #
-# PyCuda documentation build configuration file, created by
+# PyCUDA documentation build configuration file, created by
 # sphinx-quickstart on Fri Jun 13 00:51:19 2008.
 #
 # This file is execfile()d with the current directory set to its containing dir.
@@ -35,7 +35,7 @@ source_suffix = '.rst'
 master_doc = 'index'
 
 # General substitutions.
-project = 'PyCuda'
+project = 'PyCUDA'
 copyright = '2008, Andreas Kloeckner'
 
 # The default replacements for |version| and |release|, also used in various
@@ -144,7 +144,7 @@ htmlhelp_basename = 'PyCudadoc'
 # Grouping the document tree into LaTeX files. List of tuples
 # (source start file, target name, title, author, document class [howto/manual]).
 latex_documents = [
-  ('index', 'PyCuda.tex', 'PyCuda Documentation', 'Andreas Kloeckner', 'manual'),
+  ('index', 'pycdua.tex', 'PyCUDA Documentation', 'Andreas Kloeckner', 'manual'),
 ]
 
 # The name of an image file (relative to this directory) to place at the top of
@@ -168,4 +168,5 @@ intersphinx_mapping = {
         'http://docs.python.org/dev': None,
         'http://docs.scipy.org/doc/numpy/': None,
         'http://documen.tician.de/codepy/': None,
+        'http://documen.tician.de/boostmpi/': None,
         }
