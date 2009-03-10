@@ -186,7 +186,13 @@ def expand_str(s, options):
 
     def my_repl(match):
         sym = match.group(1)
-        return expand_str(options[sym], options)
+        try:
+            repl = options[sym]
+        except KeyError:
+            from os import environ
+            repl = environ[sym]
+
+        return expand_str(repl, options)
 
     return re.subn(r"\$\{([a-zA-Z0-9_]+)\}", my_repl, s)[0]
 
