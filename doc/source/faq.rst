@@ -13,7 +13,7 @@ Two ways:
   release the `GIL <http://en.wikipedia.org/wiki/Global_Interpreter_Lock>`_
   while it is waiting for CUDA operations to finish. As of version 0.93,
   PyCUDA will actually *work* when used together with threads. Also see
-  :ref:`pycuda-threading`, below.
+  :ref:`pycuda_threading`, below.
 
 My program terminates after a launch failure. Why?
 --------------------------------------------------
@@ -107,7 +107,8 @@ cleanup, PyCUDA manages contexts for you in this case. To make this transparent
 to you, the user, PyCUDA will automatically restore the previous context once
 it's done cleaning up.
 
-.. _pycuda-threading:
+.. _pycuda_threading :
+
 How does PyCUDA handle threading?
 ---------------------------------
 
@@ -132,7 +133,7 @@ it mishandles a situation where:
 
 To entirely avoid the problem, do one of the following:
 
- * Use :mod:`processing` instead of :mod:`threading`.
+ * Use :mod:`multiprocessing` instead of :mod:`threading`.
  * Explicitly call :meth:`free` on the objects you want cleaned up.
 
 User-visible Changes

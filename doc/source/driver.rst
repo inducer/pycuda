@@ -661,6 +661,10 @@ Code on the Device: Modules and Functions
 
     Return the device address of the global *name* as an :class:`int`.
 
+    The main use of this method is to find the address of pre-declared
+    `__constant__` arrays so they can be filled from the host before kernel
+    invocation
+
   .. method:: get_texref(name)
 
     Return the :class:`TextureReference` *name* from this module.
