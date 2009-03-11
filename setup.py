@@ -114,16 +114,16 @@ def main():
             version="0.93beta",
             description="Python wrapper for Nvidia CUDA",
             long_description="""
-            PyCuda lets you access `Nvidia <http://nvidia.com>`_'s `CUDA
+            PyCUDA lets you access `Nvidia <http://nvidia.com>`_'s `CUDA
             <http://nvidia.com/cuda/>`_ parallel computation API from Python.
             Several wrappers of the CUDA API already exist-so what's so special
-            about PyCuda?
+            about PyCUDA?
 
             * Object cleanup tied to lifetime of objects. This idiom, often
               called
               `RAII <http://en.wikipedia.org/wiki/Resource_Acquisition_Is_Initialization>`_
               in C++, makes it much easier to write correct, leak- and
-              crash-free code. PyCuda knows about dependencies, too, so (for
+              crash-free code. PyCUDA knows about dependencies, too, so (for
               example) it won't detach from a context before all memory
               allocated in it is also freed.
 
@@ -131,13 +131,13 @@ def main():
               pycuda.gpuarray.GPUArray make CUDA programming even more
               convenient than with Nvidia's C-based runtime.
 
-            * Completeness. PyCuda puts the full power of CUDA's driver API at
+            * Completeness. PyCUDA puts the full power of CUDA's driver API at
               your disposal, if you wish.
 
             * Automatic Error Checking. All CUDA errors are automatically
               translated into Python exceptions.
 
-            * Speed. PyCuda's base layer is written in C++, so all the niceties
+            * Speed. PyCUDA's base layer is written in C++, so all the niceties
               above are virtually free.
 
             * Helpful `Documentation <http://documen.tician.de/pycuda>`_.

@@ -266,11 +266,11 @@ void pycuda_expose_gl();
 
 BOOST_PYTHON_MODULE(_driver)
 {
+  def("get_version", cuda_version);
+
 #define DECLARE_EXC(NAME, BASE) \
   Cuda##NAME = py::handle<>(PyErr_NewException("pycuda._driver." #NAME, BASE, NULL)); \
   py::scope().attr(#NAME) = Cuda##NAME;
-
-  def("get_version", cuda_version);
 
   {
     DECLARE_EXC(Error, NULL);
