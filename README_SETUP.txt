@@ -5,8 +5,8 @@ installation should be easy and quick.
 
 If you don't want to continue reading, just try the regular
 
-  ./configure --help
-  ./configure --some-options
+  ./configure.py --help
+  ./configure.py --some-options
   make
   sudo make install
 
