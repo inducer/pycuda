@@ -1,5 +1,6 @@
 #! /usr/bin/env python
 import pycuda.driver as drv
+import pycuda.autoinit
 import numpy
 import numpy.linalg as la
 
@@ -7,10 +8,6 @@ import numpy.linalg as la
 
 
 def main():
-    drv.init()
-    assert drv.Device.count() >= 1
-    ctx = drv.Device(0).make_context()
-
     import pycuda.gpuarray as gpuarray
 
     sizes = []
@@ -19,7 +16,10 @@ def main():
     flops_cpu = []
     times_cpu = []
     
-    for power in range(10, 25): # 24
+    from pycuda.tools import bitlog2
+    max_power = bitlog2(drv.mem_get_info()[0]) - 2 
+    # they're floats, i.e. 4 bytes each
+    for power in range(10, max_power):
         size = 1<<power
         print size
         sizes.append(size)
@@ -47,6 +47,8 @@ def main():
 
         times_gpu.append(secs/count)
         flops_gpu.append(size)
+        del a
+        del b
 
         # cpu -----------------------------------------------------------------
         a_cpu = numpy.random.randn(size).astype(numpy.float32)

@@ -70,7 +70,7 @@ class TestGPUArray(test_abstract_array.TestAbstractArray):
         assert ((3*idx).get() == result.get()).all()
 
     def test_arange(self):
-        a = gpuarray.arange(12)
+        a = gpuarray.arange(12, dtype=numpy.float32)
 
         res = a.get()
 
