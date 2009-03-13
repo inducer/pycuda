@@ -46,7 +46,7 @@ class TestAbstractArray(unittest.TestCase):
 
     def test_abs(self):
         """test if the abs function works"""
-        a = -gpuarray.arange(111)
+        a = -gpuarray.arange(111, dtype=numpy.float32)
         res = a.get()
 
         for i in range(111):
