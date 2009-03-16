@@ -339,7 +339,6 @@ def make_multichannel_2d_array(ndarray, order):
     """Channel count has to be the first dimension of the C{ndarray}."""
 
     import numpy
-    ndarray = numpy.asarray(ndarray, order="F")
     descr = ArrayDescriptor()
 
     if order.upper() == "C":

@@ -489,6 +489,12 @@ Arrays and Textures
 
   * `height, width, num_channels` for `order == "C"`,
   * `num_channels, width, height` for `order == "F"`.
+
+  .. note ::
+    
+    This function assumes that *matrix* has been created with 
+    the memory order *order*. If that is not the case, the
+    copied data will likely not be what you expect.
   
 .. _memset:
 
@@ -603,8 +609,9 @@ Structured Memory Transfers
   .. method:: __call__([aligned=True])
 
     Perform the specified memory copy, waiting for it to finish.
-    If *aligned* is *False*, tolerate misalignment that may lead
-    to severe loss of copy bandwidth.
+    If *aligned* is *False*, tolerate device-side misalignment 
+    for device-to-device copies that may lead to loss of 
+    copy bandwidth.
 
   .. method:: __call__(stream)
 

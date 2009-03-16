@@ -215,7 +215,9 @@ class TestCuda(unittest.TestCase):
 
         shape = (5,6)
         channels = 4
-        a = numpy.random.randn(*((channels,)+shape)).astype(numpy.float32)
+        a = numpy.asarray(
+                numpy.random.randn(*((channels,)+shape)),
+                dtype=numpy.float32, order="F")
         drv.bind_array_to_texref(
             drv.make_multichannel_2d_array(a, order="F"), mtx_tex)
 
