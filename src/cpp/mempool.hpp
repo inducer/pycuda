@@ -297,7 +297,10 @@ namespace pycuda
       { }
 
       ~pooled_allocation()
-      { free(); }
+      { 
+        if (m_valid)
+          free(); 
+      }
 
       void free()
       {
