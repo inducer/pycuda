@@ -282,11 +282,13 @@ class TestCuda(unittest.TestCase):
 
         e0 = bitlog2(free)
 
-        for e in range(e0-5, e0-3):
+        for e in range(e0-6, e0-4):
             for i in range(100):
                 queue.append(pool.allocate(1<<e))
                 if len(queue) > 10:
                     queue.pop(0)
+        del queue
+        pool.stop_holding()
 
     def test_multi_context(self):
         if drv.get_version() < (2,0,0):
