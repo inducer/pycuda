@@ -20,8 +20,13 @@ def compile_plain(source, options, keep, nvcc, cache_dir):
     from os.path import join
 
     if cache_dir:
-        import md5
-        checksum = md5.new()
+        try:
+            import hashlib
+            checksum = hashlib.md5()
+        except ImportError:
+            # for Python << 2.5
+            import md5
+            checksum = md5.new()
 
         checksum.update(source)
         for option in options: 
