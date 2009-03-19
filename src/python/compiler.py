@@ -6,9 +6,9 @@ from pycuda.driver import CompileError
 
 @memoize
 def get_nvcc_version(nvcc):
-    from subprocess import Popen, PIPE
+    from pytools.prefork import call_capture_stdout
     try:
-        return Popen([nvcc, "--version"], stdout=PIPE).communicate()[0]
+        return call_capture_stdout([nvcc, "--version"])
     except OSError, e:
         raise OSError, "%s was not found (is it on the PATH?) [%s]" % (
                 nvcc, str(e))
@@ -58,7 +58,7 @@ def compile_plain(source, options, keep, nvcc, cache_dir):
 
         print "*** compiler output in %s" % file_dir
 
-    from subprocess import call
+    from pytools.prefork import call
     try:
         result = call([nvcc, "--cubin"]
                 + options

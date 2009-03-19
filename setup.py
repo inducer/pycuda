@@ -167,7 +167,7 @@ def main():
             zip_safe=False,
 
             install_requires=[
-                "pytools>=7",
+                "pytools>=8",
                 ],
 
             package_dir={"pycuda": "src/python"},
