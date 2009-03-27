@@ -68,7 +68,7 @@ class TestMath(unittest.TestCase):
         b = b.get()
         
         for i in range(test_sample):
-            self.assert_(math.ldexp(a[i], a2[i]) == b[i])
+            self.assert_(math.ldexp(a[i], int(a2[i])) == b[i])
                
     def test_modf(self):
         """tests if the modf function works"""
