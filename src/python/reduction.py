@@ -93,6 +93,7 @@ def get_reduction_module(out_type, block_size,
           unsigned int i = blockIdx.x*BLOCK_SIZE*seq_count + tid;
 
           out_type acc = %(neutral)s;
+          #if 0
           for (unsigned s = 0; s < seq_count; ++s)
           { 
             if (i < n)
@@ -100,6 +101,7 @@ def get_reduction_module(out_type, block_size,
 
             i += BLOCK_SIZE; 
           }
+          #endif
 
           sdata[tid] = acc; // asd2
 

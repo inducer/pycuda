@@ -10,7 +10,7 @@ def main():
     tbl = Table()
     tbl.add_row(("size [MiB]", "time [ms]", "mem.bw [GB/s]"))
 
-    for ex in range(20,29):
+    for ex in range(3,27):
         sz = 1 << ex
         print sz
 
@@ -28,6 +28,7 @@ def main():
             def result(*args, **kwargs):
                 start = cuda.Event()
                 stop = cuda.Event()
+                cuda.Context.synchronize()
                 start.record()
                 f(*args, **kwargs)
                 stop.record()
@@ -37,11 +38,11 @@ def main():
             return result
 
         # warm-up
-        #for i in range(3):
-            #krnl(a_gpu, b_gpu)
+        for i in range(3):
+            krnl(a_gpu, b_gpu)
 
-        #cnt = 10
-        cnt = 1
+        cnt = 10
+        #cnt = 1
 
         krnl.wrap_kernels(wrap_with_timer)
         for i in range(cnt):
@@ -51,7 +52,7 @@ def main():
         bytes = a_gpu.nbytes*2*cnt
         secs = elapsed[0]*1e-3
 
-        tbl.add_row((bytes/(1<<20), elapsed[0]/cnt, bytes/secs/1e9))
+        tbl.add_row((a_gpu.nbytes/(1<<20), elapsed[0]/cnt, bytes/secs/1e9))
 
     print tbl
 
