@@ -1,66 +1,43 @@
+"""Elementwise functionality."""
+
+from __future__ import division
+
+__copyright__ = "Copyright (C) 2009 Andreas Kloeckner"
+
+__license__ = """
+Permission is hereby granted, free of charge, to any person
+obtaining a copy of this software and associated documentation
+files (the "Software"), to deal in the Software without
+restriction, including without limitation the rights to use,
+copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the
+Software is furnished to do so, subject to the following
+conditions:
+
+The above copyright notice and this permission notice shall be
+included in all copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
+EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES
+OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND
+NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT
+HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY,
+WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
+FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
+OTHER DEALINGS IN THE SOFTWARE.
+"""
+
+
+
+
 import pycuda.driver as drv
 from pytools import memoize
 import numpy
+from pycuda.tools import dtype_to_ctype
 
 
 
 
-@memoize
-def is_64_bit_platform():
-    from struct import calcsize
-    return calcsize('l') == 8
-
-
-
-
-def dtype_to_ctype(dtype):
-    dtype = numpy.dtype(dtype)
-    if dtype == numpy.int64 and is_64_bit_platform():
-        return "long"
-    elif dtype == numpy.uint64 and is_64_bit_platform():
-        return "unsinged long"
-    elif dtype == numpy.int32:
-        return "int"
-    elif dtype == numpy.uint32:
-        return "unsigned int"
-    elif dtype == numpy.int16:
-        return "short int"
-    elif dtype == numpy.uint16:
-        return "short unsigned int"
-    elif dtype == numpy.int8:
-        return "signed char"
-    elif dtype == numpy.uint8:
-        return "unsigned char"
-    elif dtype == numpy.float32:
-        return "float"
-    elif dtype == numpy.float64:
-        return "double"
-    else:
-        raise ValueError, "unable to map dtype '%s'" % dtype
-
-
-
-
-def get_arg_type(c_arg):
-    if "*" in c_arg or "[" in c_arg:
-        return "P"
-
-    import re
-    # remove identifier
-    tp = re.sub(r"[a-zA-Z0-9]+(\[[0-9]*\])*$", "", c_arg)
-    tp = tp.replace("const", "").replace("volatile", "").strip()
-    if tp == "float": return "f"
-    elif tp == "double": return "d"
-    elif tp in ["int", "signed int"]: return "i"
-    elif tp in ["unsigned", "unsigned int"]: return "I"
-    elif tp in ["long", "long int"]: return "l"
-    elif tp in ["unsigned long", "unsigned long int"]: return "L"
-    elif tp in ["short", "short int"]: return "h"
-    elif tp in ["unsigned short", "unsigned short int"]: return "H"
-    elif tp in ["char"]: return "b"
-    elif tp in ["unsigned char"]: return "B"
-    else: raise ValueError, "unknown type '%s'" % tp
-    
 def get_elwise_module(arguments, operation, 
         name="kernel", keep=False, options=[], preamble=""):
     from pycuda.compiler import SourceModule
@@ -93,6 +70,7 @@ def get_elwise_kernel_and_types(arguments, operation,
     mod = get_elwise_module(arguments, operation, name,
             keep, options)
 
+    from pycuda.tools import get_arg_type
     func = mod.get_function(name)
     arg_types = [get_arg_type(arg) for arg in arguments.split(",")]
     func.prepare("".join(arg_types), (1,1,1))
@@ -123,7 +101,6 @@ class ElementwiseKernel:
                 "vector argument"
 
     def __call__(self, *args):
-        from pytools import single_valued
         vectors = []
 
         invocation_args = []

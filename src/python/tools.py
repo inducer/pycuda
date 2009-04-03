@@ -28,7 +28,7 @@ OTHER DEALINGS IN THE SOFTWARE.
 """
 
 import pycuda.driver as cuda
-import pycuda.gpuarray as gpuarray
+from pytools import memoize
 from pycuda._driver import \
         bitlog2, \
         DeviceMemoryPool, \
@@ -273,6 +273,67 @@ def _test_occupancy():
         for smem in range(1024, 16384+1, 1024):
             occ = Occupancy(threads, smem)
             print "t%d s%d: %f %s" % (threads, smem, occ.occupancy, occ.limited_by)
+
+
+
+
+# C code generation helpers ---------------------------------------------------
+@memoize
+def platform_bits():
+    from struct import calcsize
+    return calcsize('l') * 8
+
+
+
+
+def dtype_to_ctype(dtype):
+    import numpy
+    dtype = numpy.dtype(dtype)
+    if dtype == numpy.int64 and platform_bits() == 64:
+        return "long"
+    elif dtype == numpy.uint64 and platform_bits() == 64:
+        return "unsinged long"
+    elif dtype == numpy.int32:
+        return "int"
+    elif dtype == numpy.uint32:
+        return "unsigned int"
+    elif dtype == numpy.int16:
+        return "short int"
+    elif dtype == numpy.uint16:
+        return "short unsigned int"
+    elif dtype == numpy.int8:
+        return "signed char"
+    elif dtype == numpy.uint8:
+        return "unsigned char"
+    elif dtype == numpy.float32:
+        return "float"
+    elif dtype == numpy.float64:
+        return "double"
+    else:
+        raise ValueError, "unable to map dtype '%s'" % dtype
+
+
+
+
+def get_arg_type(c_arg):
+    if "*" in c_arg or "[" in c_arg:
+        return "P"
+
+    import re
+    # remove identifier
+    tp = re.sub(r"[a-zA-Z0-9]+(\[[0-9]*\])*$", "", c_arg)
+    tp = tp.replace("const", "").replace("volatile", "").strip()
+    if tp == "float": return "f"
+    elif tp == "double": return "d"
+    elif tp in ["int", "signed int"]: return "i"
+    elif tp in ["unsigned", "unsigned int"]: return "I"
+    elif tp in ["long", "long int"]: return "l"
+    elif tp in ["unsigned long", "unsigned long int"]: return "L"
+    elif tp in ["short", "short int"]: return "h"
+    elif tp in ["unsigned short", "unsigned short int"]: return "H"
+    elif tp in ["char"]: return "b"
+    elif tp in ["unsigned char"]: return "B"
+    else: raise ValueError, "unknown type '%s'" % tp
 
 
 
