@@ -10,17 +10,19 @@ def main():
     tbl = Table()
     tbl.add_row(("size [MiB]", "time [ms]", "mem.bw [GB/s]"))
 
-    for ex in range(3,27):
+    from random import shuffle
+    for ex in range(15,27):
         sz = 1 << ex
         print sz
 
         from pycuda.curandom import rand as curand
         a_gpu = curand((sz,))
         b_gpu = curand((sz,))
+        assert sz == a_gpu.shape[0]
+        assert len(a_gpu.shape) == 1
 
         from pycuda.reduction import get_sum_kernel, get_dot_kernel
-        krnl = get_sum_kernel(a_gpu.dtype, a_gpu.dtype)
-        #krnl = get_dot_kernel(a_gpu.dtype)
+        krnl = get_dot_kernel(a_gpu.dtype)
 
         elapsed = [0]
 
@@ -28,7 +30,6 @@ def main():
             def result(*args, **kwargs):
                 start = cuda.Event()
                 stop = cuda.Event()
-                cuda.Context.synchronize()
                 start.record()
                 f(*args, **kwargs)
                 stop.record()
@@ -42,12 +43,11 @@ def main():
             krnl(a_gpu, b_gpu)
 
         cnt = 10
-        #cnt = 1
 
-        krnl.wrap_kernels(wrap_with_timer)
         for i in range(cnt):
-            #krnl(a_gpu, b_gpu)
-            krnl(a_gpu)
+            krnl(a_gpu, b_gpu,
+            #krnl(a_gpu, 
+                    kernel_wrapper=wrap_with_timer)
 
         bytes = a_gpu.nbytes*2*cnt
         secs = elapsed[0]*1e-3

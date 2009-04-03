@@ -93,17 +93,16 @@ def get_reduction_module(out_type, block_size,
           unsigned int i = blockIdx.x*BLOCK_SIZE*seq_count + tid;
 
           out_type acc = %(neutral)s;
-          #if 0
           for (unsigned s = 0; s < seq_count; ++s)
           { 
-            if (i < n)
-              acc = REDUCE(acc, READ_AND_MAP(i)); 
+            if (i >= n)
+              break;
+            acc = REDUCE(acc, READ_AND_MAP(i)); 
 
             i += BLOCK_SIZE; 
           }
-          #endif
 
-          sdata[tid] = acc; // asd2
+          sdata[tid] = acc;
 
           __syncthreads();
 
@@ -199,17 +198,22 @@ class ReductionKernel:
                 "ReductionKernel can only be used with functions that have at least one " \
                 "vector argument"
 
-    def wrap_kernels(self, wrap_func):
-        self.stage1_func = wrap_func(self.stage1_func)
-        self.stage2_func = wrap_func(self.stage2_func)
-
-    def __call__(self, *args):
+    def __call__(self, *args, **kwargs):
         MAX_BLOCK_COUNT = 1024
         SMALL_SEQ_COUNT = 4
 
+        s1_func = self.stage1_func
+        s2_func = self.stage2_func
+
+        kernel_wrapper = kwargs.get("kernel_wrapper")
+        if kernel_wrapper is not None:
+            s1_func = kernel_wrapper(s1_func)
+            s2_func = kernel_wrapper(s2_func)
+
+
         from gpuarray import empty
 
-        f = self.stage1_func
+        f = s1_func
         arg_types = self.stage1_arg_types
 
         while True:
@@ -240,14 +244,14 @@ class ReductionKernel:
             else:
                 result = empty((block_count,), dtype=self.dtype_out)
 
-            print block_count, seq_count, self.block_size
+            #print block_count, seq_count, self.block_size
             f((block_count, 1), 
                     *([result.gpudata]+invocation_args+[seq_count, sz]))
 
             if block_count == 1:
                 return result
             else:
-                f = self.stage2_func
+                f = s2_func
                 arg_types = self.stage2_arg_types
                 args = [result]
 
@@ -257,7 +261,8 @@ class ReductionKernel:
 @memoize
 def get_sum_kernel(dtype_out, dtype_in):
     return ReductionKernel(dtype_out, "0", "a+b",
-            arguments="const %(tp)s *in" % {"tp": dtype_to_ctype(dtype_in)})
+            arguments="const %(tp)s *in" % {"tp": dtype_to_ctype(dtype_in)},
+            keep=True)
 
 
 
@@ -298,3 +303,30 @@ def get_subset_dot_kernel(dtype_out, dtype_a=None, dtype_b=None):
     return ReductionKernel(dtype_out, neutral="0", 
             reduce_expr="a+b", map_expr="a[lookup_tbl[i]]*b[lookup_tbl[i]]", 
             arguments="const unsigned int *lookup_tbl, const float *a, const float *b")
+
+
+
+
+
+@memoize
+def get_subset_dot_one_sided_kernel(positive_side, 
+        dtype_out, dtype_a=None, dtype_b=None):
+    if dtype_b is None:
+        if dtype_a is None:
+            dtype_b = dtype_out
+        else:
+            dtype_b = dtype_a
+
+    if dtype_a is None:
+        dtype_a = dtype_out
+
+    if positive_side:
+        rel = ">"
+    else:
+        rel = "<"
+
+    # important: lookup_tbl must be first--it controls the length
+    return ReductionKernel(dtype_out, neutral="0", 
+            reduce_expr="a+b", 
+            map_expr="a[tbl[i]]*b[tbl[i]] %s 0 ? a[tbl[i]]*b[tbl[i]] : 0", 
+            arguments="const unsigned int *tbl, const float *a, const float *b")
