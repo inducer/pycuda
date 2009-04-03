@@ -101,7 +101,7 @@ def get_reduction_module(out_type, block_size,
             i += BLOCK_SIZE; 
           }
 
-          sdata[tid] = acc;
+          sdata[tid] = acc; // asd2
 
           __syncthreads();
 
@@ -140,7 +140,8 @@ def get_reduction_module(out_type, block_size,
             "reduce_expr": reduce_expr,
             "map_expr": map_expr,
             "name": name,
-            "preamble": preamble}
+            "preamble": preamble
+            }
     return SourceModule(src, options=options, keep=keep)
 
 
@@ -237,6 +238,7 @@ class ReductionKernel:
             else:
                 result = empty((block_count,), dtype=self.dtype_out)
 
+            print block_count, seq_count, self.block_size
             f((block_count, 1), 
                     *([result.gpudata]+invocation_args+[seq_count, sz]))
 
@@ -274,7 +276,7 @@ def get_dot_kernel(dtype_out, dtype_a=None, dtype_b=None):
             arguments="const %(tp_a)s *a, const %(tp_b)s *b" % { 
                 "tp_a": dtype_to_ctype(dtype_a),
                 "tp_b": dtype_to_ctype(dtype_b), 
-                })
+                }, keep=True)
             
 
 
@@ -291,6 +293,6 @@ def get_subset_dot_kernel(dtype_out, dtype_a=None, dtype_b=None):
         dtype_a = dtype_out
 
     # important: lookup_tbl must be first--it controls the length
-    return ReductionKernel(dtype, neutral="0", 
+    return ReductionKernel(dtype_out, neutral="0", 
             reduce_expr="a+b", map_expr="a[lookup_tbl[i]]*b[lookup_tbl[i]]", 
             arguments="const unsigned int *lookup_tbl, const float *a, const float *b")

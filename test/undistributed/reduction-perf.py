@@ -18,8 +18,9 @@ def main():
         a_gpu = curand((sz,))
         b_gpu = curand((sz,))
 
-        from pycuda.reduction import get_dot_kernel
-        krnl = get_dot_kernel(a_gpu.dtype)
+        from pycuda.reduction import get_sum_kernel, get_dot_kernel
+        krnl = get_sum_kernel(a_gpu.dtype, a_gpu.dtype)
+        #krnl = get_dot_kernel(a_gpu.dtype)
 
         elapsed = [0]
 
@@ -36,19 +37,21 @@ def main():
             return result
 
         # warm-up
-        for i in range(3):
-            krnl(a_gpu, b_gpu)
+        #for i in range(3):
+            #krnl(a_gpu, b_gpu)
 
-        cnt = 10
+        #cnt = 10
+        cnt = 1
 
         krnl.wrap_kernels(wrap_with_timer)
         for i in range(cnt):
-            krnl(a_gpu, b_gpu)
+            #krnl(a_gpu, b_gpu)
+            krnl(a_gpu)
 
         bytes = a_gpu.nbytes*2*cnt
         secs = elapsed[0]*1e-3
 
-        tbl.add_row((sz/(1<<20), elapsed[0]/cnt, bytes/secs/1e9))
+        tbl.add_row((bytes/(1<<20), elapsed[0]/cnt, bytes/secs/1e9))
 
     print tbl
 
