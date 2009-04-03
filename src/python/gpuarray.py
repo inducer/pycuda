@@ -78,16 +78,6 @@ class GPUArray(object):
 
         self._grid, self._block = splay(self.mem_size)
 
-    @property
-    def real(self):
-        # FIXME
-        return self
-
-    @property
-    def imag(self):
-        # FIXME
-        return zeros_like(self)
-
     @classmethod
     def compile_kernels(cls):
         # useful for benchmarking
@@ -400,6 +390,21 @@ class GPUArray(object):
                 self.mem_size)
 
         return result
+
+    # complex-valued business -------------------------------------------------
+    @property
+    def real(self):
+        # FIXME
+        return self
+
+    @property
+    def imag(self):
+        # FIXME
+        return zeros_like(self)
+
+    def conj(self):
+        # FIXME
+        return self
 
 
 
