@@ -534,3 +534,22 @@ def take(a, indices):
             indices.gpudata, result.gpudata, indices.mem_size)
 
     return result
+
+
+
+
+# reductions ------------------------------------------------------------------
+def sum(a, dtype=None):
+    from pycuda.reduction import get_sum_kernel
+    krnl = get_sum_kernel(dtype, a.dtype)
+    return krnl(a)
+
+def dot(a, b, dtype=None):
+    from pycuda.reduction import get_dot_kernel
+    krnl = get_dot_kernel(dtype, a.dtype, b.dtype)
+    return krnl(a, b)
+
+def subset_dot(a, b, subset, dtype=None):
+    from pycuda.reduction import get_subset_dot_kernel
+    krnl = get_subset_dot_kernel(dtype, a.dtype, b.dtype)
+    return krnl(a, b, subset)

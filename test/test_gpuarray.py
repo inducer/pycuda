@@ -78,7 +78,6 @@ class TestGPUArray(test_abstract_array.TestAbstractArray):
             self.assert_(res[i] ==i)
 
     def test_reverse(self):
-        """test if the reverse works"""
         a = numpy.array([1,2,3,4,5,6,7,8,9,10]).astype(numpy.float32)
         a_cpu = self.make_test_array(a)
 
@@ -89,7 +88,31 @@ class TestGPUArray(test_abstract_array.TestAbstractArray):
 
         for i in range(0,10):
             self.assert_(a[len(a)-1-i] == b[i])
+
+    def test_sum(self):
+        from pycuda.curandom import rand as curand
+        a_gpu = curand((200000,))
+        a = a_gpu.get()
+
+        sum_a = numpy.sum(a)
+
+        from pycuda.reduction import get_sum_kernel
+        sum_a_gpu = gpuarray.sum(a_gpu).get()
+
+        self.assert_(abs(sum_a_gpu-sum_a)/abs(sum_a) < 1e-4)
         
+    def test_dot(self):
+        from pycuda.curandom import rand as curand
+        a_gpu = curand((200000,))
+        a = a_gpu.get()
+        b_gpu = curand((200000,))
+        b = b_gpu.get()
+
+        dot_ab = numpy.dot(a, b)
+
+        dot_ab_gpu = gpuarray.dot(a_gpu, b_gpu).get()
+
+        self.assert_(abs(dot_ab_gpu-dot_ab)/abs(dot_ab) < 1e-4)
 
 if __name__ == '__main__':
     unittest.main()
