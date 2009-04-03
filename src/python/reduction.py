@@ -79,25 +79,29 @@ def get_reduction_module(out_type, block_size,
         #define READ_AND_MAP(i) %(map_expr)s
         #define REDUCE(a, b) %(reduce_expr)s
 
+        typedef %(out_type)s out_type;
+
         %(preamble)s
 
-        __global__ void %(name)s(%(out_type)s *out, %(arguments)s, 
+        __global__ void %(name)s(out_type *out, %(arguments)s, 
           unsigned int seq_count, unsigned int n)
         {
-          __shared__ %(out_type)s sdata[BLOCK_SIZE];
+          __shared__ out_type sdata[BLOCK_SIZE];
 
           unsigned int tid = threadIdx.x;
 
           unsigned int i = blockIdx.x*BLOCK_SIZE*seq_count + tid;
 
-          sdata[tid] = %(neutral)s;
+          out_type acc = %(neutral)s;
           for (unsigned s = 0; s < seq_count; ++s)
           { 
             if (i < n)
-              sdata[tid] += READ_AND_MAP(i); 
+              acc = REDUCE(acc, READ_AND_MAP(i)); 
 
             i += BLOCK_SIZE; 
           }
+
+          sdata[tid] = acc;
 
           __syncthreads();
 
