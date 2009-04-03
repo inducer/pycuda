@@ -3,7 +3,6 @@ import numpy
 import pycuda.elementwise as elementwise
 import random as random
 from pytools import memoize
-from pytools.diskdict import DiskDict
 import pycuda.driver as drv
 
 
@@ -549,7 +548,7 @@ def dot(a, b, dtype=None):
     krnl = get_dot_kernel(dtype, a.dtype, b.dtype)
     return krnl(a, b)
 
-def subset_dot(a, b, subset, dtype=None):
+def subset_dot(subset, a, b, dtype=None):
     from pycuda.reduction import get_subset_dot_kernel
     krnl = get_subset_dot_kernel(dtype, a.dtype, b.dtype)
-    return krnl(a, b, subset)
+    return krnl(subset, a, b)

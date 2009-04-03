@@ -71,27 +71,27 @@ from pycuda.tools import dtype_to_ctype
 
 def get_reduction_module(out_type, block_size,
         neutral, reduce_expr, map_expr, arguments,
-        seq_count=2, name="reduce_kernel", keep=False, options=[], preamble=""):
+        name="reduce_kernel", keep=False, options=[], preamble=""):
 
     from pycuda.compiler import SourceModule
     src = """
-        #define SEQ_COUNT %(seq_count)d
         #define BLOCK_SIZE %(block_size)d
         #define READ_AND_MAP(i) %(map_expr)s
         #define REDUCE(a, b) %(reduce_expr)s
 
         %(preamble)s
 
-        __global__ void %(name)s(%(out_type)s *out, %(arguments)s, unsigned int n)
+        __global__ void %(name)s(%(out_type)s *out, %(arguments)s, 
+          unsigned int seq_count, unsigned int n)
         {
           __shared__ %(out_type)s sdata[BLOCK_SIZE];
 
           unsigned int tid = threadIdx.x;
 
-          unsigned int i = blockIdx.x*BLOCK_SIZE*SEQ_COUNT + tid;
+          unsigned int i = blockIdx.x*BLOCK_SIZE*seq_count + tid;
 
           sdata[tid] = %(neutral)s;
-          for (unsigned s = 0; s < SEQ_COUNT; ++s)
+          for (unsigned s = 0; s < seq_count; ++s)
           { 
             if (i < n)
               sdata[tid] += READ_AND_MAP(i); 
@@ -135,7 +135,6 @@ def get_reduction_module(out_type, block_size,
             "neutral": neutral,
             "reduce_expr": reduce_expr,
             "map_expr": map_expr,
-            "seq_count": seq_count,
             "name": name,
             "preamble": preamble}
     return SourceModule(src, options=options, keep=keep)
@@ -145,7 +144,7 @@ def get_reduction_module(out_type, block_size,
 
 def get_reduction_kernel_and_types(out_type, block_size,
         neutral, reduce_expr, map_expr=None, arguments=None,
-        seq_count=2, name="reduce_kernel", keep=False, options=[], preamble=""):
+        name="reduce_kernel", keep=False, options=[], preamble=""):
     if map_expr is None:
         map_expr = "in[i]"
 
@@ -154,12 +153,12 @@ def get_reduction_kernel_and_types(out_type, block_size,
 
     mod = get_reduction_module(out_type, block_size,
             neutral, reduce_expr, map_expr, arguments,
-            seq_count, name, keep, options, preamble)
+            name, keep, options, preamble)
 
     from pycuda.tools import get_arg_type
     func = mod.get_function(name)
     arg_types = [get_arg_type(arg) for arg in arguments.split(",")]
-    func.prepare("P%sI" % "".join(arg_types), (block_size,1,1))
+    func.prepare("P%sII" % "".join(arg_types), (block_size,1,1))
 
     return func, arg_types
 
@@ -173,27 +172,34 @@ class ReductionKernel:
 
         self.dtype_out = dtype_out
 
-        self.seq_count = 2
-        self.block_size = 128
+        self.block_size = 512
 
         from pycuda.tools import dtype_to_ctype
-        self.stage1_func, self.stage1_arg_types = get_reduction_kernel_and_types(
+        s1_func, self.stage1_arg_types = get_reduction_kernel_and_types(
                 dtype_to_ctype(dtype_out), self.block_size, 
                 neutral, reduce_expr, map_expr,
                 arguments, name=name+"_stage1", keep=keep, options=options)
+        self.stage1_func = s1_func.prepared_call
 
         # stage 2 has only one input and no map expression
-        self.stage2_func, self.stage2_arg_types = get_reduction_kernel_and_types(
+        s2_func, self.stage2_arg_types = get_reduction_kernel_and_types(
                 dtype_to_ctype(dtype_out), self.block_size, 
                 neutral, reduce_expr,
                 name=name+"_stage2", keep=keep, options=options)
+        self.stage2_func = s2_func.prepared_call
 
         assert [i for i, arg_tp in enumerate(self.stage1_arg_types) if arg_tp == "P"], \
                 "ReductionKernel can only be used with functions that have at least one " \
                 "vector argument"
 
+    def wrap_kernels(self, wrap_func):
+        self.stage1_func = wrap_func(self.stage1_func)
+        self.stage2_func = wrap_func(self.stage2_func)
+
     def __call__(self, *args):
-        total_block_size = self.seq_count*self.block_size
+        MAX_BLOCK_COUNT = 1024
+        SMALL_SEQ_COUNT = 4
+
         from gpuarray import empty
 
         f = self.stage1_func
@@ -213,14 +219,22 @@ class ReductionKernel:
             repr_vec = vectors[0]
             sz = repr_vec.size
 
-            block_count = (sz + total_block_size - 1)// total_block_size
+            if sz <= self.block_size*SMALL_SEQ_COUNT*MAX_BLOCK_COUNT:
+                total_block_size = SMALL_SEQ_COUNT*self.block_size
+                block_count = (sz + total_block_size - 1) // total_block_size
+                seq_count = SMALL_SEQ_COUNT
+            else:
+                block_count = MAX_BLOCK_COUNT
+                macroblock_size = block_count*self.block_size
+                seq_count = (sz + macroblock_size - 1) // macroblock_size
+
             if block_count == 1:
                 result = empty((), dtype=self.dtype_out)
             else:
                 result = empty((block_count,), dtype=self.dtype_out)
 
-            f.prepared_call((block_count, 1), 
-                    *([result.gpudata]+invocation_args+[sz]))
+            f((block_count, 1), 
+                    *([result.gpudata]+invocation_args+[seq_count, sz]))
 
             if block_count == 1:
                 return result
@@ -272,6 +286,7 @@ def get_subset_dot_kernel(dtype_out, dtype_a=None, dtype_b=None):
     if dtype_a is None:
         dtype_a = dtype_out
 
+    # important: lookup_tbl must be first--it controls the length
     return ReductionKernel(dtype, neutral="0", 
             reduce_expr="a+b", map_expr="a[lookup_tbl[i]]*b[lookup_tbl[i]]", 
-            arguments="const float *a, const float *b, const unsigned int *lookup_tbl")
+            arguments="const unsigned int *lookup_tbl, const float *a, const float *b")

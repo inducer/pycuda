@@ -1,5 +1,4 @@
 from _driver import *
-from pytools.diskdict import DiskDict
 from pytools import memoize
 
 
