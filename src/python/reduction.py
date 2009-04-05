@@ -303,30 +303,3 @@ def get_subset_dot_kernel(dtype_out, dtype_a=None, dtype_b=None):
     return ReductionKernel(dtype_out, neutral="0", 
             reduce_expr="a+b", map_expr="a[lookup_tbl[i]]*b[lookup_tbl[i]]", 
             arguments="const unsigned int *lookup_tbl, const float *a, const float *b")
-
-
-
-
-
-@memoize
-def get_subset_dot_one_sided_kernel(positive_side, 
-        dtype_out, dtype_a=None, dtype_b=None):
-    if dtype_b is None:
-        if dtype_a is None:
-            dtype_b = dtype_out
-        else:
-            dtype_b = dtype_a
-
-    if dtype_a is None:
-        dtype_a = dtype_out
-
-    if positive_side:
-        rel = ">"
-    else:
-        rel = "<"
-
-    # important: lookup_tbl must be first--it controls the length
-    return ReductionKernel(dtype_out, neutral="0", 
-            reduce_expr="a+b", 
-            map_expr="a[tbl[i]]*b[tbl[i]] %s 0 ? a[tbl[i]]*b[tbl[i]] : 0", 
-            arguments="const unsigned int *tbl, const float *a, const float *b")

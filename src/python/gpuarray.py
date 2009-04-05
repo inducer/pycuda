@@ -557,9 +557,3 @@ def subset_dot(subset, a, b, dtype=None):
     from pycuda.reduction import get_subset_dot_kernel
     krnl = get_subset_dot_kernel(dtype, a.dtype, b.dtype)
     return krnl(subset, a, b)
-
-def subset_dot_twosided(subset, a, b, dtype=None):
-    from pycuda.reduction import get_subset_dot_one_sided_kernel
-    pos_krnl = get_subset_dot_one_sided_kernel(True, dtype, a.dtype, b.dtype)
-    neg_krnl = get_subset_dot_one_sided_kernel(False, dtype, a.dtype, b.dtype)
-    return pos_krnl(subset, a, b) + neg_krnl(subset, a, b)
