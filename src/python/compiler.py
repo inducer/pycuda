@@ -90,7 +90,8 @@ def compile_plain(source, options, keep, nvcc, cache_dir):
 
 
 def compile(source, nvcc="nvcc", options=[], keep=False,
-        no_extern_c=False, arch=None, code=None, cache_dir=None):
+        no_extern_c=False, arch=None, code=None, cache_dir=None,
+        include_dirs=[]):
 
     if not no_extern_c:
         source = 'extern "C" {\n%s\n}\n' % source
@@ -114,12 +115,20 @@ def compile(source, nvcc="nvcc", options=[], keep=False,
             from os import mkdir
             mkdir(cache_dir)
 
-    options = options[:]
     if arch is not None:
         options.extend(["-arch", arch])
 
     if code is not None:
         options.extend(["-code", code])
+
+    include_dirs = include_dirs[:]
+    from imp import find_module
+    file, pathname, descr = find_module("pycuda")
+    from os.path import join
+    include_dirs.append(join(pathname, "..", "include/cuda"))
+
+    for i in include_dirs:
+        options.append("-I"+i)
 
     return compile_plain(source, options, keep, nvcc, cache_dir)
 
@@ -128,9 +137,10 @@ def compile(source, nvcc="nvcc", options=[], keep=False,
 
 class SourceModule(object):
     def __init__(self, source, nvcc="nvcc", options=[], keep=False,
-            no_extern_c=False, arch=None, code=None, cache_dir=None):
+            no_extern_c=False, arch=None, code=None, cache_dir=None,
+            include_dirs=[]):
         cubin = compile(source, nvcc, options, keep, no_extern_c, 
-                arch, code, cache_dir)
+                arch, code, cache_dir, include_dirs)
 
         def failsafe_extract(key, cubin):
             pattern = r"%s\s*=\s*([0-9]+)" % key
