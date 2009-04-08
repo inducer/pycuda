@@ -187,7 +187,12 @@ def main():
                     extra_compile_args=conf["CXXFLAGS"],
                     extra_link_args=conf["LDFLAGS"],
                     ),
-                ])
+                ],
+                
+            data_files=[
+                ("include/cuda", glob.glob("src/cuda/*.hpp"))
+                ],
+            )
 
 
 

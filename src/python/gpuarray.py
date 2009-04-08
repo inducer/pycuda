@@ -308,10 +308,21 @@ class GPUArray(object):
         texref.set_address(self.gpudata, self.nbytes)
 
     def bind_to_texref_ext(self, texref, channels=1):
-        texref.set_address(self.gpudata, self.nbytes)
-        texref.set_format(drv.dtype_to_array_format(self.dtype), channels)
+        if self.dtype == numpy.float64:
+            if channels != 1:
+                raise ValueError, "'fake' double precision textures can only have one channel"
 
-        if numpy.integer in self.dtype.type.__mro__:
+            channels = 2
+            fmt = drv.array_format.SIGNED_INT32
+            read_as_int = True
+        else:
+            fmt = drv.dtype_to_array_format(self.dtype)
+            read_as_int = numpy.integer in self.dtype.type.__mro__
+
+        texref.set_address(self.gpudata, self.nbytes)
+        texref.set_format(fmt, channels)
+
+        if read_as_int:
             texref.set_flags(texref.get_flags() | drv.TRSF_READ_AS_INTEGER)
 
     def __len__(self):

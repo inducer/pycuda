@@ -385,6 +385,43 @@ class TestCuda(unittest.TestCase):
         drv.memcpy_dtoh(a_quadrupled, a_gpu)
         assert la.norm(a_quadrupled[1:]-4*a[1:]) == 0
 
+    def test_fp_textures(self):
+        if pycuda.autoinit.device.compute_capability() < (1, 3):
+            return
+
+        for tp, tp_cstr in [
+                (numpy.float32, "float"),
+                (numpy.float64, "double")]:
+            mod = SourceModule("""
+            #include <pycuda-helpers.hpp>
+
+            texture<fp_tex_%(tp)s, 1, cudaReadModeElementType> my_tex;
+
+            __global__ void copy_texture(%(tp)s *dest)
+            {
+              int i = threadIdx.x;
+              dest[i] = fp_tex1Dfetch(my_tex, i);
+            }
+            """ % {"tp": tp_cstr})
+
+            copy_texture = mod.get_function("copy_texture")
+            my_tex = mod.get_texref("my_tex")
+
+            import pycuda.gpuarray as gpuarray
+
+            shape = (384,)
+            a = numpy.random.randn(*shape).astype(tp)
+            a_gpu = gpuarray.to_gpu(a)
+            a_gpu.bind_to_texref_ext(my_tex)
+
+            dest = numpy.zeros(shape, dtype=tp)
+            copy_texture(drv.Out(dest),
+                    block=shape+(1,1,), 
+                    texrefs=[my_tex])
+
+            assert la.norm(dest-a) == 0
+
+
 
 
 if __name__ == "__main__":
