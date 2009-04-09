@@ -307,8 +307,8 @@ class GPUArray(object):
     def bind_to_texref(self, texref):
         texref.set_address(self.gpudata, self.nbytes)
 
-    def bind_to_texref_ext(self, texref, channels=1):
-        if self.dtype == numpy.float64:
+    def bind_to_texref_ext(self, texref, channels=1, allow_double_hack=False):
+        if self.dtype == numpy.float64 and allow_double_hack:
             if channels != 1:
                 raise ValueError, "'fake' double precision textures can only have one channel"
 
