@@ -299,7 +299,7 @@ def dtype_to_array_format(dtype):
 
 
 
-def matrix_to_array(matrix, order):
+def matrix_to_array(matrix, order, allow_double_hack=False):
     import numpy
 
     if order.upper() == "C":
@@ -316,8 +316,13 @@ def matrix_to_array(matrix, order):
 
     descr.width = w
     descr.height = h
-    descr.format = dtype_to_array_format(matrix.dtype)
-    descr.num_channels = 1
+
+    if matrix.dtype == numpy.float64 and allow_double_hack:
+        descr.format = array_format.SIGNED_INT32
+        descr.num_channels = 2
+    else:
+        descr.format = dtype_to_array_format(matrix.dtype)
+        descr.num_channels = 1
 
     ary = Array(descr)
 
