@@ -389,9 +389,7 @@ class TestCuda(unittest.TestCase):
         if pycuda.autoinit.device.compute_capability() < (1, 3):
             return
 
-        for tp, tp_cstr in [
-                (numpy.float32, "float"),
-                (numpy.float64, "double")]:
+        for tp, tp_cstr in [numpy.float32, numpy.float64]:
             mod = SourceModule("""
             #include <pycuda-helpers.hpp>
 
