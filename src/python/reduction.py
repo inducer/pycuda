@@ -302,4 +302,8 @@ def get_subset_dot_kernel(dtype_out, dtype_a=None, dtype_b=None):
     # important: lookup_tbl must be first--it controls the length
     return ReductionKernel(dtype_out, neutral="0", 
             reduce_expr="a+b", map_expr="a[lookup_tbl[i]]*b[lookup_tbl[i]]", 
-            arguments="const unsigned int *lookup_tbl, const float *a, const float *b")
+            arguments="const unsigned int *lookup_tbl, "
+            "const %(tp_a)s *a, const %(tp_b)s *b" % {
+            "tp_a": dtype_to_ctype(dtype_a),
+            "tp_b": dtype_to_ctype(dtype_b), 
+            })

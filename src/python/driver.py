@@ -82,6 +82,7 @@ def _add_functionality():
 
         import struct
         buf = struct.pack(format, *arg_data)
+
         func.param_setv(0, buf)
         func.param_set_size(len(buf))
 
@@ -205,6 +206,7 @@ def _add_functionality():
     def function_prepared_async_call(func, grid, stream, *args):
         from struct import pack
         func.param_setv(0, pack(func.arg_format, *args))
+
         for texref in func.texrefs:
             func.param_set_texref(texref)
 

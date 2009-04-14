@@ -29,14 +29,18 @@ print array2
 mod = SourceModule("""
     struct DoubleOperation {
         int datalen, __padding; // so 64-bit ptrs can be aligned
-        __global__ float *ptr;
+        float *ptr;
     };
+
 
     __global__ void double_array(DoubleOperation *a) 
     {
         a = a + blockIdx.x;
         for (int idx = threadIdx.x; idx < a->datalen; idx += blockDim.x) 
-            a->ptr[idx] *= 2;
+        {
+            float *a_ptr = a->ptr;
+            a_ptr[idx] *= 2;
+        }
     }
     """)
 func = mod.get_function("double_array")
