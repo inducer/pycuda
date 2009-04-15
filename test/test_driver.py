@@ -389,7 +389,10 @@ class TestCuda(unittest.TestCase):
         if pycuda.autoinit.device.compute_capability() < (1, 3):
             return
 
-        for tp, tp_cstr in [numpy.float32, numpy.float64]:
+        for tp in [numpy.float32, numpy.float64]:
+            from pycuda.tools import dtype_to_ctype
+
+            tp_cstr = dtype_to_ctype(tp)
             mod = SourceModule("""
             #include <pycuda-helpers.hpp>
 
@@ -410,7 +413,7 @@ class TestCuda(unittest.TestCase):
             shape = (384,)
             a = numpy.random.randn(*shape).astype(tp)
             a_gpu = gpuarray.to_gpu(a)
-            a_gpu.bind_to_texref_ext(my_tex)
+            a_gpu.bind_to_texref_ext(my_tex, allow_double_hack=True)
 
             dest = numpy.zeros(shape, dtype=tp)
             copy_texture(drv.Out(dest),
