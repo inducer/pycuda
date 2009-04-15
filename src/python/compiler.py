@@ -16,17 +16,23 @@ def get_nvcc_version(nvcc):
 
 
 
+def _new_md5(): 
+    try:
+        import hashlib
+        return hashlib.md5()
+    except ImportError:
+        # for Python << 2.5
+        import md5
+        return md5.new()
+
+
+
+
 def compile_plain(source, options, keep, nvcc, cache_dir):
     from os.path import join
 
     if cache_dir:
-        try:
-            import hashlib
-            checksum = hashlib.md5()
-        except ImportError:
-            # for Python << 2.5
-            import md5
-            checksum = md5.new()
+        checksum = _new_md5()
 
         checksum.update(source)
         for option in options: 
@@ -89,6 +95,20 @@ def compile_plain(source, options, keep, nvcc, cache_dir):
 
 
 
+def _get_per_user_string():
+    try:
+        from os import getuid
+    except ImportError:
+        checksum = _new_md5()
+        from os import environ
+        checksum.update(environ["HOME"])
+        return checksum.hexdigest()
+    else:
+        return "uid%d" % getuid()
+
+
+
+
 def compile(source, nvcc="nvcc", options=[], keep=False,
         no_extern_c=False, arch=None, code=None, cache_dir=None,
         include_dirs=[]):
@@ -109,7 +129,7 @@ def compile(source, nvcc="nvcc", options=[], keep=False,
         import os
         from tempfile import gettempdir
         cache_dir = join(gettempdir(), 
-                "pycuda-compiler-cache-v1-uid%s" % os.getuid())
+                "pycuda-compiler-cache-v1-%s" % _get_per_user_string())
 
         if not exists(cache_dir):
             from os import mkdir
