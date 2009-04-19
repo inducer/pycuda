@@ -1,5 +1,4 @@
 from pytools import memoize
-from pycuda.driver import CompileError
 
 
 
@@ -75,6 +74,7 @@ def compile_plain(source, options, keep, nvcc, cache_dir):
                 nvcc, str(e))
 
     if result != 0:
+        from pycuda.driver import CompileError
         raise CompileError, "nvcc compilation of %s failed" % cu_file_path
 
     cubin = open(join(file_dir, file_root + ".cubin"), "r").read()
