@@ -1082,26 +1082,39 @@ namespace cuda
 
 
 
-  struct host_allocation : public boost::noncopyable
+  struct host_allocation : public boost::noncopyable, public context_dependent
   {
     private:
       void *m_data;
+      bool m_valid;
 
     public:
       host_allocation(unsigned bytesize)
-        : m_data(mem_alloc_host(bytesize))
+        : m_valid(true), m_data(mem_alloc_host(bytesize))
       { }
 
       ~host_allocation()
-      { free(); }
+      { 
+        if (m_valid)
+          free(); 
+      }
 
       void free()
       {
-        if (m_data)
+        if (m_valid)
         {
-          mem_free_host(m_data); 
-          m_data = 0;
+          try
+          {
+            scoped_context_activation ca(get_context());
+            mem_free_host(m_data); 
+          }
+          CUDA_CATCH_WARN_OOT_LEAK(host_allocation);
+
+          release_context();
+          m_valid = false;
         }
+        else
+          throw cuda::error("host_allocation::free", CUDA_ERROR_INVALID_HANDLE);
       }
       
       void *data()

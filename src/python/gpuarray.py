@@ -60,12 +60,18 @@ class GPUArray(object):
     """
 
     def __init__(self, shape, dtype, stream=None, allocator=drv.mem_alloc):
+        try:
+            s = 1
+            for dim in shape:
+                s *= dim
+        except TypeError:
+            assert isinstance(shape, int)
+            s = shape
+            shape = (shape,)
+
         self.shape = shape
         self.dtype = numpy.dtype(dtype)
 
-        s = 1
-        for dim in shape:
-            s *= dim
         self.mem_size = self.size = s
         self.nbytes = self.dtype.itemsize * self.size
 
