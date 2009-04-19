@@ -246,7 +246,7 @@ Concurrency and Streams
     Insert a recording point for *self* into the global device execution
     stream.
 
-  .. method:: record_in_stream(stream)
+  .. method:: record(stream)
 
     Insert a recording point for *self* into the :class:`Stream` *stream*
 
