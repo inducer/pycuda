@@ -152,11 +152,16 @@ namespace
     if (PyArray_DescrConverter(dtype.ptr(), &tp_descr) != NPY_SUCCEED)
       throw py::error_already_set();
 
+    py::extract<npy_intp> shape_as_int(shape);
     std::vector<npy_intp> dims;
-    std::copy(
-        py::stl_input_iterator<npy_intp>(shape),
-        py::stl_input_iterator<npy_intp>(),
-        back_inserter(dims));
+
+    if (shape_as_int.check())
+      dims.push_back(shape_as_int());
+    else
+      std::copy(
+          py::stl_input_iterator<npy_intp>(shape),
+          py::stl_input_iterator<npy_intp>(),
+          back_inserter(dims));
 
     std::auto_ptr<host_allocation> alloc(
         new host_allocation(
