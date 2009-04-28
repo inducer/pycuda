@@ -59,7 +59,8 @@ class GPUArray(object):
     work on an element-by-element basis, just like numpy.ndarray.
     """
 
-    def __init__(self, shape, dtype, stream=None, allocator=drv.mem_alloc):
+    def __init__(self, shape, dtype, stream=None, allocator=drv.mem_alloc, 
+            base=None, gpudata=None):
         try:
             s = 1
             for dim in shape:
@@ -76,11 +77,20 @@ class GPUArray(object):
         self.nbytes = self.dtype.itemsize * self.size
 
         self.allocator = allocator
-        if self.size:
-            self.gpudata = self.allocator(self.size * self.dtype.itemsize)
+        if gpudata is None:
+            if self.size:
+                self.gpudata = self.allocator(self.size * self.dtype.itemsize)
+            else:
+                self.gpudata = None
+            
+            assert base is None
         else:
-            self.gpudata = None
+            self.gpudata = gpudata
+
+            assert base is not None
+
         self.stream = stream
+        self.base = base
 
         self._grid, self._block = splay(self.mem_size)
 
@@ -407,6 +417,28 @@ class GPUArray(object):
                 self.mem_size)
 
         return result
+
+    # slicing -----------------------------------------------------------------
+    def __getitem__(self, idx):
+        if len(self.shape) > 1:
+            raise NotImplementedError("multi-d slicing is not yet implemented")
+        
+        if not isinstance(idx, slice):
+            raise ValueError("non-slice indexing not supported")
+
+        l, = self.shape
+        start, stop, stride = idx.indices(l)
+
+        if stride != 1:
+            raise NotImplementedError("strided slicing is not yet implemented")
+
+        return GPUArray(
+                shape=((stop-start)//stride,),
+                dtype=self.dtype,
+                stream=self.stream,
+                allocator=self.allocator,
+                base=self,
+                gpudata=int(self.gpudata) + start*self.dtype.itemsize)
 
     # complex-valued business -------------------------------------------------
     @property

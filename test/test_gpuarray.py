@@ -114,5 +114,22 @@ class TestGPUArray(test_abstract_array.TestAbstractArray):
 
         self.assert_(abs(dot_ab_gpu-dot_ab)/abs(dot_ab) < 1e-4)
 
+    def test_slice(self):
+        from pycuda.curandom import rand as curand
+
+        l = 20000
+        a_gpu = curand((l,))
+        a = a_gpu.get()
+
+        from random import randrange
+        for i in range(200):
+            start = randrange(l)
+            end = randrange(start, l)
+
+            a_gpu_slice = a_gpu[start:end]
+            a_slice = a[start:end]
+
+            self.assert_(la.norm(a_gpu_slice.get()-a_slice) == 0)
+
 if __name__ == '__main__':
     unittest.main()
