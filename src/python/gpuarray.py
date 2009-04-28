@@ -595,7 +595,7 @@ def take(a, indices, out=None):
 
 
 def multi_take(arrays, indices, out=None):
-    if not arrays:
+    if not len(arrays):
         return []
     assert len(indices.shape) == 1
 
@@ -628,7 +628,7 @@ def multi_take(arrays, indices, out=None):
 
 def multi_take_put(arrays, dest_indices, src_indices, dest_shape=None, 
         out=None):
-    if not arrays:
+    if not len(arrays):
         return []
 
     a_dtype = arrays[0].dtype

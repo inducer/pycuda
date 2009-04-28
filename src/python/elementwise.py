@@ -136,7 +136,7 @@ def get_take_kernel(dtype, idx_dtype, vec_count=1):
     body = (
             ("%(idx_tp)s src_idx = idx[i];\n" % ctx)
             + "\n".join(
-            "dest%d[i] = tex1Dfetch(tex_src%d, src_idx)" % (i, i)
+            "dest%d[i] = tex1Dfetch(tex_src%d, src_idx);" % (i, i)
             for i in range(vec_count)))
 
     mod = get_elwise_module(args, body, "take", preamble=preamble)
@@ -166,11 +166,11 @@ def get_take_put_kernel(dtype, idx_dtype, vec_count=1):
             ("%(idx_tp)s src_idx = gmem_src_idx[i];\n" 
                 "%(idx_tp)s dest_idx = gmem_dest_idx[i];\n" % ctx)
             + "\n".join(
-            "dest%d[dest_idx] = tex1Dfetch(tex_src%d, src_idx)" % (i, i)
+            "dest%d[dest_idx] = tex1Dfetch(tex_src%d, src_idx);" % (i, i)
             for i in range(vec_count)))
 
-    mod = get_elwise_module(args, body, "take", preamble=preamble)
-    func = mod.get_function("take")
+    mod = get_elwise_module(args, body, "take_put", preamble=preamble)
+    func = mod.get_function("take_put")
     tex_src = [mod.get_texref("tex_src%d" % i) for i in range(vec_count)]
     func.prepare("PP"+(vec_count*"P")+"I", (1,1,1), texrefs=tex_src)
     return func, tex_src
