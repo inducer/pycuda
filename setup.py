@@ -38,12 +38,12 @@ def search_on_path(filename):
     from os import pathsep, environ
 
     search_path = environ["PATH"]
-    print "*", search_path
+    #print "*", search_path
 
     file_found = 0
     paths = search_path.split(pathsep)
     for path in paths:
-        print path
+        #print path
         if exists(join(path, filename)):
              file_found = 1
              break
