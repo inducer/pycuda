@@ -120,22 +120,64 @@ class ElementwiseKernel:
 
 
 @memoize
-def get_take_kernel(dtype, idx_dtype):
+def get_take_kernel(dtype, idx_dtype, vec_count=1):
     ctx = {
             "idx_tp": dtype_to_ctype(idx_dtype),
             "tp": dtype_to_ctype(dtype),
             }
 
-    mod = get_elwise_module(
-            "%(idx_tp)s *idx, %(tp)s *dest, unsigned n" % ctx,
-            "dest[i] = tex1Dfetch(tex_src, idx[i])",
-            "take",
-            preamble="texture <%(tp)s, 1, cudaReadModeElementType> tex_src;" % ctx)
+    args = ("%(idx_tp)s *idx, "
+            +", ".join("%(tp)s *dest"+str(i) 
+                for i in range(vec_count))
+            +", unsigned n") % ctx
+    preamble = "\n".join(
+        "texture <%s, 1, cudaReadModeElementType> tex_src%d;" % (ctx["tp"], i)
+        for i in range(vec_count))
+    body = (
+            ("%(idx_tp)s src_idx = idx[i];\n" % ctx)
+            + "\n".join(
+            "dest%d[i] = tex1Dfetch(tex_src%d, src_idx)" % (i, i)
+            for i in range(vec_count)))
+
+    mod = get_elwise_module(args, body, "take", preamble=preamble)
     func = mod.get_function("take")
-    tex_src = mod.get_texref("tex_src")
-    func.prepare("PPI", (1,1,1), texrefs=[tex_src])
+    tex_src = [mod.get_texref("tex_src%d" % i) for i in range(vec_count)]
+    func.prepare("P"+(vec_count*"P")+"I", (1,1,1), texrefs=tex_src)
+    return func, tex_src
+
+
+
+
+@memoize
+def get_take_put_kernel(dtype, idx_dtype, vec_count=1):
+    ctx = {
+            "idx_tp": dtype_to_ctype(idx_dtype),
+            "tp": dtype_to_ctype(dtype),
+            }
+
+    args = ("%(idx_tp)s *gmem_dest_idx, %(idx_tp)s *gmem_src_idx,"
+            +", ".join("%(tp)s *dest"+str(i) 
+                for i in range(vec_count))
+            +", unsigned n") % ctx
+    preamble = "\n".join(
+        "texture <%s, 1, cudaReadModeElementType> tex_src%d;" % (ctx["tp"], i)
+        for i in range(vec_count))
+    body = (
+            ("%(idx_tp)s src_idx = gmem_src_idx[i];\n" 
+                "%(idx_tp)s dest_idx = gmem_dest_idx[i];\n" % ctx)
+            + "\n".join(
+            "dest%d[dest_idx] = tex1Dfetch(tex_src%d, src_idx)" % (i, i)
+            for i in range(vec_count)))
+
+    mod = get_elwise_module(args, body, "take", preamble=preamble)
+    func = mod.get_function("take")
+    tex_src = [mod.get_texref("tex_src%d" % i) for i in range(vec_count)]
+    func.prepare("PP"+(vec_count*"P")+"I", (1,1,1), texrefs=tex_src)
     return func, tex_src
             
+
+
+
 @memoize
 def get_copy_kernel(dtype_dest, dtype_src):
     return get_elwise_kernel(

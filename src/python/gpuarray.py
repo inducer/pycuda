@@ -576,17 +576,87 @@ def arange(*args, **kwargs):
 
 
 
-def take(a, indices):
-    result = GPUArray(indices.shape, a.dtype, a.stream)
+def take(a, indices, out=None):
+    if out is None:
+        out = GPUArray(indices.shape, a.dtype, a.stream)
+
+    assert len(indices.shape) == 1
 
     func, tex_src = elementwise.get_take_kernel(a.dtype, indices.dtype)
-    a.bind_to_texref_ext(tex_src)
+    a.bind_to_texref_ext(tex_src[0])
 
-    func.set_block_shape(*result._block)
-    func.prepared_async_call(result._grid, result.stream,
-            indices.gpudata, result.gpudata, indices.mem_size)
+    func.set_block_shape(*out._block)
+    func.prepared_async_call(out._grid, out.stream,
+            indices.gpudata, out.gpudata, indices.size)
 
-    return result
+    return out
+
+
+
+
+def multi_take(arrays, indices, out=None):
+    if not arrays:
+        return []
+    assert len(indices.shape) == 1
+
+    a_dtype = arrays[0].dtype
+    a_stream = arrays[0].stream
+
+    vec_count = len(arrays)
+
+    if out is None:
+        out = [GPUArray(indices.shape, a_dtype, a_stream)
+                for i in range(vec_count)]
+
+    func, tex_src = elementwise.get_take_kernel(a_dtype, indices.dtype, 
+            vec_count=vec_count)
+    for i, a in enumerate(arrays):
+        a.bind_to_texref_ext(tex_src[i])
+
+    one_result_vec = out[0]
+
+    
+    func.set_block_shape(*one_result_vec._block)
+    func.prepared_async_call(one_result_vec._grid, one_result_vec.stream,
+            indices.gpudata, 
+            *([o.gpudata for o in out] + [indices.size]))
+
+    return out
+
+
+
+
+def multi_take_put(arrays, dest_indices, src_indices, dest_shape=None, 
+        out=None):
+    if not arrays:
+        return []
+
+    a_dtype = arrays[0].dtype
+    a_stream = arrays[0].stream
+
+    vec_count = len(arrays)
+
+    if out is None:
+        out = [GPUArray(dest_shape, a_dtype, a_stream)
+                for i in range(vec_count)]
+
+    assert src_indices.dtype == dest_indices.dtype
+    assert len(src_indices.shape) == 1
+    assert src_indices.shape == dest_indices.shape
+
+    func, tex_src = elementwise.get_take_put_kernel(
+            a_dtype, src_indices.dtype, vec_count=vec_count)
+    for i, a in enumerate(arrays):
+        a.bind_to_texref_ext(tex_src[i], allow_double_hack=True)
+
+    one_out_vec = out[0]
+
+    func.set_block_shape(*one_out_vec._block)
+    func.prepared_async_call(one_out_vec._grid, one_out_vec.stream,
+            dest_indices.gpudata, src_indices.gpudata,
+            *([o.gpudata for o in out] + [src_indices.size]))
+
+    return out
 
 
 
