@@ -1085,8 +1085,8 @@ namespace cuda
   struct host_allocation : public boost::noncopyable, public context_dependent
   {
     private:
-      void *m_data;
       bool m_valid;
+      void *m_data;
 
     public:
       host_allocation(unsigned bytesize)
