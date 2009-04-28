@@ -9,7 +9,6 @@ import sys
 
 class TestAbstractArray(unittest.TestCase):                                      
     __test__ = False
-    """tests the array classes"""
 
     def make_test_array(self, array):
         """Turn a given numpy array into the kind of array that 
@@ -17,8 +16,6 @@ class TestAbstractArray(unittest.TestCase):
         raise NotImplementedError
 
     def test_pow_array(self):
-        """tests the pow function based on arrays"""
-
         a = numpy.array([1,2,3,4,5]).astype(numpy.float32)
         a_gpu = self.make_test_array(a)
 
@@ -33,8 +30,6 @@ class TestAbstractArray(unittest.TestCase):
             self.assert_(abs(pow(a[i],a[i]) - result[i]) < 1e-3)
 
     def test_pow_number(self):
-        """tests the pow function based on a number"""
-
         a = numpy.array([1,2,3,4,5,6,7,8,9,10]).astype(numpy.float32)
         a_cpu = self.make_test_array(a)
  
@@ -45,7 +40,6 @@ class TestAbstractArray(unittest.TestCase):
        
 
     def test_abs(self):
-        """test if the abs function works"""
         a = -gpuarray.arange(111, dtype=numpy.float32)
         res = a.get()
 
@@ -62,13 +56,12 @@ class TestAbstractArray(unittest.TestCase):
 
 
     def test_len(self):
-        """test the len"""
         a = numpy.array([1,2,3,4,5,6,7,8,9,10]).astype(numpy.float32)
         a_cpu = self.make_test_array(a)
         self.assert_(len(a_cpu) == 10)
 
     def test_multiply(self):
-        """Tests the muliplication of an array with a scalar. """
+        """Test the muliplication of an array with a scalar. """
 
         #test data
         a = numpy.array([1,2,3,4,5,6,7,8,9,10]).astype(numpy.float32)
@@ -98,7 +91,7 @@ class TestAbstractArray(unittest.TestCase):
         
 
     def test_multiply_array(self):
-        """Tests the multiplaction of two arrays."""
+        """Test the multiplication of two arrays."""
 
         #test data
         a = numpy.array([1,2,3,4,5,6,7,8,9,10]).astype(numpy.float32)
@@ -116,7 +109,7 @@ class TestAbstractArray(unittest.TestCase):
 
 
     def test_addition_array(self):
-        """Tests the addition of two arrays."""
+        """Test the addition of two arrays."""
 
         #test data
         a = numpy.array([1,2,3,4,5,6,7,8,9,10]).astype(numpy.float32)
@@ -134,7 +127,7 @@ class TestAbstractArray(unittest.TestCase):
 
 
     def test_addition_scalar(self):
-        """Tests the addition of an array and a scalar."""
+        """Test the addition of an array and a scalar."""
 
         #test data
         a = numpy.array([1,2,3,4,5,6,7,8,9,10]).astype(numpy.float32)
@@ -158,7 +151,7 @@ class TestAbstractArray(unittest.TestCase):
 
 
     def test_substract_array(self):
-        """Tests the substraction of two arrays."""
+        """Test the substraction of two arrays."""
         #test data
         a = numpy.array([1,2,3,4,5,6,7,8,9,10]).astype(numpy.float32)
         b = numpy.array([10,20,30,40,50,60,70,80,90,100]).astype(numpy.float32)
@@ -184,7 +177,7 @@ class TestAbstractArray(unittest.TestCase):
 
 
     def test_substract_scalar(self):
-        """Tests the substraction of an array and a scalar."""
+        """Test the substraction of an array and a scalar."""
 
         #test data
         a = numpy.array([1,2,3,4,5,6,7,8,9,10]).astype(numpy.float32)
@@ -210,7 +203,7 @@ class TestAbstractArray(unittest.TestCase):
 
 
     def test_divide_scalar(self):
-        """Tests the division of an array and a scalar."""
+        """Test the division of an array and a scalar."""
 
         #test data
         a = numpy.array([1,2,3,4,5,6,7,8,9,10]).astype(numpy.float32)
@@ -233,7 +226,7 @@ class TestAbstractArray(unittest.TestCase):
             self.assert_( abs(2/a[i] - a_divide[i]) < 1e-3 )
 
     def test_divide_array(self):
-        """Tests the division of an array and a scalar. """
+        """Test the division of an array and a scalar. """
 
         #test data
         a = numpy.array([10,20,30,40,50,60,70,80,90,100]).astype(numpy.float32)
