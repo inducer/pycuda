@@ -131,9 +131,13 @@ def compile(source, nvcc="nvcc", options=[], keep=False,
         cache_dir = join(gettempdir(), 
                 "pycuda-compiler-cache-v1-%s" % _get_per_user_string())
 
-        if not exists(cache_dir):
-            from os import mkdir
+        from os import mkdir
+        try:
             mkdir(cache_dir)
+        except OSError, e:
+            from errno import EEXIST
+            if e.errno != EEXIST:
+                raise
 
     if arch is not None:
         options.extend(["-arch", arch])
