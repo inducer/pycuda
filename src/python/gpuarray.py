@@ -608,6 +608,8 @@ def multi_take(arrays, indices, out=None):
         out = [GPUArray(indices.shape, a_dtype, a_stream)
                 for i in range(vec_count)]
 
+    assert len(out) == len(arrays)
+
     func, tex_src = elementwise.get_take_kernel(a_dtype, indices.dtype, 
             vec_count=vec_count)
     for i, a in enumerate(arrays):
@@ -643,6 +645,7 @@ def multi_take_put(arrays, dest_indices, src_indices, dest_shape=None,
     assert src_indices.dtype == dest_indices.dtype
     assert len(src_indices.shape) == 1
     assert src_indices.shape == dest_indices.shape
+    assert len(out) == len(arrays)
 
     func, tex_src = elementwise.get_take_put_kernel(
             a_dtype, src_indices.dtype, vec_count=vec_count)
@@ -655,6 +658,39 @@ def multi_take_put(arrays, dest_indices, src_indices, dest_shape=None,
     func.prepared_async_call(one_out_vec._grid, one_out_vec.stream,
             dest_indices.gpudata, src_indices.gpudata,
             *([o.gpudata for o in out] + [src_indices.size]))
+
+    return out
+
+
+
+
+def multi_put(arrays, dest_indices, dest_shape=None, out=None):
+    if not len(arrays):
+        return []
+
+    a_dtype = arrays[0].dtype
+    a_stream = arrays[0].stream
+
+    vec_count = len(arrays)
+
+    if out is None:
+        out = [GPUArray(dest_shape, a_dtype, a_stream)
+                for i in range(vec_count)]
+
+    assert len(dest_indices.shape) == 1
+    assert len(out) == len(arrays)
+
+    func = elementwise.get_put_kernel(
+            a_dtype, dest_indices.dtype, vec_count=vec_count)
+
+    one_out_vec = out[0]
+
+    func.set_block_shape(*one_out_vec._block)
+    func.prepared_async_call(one_out_vec._grid, one_out_vec.stream,
+            dest_indices.gpudata, 
+            *([o.gpudata for o in out] 
+                + [i.gpudata for i in arrays] 
+                + [dest_indices.size]))
 
     return out
 
