@@ -207,7 +207,7 @@ namespace cuda
         return bytes;
       }
 
-      int get_attribute(CUdevice_attribute attr)
+      int get_attribute(CUdevice_attribute attr) const
       {
         int result;
         CUDAPP_CALL_GUARDED(cuDeviceGetAttribute, (&result, attr, m_device));

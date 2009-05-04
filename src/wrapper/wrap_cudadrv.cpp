@@ -12,7 +12,7 @@
 
 
 #if CUDA_VERSION < 1010
-#error PyCuda only works with CUDA 1.1 or newer
+#error PyCuda only works with CUDA 1.1 or newer.
 #endif
 
 

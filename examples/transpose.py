@@ -188,7 +188,9 @@ def run_benchmark():
         source.gpudata.free()
         target.gpudata.free()
 
-    print [s for s, bw in zip(sizes, bandwidths) if bw < 40e9]
+    slow_sizes = [s for s, bw in zip(sizes, bandwidths) if bw < 40e9]
+    print slow_sizes
+    print [s % 64 for s in slow_sizes]
     from matplotlib.pyplot import semilogx, loglog, show, savefig, clf
     semilogx(sizes, bandwidths)
     savefig("transpose-bw.png")
