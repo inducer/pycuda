@@ -1,5 +1,4 @@
 from _driver import *
-from pytools import memoize
 
 
 
@@ -344,7 +343,6 @@ def matrix_to_array(matrix, order, allow_double_hack=False):
 def make_multichannel_2d_array(ndarray, order):
     """Channel count has to be the first dimension of the C{ndarray}."""
 
-    import numpy
     descr = ArrayDescriptor()
 
     if order.upper() == "C":

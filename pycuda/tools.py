@@ -29,10 +29,10 @@ OTHER DEALINGS IN THE SOFTWARE.
 
 import pycuda.driver as cuda
 from pytools import memoize
-from pycuda._driver import \
-        bitlog2, \
-        DeviceMemoryPool, \
-        PageLockedMemoryPool
+import pycuda._driver as _drv
+bitlog2 = _drv.bitlog2
+DeviceMemoryPool = _drv.DeviceMemoryPool
+PageLockedMemoryPool = _drv.PageLockedMemoryPool
 
 
 
@@ -268,15 +268,6 @@ def allow_user_edit(s, filename, descr="the file"):
 
 
 
-def _test_occupancy():
-    for threads in range(32, 512, 16):
-        for smem in range(1024, 16384+1, 1024):
-            occ = Occupancy(threads, smem)
-            print "t%d s%d: %f %s" % (threads, smem, occ.occupancy, occ.limited_by)
-
-
-
-
 # C code generation helpers ---------------------------------------------------
 @memoize
 def platform_bits():
@@ -334,12 +325,3 @@ def get_arg_type(c_arg):
     elif tp in ["char"]: return "b"
     elif tp in ["unsigned char"]: return "B"
     else: raise ValueError, "unknown type '%s'" % tp
-
-
-
-
-if __name__ == "__main__":
-    import pycuda.driver as drv
-    drv.init()
-
-    _test_occupancy()

@@ -30,7 +30,6 @@ OTHER DEALINGS IN THE SOFTWARE.
 
 
 
-import pycuda.driver as drv
 from pytools import memoize
 import numpy
 from pycuda.tools import dtype_to_ctype

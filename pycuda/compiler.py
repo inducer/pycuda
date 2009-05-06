@@ -142,8 +142,7 @@ def compile(source, nvcc="nvcc", options=[], keep=False,
             pass
 
     if cache_dir is None:
-        from os.path import expanduser, join, exists
-        import os
+        from os.path import join
         from tempfile import gettempdir
         cache_dir = join(gettempdir(), 
                 "pycuda-compiler-cache-v1-%s" % _get_per_user_string())
