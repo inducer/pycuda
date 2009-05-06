@@ -241,6 +241,11 @@ Concurrency and Streams
 
 .. class:: Event(flags=0)
 
+  An event is a temporal 'marker' in a :class:`Stream` that allows taking the time
+  between two events--such as the time required to execute a kernel.
+  An event's time is recorded when the :class:`Stream` has finished all tasks 
+  enqueued before the :meth:`record` call.
+
   .. method:: record()
 
     Insert a recording point for *self* into the global device execution
@@ -261,10 +266,16 @@ Concurrency and Streams
   .. method:: time_since(event)
 
     Return the time in milliseconds that has passed between *self* and *event*.
+    Use this method as `end.time_since(start)`. Note that this method will fail
+    with an "invalid value" error if either of the events has not been reached yet. 
+    Use :meth:`synchronize` to ensure that the event has been reached.
 
   .. method:: time_till(event)
 
     Return the time in milliseconds that has passed between *event* and *self*.
+    Use this method as `start.time_till(end)`. Note that this method will fail
+    with an "invalid value" error if either of the events has not been reached yet. 
+    Use :meth:`synchronize` to ensure that the event has been reached.
 
 
 Memory
