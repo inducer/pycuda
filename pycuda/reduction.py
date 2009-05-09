@@ -182,14 +182,14 @@ class ReductionKernel:
                 dtype_to_ctype(dtype_out), self.block_size, 
                 neutral, reduce_expr, map_expr,
                 arguments, name=name+"_stage1", keep=keep, options=options)
-        self.stage1_func = s1_func.prepared_call
+        self.stage1_func = s1_func.prepared_async_call
 
         # stage 2 has only one input and no map expression
         s2_func, self.stage2_arg_types = get_reduction_kernel_and_types(
                 dtype_to_ctype(dtype_out), self.block_size, 
                 neutral, reduce_expr,
                 name=name+"_stage2", keep=keep, options=options)
-        self.stage2_func = s2_func.prepared_call
+        self.stage2_func = s2_func.prepared_async_call
 
         assert [i for i, arg_tp in enumerate(self.stage1_arg_types) if arg_tp == "P"], \
                 "ReductionKernel can only be used with functions that have at least one " \
@@ -207,6 +207,7 @@ class ReductionKernel:
             s1_func = kernel_wrapper(s1_func)
             s2_func = kernel_wrapper(s2_func)
 
+        stream = kwargs.get("stream")
 
         from gpuarray import empty
 
@@ -237,12 +238,12 @@ class ReductionKernel:
                 seq_count = (sz + macroblock_size - 1) // macroblock_size
 
             if block_count == 1:
-                result = empty((), dtype=self.dtype_out)
+                result = empty((), self.dtype_out, repr_vec.allocator)
             else:
-                result = empty((block_count,), dtype=self.dtype_out)
+                result = empty((block_count,), self.dtype_out, repr_vec.allocator)
 
             #print block_count, seq_count, self.block_size
-            f((block_count, 1), 
+            f((block_count, 1), stream,
                     *([result.gpudata]+invocation_args+[seq_count, sz]))
 
             if block_count == 1:

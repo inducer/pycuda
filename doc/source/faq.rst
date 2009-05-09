@@ -156,6 +156,12 @@ Version 0.93
   data types, including type promotion.
 * Add :func:`pycuda.gpuarray.take`.
 * Fix thread handling by making internal context stack thread-local.
+* Add :class:`pycuda.reduction.ReductionKernel`.
+* Add :func:`pycuda.gpuarray.sum`, :func:`pycuda.gpuarray.dot`, 
+  :func:`pycuda.gpuarray.subset_dot`.
+* :class:`pycuda.gpuarray.GPUArray` no longer has an associated :class:`Stream`.
+  Asynchronous GPUArray transfers are now separate from synchronous ones and 
+  have an ``_async`` suffix.
 
 Version 0.92
 ------------

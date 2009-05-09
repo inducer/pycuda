@@ -527,16 +527,22 @@ Initializing Device Memory
 Unstructured Memory Transfers
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-.. function:: memcpy_htod(dest, src, stream=None)
+.. function:: memcpy_htod(dest, src)
 
   Copy from the Python buffer *src* to the device pointer *dest* 
   (an :class:`int` or a :class:`DeviceAllocation`). The size of
   the copy is determined by the size of the buffer. 
   
-  Optionally execute asynchronously, serialized via *stream*. In
-  this case, *src* must be page-locked.
+.. function:: memcpy_htod_async(dest, src, stream=None)
 
-.. function:: memcpy_dtoh(dest, src, stream=None)
+  Copy from the Python buffer *src* to the device pointer *dest* 
+  (an :class:`int` or a :class:`DeviceAllocation`) asynchronously, 
+  optionally serialized via *stream*. The size of
+  the copy is determined by the size of the buffer. 
+
+  New in 0.93.
+
+.. function:: memcpy_dtoh(dest, src)
 
   Copy from the device pointer *src* (an :class:`int` or a
   :class:`DeviceAllocation`) to the Python buffer *dest*. The size of the copy
@@ -544,6 +550,13 @@ Unstructured Memory Transfers
 
   Optionally execute asynchronously, serialized via *stream*. In
   this case, *dest* must be page-locked.
+
+.. function:: memcpy_dtoh_async(dest, src, stream=None)
+
+  Copy from the device pointer *src* (an :class:`int` or a
+  :class:`DeviceAllocation`) to the Python buffer *dest* asynchronously,
+  optionally serialized via *stream*. The size of the copy
+  is determined by the size of the buffer.
 
 .. function:: memcpy_dtod(dest, src, size)
 .. function:: memcpy_dtoa(ary, index, src, len)
