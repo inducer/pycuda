@@ -1,7 +1,6 @@
 from __future__ import division
 import numpy
 import pycuda.elementwise as elementwise
-import random as random
 from pytools import memoize
 import pycuda.driver as drv
 
@@ -297,7 +296,7 @@ class GPUArray(object):
             func = elementwise.get_divide_kernel()
             func.set_block_shape(*self._block)
             func.prepared_async_call(self._grid, self.stream,
-                    other.gpudata, self.gpudata, out.gpudata, 
+                    other.gpudata, self.gpudata, result.gpudata, 
                     self.mem_size)
 
             return result

@@ -1,7 +1,6 @@
 import pycuda.gpuarray as gpuarray
 import pycuda.elementwise as elementwise
 import numpy
-import math
 
 def _make_unary_array_func(name):
     def f(array):

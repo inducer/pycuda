@@ -109,6 +109,23 @@ def _get_per_user_string():
 
 
 
+def _find_pycuda_include_path():
+    from imp import find_module
+    file, pathname, descr = find_module("pycuda")
+
+    from os.path import join, exists
+    installed_path = join(pathname, "..", "include", "cuda")
+    development_path = join(pathname, "..", "src", "cuda")
+
+    if exists(installed_path):
+        return installed_path
+    elif exists(development_path):
+        return development_path
+    else:
+        raise RuntimeError("could not find path PyCUDA's C header files")
+
+
+
 def compile(source, nvcc="nvcc", options=[], keep=False,
         no_extern_c=False, arch=None, code=None, cache_dir=None,
         include_dirs=[]):
@@ -125,8 +142,7 @@ def compile(source, nvcc="nvcc", options=[], keep=False,
             pass
 
     if cache_dir is None:
-        from os.path import expanduser, join, exists
-        import os
+        from os.path import join
         from tempfile import gettempdir
         cache_dir = join(gettempdir(), 
                 "pycuda-compiler-cache-v1-%s" % _get_per_user_string())
@@ -145,11 +161,7 @@ def compile(source, nvcc="nvcc", options=[], keep=False,
     if code is not None:
         options.extend(["-code", code])
 
-    include_dirs = include_dirs[:]
-    from imp import find_module
-    file, pathname, descr = find_module("pycuda")
-    from os.path import join
-    include_dirs.append(join(pathname, "..", "include/cuda"))
+    include_dirs = include_dirs + [_find_pycuda_include_path()]
 
     for i in include_dirs:
         options.append("-I"+i)

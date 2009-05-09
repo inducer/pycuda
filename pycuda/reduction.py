@@ -61,9 +61,7 @@ source code with only those rights set forth herein.
 
 
 
-import pycuda.driver as drv
 from pytools import memoize
-import numpy
 from pycuda.tools import dtype_to_ctype
 
 
@@ -180,7 +178,6 @@ class ReductionKernel:
 
         self.block_size = 512
 
-        from pycuda.tools import dtype_to_ctype
         s1_func, self.stage1_arg_types = get_reduction_kernel_and_types(
                 dtype_to_ctype(dtype_out), self.block_size, 
                 neutral, reduce_expr, map_expr,

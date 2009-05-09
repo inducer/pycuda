@@ -258,6 +258,14 @@ namespace
     CUDAPP_CALL_GUARDED(cuMemcpyAtoH, (buf, ary.handle(), index, len));
   }
 
+  bool have_gl_ext()
+  {
+#ifdef HAVE_GL
+    return true;
+#else
+    return false;
+#endif
+  }
 }
 
 
@@ -639,6 +647,8 @@ BOOST_PYTHON_MODULE(_driver)
   py::scope().attr("TRSF_READ_AS_INTEGER") = CU_TRSF_READ_AS_INTEGER;
   py::scope().attr("TRSF_NORMALIZED_COORDINATES") = CU_TRSF_NORMALIZED_COORDINATES;
   py::scope().attr("TR_DEFAULT") = CU_PARAM_TR_DEFAULT;
+
+  DEF_SIMPLE_FUNCTION(have_gl_ext);
 
   pycuda_expose_tools();
 #ifdef HAVE_GL

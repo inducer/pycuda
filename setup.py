@@ -170,7 +170,6 @@ def main():
                 "pytools>=8",
                 ],
 
-            package_dir={"pycuda": "src/python"},
             ext_package="pycuda",
             ext_modules=[
                 NumpyExtension("_driver", 
