@@ -58,7 +58,7 @@ class GPUArray(object):
     work on an element-by-element basis, just like numpy.ndarray.
     """
 
-    def __init__(self, shape, dtype, stream=None, allocator=drv.mem_alloc, 
+    def __init__(self, shape, dtype, allocator=drv.mem_alloc, 
             base=None, gpudata=None):
         try:
             s = 1
@@ -88,7 +88,6 @@ class GPUArray(object):
 
             assert base is not None
 
-        self.stream = stream
         self.base = base
 
         self._grid, self._block = splay(self.mem_size)
@@ -98,13 +97,19 @@ class GPUArray(object):
         # useful for benchmarking
         elementwise._compile_kernels(cls)
 
-    def set(self, ary, stream=None):
+    def set(self, ary):
         assert ary.size == self.size
         assert ary.dtype == self.dtype
         if self.size:
-            drv.memcpy_htod(self.gpudata, ary, stream)
+            drv.memcpy_htod(self.gpudata, ary)
 
-    def get(self, ary=None, stream=None, pagelocked=False):
+    def set_async(self, ary, stream=None):
+        assert ary.size == self.size
+        assert ary.dtype == self.dtype
+        if self.size:
+            drv.memcpy_htod_async(self.gpudata, ary, stream)
+
+    def get(self, ary=None, pagelocked=False):
         if ary is None:
             if pagelocked:
                 ary = drv.pagelocked_empty(self.shape, self.dtype)
@@ -117,6 +122,17 @@ class GPUArray(object):
             drv.memcpy_dtoh(ary, self.gpudata)
         return ary
 
+    def get_async(self, stream=None, ary=None):
+        if ary is None:
+            ary = drv.pagelocked_empty(self.shape, self.dtype)
+        else:
+            assert ary.size == self.size
+            assert ary.dtype == self.dtype
+
+        if self.size:
+            drv.memcpy_dtoh_async(ary, self.gpudata, stream)
+        return ary
+
     def __str__(self):
         return str(self.get())
 
@@ -124,7 +140,7 @@ class GPUArray(object):
         return repr(self.get())
 
     # kernel invocation wrappers ----------------------------------------------
-    def _axpbyz(self, selffac, other, otherfac, out, add_timer=None):
+    def _axpbyz(self, selffac, other, otherfac, out, add_timer=None, stream=None):
         """Compute ``out = selffac * self + otherfac*other``, 
         where `other` is a vector.."""
         assert self.shape == other.shape
@@ -137,32 +153,32 @@ class GPUArray(object):
                 selffac, self.gpudata, otherfac, other.gpudata, 
                 out.gpudata, self.mem_size))
         else:
-            func.prepared_async_call(self._grid, self.stream,
+            func.prepared_async_call(self._grid, stream,
                     selffac, self.gpudata, otherfac, other.gpudata, 
                     out.gpudata, self.mem_size)
 
         return out
 
-    def _axpbz(self, selffac, other, out):
+    def _axpbz(self, selffac, other, out, stream=None):
         """Compute ``out = selffac * self + other``, where `other` is a scalar."""
         func = elementwise.get_axpbz_kernel(self.dtype)
         func.set_block_shape(*self._block)
-        func.prepared_async_call(self._grid, self.stream,
+        func.prepared_async_call(self._grid, stream,
                 selffac, self.gpudata,
                 other, out.gpudata, self.mem_size)
 
         return out
 
-    def _elwise_multiply(self, other, out):
+    def _elwise_multiply(self, other, out, stream=None):
         func = elementwise.get_multiply_kernel(self.dtype, other.dtype, out.dtype)
         func.set_block_shape(*self._block)
-        func.prepared_async_call(self._grid, self.stream,
+        func.prepared_async_call(self._grid, stream,
                 self.gpudata, other.gpudata,
                 out.gpudata, self.mem_size)
 
         return out
 
-    def _rdiv_scalar(self, other, out):
+    def _rdiv_scalar(self, other, out, stream=None):
         """Divides an array by a scalar::
           
            y = n / self 
@@ -172,30 +188,31 @@ class GPUArray(object):
 
         func = elementwise.get_rdivide_elwise_kernel(self.dtype)
         func.set_block_shape(*self._block)
-        func.prepared_async_call(self._grid, self.stream,
+        func.prepared_async_call(self._grid, stream,
                 self.gpudata, other,
                 out.gpudata, self.mem_size)
 
         return out
 
-    def _div(self, other, out):
+    def _div(self, other, out, stream=None):
         """Divides an array by another array."""
 
         assert self.shape == other.shape
 
         func = elementwise.get_divide_kernel(self.dtype, other.dtype, out.dtype)
         func.set_block_shape(*self._block)
-        func.prepared_async_call(self._grid, self.stream,
+        func.prepared_async_call(self._grid, stream,
                 self.gpudata, other.gpudata,
                 out.gpudata, self.mem_size)
 
         return out
 
     def _new_like_me(self, dtype=None):
-        return self.__class__(self.shape, dtype or self.dtype, allocator=self.allocator)
+        return self.__class__(self.shape, dtype or self.dtype, 
+                allocator=self.allocator)
 
     # operators ---------------------------------------------------------------
-    def mul_add(self, selffac, other, otherfac, add_timer=None):
+    def mul_add(self, selffac, other, otherfac, add_timer=None, stream=None):
         """Return `selffac * self + otherfac*other`.
         """
         result = self._new_like_me(_get_common_dtype(self, other))
@@ -295,7 +312,7 @@ class GPUArray(object):
 
             func = elementwise.get_divide_kernel()
             func.set_block_shape(*self._block)
-            func.prepared_async_call(self._grid, self.stream,
+            func.prepared_async_call(self._grid, None,
                     other.gpudata, self.gpudata, result.gpudata, 
                     self.mem_size)
 
@@ -310,11 +327,11 @@ class GPUArray(object):
 
     __rtruediv__ = __div__
 
-    def fill(self, value):
+    def fill(self, value, stream=None):
         """fills the array with the specified value"""
         func = elementwise.get_fill_kernel(self.dtype)
         func.set_block_shape(*self._block)
-        func.prepared_async_call(self._grid, self.stream,
+        func.prepared_async_call(self._grid, stream,
                 value, self.gpudata, self.mem_size)
 
         return self
@@ -363,7 +380,7 @@ class GPUArray(object):
 
         func = elementwise.get_unary_func_kernel(fname, self.dtype)
         func.set_block_shape(*self._block)
-        func.prepared_async_call(self._grid, self.stream,
+        func.prepared_async_call(self._grid, None,
                 self.gpudata,result.gpudata, self.mem_size)
 
         return result
@@ -387,7 +404,7 @@ class GPUArray(object):
                     self.dtype, other.dtype, result.dtype)
 
             func.set_block_shape(*self._block)
-            func.prepared_async_call(self._grid, self.stream,
+            func.prepared_async_call(self._grid, None,
                     self.gpudata, other.gpudata, result.gpudata,
                     self.mem_size)
             
@@ -396,13 +413,13 @@ class GPUArray(object):
             result = self._new_like_me()
             func = elementwise.get_pow_kernel(self.dtype)
             func.set_block_shape(*self._block)
-            func.prepared_async_call(self._grid, self.stream,
+            func.prepared_async_call(self._grid, None,
                     other, self.gpudata, result.gpudata,
                     self.mem_size)
 
             return result
 
-    def reverse(self):
+    def reverse(self, stream=None):
         """Return this array in reversed order. The array is treated
         as one-dimensional.
         """
@@ -411,7 +428,7 @@ class GPUArray(object):
 
         func = elementwise.get_reverse_kernel(self.dtype)
         func.set_block_shape(*self._block)
-        func.prepared_async_call(self._grid, self.stream,
+        func.prepared_async_call(self._grid, stream,
                 self.gpudata, result.gpudata,
                 self.mem_size)
 
@@ -419,11 +436,14 @@ class GPUArray(object):
 
     # slicing -----------------------------------------------------------------
     def __getitem__(self, idx):
+        if idx == ():
+            return self
+
         if len(self.shape) > 1:
             raise NotImplementedError("multi-d slicing is not yet implemented")
         
         if not isinstance(idx, slice):
-            raise ValueError("non-slice indexing not supported")
+            raise ValueError("non-slice indexing not supported: %s" % (idx,))
 
         l, = self.shape
         start, stop, stride = idx.indices(l)
@@ -434,7 +454,6 @@ class GPUArray(object):
         return GPUArray(
                 shape=((stop-start)//stride,),
                 dtype=self.dtype,
-                stream=self.stream,
                 allocator=self.allocator,
                 base=self,
                 gpudata=int(self.gpudata) + start*self.dtype.itemsize)
@@ -457,10 +476,16 @@ class GPUArray(object):
 
 
 
-def to_gpu(ary, stream=None, allocator=drv.mem_alloc):
+def to_gpu(ary, allocator=drv.mem_alloc):
     """converts a numpy array to a GPUArray"""
-    result = GPUArray(ary.shape, ary.dtype, stream, allocator)
-    result.set(ary, stream)
+    result = GPUArray(ary.shape, ary.dtype, allocator)
+    result.set(ary)
+    return result
+
+def to_gpu_async(ary, allocator=drv.mem_alloc, stream=None):
+    """converts a numpy array to a GPUArray"""
+    result = GPUArray(ary.shape, ary.dtype, allocator)
+    result.set_async(ary, stream)
     return result
 
 empty = GPUArray
@@ -474,14 +499,12 @@ def zeros(shape, dtype, stream=None, allocator=drv.mem_alloc):
 
 def empty_like(other_ary):
     result = GPUArray(
-            other_ary.shape, other_ary.dtype, 
-            other_ary.stream, other_ary.allocator)
+            other_ary.shape, other_ary.dtype, other_ary.allocator)
     return result
 
 def zeros_like(other_ary):
     result = GPUArray(
-            other_ary.shape, other_ary.dtype, 
-            other_ary.stream, other_ary.allocator)
+            other_ary.shape, other_ary.dtype, other_ary.allocator)
     result.fill(0)
     return result
 
@@ -567,7 +590,7 @@ def arange(*args, **kwargs):
 
     func = elementwise.get_arange_kernel(dtype)
     func.set_block_shape(*result._block)
-    func.prepared_async_call(result._grid, result.stream,
+    func.prepared_async_call(result._grid, kwargs.get("stream"),
             result.gpudata, start, step, size)
 
     return result
@@ -575,9 +598,9 @@ def arange(*args, **kwargs):
 
 
 
-def take(a, indices, out=None):
+def take(a, indices, out=None, stream=None):
     if out is None:
-        out = GPUArray(indices.shape, a.dtype, a.stream)
+        out = GPUArray(indices.shape, a.dtype, a.allocator)
 
     assert len(indices.shape) == 1
 
@@ -585,7 +608,7 @@ def take(a, indices, out=None):
     a.bind_to_texref_ext(tex_src[0])
 
     func.set_block_shape(*out._block)
-    func.prepared_async_call(out._grid, out.stream,
+    func.prepared_async_call(out._grid, stream,
             indices.gpudata, out.gpudata, indices.size)
 
     return out
@@ -593,18 +616,18 @@ def take(a, indices, out=None):
 
 
 
-def multi_take(arrays, indices, out=None):
+def multi_take(arrays, indices, out=None, stream=None):
     if not len(arrays):
         return []
     assert len(indices.shape) == 1
 
     a_dtype = arrays[0].dtype
-    a_stream = arrays[0].stream
+    a_allocator = arrays[0].dtype
 
     vec_count = len(arrays)
 
     if out is None:
-        out = [GPUArray(indices.shape, a_dtype, a_stream)
+        out = [GPUArray(indices.shape, a_dtype, a_allocator)
                 for i in range(vec_count)]
 
     assert len(out) == len(arrays)
@@ -616,9 +639,8 @@ def multi_take(arrays, indices, out=None):
 
     one_result_vec = out[0]
 
-    
     func.set_block_shape(*one_result_vec._block)
-    func.prepared_async_call(one_result_vec._grid, one_result_vec.stream,
+    func.prepared_async_call(one_result_vec._grid, stream,
             indices.gpudata, 
             *([o.gpudata for o in out] + [indices.size]))
 
@@ -628,17 +650,17 @@ def multi_take(arrays, indices, out=None):
 
 
 def multi_take_put(arrays, dest_indices, src_indices, dest_shape=None, 
-        out=None):
+        out=None, stream=None):
     if not len(arrays):
         return []
 
     a_dtype = arrays[0].dtype
-    a_stream = arrays[0].stream
+    a_allocator = arrays[0].allocator
 
     vec_count = len(arrays)
 
     if out is None:
-        out = [GPUArray(dest_shape, a_dtype, a_stream)
+        out = [GPUArray(dest_shape, a_dtype, a_allocator)
                 for i in range(vec_count)]
 
     assert src_indices.dtype == dest_indices.dtype
@@ -654,7 +676,7 @@ def multi_take_put(arrays, dest_indices, src_indices, dest_shape=None,
     one_out_vec = out[0]
 
     func.set_block_shape(*one_out_vec._block)
-    func.prepared_async_call(one_out_vec._grid, one_out_vec.stream,
+    func.prepared_async_call(one_out_vec._grid, stream,
             dest_indices.gpudata, src_indices.gpudata,
             *([o.gpudata for o in out] + [src_indices.size]))
 
@@ -663,17 +685,17 @@ def multi_take_put(arrays, dest_indices, src_indices, dest_shape=None,
 
 
 
-def multi_put(arrays, dest_indices, dest_shape=None, out=None):
+def multi_put(arrays, dest_indices, dest_shape=None, out=None, stream=None):
     if not len(arrays):
         return []
 
     a_dtype = arrays[0].dtype
-    a_stream = arrays[0].stream
+    a_allocator = arrays[0].allocator
 
     vec_count = len(arrays)
 
     if out is None:
-        out = [GPUArray(dest_shape, a_dtype, a_stream)
+        out = [GPUArray(dest_shape, a_dtype, a_allocator)
                 for i in range(vec_count)]
 
     assert len(dest_indices.shape) == 1
@@ -685,7 +707,7 @@ def multi_put(arrays, dest_indices, dest_shape=None, out=None):
     one_out_vec = out[0]
 
     func.set_block_shape(*one_out_vec._block)
-    func.prepared_async_call(one_out_vec._grid, one_out_vec.stream,
+    func.prepared_async_call(one_out_vec._grid, stream,
             dest_indices.gpudata, 
             *([o.gpudata for o in out] 
                 + [i.gpudata for i in arrays] 
@@ -697,17 +719,17 @@ def multi_put(arrays, dest_indices, dest_shape=None, out=None):
 
 
 # reductions ------------------------------------------------------------------
-def sum(a, dtype=None):
+def sum(a, dtype=None, stream=None):
     from pycuda.reduction import get_sum_kernel
     krnl = get_sum_kernel(dtype, a.dtype)
-    return krnl(a)
+    return krnl(a, stream=stream)
 
-def dot(a, b, dtype=None):
+def dot(a, b, dtype=None, stream=None):
     from pycuda.reduction import get_dot_kernel
     krnl = get_dot_kernel(dtype, a.dtype, b.dtype)
-    return krnl(a, b)
+    return krnl(a, b, stream=stream)
 
-def subset_dot(subset, a, b, dtype=None):
+def subset_dot(subset, a, b, dtype=None, stream=None):
     from pycuda.reduction import get_subset_dot_kernel
     krnl = get_subset_dot_kernel(dtype, a.dtype, b.dtype)
-    return krnl(subset, a, b)
+    return krnl(subset, a, b, stream=stream)

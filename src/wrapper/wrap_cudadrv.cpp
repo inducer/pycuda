@@ -206,9 +206,35 @@ namespace
     }
     else
     {
+      PyErr_WarnEx(
+          PyExc_DeprecationWarning,
+          "memcpy_htod with a stream argument is deprecated. Use memcpy_dtoh_async instead.",
+          1);
       const stream &s = py::extract<const stream &>(stream_py);
       CUDAPP_CALL_GUARDED(cuMemcpyHtoDAsync, (dst, buf, len, s.handle()));
     }
+  }
+
+
+
+
+  void py_memcpy_htod_async(CUdeviceptr dst, py::object src, py::object stream_py)
+  {
+    const void *buf;
+    PYCUDA_BUFFER_SIZE_T len;
+    if (PyObject_AsReadBuffer(src.ptr(), &buf, &len))
+      throw py::error_already_set();
+
+    CUstream s_handle;
+    if (stream_py.ptr() != Py_None)
+    {
+      const stream &s = py::extract<const stream &>(stream_py);
+      s_handle = s.handle();
+    }
+    else
+      s_handle = 0;
+
+    CUDAPP_CALL_GUARDED(cuMemcpyHtoDAsync, (dst, buf, len, s_handle));
   }
 
 
@@ -227,9 +253,36 @@ namespace
     }
     else
     {
+      PyErr_WarnEx(
+          PyExc_DeprecationWarning,
+          "memcpy_dtoh with a stream argument is deprecated. Use memcpy_dtoh_async instead.",
+          1);
+
       const stream &s = py::extract<const stream &>(stream_py);
       CUDAPP_CALL_GUARDED(cuMemcpyDtoHAsync, (buf, src, len, s.handle()));
     }
+  }
+
+
+
+
+  void py_memcpy_dtoh_async(py::object dest, CUdeviceptr src, py::object stream_py)
+  {
+    void *buf;
+    PYCUDA_BUFFER_SIZE_T len;
+    if (PyObject_AsWriteBuffer(dest.ptr(), &buf, &len))
+      throw py::error_already_set();
+
+    CUstream s_handle;
+    if (stream_py.ptr() != Py_None)
+    {
+      const stream &s = py::extract<const stream &>(stream_py);
+      s_handle = s.handle();
+    }
+    else
+      s_handle = 0;
+
+    CUDAPP_CALL_GUARDED(cuMemcpyDtoHAsync, (buf, src, len, s_handle));
   }
 
 
@@ -481,7 +534,11 @@ BOOST_PYTHON_MODULE(_driver)
 
   py::def("memcpy_htod", py_memcpy_htod, 
       (py::args("dest"), py::arg("src"), py::arg("stream")=py::object()));
+  py::def("memcpy_htod_async", py_memcpy_htod_async, 
+      (py::args("dest"), py::arg("src"), py::arg("stream")=py::object()));
   py::def("memcpy_dtoh", py_memcpy_dtoh, 
+      (py::args("dest"), py::arg("src"), py::arg("stream")=py::object()));
+  py::def("memcpy_dtoh_async", py_memcpy_dtoh_async, 
       (py::args("dest"), py::arg("src"), py::arg("stream")=py::object()));
   py::def("memcpy_dtod", _cuMemcpyDtoD, py::args("dest", "src", "size"));
 
