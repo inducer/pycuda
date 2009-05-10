@@ -162,6 +162,7 @@ Version 0.93
 * :class:`pycuda.gpuarray.GPUArray` no longer has an associated :class:`Stream`.
   Asynchronous GPUArray transfers are now separate from synchronous ones and 
   have an ``_async`` suffix.
+* Support for features added in CUDA 2.2.
 
 Version 0.92
 ------------

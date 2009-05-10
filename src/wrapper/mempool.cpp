@@ -34,7 +34,7 @@ namespace
           cuda::scoped_context_activation ca(get_context());
           cuda::mem_free(p);
         }
-        CUDA_CATCH_WARN_OOT_LEAK(pooled_device_allocation);
+        CUDAPP_CATCH_WARN_OOT_LEAK(pooled_device_allocation);
       }
 
       void try_release_blocks()

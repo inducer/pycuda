@@ -260,7 +260,7 @@ Generating Arrays of Random Numbers
 
 .. module:: pycuda.curandom
 
-.. function:: rand(shape, dtype=numpy.float32)
+.. function:: rand(shape, dtype=numpy.float32, stream=None)
 
   Return an array of `shape` filled with random values of `dtype`
   in the range [0,1).

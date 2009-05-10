@@ -69,11 +69,27 @@ Constants
 
   .. attribute:: SCHED_MASK
 
+    Mask of valid scheduling flags in this bitfield.
+
+  .. attribute:: BLOCKING_SYNC
+
+    Use blocking synchronization. CUDA 2.2 and newer.
+
+  .. attribute:: MAP_HOST
+
+    Support mapped pinned allocations. CUDA 2.2 and newer.
+
+  .. attribute:: FLAGS_MASK
+
     Mask of valid flags in this bitfield.
 
-  .. attribute:: SCHED_FLAGS_MASK
 
-    Mask of valid scheduling flags in this bitfield.
+.. class:: event_flags
+
+  Flags for :class:`Event`. CUDA 2.2 and newer.
+
+  .. attribute:: DEFAULT
+  .. attribute:: BLOCKING_SYNC
 
 .. class:: device_attribute
 
@@ -108,7 +124,34 @@ Constants
 
   .. attribute:: MAX_REGISTERS_PER_BLOCK
 
-    CUDA 2.0 and above only.
+    CUDA 2.0 and above.
+
+  .. attribute:: KERNEL_EXEC_TIMEOUT
+
+    CUDA 2.2 and above.
+
+  .. attribute:: INTEGRATED
+
+    CUDA 2.2 and above.
+
+  .. attribute:: CAN_MAP_HOST_MEMORY
+
+    CUDA 2.2 and above.
+
+  .. attribute:: COMPUTE_MODE
+
+    CUDA 2.2 and above.
+
+.. class:: function_attribute
+
+  Flags for :meth:`Function.get_attribute`. CUDA 2.2 and newer.
+
+  .. attribute:: MAX_THREADS_PER_BLOCK
+  .. attribute:: SHARED_SIZE_BYTES
+  .. attribute:: CONST_SIZE_BYTES
+  .. attribute:: LOCAL_SIZE_BYTES
+  .. attribute:: NUM_REGS
+  .. attribute:: MAX
 
 .. class:: array_format
 
@@ -138,6 +181,52 @@ Constants
   .. attribute:: DEVICE
   .. attribute:: ARRAY
 
+.. class:: compute_mode
+
+  CUDA 2.2 and newer.
+
+  .. attribute:: DEFAULT
+  .. attribute:: EXCLUSIVE
+  .. attribute:: PROHIBITED
+
+.. class:: jit_option
+
+  CUDA 2.1 and newer.
+
+  .. attribute:: MAX_REGISTERS
+  .. attribute:: THREADS_PER_BLOCK
+  .. attribute:: WALL_TIME
+  .. attribute:: INFO_LOG_BUFFER
+  .. attribute:: INFO_LOG_BUFFER_SIZE_BYTES
+  .. attribute:: ERROR_LOG_BUFFER
+  .. attribute:: ERROR_LOG_BUFFER_SIZE_BYTES
+  .. attribute:: OPTIMIZATION_LEVEL
+  .. attribute:: TARGET_FROM_CUCONTEXT
+  .. attribute:: TARGET
+  .. attribute:: FALLBACK_STRATEGY
+
+.. class:: jit_target
+
+  CUDA 2.1 and newer.
+
+  .. attribute:: COMPUTE_10
+  .. attribute:: COMPUTE_11
+  .. attribute:: COMPUTE_12
+  .. attribute:: COMPUTE_13
+
+.. class:: jit_fallback
+
+  CUDA 2.1 and newer.
+
+  .. attribute:: PREFER_PTX
+  .. attribute:: PREFER_BINARY
+
+.. class:: host_alloc_flags
+
+  .. attribute:: PORTABLE
+  .. attribute:: DEVICEMAP
+  .. attribute:: WRITECOMBINED
+
 Devices and Contexts
 --------------------
 
@@ -145,6 +234,11 @@ Devices and Contexts
   
   Obtain the version of CUDA against which PyCuda was compiled. Returns a
   3-tuple of integers as *(major, minor, revision)*.
+
+.. function:: get_driver_version()
+  
+  Obtain the version of the CUDA driver on top of which PyCUDA is
+  running. Returns an integer version number.
 
 .. function:: init(flags=0)
 
@@ -246,6 +340,8 @@ Concurrency and Streams
   An event's time is recorded when the :class:`Stream` has finished all tasks 
   enqueued before the :meth:`record` call.
 
+  See :class:`event_flags` for values for the *flags* parameter.
+
   .. method:: record()
 
     Insert a recording point for *self* into the global device execution
@@ -340,29 +436,42 @@ Global Device Memory
 Pagelocked Host Memory
 ^^^^^^^^^^^^^^^^^^^^^^
 
-.. function:: pagelocked_empty(shape, dtype, order="C")
+.. function:: pagelocked_empty(shape, dtype, order="C", mem_flags=0)
 
   Allocate a pagelocked :class:`numpy.ndarray` of *shape*, *dtype* and *order*.
-  For the meaning of these parameters, please refer to the :mod:`numpy` 
+
+  *mem_flags* may be one of the values in :class:`host_alloc_flags`.
+  It may only be non-zero on CUDA 2.2 and newer.
+
+  For the meaning of the other parameters, please refer to the :mod:`numpy` 
   documentation.
 
-.. function:: pagelocked_zeros(shape, dtype, order="C")
+.. function:: pagelocked_zeros(shape, dtype, order="C", mem_flags=0)
 
   Allocate a pagelocked :class:`numpy.ndarray` of *shape*, *dtype* and *order* that
   is zero-initialized.
 
-  For the meaning of these parameters, please refer to the :mod:`numpy` 
+  *mem_flags* may be one of the values in :class:`host_alloc_flags`.
+  It may only be non-zero on CUDA 2.2 and newer.
+
+  For the meaning of the other parameters, please refer to the :mod:`numpy` 
   documentation.
 
-.. function:: pagelocked_empty_like(array)
+.. function:: pagelocked_empty_like(array, mem_flags=0)
 
   Allocate a pagelocked :class:`numpy.ndarray` with the same shape, dtype and order
   as *array*.
 
-.. function:: pagelocked_zeros_like(array)
+  *mem_flags* may be one of the values in :class:`host_alloc_flags`.
+  It may only be non-zero on CUDA 2.2 and newer.
+
+.. function:: pagelocked_zeros_like(array, mem_flags=0)
 
   Allocate a pagelocked :class:`numpy.ndarray` with the same shape, dtype and order
   as *array*. Initialize it to 0.
+
+  *mem_flags* may be one of the values in :class:`host_alloc_flags`.
+  It may only be non-zero on CUDA 2.2 and newer.
 
 The :class:`numpy.ndarray` instances returned by these functions 
 have an attribute *base* that references an object of type
@@ -379,6 +488,13 @@ have an attribute *base* that references an object of type
     becomes unreachable. Any further use of the object (or its 
     associated :mod:`numpy` array) is an error
     and will lead to undefined behavior.
+
+  .. method:: get_device_pointer()
+
+    Return a device pointer that indicates the address at which
+    this memory is mapped into the device's address space.
+
+    Only available on CUDA 2.2 and newer.
 
 Arrays and Textures
 ^^^^^^^^^^^^^^^^^^^
@@ -694,7 +810,7 @@ Code on the Device: Modules and Functions
 
     The main use of this method is to find the address of pre-declared
     `__constant__` arrays so they can be filled from the host before kernel
-    invocation
+    invocation.
 
   .. method:: get_texref(name)
 
@@ -704,13 +820,21 @@ Code on the Device: Modules and Functions
   
   Create a :class:`Module` by loading the CUBIN file *filename*.
 
-.. function:: module_from_buffer(buffer)
+.. function:: module_from_buffer(buffer, options=[], message_handler=None)
 
-  Create a :class:`Module` by loading a CUBIN from *buffer*, which must
-  support the Python buffer interface. (For example, :class:`str` and 
-  :class:`numpy.ndarray` do.)
+  Create a :class:`Module` by loading a PTX or CUBIN module from
+  *buffer*, which must support the Python buffer interface. 
+  (For example, :class:`str` and :class:`numpy.ndarray` do.)
+
+  :param options: A list of tuples (:class:`jit_option`, value).
+  :param message_handler: A callable that is called with a
+    arguments of ``(compile_success_bool, info_str, error_str)``
+    which allows the user to process error and warning messages
+    from the PTX compiler.
+
+  Loading PTX modules as well as non-default values of *options* and
+  *message_handler* are only allowed on CUDA 2.1 and newer.
   
-
 .. class:: Function
 
   Handle to a *__global__* function in a :class:`Module`. Create using
@@ -858,21 +982,34 @@ Code on the Device: Modules and Functions
     The texture references given to :meth:`prepare` are set up as parameters, as
     well.
 
+  .. method:: get_attribute(attr)
+
+    Return one of the attributes given by the
+    :class:`function_attribute` value *attr*.
+    
   .. attribute:: lmem
 
     The number of bytes of local memory used by this function.
     Only available if this function is part of a :class:`SourceModule`.
+
+    This attribute is deprecated when PyCUDA is compiled against
+    CUDA 2.2 and newer. It will be removed in PyCUDA 0.94.
 
   .. attribute:: smem
 
     The number of bytes of shared memory used by this function.
     Only available if this function is part of a :class:`SourceModule`.
 
+    This attribute is deprecated when PyCUDA is compiled against
+    CUDA 2.2 and newer. It will be removed in PyCUDA 0.94.
+
   .. attribute:: registers
 
     The number of 32-bit registers used by this function.
     Only available if this function is part of a :class:`SourceModule`.
 
+    This attribute is deprecated when PyCUDA is compiled against
+    CUDA 2.2 and newer. It will be removed in PyCUDA 0.94.
 
 .. class:: ArgumentHandler(array)
 

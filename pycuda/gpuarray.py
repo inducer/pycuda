@@ -490,10 +490,10 @@ def to_gpu_async(ary, allocator=drv.mem_alloc, stream=None):
 
 empty = GPUArray
 
-def zeros(shape, dtype, stream=None, allocator=drv.mem_alloc):
+def zeros(shape, dtype, allocator=drv.mem_alloc):
     """Returns an array of the given shape and dtype filled with 0's."""
 
-    result = GPUArray(shape, dtype, stream, allocator)
+    result = GPUArray(shape, dtype, allocator)
     result.fill(0)
     return result
 
