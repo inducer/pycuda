@@ -223,6 +223,8 @@ Constants
 
 .. class:: host_alloc_flags
 
+    Flags to be used to allocate :ref:`pagelocked_memory`.
+
     .. attribute:: PORTABLE
     .. attribute:: DEVICEMAP
     .. attribute:: WRITECOMBINED
@@ -432,6 +434,7 @@ Global Device Memory
         becomes unreachable. Any further use of the object is an error
         and will lead to undefined behavior.
 
+.. _pagelocked_memory :
 
 Pagelocked Host Memory
 ^^^^^^^^^^^^^^^^^^^^^^
