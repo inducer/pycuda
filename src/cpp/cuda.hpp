@@ -705,6 +705,12 @@ namespace cuda
         return byte_offset;
       }
 
+      void set_address_2d(CUdeviceptr dptr, 
+          const CUDA_ARRAY_DESCRIPTOR &descr, unsigned int pitch)
+      { 
+        CUDAPP_CALL_GUARDED(cuTexRefSetAddress2D, (m_texref, &descr, dptr, pitch)); 
+      }
+
       void set_format(CUarray_format fmt, int num_packed_components)
       { CUDAPP_CALL_GUARDED(cuTexRefSetFormat, (m_texref, fmt, num_packed_components)); }
 

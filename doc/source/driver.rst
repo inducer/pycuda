@@ -571,6 +571,14 @@ Arrays and Textures
         Unlike for :class:`Array` objects, no life support is provided for linear memory
         bound to texture references.
 
+    .. method:: set_address_2d(devptr, descr, pitch)
+
+        Bind *self* as a 2-dimensional texture to a chunk of global memory
+        at *devptr*. The line-to-line offset in bytes is given by *pitch*.
+        Width, height and format are given in the :class:`ArrayDescriptor` 
+        *descr*. :meth:`set_format` need not and should not be called in
+        addition to this method.
+
     .. method:: set_format(fmt, num_components)
       
         Set the texture to have :class:`array_format` *fmt* and to have
