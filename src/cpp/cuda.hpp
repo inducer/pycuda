@@ -1170,7 +1170,7 @@ namespace cuda
       CUevent m_event;
 
     public:
-      event(unsigned int flags=CU_EVENT_DEFAULT)
+      event(unsigned int flags=0)
       { CUDAPP_CALL_GUARDED(cuEventCreate, (&m_event, flags)); }
 
       ~event()

@@ -540,13 +540,15 @@ BOOST_PYTHON_MODULE(_driver)
     .value("ARRAY", CU_MEMORYTYPE_ARRAY)
     ;
 
-#if CUDA_VERSION >= 2010
+#if CUDA_VERSION >= 2020
   py::enum_<CUcomputemode>("compute_mode")
     .value("DEFAULT", CU_COMPUTEMODE_DEFAULT)
     .value("EXCLUSIVE", CU_COMPUTEMODE_EXCLUSIVE)
     .value("PROHIBITED", CU_COMPUTEMODE_PROHIBITED)
     ;
+#endif
 
+#if CUDA_VERSION >= 2010
   py::enum_<CUjit_option>("jit_option")
     .value("MAX_REGISTERS", CU_JIT_MAX_REGISTERS)
     .value("THREADS_PER_BLOCK", CU_JIT_THREADS_PER_BLOCK)
