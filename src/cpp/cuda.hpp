@@ -691,11 +691,16 @@ namespace cuda
         m_array = ary;
       }
 
-      unsigned int set_address(CUdeviceptr dptr, unsigned int bytes)
+      unsigned int set_address(CUdeviceptr dptr, unsigned int bytes, bool allow_offset=false)
       { 
         unsigned int byte_offset;
         CUDAPP_CALL_GUARDED(cuTexRefSetAddress, (&byte_offset,
               m_texref, dptr, bytes)); 
+
+        if (!allow_offset && byte_offset != 0)
+          throw cuda::error("texture_reference::set_address", CUDA_ERROR_INVALID_VALUE,
+              "texture binding resulted in offset, but allow_offset was false");
+
         m_array.reset();
         return byte_offset;
       }

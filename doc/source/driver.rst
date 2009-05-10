@@ -556,10 +556,14 @@ Arrays and Textures
     As long as *array* remains bound to this texture reference, it will not be
     freed--the texture reference keeps a reference to the array.
 
-  .. method:: set_address(devptr, bytes)
+  .. method:: set_address(devptr, bytes, allow_offset=False)
   
     Bind *self* to the a chunk of linear memory starting at the integer address 
-    *devptr*, encompassing a number of *bytes*.
+    *devptr*, encompassing a number of *bytes*. Due to alignment requirements,
+    the effective texture bind address may be different from the requested one
+    by an offset. This method returns this offset in bytes. If *allow_offset*
+    is ``False``, a nonzero value of this offset will cause an exception to be
+    raised.
 
     Unlike for :class:`Array` objects, no life support is provided for linear memory
     bound to texture references.

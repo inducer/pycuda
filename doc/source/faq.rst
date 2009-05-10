@@ -159,9 +159,11 @@ Version 0.93
 * Add :class:`pycuda.reduction.ReductionKernel`.
 * Add :func:`pycuda.gpuarray.sum`, :func:`pycuda.gpuarray.dot`, 
   :func:`pycuda.gpuarray.subset_dot`.
-* :class:`pycuda.gpuarray.GPUArray` no longer has an associated :class:`Stream`.
-  Asynchronous GPUArray transfers are now separate from synchronous ones and 
-  have an ``_async`` suffix.
+* Synchronous and asynchronous memory transfers are now separate
+  from each other, the latter having an ``_async`` suffix.
+* :class:`pycuda.gpuarray.GPUArray` no longer has an associated 
+  :class:`pycuda.driver.Stream`.  Asynchronous GPUArray transfers are 
+  now separate from synchronous ones and have an ``_async`` suffix.
 * Support for features added in CUDA 2.2.
 
 Version 0.92
