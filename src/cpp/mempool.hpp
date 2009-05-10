@@ -70,8 +70,8 @@ namespace pycuda
       bool m_stop_holding;
 
     public:
-      memory_pool()
-        : m_held_blocks(0), m_active_blocks(0), m_stop_holding(false)
+      memory_pool(Allocator const &alloc=Allocator())
+        : m_allocator(alloc), m_held_blocks(0), m_active_blocks(0), m_stop_holding(false)
       {
       }
       
