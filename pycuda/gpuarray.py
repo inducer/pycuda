@@ -674,8 +674,8 @@ def multi_take_put(arrays, dest_indices, src_indices, dest_shape=None,
 
     func, tex_src = elementwise.get_take_put_kernel(
             a_dtype, src_indices.dtype, vec_count=vec_count)
-    for i, a in enumerate(arrays):
-        a.bind_to_texref_ext(tex_src[i], allow_double_hack=True)
+    for src_tr, a in zip(tex_src, arrays):
+        a.bind_to_texref_ext(src_tr, allow_double_hack=True)
 
     one_out_vec = out[0]
 
