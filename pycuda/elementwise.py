@@ -148,30 +148,46 @@ def get_take_kernel(dtype, idx_dtype, vec_count=1):
 
 
 @memoize
-def get_take_put_kernel(dtype, idx_dtype, vec_count=1):
+def get_take_put_kernel(dtype, idx_dtype, with_offsets, vec_count=1):
     ctx = {
             "idx_tp": dtype_to_ctype(idx_dtype),
             "tp": dtype_to_ctype(dtype),
             }
 
-    args = ("%(idx_tp)s *gmem_dest_idx, %(idx_tp)s *gmem_src_idx,"
-            +", ".join("%(tp)s *dest"+str(i) 
-                for i in range(vec_count))
-            +", unsigned n") % ctx
+    args = ([ "%(idx_tp)s *gmem_dest_idx",
+            "%(idx_tp)s *gmem_src_idx"]
+            +["%(tp)s *dest"+str(i) for i in range(vec_count)]
+            +["%(idx_tp)s offset"+str(i) for i in range(vec_count)
+                if with_offsets]
+            +["unsigned n"])
+
     preamble = "\n".join(
         "texture <%s, 1, cudaReadModeElementType> tex_src%d;" % (ctx["tp"], i)
         for i in range(vec_count))
-    body = (
-            ("%(idx_tp)s src_idx = gmem_src_idx[i];\n" 
-                "%(idx_tp)s dest_idx = gmem_dest_idx[i];\n" % ctx)
-            + "\n".join(
-            "dest%d[dest_idx] = tex1Dfetch(tex_src%d, src_idx);" % (i, i)
-            for i in range(vec_count)))
 
-    mod = get_elwise_module(args, body, "take_put", preamble=preamble)
+    if with_offsets:
+        def get_copy_insn(i):
+            return ("dest%d[dest_idx] = "
+                    "tex1Dfetch(tex_src%d, src_idx+offset%d);" 
+                    % (i, i, i))
+    else:
+        def get_copy_insn(i):
+            return ("dest%d[dest_idx] = "
+                    "tex1Dfetch(tex_src%d, src_idx);" % (i, i))
+
+    body = (("%(idx_tp)s src_idx = gmem_src_idx[i];\n" 
+                "%(idx_tp)s dest_idx = gmem_dest_idx[i];\n" % ctx)
+            + "\n".join(get_copy_insn(i) for i in range(vec_count)))
+
+    mod = get_elwise_module(", ".join(args) % ctx, 
+            body, "take_put", preamble=preamble)
     func = mod.get_function("take_put")
     tex_src = [mod.get_texref("tex_src%d" % i) for i in range(vec_count)]
-    func.prepare("PP"+(vec_count*"P")+"I", (1,1,1), texrefs=tex_src)
+    func.prepare(
+            "PP"+(vec_count*"P")
+            +(bool(with_offsets)*vec_count*"I")
+            +"I", 
+            (1,1,1), texrefs=tex_src)
     return func, tex_src
             
 

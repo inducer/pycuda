@@ -654,7 +654,7 @@ def multi_take(arrays, indices, out=None, stream=None):
 
 
 def multi_take_put(arrays, dest_indices, src_indices, dest_shape=None, 
-        out=None, stream=None):
+        out=None, stream=None, src_offsets=None):
     if not len(arrays):
         return []
 
@@ -673,16 +673,25 @@ def multi_take_put(arrays, dest_indices, src_indices, dest_shape=None,
     assert len(out) == len(arrays)
 
     func, tex_src = elementwise.get_take_put_kernel(
-            a_dtype, src_indices.dtype, vec_count=vec_count)
+            a_dtype, src_indices.dtype, 
+            with_offsets=src_offsets is not None,
+            vec_count=vec_count)
     for src_tr, a in zip(tex_src, arrays):
         a.bind_to_texref_ext(src_tr, allow_double_hack=True)
 
     one_out_vec = out[0]
 
+    if src_offsets is None:
+        src_offsets = []
+    else:
+        assert len(src_offsets) == len(arrays)
+
     func.set_block_shape(*one_out_vec._block)
     func.prepared_async_call(one_out_vec._grid, stream,
             dest_indices.gpudata, src_indices.gpudata,
-            *([o.gpudata for o in out] + [src_indices.size]))
+            *([o.gpudata for o in out] 
+                + src_offsets
+                + [src_indices.size]))
 
     return out
 
