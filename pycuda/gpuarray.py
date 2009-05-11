@@ -336,10 +336,12 @@ class GPUArray(object):
 
         return self
 
-    def bind_to_texref(self, texref):
-        texref.set_address(self.gpudata, self.nbytes)
+    def bind_to_texref(self, texref, allow_offset=False):
+        return texref.set_address(self.gpudata, self.nbytes, 
+                allow_offset=allow_offset) / self.dtype.itemsize
 
-    def bind_to_texref_ext(self, texref, channels=1, allow_double_hack=False):
+    def bind_to_texref_ext(self, texref, channels=1, allow_double_hack=False, 
+            allow_offset=False):
         if self.dtype == numpy.float64 and allow_double_hack:
             if channels != 1:
                 raise ValueError, "'fake' double precision textures can only have one channel"
@@ -351,11 +353,13 @@ class GPUArray(object):
             fmt = drv.dtype_to_array_format(self.dtype)
             read_as_int = numpy.integer in self.dtype.type.__mro__
 
-        texref.set_address(self.gpudata, self.nbytes)
+        offset = texref.set_address(self.gpudata, self.nbytes, allow_offset=allow_offset)
         texref.set_format(fmt, channels)
 
         if read_as_int:
             texref.set_flags(texref.get_flags() | drv.TRSF_READ_AS_INTEGER)
+
+        return offset/self.dtype.itemsize
 
     def __len__(self):
         """Return the size of the leading dimension of self."""

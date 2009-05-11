@@ -112,22 +112,31 @@ The :class:`GPUArray` Array Class
 
     Fill the array with *scalar*.
 
-  .. method:: bind_to_texref(texref)
+  .. method:: bind_to_texref(texref, allow_offset=False)
 
     Bind *self* to the :class:`pycuda.driver.TextureReference` *texref*.
 
+    Due to alignment requirements, the effective texture bind address may be
+    different from the requested one by an offset. This method returns this
+    offset in units of *self*'s data type.  If *allow_offset* is ``False``, a
+    nonzero value of this offset will cause an exception to be raised.
+
     .. note::
+        It is recommended to use :meth:`bind_to_texref_ext` instead of 
+        this method.
 
-      For more comprehensive functionality, consider using
-      :meth:`bind_to_texref_ext`.
-
-  .. method:: bind_to_texref_ext(texref, channels=1)
+  .. method:: bind_to_texref_ext(texref, channels=1, allow_offset=False)
 
     Bind *self* to the :class:`pycuda.driver.TextureReference` *texref*.
     In addition, set the texture reference's format to match :attr:`dtype`
     and its channel count to *channels*. This routine also sets the
     texture reference's :data:`pycuda.driver.TRSF_READ_AS_INTEGER` flag, 
     if necessary.
+
+    Due to alignment requirements, the effective texture bind address may be
+    different from the requested one by an offset. This method returns this
+    offset in units of *self*'s data type.  If *allow_offset* is ``False``, a
+    nonzero value of this offset will cause an exception to be raised.
 
     (Added in version 0.93.)
     
