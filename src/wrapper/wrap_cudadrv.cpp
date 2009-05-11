@@ -869,7 +869,9 @@ BOOST_PYTHON_MODULE(_driver)
       .DEF_SIMPLE_METHOD(set_array)
       .def("set_address", &cl::set_address, 
           (py::arg("devptr"), py::arg("bytes"), py::arg("allow_offset")=false))
+#if CUDA_VERSION >= 2020
       .DEF_SIMPLE_METHOD_WITH_ARGS(set_address_2d, ("devptr", "descr", "pitch"))
+#endif
       .DEF_SIMPLE_METHOD_WITH_ARGS(set_format, ("format", "num_components"))
       .DEF_SIMPLE_METHOD_WITH_ARGS(set_address_mode, ("dim", "am"))
       .DEF_SIMPLE_METHOD(set_filter_mode)
