@@ -132,7 +132,8 @@ def main():
               convenient than with Nvidia's C-based runtime.
 
             * Completeness. PyCUDA puts the full power of CUDA's driver API at
-              your disposal, if you wish.
+              your disposal, if you wish. It also includes code for 
+              interoperability with OpenGL.
 
             * Automatic Error Checking. All CUDA errors are automatically
               translated into Python exceptions.
