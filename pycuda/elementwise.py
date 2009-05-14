@@ -123,19 +123,20 @@ def get_take_kernel(dtype, idx_dtype, vec_count=1):
     ctx = {
             "idx_tp": dtype_to_ctype(idx_dtype),
             "tp": dtype_to_ctype(dtype),
+            "tex_tp": dtype_to_ctype(dtype, with_fp_tex_hack=True),
             }
 
     args = ("%(idx_tp)s *idx, "
             +", ".join("%(tp)s *dest"+str(i) 
                 for i in range(vec_count))
             +", unsigned n") % ctx
-    preamble = "\n".join(
-        "texture <%s, 1, cudaReadModeElementType> tex_src%d;" % (ctx["tp"], i)
+    preamble = "#include <pycuda-helpers.hpp>\n\n" + "\n".join(
+        "texture <%s, 1, cudaReadModeElementType> tex_src%d;" % (ctx["tex_tp"], i)
         for i in range(vec_count))
     body = (
             ("%(idx_tp)s src_idx = idx[i];\n" % ctx)
             + "\n".join(
-            "dest%d[i] = tex1Dfetch(tex_src%d, src_idx);" % (i, i)
+            "dest%d[i] = fp_tex1Dfetch(tex_src%d, src_idx);" % (i, i)
             for i in range(vec_count)))
 
     mod = get_elwise_module(args, body, "take", preamble=preamble)
@@ -152,6 +153,7 @@ def get_take_put_kernel(dtype, idx_dtype, with_offsets, vec_count=1):
     ctx = {
             "idx_tp": dtype_to_ctype(idx_dtype),
             "tp": dtype_to_ctype(dtype),
+            "tex_tp": dtype_to_ctype(dtype, with_fp_tex_hack=True),
             }
 
     args = ([ "%(idx_tp)s *gmem_dest_idx",
@@ -161,19 +163,19 @@ def get_take_put_kernel(dtype, idx_dtype, with_offsets, vec_count=1):
                 if with_offsets]
             +["unsigned n"])
 
-    preamble = "\n".join(
-        "texture <%s, 1, cudaReadModeElementType> tex_src%d;" % (ctx["tp"], i)
+    preamble = "#include <pycuda-helpers.hpp>\n\n" + "\n".join(
+        "texture <%s, 1, cudaReadModeElementType> tex_src%d;" % (ctx["tex_tp"], i)
         for i in range(vec_count))
 
     if with_offsets:
         def get_copy_insn(i):
             return ("dest%d[dest_idx] = "
-                    "tex1Dfetch(tex_src%d, src_idx+offset%d);" 
+                    "fp_tex1Dfetch(tex_src%d, src_idx+offset%d);" 
                     % (i, i, i))
     else:
         def get_copy_insn(i):
             return ("dest%d[dest_idx] = "
-                    "tex1Dfetch(tex_src%d, src_idx);" % (i, i))
+                    "fp_tex1Dfetch(tex_src%d, src_idx);" % (i, i))
 
     body = (("%(idx_tp)s src_idx = gmem_src_idx[i];\n" 
                 "%(idx_tp)s dest_idx = gmem_dest_idx[i];\n" % ctx)

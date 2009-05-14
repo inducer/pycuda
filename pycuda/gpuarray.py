@@ -609,7 +609,7 @@ def take(a, indices, out=None, stream=None):
     assert len(indices.shape) == 1
 
     func, tex_src = elementwise.get_take_kernel(a.dtype, indices.dtype)
-    a.bind_to_texref_ext(tex_src[0])
+    a.bind_to_texref_ext(tex_src[0], allow_double_hack=True)
 
     func.set_block_shape(*out._block)
     func.prepared_async_call(out._grid, stream,
@@ -639,7 +639,7 @@ def multi_take(arrays, indices, out=None, stream=None):
     func, tex_src = elementwise.get_take_kernel(a_dtype, indices.dtype, 
             vec_count=vec_count)
     for i, a in enumerate(arrays):
-        a.bind_to_texref_ext(tex_src[i])
+        a.bind_to_texref_ext(tex_src[i], allow_double_hack=True)
 
     one_result_vec = out[0]
 

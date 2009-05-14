@@ -277,7 +277,7 @@ def platform_bits():
 
 
 
-def dtype_to_ctype(dtype):
+def dtype_to_ctype(dtype, with_fp_tex_hack=False):
     import numpy
     dtype = numpy.dtype(dtype)
     if dtype == numpy.int64 and platform_bits() == 64:
@@ -297,9 +297,15 @@ def dtype_to_ctype(dtype):
     elif dtype == numpy.uint8:
         return "unsigned char"
     elif dtype == numpy.float32:
-        return "float"
+        if with_fp_tex_hack:
+            return "fp_tex_float"
+        else:
+            return "float"
     elif dtype == numpy.float64:
-        return "double"
+        if with_fp_tex_hack:
+            return "fp_tex_double"
+        else:
+            return "double"
     else:
         raise ValueError, "unable to map dtype '%s'" % dtype
 
