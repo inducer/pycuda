@@ -199,8 +199,8 @@ namespace
     CUDAPP_PRINT_CALL_TRACE("cuModuleLoadDataEx");
     CUresult cu_status_code; \
     cu_status_code = cuModuleLoadDataEx(&mod, mod_buf, options.size(), 
-         const_cast<CUjit_option *>(options.data()),
-         const_cast<void **>(option_values.data()));
+         const_cast<CUjit_option *>(&*options.begin()),
+         const_cast<void **>(&*option_values.begin()));
 
     size_t info_buf_size = size_t(option_values[1]);
     size_t error_buf_size = size_t(option_values[3]);
