@@ -76,17 +76,17 @@ def _get_big_block_transpose_kernel():
         // Store transposed Submatrix to shared memory
         A_shared[threadIdx.y][threadIdx.x] = A[glob_idx_a];
         A_shared[threadIdx.y][threadIdx.x+BLOCK_SIZE] = A[glob_idx_a+BLOCK_SIZE];
-        A_shared[threadIdx.y+BLOCK_SIZE][threadIdx.x] = A[glob_idx_a+a_block_stride];
+        A_shared[threadIdx.y+BLOCK_SIZE][threadIdx.x] = A[glob_idx_a+A_BLOCK_STRIDE];
         A_shared[threadIdx.y+BLOCK_SIZE][threadIdx.x+BLOCK_SIZE] = 
-          A[glob_idx_a+BLOCK_SIZE+a_block_stride];
+          A[glob_idx_a+BLOCK_SIZE+A_BLOCK_STRIDE];
           
         __syncthreads();
 
         // Write transposed Submatrix to global memory
         A_t[glob_idx_a_t] = A_shared[threadIdx.x][threadIdx.y];
-        A_t[glob_idx_a_t+a_t_block_stride] = A_shared[threadIdx.x+BLOCK_SIZE][threadIdx.y];
+        A_t[glob_idx_a_t+A_T_BLOCK_STRIDE] = A_shared[threadIdx.x+BLOCK_SIZE][threadIdx.y];
         A_t[glob_idx_a_t+BLOCK_SIZE] = A_shared[threadIdx.x][threadIdx.y+BLOCK_SIZE];
-        A_t[glob_idx_a_t+a_t_block_stride+BLOCK_SIZE] = A_shared[threadIdx.x+BLOCK_SIZE][threadIdx.y+BLOCK_SIZE];
+        A_t[glob_idx_a_t+A_T_BLOCK_STRIDE+BLOCK_SIZE] = A_shared[threadIdx.x+BLOCK_SIZE][threadIdx.y+BLOCK_SIZE];
       }
       """)
 
