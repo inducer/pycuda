@@ -3,14 +3,18 @@ The :class:`GPUArray` Array Class
 
 .. module:: pycuda.gpuarray
 
-.. class:: GPUArray(shape, dtype, stream=None)
+.. class:: GPUArray(shape, dtype, allocator=None)
 
   A :class:`numpy.ndarray` work-alike that stores its data and performs its
   computations on the compute device.  *shape* and *dtype* work exactly as in
   :mod:`numpy`.  Arithmetic methods in :class:`GPUArray` support the
   broadcasting of scalars. (e.g. `array+5`) If the
-  :class:`pycuda.driver.Stream` *stream* is specified, all computations on
-  *self* are sequenced into it.
+
+  *allocator* is a callable that, upon being called with an argument of the number
+  of bytes to be allocated, returns an object that can be cast to an
+  :class:`int` representing the address of the newly allocated memory.
+  Observe that both :func:`pycuda.driver.mem_alloc` and 
+  :meth:`pycuda.tools.DeviceMemoryPool.alloc` are a model of this interface.
 
   .. attribute :: gpudata
     
@@ -51,22 +55,37 @@ The :class:`GPUArray` Array Class
       of :attr:`size` instead of its current value. The change was made in order
       to match :mod:`numpy`.
 
-  .. method :: set(ary, stream=None)
+  .. method :: set(ary)
 
     Transfer the contents the :class:`numpy.ndarray` object *ary*
+    onto the device.
+
+    *ary* must have the same dtype and size (not necessarily shape) as *self*.
+
+  .. method :: set_async(ary, stream=None)
+
+    Asynchronously transfer the contents the :class:`numpy.ndarray` object *ary*
     onto the device, optionally sequenced on *stream*.
 
     *ary* must have the same dtype and size (not necessarily shape) as *self*.
+
 
   .. method :: get(ary=None, stream=None, pagelocked=False)
 
     Transfer the contents of *self* into *ary* or a newly allocated
     :mod:`numpy.ndarray`. If *ary* is given, it must have the right
     size (not necessarily shape) and dtype. If it is not given,
-    *pagelocked* specifies whether the new array is allocated 
+    a *pagelocked* specifies whether the new array is allocated 
     page-locked.
 
-  .. method :: mul_add(self, selffac, other, otherfac, add_timer=None):
+  .. method :: get_async(ary=None, stream=None)
+
+    Transfer the contents of *self* into *ary* or a newly allocated
+    :mod:`numpy.ndarray`. If *ary* is given, it must have the right
+    size (not necessarily shape) and dtype. If it is not given,
+    a page-locked* array is newly allocated.
+
+  .. method :: mul_add(self, selffac, other, otherfac, add_timer=None, stream=None):
     
     Return `selffac*self + otherfac*other`. *add_timer*, if given, 
     is invoked with the result from 
@@ -89,20 +108,24 @@ The :class:`GPUArray` Array Class
 
   .. UNDOC reverse()
   
-  .. method :: fill(scalar)
+  .. method :: fill(scalar, stream=None)
 
     Fill the array with *scalar*.
 
-  .. method:: bind_to_texref(texref)
+  .. method:: bind_to_texref(texref, allow_offset=False)
 
     Bind *self* to the :class:`pycuda.driver.TextureReference` *texref*.
 
+    Due to alignment requirements, the effective texture bind address may be
+    different from the requested one by an offset. This method returns this
+    offset in units of *self*'s data type.  If *allow_offset* is ``False``, a
+    nonzero value of this offset will cause an exception to be raised.
+
     .. note::
+        It is recommended to use :meth:`bind_to_texref_ext` instead of 
+        this method.
 
-      For more comprehensive functionality, consider using
-      :meth:`bind_to_texref_ext`.
-
-  .. method:: bind_to_texref_ext(texref, channels=1)
+  .. method:: bind_to_texref_ext(texref, channels=1, allow_offset=False)
 
     Bind *self* to the :class:`pycuda.driver.TextureReference` *texref*.
     In addition, set the texture reference's format to match :attr:`dtype`
@@ -110,21 +133,36 @@ The :class:`GPUArray` Array Class
     texture reference's :data:`pycuda.driver.TRSF_READ_AS_INTEGER` flag, 
     if necessary.
 
+    Due to alignment requirements, the effective texture bind address may be
+    different from the requested one by an offset. This method returns this
+    offset in units of *self*'s data type.  If *allow_offset* is ``False``, a
+    nonzero value of this offset will cause an exception to be raised.
+
     (Added in version 0.93.)
     
 Constructing :class:`GPUArray` Instances
 ----------------------------------------
 
-.. function:: to_gpu(ary, stream=None)
+.. function:: to_gpu(ary, allocator=None)
   
   Return a :class:`GPUArray` that is an exact copy of the :class:`numpy.ndarray`
-  instance *ary*. Optionally sequence on *stream*.
+  instance *ary*.
+
+  See :class:`GPUArray` for the meaning of *allocator*.
+
+.. function:: to_gpu_async(ary, allocator=None, stream=None)
   
-.. function:: empty(shape, dtype, stream)
+  Return a :class:`GPUArray` that is an exact copy of the :class:`numpy.ndarray`
+  instance *ary*. The copy is done asynchronously, optionally sequenced into
+  *stream*.
+
+  See :class:`GPUArray` for the meaning of *allocator*.
+  
+.. function:: empty(shape, dtype)
 
   A synonym for the :class:`GPUArray` constructor.
 
-.. function:: zeros(shape, dtype, stream)
+.. function:: zeros(shape, dtype)
 
   Same as :func:`empty`, but the :class:`GPUArray` is zero-initialized before
   being returned.
@@ -139,7 +177,7 @@ Constructing :class:`GPUArray` Instances
   Make a new, zero-initialized :class:`GPUArray` having the same properties
   as *other_ary*.
 
-.. function:: arange(start, stop, step, dtype=None)
+.. function:: arange(start, stop, step, dtype=None, stream=None)
 
   Create a :class:`GPUArray` filled with numbers spaced `step` apart,
   starting from `start` and ending at `stop`.
@@ -151,10 +189,16 @@ Constructing :class:`GPUArray` Instances
   *dtype*, if not specified, is taken as the largest common type
   of *start*, *stop* and *step*.
 
-.. function:: take(a, indices)
+.. function:: take(a, indices, stream=None)
   
   Return the :class:`GPUArray` ``[a[indices[0]], ..., a[indices[n]]]``.
   For the moment, *a* must be a type that can be bound to a texture.
+
+.. function:: sum(a, dtype=None, stream=None)
+
+.. function:: dot(a, b, dtype=None, stream=None)
+
+.. function:: subset_dot(subset, a, b, dtype=None, stream=None)
 
 Elementwise Functions on :class:`GPUArrray` Instances
 -----------------------------------------------------
@@ -225,7 +269,7 @@ Generating Arrays of Random Numbers
 
 .. module:: pycuda.curandom
 
-.. function:: rand(shape, dtype=numpy.float32)
+.. function:: rand(shape, dtype=numpy.float32, stream=None)
 
   Return an array of `shape` filled with random values of `dtype`
   in the range [0,1).
@@ -290,3 +334,23 @@ Here's a usage example::
 
 (You can find this example as :file:`examples/demo_elementwise.py` in the PyCuda 
 distribution.)
+
+Reductions
+----------
+
+.. module:: pycuda.reduction
+
+.. class:: ReductionKernel(dtype_out, neutral, reduce_expr, map_expr=None, arguments=None, name="reduce_kernel", keep=False, options=[])
+
+    .. method __call__(*args, stream=None)
+
+Here's a usage example::
+
+    a = gpuarray.arange(400, dtype=numpy.float32)
+    b = gpuarray.arange(400, dtype=numpy.float32)
+
+    krnl = ReductionKernel(numpy.float32, neutral="0", 
+            reduce_expr="a+b", map_expr="a[i]*b[i]", 
+            arguments="float *a, float *b")
+
+    my_dot_prod = krnl(a, b).get()

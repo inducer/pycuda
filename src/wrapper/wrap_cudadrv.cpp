@@ -12,7 +12,7 @@
 
 
 #if CUDA_VERSION < 1010
-#error PyCuda only works with CUDA 1.1 or newer
+#error PyCuda only works with CUDA 1.1 or newer.
 #endif
 
 
@@ -72,6 +72,22 @@ namespace
 
 
 
+  class host_alloc_flags { };
+
+
+
+  py::object device_get_attribute(device const &dev, CUdevice_attribute attr)
+  {
+#if CUDA_VERSION >= 2020
+    if (attr == CU_DEVICE_ATTRIBUTE_COMPUTE_MODE)
+      return py::object(CUcomputemode(dev.get_attribute(attr)));
+    else
+#endif
+      return py::object(dev.get_attribute(attr));
+  }
+
+
+
   device_allocation *mem_alloc_wrap(unsigned long bytes)
   {
     return new device_allocation(pycuda::mem_alloc_gc(bytes));
@@ -124,14 +140,87 @@ namespace
 
 
 
-  module *module_from_buffer(py::object buffer)
+#if CUDA_VERSION >= 2020
+#define MAKE_FUNCTION_HACKY_GETTER(ATTR_NAME, ATTR) \
+  int function_get_##ATTR_NAME(function const &f) \
+  { \
+    PyErr_WarnEx( \
+        PyExc_DeprecationWarning, \
+        "Function." #ATTR_NAME " is deprecated when using CUDA 2.2 and newer. Use Function.get_attribute().", \
+          1); \
+    return f.get_attribute(ATTR); \
+  }
+#else
+#define MAKE_FUNCTION_HACKY_GETTER(ATTR_NAME, ATTR) \
+  py::object function_get_##ATTR_NAME(py::object func) \
+  { return py::object(func.attr("_hacky_" #ATTR_NAME)); }
+#endif
+
+  MAKE_FUNCTION_HACKY_GETTER(lmem, CU_FUNC_ATTRIBUTE_LOCAL_SIZE_BYTES);
+  MAKE_FUNCTION_HACKY_GETTER(smem, CU_FUNC_ATTRIBUTE_SHARED_SIZE_BYTES);
+  MAKE_FUNCTION_HACKY_GETTER(registers, CU_FUNC_ATTRIBUTE_NUM_REGS);
+
+
+
+
+  module *module_from_buffer(py::object buffer, py::object py_options, 
+      py::object message_handler)
   {
-    const char *buf;
+    const char *mod_buf;
     PYCUDA_BUFFER_SIZE_T len;
-    if (PyObject_AsCharBuffer(buffer.ptr(), &buf, &len))
+    if (PyObject_AsCharBuffer(buffer.ptr(), &mod_buf, &len))
       throw py::error_already_set();
     CUmodule mod;
-    CUDAPP_CALL_GUARDED(cuModuleLoadData, (&mod, buf));
+
+#if CUDA_VERSION >= 2010
+    const unsigned buf_size = 32768;
+    char info_buf[buf_size], error_buf[buf_size];
+
+    std::vector<CUjit_option> options;
+    std::vector<void *> option_values;
+
+#define ADD_OPTION_PTR(KEY, PTR) \
+    { \
+      options.push_back(KEY); \
+      option_values.push_back(PTR); \
+    }
+
+    ADD_OPTION_PTR(CU_JIT_INFO_LOG_BUFFER, info_buf);
+    ADD_OPTION_PTR(CU_JIT_INFO_LOG_BUFFER_SIZE_BYTES, (void *) buf_size);
+    ADD_OPTION_PTR(CU_JIT_ERROR_LOG_BUFFER, error_buf);
+    ADD_OPTION_PTR(CU_JIT_ERROR_LOG_BUFFER_SIZE_BYTES, (void *) buf_size);
+
+    PYTHON_FOREACH(key_value, py_options)
+      ADD_OPTION_PTR(
+          py::extract<CUjit_option>(key_value[0]), 
+          (void *) py::extract<int>(key_value[1])());
+#undef ADD_OPTION
+    
+    CUDAPP_PRINT_CALL_TRACE("cuModuleLoadDataEx");
+    CUresult cu_status_code; \
+    cu_status_code = cuModuleLoadDataEx(&mod, mod_buf, options.size(), 
+         const_cast<CUjit_option *>(options.data()),
+         const_cast<void **>(option_values.data()));
+
+    size_t info_buf_size = size_t(option_values[1]);
+    size_t error_buf_size = size_t(option_values[3]);
+
+    if (message_handler != py::object())
+      message_handler(cu_status_code == CUDA_SUCCESS,
+          std::string(info_buf, info_buf_size),
+          std::string(error_buf, error_buf_size));
+
+    if (cu_status_code != CUDA_SUCCESS)
+      throw cuda::error("cuModuleLoadDataEx", cu_status_code, 
+          std::string(error_buf, error_buf_size).c_str());
+#else
+    if (py::len(py_options))
+      throw cuda::error("module_from_buffer", CUDA_ERROR_INVALID_VALUE,
+          "non-empty options argument only supported on CUDA 2.1 and newer");
+
+    CUDAPP_CALL_GUARDED(cuModuleLoadData, (&mod, mod_buf));
+#endif
+
     return new module(mod);
   }
 
@@ -146,37 +235,45 @@ namespace
 
 
 
-  py::handle<> pagelocked_empty(py::object shape, py::object dtype, py::object order_py)
+  py::handle<> pagelocked_empty(py::object shape, py::object dtype, 
+      py::object order_py, unsigned mem_flags)
   {
     PyArray_Descr *tp_descr;
     if (PyArray_DescrConverter(dtype.ptr(), &tp_descr) != NPY_SUCCEED)
       throw py::error_already_set();
 
+    py::extract<npy_intp> shape_as_int(shape);
     std::vector<npy_intp> dims;
-    std::copy(
-        py::stl_input_iterator<npy_intp>(shape),
-        py::stl_input_iterator<npy_intp>(),
-        back_inserter(dims));
+
+    if (shape_as_int.check())
+      dims.push_back(shape_as_int());
+    else
+      std::copy(
+          py::stl_input_iterator<npy_intp>(shape),
+          py::stl_input_iterator<npy_intp>(),
+          back_inserter(dims));
 
     std::auto_ptr<host_allocation> alloc(
         new host_allocation(
-          tp_descr->elsize*pycuda::size_from_dims(dims.size(), &dims.front())));
+          tp_descr->elsize*pycuda::size_from_dims(dims.size(), &dims.front()),
+          mem_flags)
+        );
 
     NPY_ORDER order = PyArray_CORDER;
     PyArray_OrderConverter(order_py.ptr(), &order);
 
-    int flags = 0;
+    int ary_flags = 0;
     if (order == PyArray_FORTRANORDER)
-      flags |= NPY_FARRAY;
+      ary_flags |= NPY_FARRAY;
     else if (order == PyArray_CORDER)
-      flags |= NPY_CARRAY;
+      ary_flags |= NPY_CARRAY;
     else
       throw std::runtime_error("unrecognized order specifier");
 
     py::handle<> result = py::handle<>(PyArray_NewFromDescr(
         &PyArray_Type, tp_descr,
         dims.size(), &dims.front(), /*strides*/ NULL,
-        alloc->data(), flags, /*obj*/NULL));
+        alloc->data(), ary_flags, /*obj*/NULL));
 
     py::handle<> alloc_py(handle_from_new_ptr(alloc.release()));
     PyArray_BASE(result.get()) = alloc_py.get();
@@ -201,9 +298,35 @@ namespace
     }
     else
     {
+      PyErr_WarnEx(
+          PyExc_DeprecationWarning,
+          "memcpy_htod with a stream argument is deprecated. Use memcpy_dtoh_async instead.",
+          1);
       const stream &s = py::extract<const stream &>(stream_py);
       CUDAPP_CALL_GUARDED(cuMemcpyHtoDAsync, (dst, buf, len, s.handle()));
     }
+  }
+
+
+
+
+  void py_memcpy_htod_async(CUdeviceptr dst, py::object src, py::object stream_py)
+  {
+    const void *buf;
+    PYCUDA_BUFFER_SIZE_T len;
+    if (PyObject_AsReadBuffer(src.ptr(), &buf, &len))
+      throw py::error_already_set();
+
+    CUstream s_handle;
+    if (stream_py.ptr() != Py_None)
+    {
+      const stream &s = py::extract<const stream &>(stream_py);
+      s_handle = s.handle();
+    }
+    else
+      s_handle = 0;
+
+    CUDAPP_CALL_GUARDED(cuMemcpyHtoDAsync, (dst, buf, len, s_handle));
   }
 
 
@@ -222,9 +345,36 @@ namespace
     }
     else
     {
+      PyErr_WarnEx(
+          PyExc_DeprecationWarning,
+          "memcpy_dtoh with a stream argument is deprecated. Use memcpy_dtoh_async instead.",
+          1);
+
       const stream &s = py::extract<const stream &>(stream_py);
       CUDAPP_CALL_GUARDED(cuMemcpyDtoHAsync, (buf, src, len, s.handle()));
     }
+  }
+
+
+
+
+  void py_memcpy_dtoh_async(py::object dest, CUdeviceptr src, py::object stream_py)
+  {
+    void *buf;
+    PYCUDA_BUFFER_SIZE_T len;
+    if (PyObject_AsWriteBuffer(dest.ptr(), &buf, &len))
+      throw py::error_already_set();
+
+    CUstream s_handle;
+    if (stream_py.ptr() != Py_None)
+    {
+      const stream &s = py::extract<const stream &>(stream_py);
+      s_handle = s.handle();
+    }
+    else
+      s_handle = 0;
+
+    CUDAPP_CALL_GUARDED(cuMemcpyDtoHAsync, (buf, src, len, s_handle));
   }
 
 
@@ -253,6 +403,14 @@ namespace
     CUDAPP_CALL_GUARDED(cuMemcpyAtoH, (buf, ary.handle(), index, len));
   }
 
+  bool have_gl_ext()
+  {
+#ifdef HAVE_GL
+    return true;
+#else
+    return false;
+#endif
+  }
 }
 
 
@@ -266,7 +424,10 @@ void pycuda_expose_gl();
 
 BOOST_PYTHON_MODULE(_driver)
 {
-  def("get_version", cuda_version);
+  py::def("get_version", cuda_version);
+#if CUDA_VERSION >= 2020
+  py::def("get_driver_version", cuda::get_driver_version);
+#endif
 
 #define DECLARE_EXC(NAME, BASE) \
   Cuda##NAME = py::handle<>(PyErr_NewException("pycuda._driver." #NAME, BASE, NULL)); \
@@ -291,9 +452,21 @@ BOOST_PYTHON_MODULE(_driver)
     .value("SCHED_SPIN", CU_CTX_SCHED_SPIN)
     .value("SCHED_YIELD", CU_CTX_SCHED_YIELD)
     .value("SCHED_MASK", CU_CTX_SCHED_MASK)
-    .value("SCHED_FLAGS_MASK", CU_CTX_FLAGS_MASK)
+#if CUDA_VERSION >= 2020
+    .value("BLOCKING_SYNC", CU_CTX_BLOCKING_SYNC)
+    .value("MAP_HOST", CU_CTX_MAP_HOST)
+#endif
+    .value("FLAGS_MASK", CU_CTX_FLAGS_MASK)
     ;
 #endif
+
+#if CUDA_VERSION >= 2020
+  py::enum_<CUevent_flags>("event_flags")
+    .value("DEFAULT", CU_EVENT_DEFAULT)
+    .value("BLOCKING_SYNC", CU_EVENT_BLOCKING_SYNC)
+    ;
+#endif
+
 
   py::enum_<CUarray_format>("array_format")
     .value("UNSIGNED_INT8", CU_AD_FORMAT_UNSIGNED_INT8)
@@ -342,12 +515,76 @@ BOOST_PYTHON_MODULE(_driver)
 #if CUDA_VERSION >= 2000
     .value("MULTIPROCESSOR_COUNT", CU_DEVICE_ATTRIBUTE_MULTIPROCESSOR_COUNT)
 #endif
+#if CUDA_VERSION >= 2020
+    .value("KERNEL_EXEC_TIMEOUT", CU_DEVICE_ATTRIBUTE_KERNEL_EXEC_TIMEOUT)
+    .value("INTEGRATED", CU_DEVICE_ATTRIBUTE_INTEGRATED)
+    .value("CAN_MAP_HOST_MEMORY", CU_DEVICE_ATTRIBUTE_CAN_MAP_HOST_MEMORY)
+    .value("COMPUTE_MODE", CU_DEVICE_ATTRIBUTE_COMPUTE_MODE)
+#endif
     ;
+
+#if CUDA_VERSION >= 2020
+  py::enum_<CUfunction_attribute>("function_attribute")
+    .value("MAX_THREADS_PER_BLOCK", CU_FUNC_ATTRIBUTE_MAX_THREADS_PER_BLOCK)
+    .value("SHARED_SIZE_BYTES", CU_FUNC_ATTRIBUTE_SHARED_SIZE_BYTES)
+    .value("CONST_SIZE_BYTES", CU_FUNC_ATTRIBUTE_CONST_SIZE_BYTES)
+    .value("LOCAL_SIZE_BYTES", CU_FUNC_ATTRIBUTE_LOCAL_SIZE_BYTES)
+    .value("NUM_REGS", CU_FUNC_ATTRIBUTE_NUM_REGS)
+    .value("MAX", CU_FUNC_ATTRIBUTE_MAX)
+    ;
+#endif
+
   py::enum_<CUmemorytype>("memory_type")
     .value("HOST", CU_MEMORYTYPE_HOST)
     .value("DEVICE", CU_MEMORYTYPE_DEVICE)
     .value("ARRAY", CU_MEMORYTYPE_ARRAY)
     ;
+
+#if CUDA_VERSION >= 2020
+  py::enum_<CUcomputemode>("compute_mode")
+    .value("DEFAULT", CU_COMPUTEMODE_DEFAULT)
+    .value("EXCLUSIVE", CU_COMPUTEMODE_EXCLUSIVE)
+    .value("PROHIBITED", CU_COMPUTEMODE_PROHIBITED)
+    ;
+#endif
+
+#if CUDA_VERSION >= 2010
+  py::enum_<CUjit_option>("jit_option")
+    .value("MAX_REGISTERS", CU_JIT_MAX_REGISTERS)
+    .value("THREADS_PER_BLOCK", CU_JIT_THREADS_PER_BLOCK)
+    .value("WALL_TIME", CU_JIT_WALL_TIME)
+    .value("INFO_LOG_BUFFER", CU_JIT_INFO_LOG_BUFFER)
+    .value("INFO_LOG_BUFFER_SIZE_BYTES", CU_JIT_INFO_LOG_BUFFER_SIZE_BYTES)
+    .value("ERROR_LOG_BUFFER", CU_JIT_ERROR_LOG_BUFFER)
+    .value("ERROR_LOG_BUFFER_SIZE_BYTES", CU_JIT_ERROR_LOG_BUFFER_SIZE_BYTES)
+    .value("OPTIMIZATION_LEVEL", CU_JIT_OPTIMIZATION_LEVEL)
+    .value("TARGET_FROM_CUCONTEXT", CU_JIT_TARGET_FROM_CUCONTEXT)
+    .value("TARGET", CU_JIT_TARGET)
+    .value("FALLBACK_STRATEGY", CU_JIT_FALLBACK_STRATEGY)
+    ;
+
+  py::enum_<CUjit_target>("jit_target")
+    .value("COMPUTE_10", CU_TARGET_COMPUTE_10)
+    .value("COMPUTE_11", CU_TARGET_COMPUTE_11)
+    .value("COMPUTE_12", CU_TARGET_COMPUTE_12)
+    .value("COMPUTE_13", CU_TARGET_COMPUTE_13)
+    ;
+
+  py::enum_<CUjit_fallback>("jit_fallback")
+    .value("PREFER_PTX", CU_PREFER_PTX)
+    .value("PREFER_BINARY", CU_PREFER_BINARY)
+    ;
+#endif
+
+#if CUDA_VERSION >= 2020
+  {
+    py::class_<host_alloc_flags> cls("host_alloc_flags", py::no_init);
+    cls.attr("PORTABLE") = CU_MEMHOSTALLOC_PORTABLE;
+    cls.attr("DEVICEMAP") = CU_MEMHOSTALLOC_DEVICEMAP;
+    cls.attr("WRITECOMBINED") = CU_MEMHOSTALLOC_WRITECOMBINED;
+  }
+#endif
+
 
   py::def("init", init,
       py::arg("flags")=0);
@@ -361,7 +598,7 @@ BOOST_PYTHON_MODULE(_driver)
       .DEF_SIMPLE_METHOD(name)
       .DEF_SIMPLE_METHOD(compute_capability)
       .DEF_SIMPLE_METHOD(total_memory)
-      .DEF_SIMPLE_METHOD(get_attribute)
+      .def("get_attribute", device_get_attribute)
       .def(py::self == py::self)
       .def(py::self != py::self)
       .def("__hash__", &cl::hash)
@@ -410,7 +647,10 @@ BOOST_PYTHON_MODULE(_driver)
 
   py::def("module_from_file", module_from_file, (py::arg("filename")),
       py::return_value_policy<py::manage_new_object>());
-  py::def("module_from_buffer", module_from_buffer, (py::arg("buffer")),
+  py::def("module_from_buffer", module_from_buffer, 
+      (py::arg("buffer"), 
+       py::arg("options")=py::list(), 
+       py::arg("message_handler")=py::object()),
       py::return_value_policy<py::manage_new_object>());
 
   {
@@ -427,6 +667,14 @@ BOOST_PYTHON_MODULE(_driver)
       .DEF_SIMPLE_METHOD(launch)
       .DEF_SIMPLE_METHOD(launch_grid)
       .DEF_SIMPLE_METHOD(launch_grid_async)
+
+#if CUDA_VERSION >= 2020
+      .DEF_SIMPLE_METHOD(get_attribute)
+#endif
+
+      .add_property("lmem", function_get_lmem)
+      .add_property("smem", function_get_smem)
+      .add_property("registers", function_get_registers)
       ;
   }
 
@@ -445,6 +693,9 @@ BOOST_PYTHON_MODULE(_driver)
     typedef host_allocation cl;
     py::class_<cl, boost::noncopyable>("HostAllocation", py::no_init)
       .DEF_SIMPLE_METHOD(free)
+#if CUDA_VERSION >= 2020
+      .DEF_SIMPLE_METHOD(get_device_pointer)
+#endif
       ;
   }
 
@@ -468,7 +719,11 @@ BOOST_PYTHON_MODULE(_driver)
 
   py::def("memcpy_htod", py_memcpy_htod, 
       (py::args("dest"), py::arg("src"), py::arg("stream")=py::object()));
+  py::def("memcpy_htod_async", py_memcpy_htod_async, 
+      (py::args("dest"), py::arg("src"), py::arg("stream")=py::object()));
   py::def("memcpy_dtoh", py_memcpy_dtoh, 
+      (py::args("dest"), py::arg("src"), py::arg("stream")=py::object()));
+  py::def("memcpy_dtoh_async", py_memcpy_dtoh_async, 
       (py::args("dest"), py::arg("src"), py::arg("stream")=py::object()));
   py::def("memcpy_dtod", _cuMemcpyDtoD, py::args("dest", "src", "size"));
 
@@ -556,7 +811,8 @@ BOOST_PYTHON_MODULE(_driver)
 #endif
 
   py::def("pagelocked_empty", pagelocked_empty,
-      (py::arg("shape"), py::arg("dtype"), py::arg("order")="C"));
+      (py::arg("shape"), py::arg("dtype"), py::arg("order")="C",
+       py::arg("mem_flags")=0));
 
   {
     typedef event cl;
@@ -611,7 +867,11 @@ BOOST_PYTHON_MODULE(_driver)
     typedef texture_reference cl;
     py::class_<cl, boost::noncopyable>("TextureReference")
       .DEF_SIMPLE_METHOD(set_array)
-      .DEF_SIMPLE_METHOD_WITH_ARGS(set_address, ("devptr", "bytes"))
+      .def("set_address", &cl::set_address, 
+          (py::arg("devptr"), py::arg("bytes"), py::arg("allow_offset")=false))
+#if CUDA_VERSION >= 2020
+      .DEF_SIMPLE_METHOD_WITH_ARGS(set_address_2d, ("devptr", "descr", "pitch"))
+#endif
       .DEF_SIMPLE_METHOD_WITH_ARGS(set_format, ("format", "num_components"))
       .DEF_SIMPLE_METHOD_WITH_ARGS(set_address_mode, ("dim", "am"))
       .DEF_SIMPLE_METHOD(set_filter_mode)
@@ -634,6 +894,8 @@ BOOST_PYTHON_MODULE(_driver)
   py::scope().attr("TRSF_READ_AS_INTEGER") = CU_TRSF_READ_AS_INTEGER;
   py::scope().attr("TRSF_NORMALIZED_COORDINATES") = CU_TRSF_NORMALIZED_COORDINATES;
   py::scope().attr("TR_DEFAULT") = CU_PARAM_TR_DEFAULT;
+
+  DEF_SIMPLE_FUNCTION(have_gl_ext);
 
   pycuda_expose_tools();
 #ifdef HAVE_GL

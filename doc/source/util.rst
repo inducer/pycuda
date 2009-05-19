@@ -201,7 +201,12 @@ Memory Pool for pagelocked memory
 
         Return the size of the allocated memory in bytes.
 
-.. class:: PageLockedMemoryPool
+.. class:: PageLockedAllocator(flags=0)
+
+    Specifies the set of :class:`pycuda.driver.host_alloc_flags` used in its 
+    associated :class:`PageLockedMemoryPool`.
+
+.. class:: PageLockedMemoryPool(allocator=PageLockedAllocator())
 
     A memory pool for pagelocked host memory as allocated using 
     :func:`pycuda.driver.pagelocked_empty`. (see :ref:`mempool`)

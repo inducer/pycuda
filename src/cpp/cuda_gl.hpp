@@ -60,7 +60,7 @@ namespace cuda { namespace gl {
             CUDAPP_CALL_GUARDED(cuGLUnregisterBufferObject, (m_handle));
             m_valid = false;
           }
-          CUDA_CATCH_WARN_OOT_LEAK(buffer_object);
+          CUDAPP_CATCH_WARN_OOT_LEAK(buffer_object);
         }
         else
           throw cuda::error("buffer_object::unregister", CUDA_ERROR_INVALID_HANDLE);
@@ -101,7 +101,7 @@ namespace cuda { namespace gl {
             CUDAPP_CALL_GUARDED(cuGLUnmapBufferObject, (m_buffer_object->handle()));
             m_valid = false;
           }
-          CUDA_CATCH_WARN_OOT_LEAK(buffer_object_mapping)
+          CUDAPP_CATCH_WARN_OOT_LEAK(buffer_object_mapping)
         }
         else
           throw cuda::error("buffer_object_mapping::unmap", CUDA_ERROR_INVALID_HANDLE);

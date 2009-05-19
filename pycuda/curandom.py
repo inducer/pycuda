@@ -175,7 +175,7 @@ md5_code = """
 
 import numpy
 
-def rand(shape, dtype=numpy.float32):
+def rand(shape, dtype=numpy.float32, stream=None):
     from pycuda.gpuarray import GPUArray
     from pycuda.elementwise import get_elwise_kernel
 
@@ -211,7 +211,7 @@ def rand(shape, dtype=numpy.float32):
         raise NotImplementedError;
 
     func.set_block_shape(*result._block)
-    func.prepared_async_call(result._grid, result.stream,
+    func.prepared_async_call(result._grid, stream,
             result.gpudata, numpy.random.randint(2**31-1), result.size)
     
     return result

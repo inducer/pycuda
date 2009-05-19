@@ -144,9 +144,16 @@ Version 0.93
 
 .. note:: 
 
-    Version 0.93 is currently in active development. If you'd like to try a
-    snapshot, you may access PyCUDA's source control archive via the
-    PyCUDA homepage.
+    Version 0.93 is currently in release candidate status. If you'd 
+    like to try a snapshot, you may access PyCUDA's source control 
+    archive via the PyCUDA homepage.
+
+.. warning::
+
+    Version 0.93 makes some changes to the PyCUDA programming interface.
+    In all cases where documented features were changed, the old usage
+    continues to work, but results in a warning. It is recommended that
+    you update your code to remove the warning.
 
 * OpenGL interoperability in :mod:`pycuda.gl`.
 * Document :meth:`pycuda.gpuarray.GPUArray.__len__`. Change its definition
@@ -156,6 +163,21 @@ Version 0.93
   data types, including type promotion.
 * Add :func:`pycuda.gpuarray.take`.
 * Fix thread handling by making internal context stack thread-local.
+* Add :class:`pycuda.reduction.ReductionKernel`.
+* Add :func:`pycuda.gpuarray.sum`, :func:`pycuda.gpuarray.dot`, 
+  :func:`pycuda.gpuarray.subset_dot`.
+* Synchronous and asynchronous memory transfers are now separate
+  from each other, the latter having an ``_async`` suffix.
+  The now-synchronous forms still take a :class:`pycuda.driver.Stream`
+  argument, but this practice is deprecated and prints a warning.
+* :class:`pycuda.gpuarray.GPUArray` no longer has an associated 
+  :class:`pycuda.driver.Stream`.  Asynchronous GPUArray transfers are 
+  now separate from synchronous ones and have an ``_async`` suffix.
+* Support for features added in CUDA 2.2.
+* :class:`pycuda.driver.SourceModule` has been moved to
+  :class:`pycuda.compiler.SourceModule`. It is still available by
+  the old name, but will print a warning about the impending
+  deprecation.
 
 Version 0.92
 ------------

@@ -38,12 +38,12 @@ def search_on_path(filename):
     from os import pathsep, environ
 
     search_path = environ["PATH"]
-    print "*", search_path
+    #print "*", search_path
 
     file_found = 0
     paths = search_path.split(pathsep)
     for path in paths:
-        print path
+        #print path
         if exists(join(path, filename)):
              file_found = 1
              break
@@ -111,7 +111,7 @@ def main():
 
     setup(name="pycuda",
             # metadata
-            version="0.93beta",
+            version="0.93rc1",
             description="Python wrapper for Nvidia CUDA",
             long_description="""
             PyCUDA lets you access `Nvidia <http://nvidia.com>`_'s `CUDA
@@ -170,7 +170,6 @@ def main():
                 "pytools>=8",
                 ],
 
-            package_dir={"pycuda": "src/python"},
             ext_package="pycuda",
             ext_modules=[
                 NumpyExtension("_driver", 

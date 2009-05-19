@@ -1,5 +1,4 @@
 from _driver import *
-from pytools import memoize
 
 
 
@@ -25,11 +24,17 @@ class ArgumentHandler(object):
 
 class In(ArgumentHandler):
     def pre_call(self, stream):
-        memcpy_htod(self.get_device_alloc(), self.array, stream)
+        if stream is not None:
+            memcpy_htod_async(self.get_device_alloc(), self.array, stream)
+        else:
+            memcpy_htod_async(self.get_device_alloc(), self.array)
 
 class Out(ArgumentHandler):
     def post_call(self, stream):
-        memcpy_dtoh(self.array, self.get_device_alloc(), stream)
+        if stream is not None:
+            memcpy_dtoh_async(self.array, self.get_device_alloc(), stream)
+        else:
+            memcpy_dtoh(self.array, self.get_device_alloc())
 
 class InOut(In, Out):
     pass
@@ -232,15 +237,15 @@ _add_functionality()
 
 
 
-def pagelocked_zeros(shape, dtype, order="C"):
-    result = pagelocked_empty(shape, dtype, order)
+def pagelocked_zeros(shape, dtype, order="C", mem_flags=0):
+    result = pagelocked_empty(shape, dtype, order, mem_flags)
     result.fill(0)
     return result
 
 
 
 
-def pagelocked_empty_like(array):
+def pagelocked_empty_like(array, mem_flags=0):
     if array.flags.c_contiguous:
         order = "C"
     elif array.flags.f_contiguous:
@@ -248,13 +253,13 @@ def pagelocked_empty_like(array):
     else:
         raise ValueError, "could not detect array order"
 
-    return pagelocked_empty(array.shape, array.dtype, order)
+    return pagelocked_empty(array.shape, array.dtype, order, mem_flags)
 
 
 
 
-def pagelocked_zeros_like(array):
-    result = pagelocked_empty_like(array)
+def pagelocked_zeros_like(array, mem_flags=0):
+    result = pagelocked_empty_like(array, mem_flags)
     result.fill(0)
     return result
 
@@ -344,7 +349,6 @@ def matrix_to_array(matrix, order, allow_double_hack=False):
 def make_multichannel_2d_array(ndarray, order):
     """Channel count has to be the first dimension of the C{ndarray}."""
 
-    import numpy
     descr = ArrayDescriptor()
 
     if order.upper() == "C":

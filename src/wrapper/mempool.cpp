@@ -34,7 +34,7 @@ namespace
           cuda::scoped_context_activation ca(get_context());
           cuda::mem_free(p);
         }
-        CUDA_CATCH_WARN_OOT_LEAK(pooled_device_allocation);
+        CUDAPP_CATCH_WARN_OOT_LEAK(pooled_device_allocation);
       }
 
       void try_release_blocks()
@@ -48,13 +48,20 @@ namespace
 
   class host_allocator
   {
+    private:
+      unsigned m_flags;
+
     public:
       typedef void *pointer_type;
       typedef unsigned int size_type;
 
+      host_allocator(unsigned flags=0)
+        : m_flags(flags)
+      { }
+
       pointer_type allocate(size_type s)
       {
-        return cuda::mem_alloc_host(s);
+        return cuda::mem_alloc_host(s, m_flags);
       }
 
       void free(pointer_type p)
@@ -226,11 +233,20 @@ void pycuda_expose_tools()
   }
 
   {
+    typedef host_allocator cl;
+    py::class_<cl> wrapper("PageLockedAllocator",
+        py::init<py::optional<unsigned> >());
+  }
+
+  {
     typedef pycuda::memory_pool<host_allocator> cl;
 
     py::class_<
       cl, boost::noncopyable, 
-      boost::shared_ptr<cl> > wrapper("PageLockedMemoryPool");
+      boost::shared_ptr<cl> > wrapper(
+          "PageLockedMemoryPool",
+          py::init<py::optional<host_allocator const &> >()
+          );
     wrapper
       .def("allocate", host_pool_allocate,
           (py::arg("shape"), py::arg("dtype"), py::arg("order")="C"));

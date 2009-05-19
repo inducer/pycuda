@@ -5,6 +5,8 @@
 
 
 #include <boost/python.hpp>
+#include <boost/foreach.hpp>
+#include <boost/python/stl_iterator.hpp>
 
 
 
@@ -36,6 +38,11 @@
 #define DEF_SIMPLE_RW_MEMBER(NAME) \
   def_readwrite(#NAME, &cl::m_##NAME)
 
+#define PYTHON_FOREACH(NAME, ITERABLE) \
+  BOOST_FOREACH(boost::python::object NAME, \
+      std::make_pair( \
+        boost::python::stl_input_iterator<boost::python::object>(ITERABLE), \
+        boost::python::stl_input_iterator<boost::python::object>()))
 
 
 

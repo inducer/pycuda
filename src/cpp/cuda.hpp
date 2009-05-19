@@ -55,7 +55,7 @@
     if (cu_status_code != CUDA_SUCCESS) \
       throw cuda::error(#NAME, cu_status_code);\
   }
-#define CUDA_CATCH_WARN_OOT_LEAK(TYPE) \
+#define CUDAPP_CATCH_WARN_OOT_LEAK(TYPE) \
   catch (cuda::cannot_activate_out_of_thread_context) \
   { }
   // In all likelihood, this TYPE's managing thread has exited, and
@@ -166,6 +166,19 @@ namespace cuda
 
 
 
+  // version query ------------------------------------------------------------
+#if CUDA_VERSION >= 2020
+  inline int get_driver_version()
+  {
+    int result;
+    CUDAPP_CALL_GUARDED(cuDriverGetVersion, (&result));
+    return result;
+  }
+#endif
+
+
+
+
   // device -------------------------------------------------------------------
   class context;
 
@@ -207,7 +220,7 @@ namespace cuda
         return bytes;
       }
 
-      int get_attribute(CUdevice_attribute attr)
+      int get_attribute(CUdevice_attribute attr) const
       {
         int result;
         CUDAPP_CALL_GUARDED(cuDeviceGetAttribute, (&result, attr, m_device));
@@ -541,7 +554,7 @@ namespace cuda
           scoped_context_activation ca(get_context());
           CUDAPP_CALL_GUARDED(cuStreamDestroy, (m_stream)); 
         }
-        CUDA_CATCH_WARN_OOT_LEAK(stream);
+        CUDAPP_CATCH_WARN_OOT_LEAK(stream);
       }
 
       void synchronize()
@@ -605,7 +618,7 @@ namespace cuda
             scoped_context_activation ca(get_context());
             CUDAPP_CALL_GUARDED(cuArrayDestroy, (m_array)); 
           }
-          CUDA_CATCH_WARN_OOT_LEAK(array);
+          CUDAPP_CATCH_WARN_OOT_LEAK(array);
 
           m_managed = false;
           release_context();
@@ -678,14 +691,27 @@ namespace cuda
         m_array = ary;
       }
 
-      unsigned int set_address(CUdeviceptr dptr, unsigned int bytes)
+      unsigned int set_address(CUdeviceptr dptr, unsigned int bytes, bool allow_offset=false)
       { 
         unsigned int byte_offset;
         CUDAPP_CALL_GUARDED(cuTexRefSetAddress, (&byte_offset,
               m_texref, dptr, bytes)); 
+
+        if (!allow_offset && byte_offset != 0)
+          throw cuda::error("texture_reference::set_address", CUDA_ERROR_INVALID_VALUE,
+              "texture binding resulted in offset, but allow_offset was false");
+
         m_array.reset();
         return byte_offset;
       }
+
+#if CUDA_VERSION >= 2020
+      void set_address_2d(CUdeviceptr dptr, 
+          const CUDA_ARRAY_DESCRIPTOR &descr, unsigned int pitch)
+      { 
+        CUDAPP_CALL_GUARDED(cuTexRefSetAddress2D, (m_texref, &descr, dptr, pitch)); 
+      }
+#endif
 
       void set_format(CUarray_format fmt, int num_packed_components)
       { CUDAPP_CALL_GUARDED(cuTexRefSetFormat, (m_texref, fmt, num_packed_components)); }
@@ -764,7 +790,7 @@ namespace cuda
           scoped_context_activation ca(get_context());
           CUDAPP_CALL_GUARDED(cuModuleUnload, (m_module));
         }
-        CUDA_CATCH_WARN_OOT_LEAK(module);
+        CUDAPP_CATCH_WARN_OOT_LEAK(module);
       }
 
       CUmodule handle() const
@@ -840,6 +866,15 @@ namespace cuda
       { CUDAPP_CALL_GUARDED_THREADED(cuLaunchGrid, (m_function, grid_width, grid_height)); }
       void launch_grid_async(int grid_width, int grid_height, const stream &s)
       { CUDAPP_CALL_GUARDED_THREADED(cuLaunchGridAsync, (m_function, grid_width, grid_height, s.handle())); }
+
+#if CUDA_VERSION >= 2020
+      int get_attribute(CUfunction_attribute attr) const
+      {
+        int result;
+        CUDAPP_CALL_GUARDED(cuFuncGetAttribute, (&result, attr, m_function));
+        return result;
+      }
+#endif
   };
 
   inline
@@ -898,7 +933,7 @@ namespace cuda
             scoped_context_activation ca(get_context());
             mem_free(m_devptr);
           }
-          CUDA_CATCH_WARN_OOT_LEAK(device_allocation);
+          CUDAPP_CATCH_WARN_OOT_LEAK(device_allocation);
 
           release_context();
           m_valid = false;
@@ -1067,10 +1102,17 @@ namespace cuda
 
 
   // host memory --------------------------------------------------------------
-  inline void *mem_alloc_host(unsigned int size)
+  inline void *mem_alloc_host(unsigned int size, unsigned flags=0)
   {
     void *m_data;
+#if CUDA_VERSION >= 2020
+    CUDAPP_CALL_GUARDED(cuMemHostAlloc, (&m_data, size, flags));
+#else
+    if (flags != 0)
+      throw cuda::error("mem_alloc_host", CUDA_ERROR_INVALID_VALUE,
+          "nonzero flags in mem_alloc_host not allowed in CUDA 2.1 and older");
     CUDAPP_CALL_GUARDED(cuMemAllocHost, (&m_data, size));
+#endif
     return m_data;
   }
 
@@ -1082,30 +1124,53 @@ namespace cuda
 
 
 
-  struct host_allocation : public boost::noncopyable
+  struct host_allocation : public boost::noncopyable, public context_dependent
   {
     private:
+      bool m_valid;
       void *m_data;
 
     public:
-      host_allocation(unsigned bytesize)
-        : m_data(mem_alloc_host(bytesize))
+      host_allocation(unsigned bytesize, unsigned flags=0)
+        : m_valid(true), m_data(mem_alloc_host(bytesize, flags))
       { }
 
       ~host_allocation()
-      { free(); }
+      { 
+        if (m_valid)
+          free(); 
+      }
 
       void free()
       {
-        if (m_data)
+        if (m_valid)
         {
-          mem_free_host(m_data); 
-          m_data = 0;
+          try
+          {
+            scoped_context_activation ca(get_context());
+            mem_free_host(m_data); 
+          }
+          CUDAPP_CATCH_WARN_OOT_LEAK(host_allocation);
+
+          release_context();
+          m_valid = false;
         }
+        else
+          throw cuda::error("host_allocation::free", CUDA_ERROR_INVALID_HANDLE);
       }
       
       void *data()
       { return m_data; }
+
+#if CUDA_VERSION >= 2020
+      CUdeviceptr get_device_pointer()
+      {
+        CUdeviceptr result;
+        CUDAPP_CALL_GUARDED(cuMemHostGetDevicePointer, (&result, m_data, 0));
+        return result;
+      }
+#endif
+
   };
 
 
@@ -1128,7 +1193,7 @@ namespace cuda
           scoped_context_activation ca(get_context());
           CUDAPP_CALL_GUARDED(cuEventDestroy, (m_event)); 
         }
-        CUDA_CATCH_WARN_OOT_LEAK(event);
+        CUDAPP_CATCH_WARN_OOT_LEAK(event);
       }
 
       void record()

@@ -21,7 +21,7 @@ void pycuda_expose_gl()
 
   DEF_SIMPLE_FUNCTION(gl_init);
 
-  py::def("make_context", make_gl_context, (arg("dev"), arg("flags")=0));
+  py::def("make_gl_context", make_gl_context, (arg("dev"), arg("flags")=0));
 
   {
     typedef buffer_object cl;
