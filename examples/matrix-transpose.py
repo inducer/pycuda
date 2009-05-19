@@ -1,4 +1,7 @@
+# Exercise 1 from http://webapp.dam.brown.edu/wiki/SciComp/CudaExercises
+
 # Transposition of a matrix A
+
 from __future__ import division
 
 import pycuda.driver as cuda
@@ -6,6 +9,11 @@ import pycuda.autoinit
 from pycuda.compiler import SourceModule
 
 import numpy
+
+
+# Define block size
+
+block_size = 16
 
 
 # Define A on host and copy A to device
@@ -18,7 +26,6 @@ A = A.astype(numpy.float32)
 A_gpu = cuda.mem_alloc(A.nbytes)
 cuda.memcpy_htod(A_gpu, A)
 
-print "Size of A in Bytes:", A.nbytes
  
 # Initialise A_t on host and device
 
@@ -29,7 +36,7 @@ A_t_gpu = cuda.mem_alloc(A_t.nbytes)
 # Transpose A on the device
 
 mod = SourceModule("""
-  #define BLOCK_SIZE 16
+  #define BLOCK_SIZE %(block_size)d
   #define A_BLOCK_STRIDE (BLOCK_SIZE*a_width)
   #define A_T_BLOCK_STRIDE (BLOCK_SIZE*a_height)
 
@@ -59,13 +66,13 @@ mod = SourceModule("""
     A_t[glob_idx_a_t+BLOCK_SIZE] = A_shared[threadIdx.x][threadIdx.y+BLOCK_SIZE];
     A_t[glob_idx_a_t+A_T_BLOCK_STRIDE+BLOCK_SIZE] = A_shared[threadIdx.x+BLOCK_SIZE][threadIdx.y+BLOCK_SIZE];
   }
-  """)
+  """% {"block_size": block_size})
 
 # Preparation of the function call
 
-block_size = 16
 func = mod.get_function("transpose")
 func.prepare("PPii", block=(block_size, block_size, 1))
+
 
 # Preparation for getting the time
 
@@ -75,6 +82,7 @@ stop = pycuda.driver.Event()
 assert width % (2*block_size) == 0
 assert height % (2*block_size) == 0
 
+
 # Warm up
 
 func.prepared_call((width // (2*block_size),height // (2*block_size)), 
@@ -82,6 +90,7 @@ func.prepared_call((width // (2*block_size),height // (2*block_size)),
 
 func.prepared_call((width // (2*block_size),height // (2*block_size)), 
 		A_gpu, A_t_gpu, width, height)
+
 
 # Call function and get time
 
@@ -94,21 +103,19 @@ for i in range(times):
         		A_gpu, A_t_gpu, width, height)
 stop.record()
 
+
 # Copy A_t from device to host
+
 
 cuda.memcpy_dtoh(A_t, A_t_gpu)
 
 
-# Evaluate memory bandwidth
+# Evaluate memory bandwidth and verify solution
 
 stop.synchronize()
 
 elapsed_seconds = stop.time_since(start) / times * 1e-3
 print "mem bw:", A.nbytes / elapsed_seconds / 1e9 * 2
-
-
-#print "A =", A
-#print "A_t =", A_t
 
 import numpy.linalg as la
 print "errornorm =", la.norm(A.T-A_t)
