@@ -1,104 +1,208 @@
 # Exercise 1 from http://webapp.dam.brown.edu/wiki/SciComp/CudaExercises
 
-# Transposition of a matrix A
+# Transposition of a matrix
+# by Hendrik Riedmann <riedmann@dam.brown.edu>
 
 from __future__ import division
+
 import pycuda.driver as cuda
-import pycuda.autoinit
-import pycuda.curandom as curandom
 import pycuda.gpuarray as gpuarray
+import pycuda.autoinit
 from pycuda.compiler import SourceModule
+
 import numpy
+import numpy.linalg as la
+
+from pytools import memoize
 
 block_size = 16
 
-# Define A on host and copy A to device
-height = 7488
-width = 7488
+@memoize
+def _get_transpose_kernel():
+    mod = SourceModule("""
+      #define BLOCK_SIZE %(block_size)d
+      #define A_BLOCK_STRIDE (BLOCK_SIZE*a_width)
+      #define A_T_BLOCK_STRIDE (BLOCK_SIZE*a_height)
 
-A = numpy.zeros((height, width), dtype=numpy.float32)
-A_gpu = curandom.rand(height*width)
+      __global__ void transpose(float *A_t, float *A, int a_width, int a_height)
+      {
+        // Base indices in A and A_t
+        int base_idx_a   = blockIdx.x*BLOCK_SIZE + blockIdx.y*A_BLOCK_STRIDE;
+        int base_idx_a_t = blockIdx.y*BLOCK_SIZE + blockIdx.x*A_T_BLOCK_STRIDE;
 
-# Define A_t on host and device
-A_t = numpy.zeros((width, height), dtype=numpy.float32)
-A_t_gpu = gpuarray.zeros_like(A_gpu)
+        // Global indices in A and A_t
+        int glob_idx_a   = base_idx_a + threadIdx.x + a_width*threadIdx.y;
+        int glob_idx_a_t = base_idx_a_t + threadIdx.x + a_height*threadIdx.y;
+
+        __shared__ float A_shared[BLOCK_SIZE][BLOCK_SIZE+1];
+
+        // Store transposed submatrix to shared memory
+        A_shared[threadIdx.y][threadIdx.x] = A[glob_idx_a];
+          
+        __syncthreads();
+
+        // Write transposed submatrix to global memory
+        A_t[glob_idx_a_t] = A_shared[threadIdx.x][threadIdx.y];
+      }
+      """% {"block_size": block_size})
+
+    func = mod.get_function("transpose")
+    func.prepare("PPii", block=(block_size, block_size, 1))
+
+    from pytools import Record
+    class TransposeKernelInfo(Record): pass
+
+    return TransposeKernelInfo(func=func, 
+            block_size=block_size,
+            granularity=block_size)
 
 
-# Transpose A on the device
-mod = SourceModule("""
-#define BLOCK_SIZE %(block_size)d
-#define A_BLOCK_STRIDE (BLOCK_SIZE*a_width)
-#define A_T_BLOCK_STRIDE (BLOCK_SIZE*a_height)
 
-__global__ void transpose(float *A, float *A_t, int a_width, int a_height)
-{
-    // Base indices in A and A_t
-    int base_idx_a   = 2*blockIdx.x*BLOCK_SIZE + 2*blockIdx.y*A_BLOCK_STRIDE;
-    int base_idx_a_t = 2*blockIdx.y*BLOCK_SIZE + 2*blockIdx.x*A_T_BLOCK_STRIDE;
+def _get_big_block_transpose_kernel():
+    mod = SourceModule("""
+      #define BLOCK_SIZE %(block_size)d
+      #define A_BLOCK_STRIDE (BLOCK_SIZE*a_width)
+      #define A_T_BLOCK_STRIDE (BLOCK_SIZE*a_height)
 
-    // Global indices in A and A_t
-    int glob_idx_a   = base_idx_a + threadIdx.x + a_width*threadIdx.y;
-    int glob_idx_a_t = base_idx_a_t + threadIdx.x + a_height*threadIdx.y;
+      __global__ void transpose(float *A, float *A_t, int a_width, int a_height)
+      {
+        // Base indices in A and A_t
+        int base_idx_a   = 2*blockIdx.x*BLOCK_SIZE + 2*blockIdx.y*A_BLOCK_STRIDE;
+        int base_idx_a_t = 2*blockIdx.y*BLOCK_SIZE + 2*blockIdx.x*A_T_BLOCK_STRIDE;
 
-    __shared__ float A_shared[2*BLOCK_SIZE][2*BLOCK_SIZE+1];
+        // Global indices in A and A_t
+        int glob_idx_a   = base_idx_a + threadIdx.x + a_width*threadIdx.y;
+        int glob_idx_a_t = base_idx_a_t + threadIdx.x + a_height*threadIdx.y;
 
-    // Store transposed submatrix to shared memory
-    A_shared[threadIdx.y][threadIdx.x] = A[glob_idx_a];
-    A_shared[threadIdx.y][threadIdx.x+BLOCK_SIZE] = 
-    A[glob_idx_a+A_BLOCK_STRIDE];
-    A_shared[threadIdx.y+BLOCK_SIZE][threadIdx.x] = A[glob_idx_a+BLOCK_SIZE];
-    A_shared[threadIdx.y+BLOCK_SIZE][threadIdx.x+BLOCK_SIZE] = 
-    A[glob_idx_a+BLOCK_SIZE+A_BLOCK_STRIDE];
-      
-    __syncthreads();
+        __shared__ float A_shared[2*BLOCK_SIZE][2*BLOCK_SIZE+1];
 
-    // Write transposed submatrix to global memory
-    A_t[glob_idx_a_t] = A_shared[threadIdx.x][threadIdx.y];
-    A_t[glob_idx_a_t+A_T_BLOCK_STRIDE] = 
-    A_shared[threadIdx.x+BLOCK_SIZE][threadIdx.y];
-    A_t[glob_idx_a_t+BLOCK_SIZE] = 
-    A_shared[threadIdx.x][threadIdx.y+BLOCK_SIZE];
-    A_t[glob_idx_a_t+A_T_BLOCK_STRIDE+BLOCK_SIZE] = 
-    A_shared[threadIdx.x+BLOCK_SIZE][threadIdx.y+BLOCK_SIZE];
-}
-  """% {"block_size": block_size})
+        // Store transposed submatrix to shared memory
+        A_shared[threadIdx.y][threadIdx.x] = A[glob_idx_a];
+        A_shared[threadIdx.y][threadIdx.x+BLOCK_SIZE] = A[glob_idx_a+A_BLOCK_STRIDE];
+        A_shared[threadIdx.y+BLOCK_SIZE][threadIdx.x] = A[glob_idx_a+BLOCK_SIZE];
+        A_shared[threadIdx.y+BLOCK_SIZE][threadIdx.x+BLOCK_SIZE] = 
+          A[glob_idx_a+BLOCK_SIZE+A_BLOCK_STRIDE];
+          
+        __syncthreads();
 
-# Preparation of the function call
-func = mod.get_function("transpose")
-func.prepare("PPii", block=(block_size, block_size, 1))
+        // Write transposed submatrix to global memory
+        A_t[glob_idx_a_t] = A_shared[threadIdx.x][threadIdx.y];
+        A_t[glob_idx_a_t+A_T_BLOCK_STRIDE] = A_shared[threadIdx.x+BLOCK_SIZE][threadIdx.y];
+        A_t[glob_idx_a_t+BLOCK_SIZE] = A_shared[threadIdx.x][threadIdx.y+BLOCK_SIZE];
+        A_t[glob_idx_a_t+A_T_BLOCK_STRIDE+BLOCK_SIZE] = A_shared[threadIdx.x+BLOCK_SIZE][threadIdx.y+BLOCK_SIZE];
+      }
+      """% {"block_size": block_size})
 
-# Preparation for getting the time
-start = pycuda.driver.Event()
-stop = pycuda.driver.Event()
+    func = mod.get_function("transpose")
+    func.prepare("PPii", block=(block_size, block_size, 1))
 
-assert width % (2*block_size) == 0
-assert height % (2*block_size) == 0
+    from pytools import Record
+    class TransposeKernelInfo(Record): pass
 
-# Warm up
-func.prepared_call((width // (2*block_size),height // (2*block_size)), 
-		A_gpu.gpudata, A_t_gpu.gpudata, width, height)
-func.prepared_call((width // (2*block_size),height // (2*block_size)), 
-		A_gpu.gpudata, A_t_gpu.gpudata, width, height)
+    return TransposeKernelInfo(func=func, 
+            block_size=block_size, 
+            granularity=2*block_size)
 
-# Call function and get time
-times = 4
 
-cuda.Context.synchronize()
-start.record()
-for i in range(times):
-    func.prepared_call((width // (2*block_size),height // (2*block_size)), 
-        		A_gpu.gpudata, A_t_gpu.gpudata, width, height)
-stop.record()
 
-# Copy A and A_t from device to host
-A_t_gpu.get(A_t)
-A_gpu.get(A)
 
-# Evaluate memory bandwidth and verify solution
-stop.synchronize()
+def _transpose(tgt, src):
+    krnl = _get_big_block_transpose_kernel()
 
-elapsed_seconds = stop.time_since(start) / times * 1e-3
-print "mem bw:", A_t.nbytes / elapsed_seconds / 1e9 * 2
+    w, h = src.shape
+    assert tgt.shape == (h, w)
+    assert w % krnl.granularity == 0
+    assert h % krnl.granularity == 0
 
-import numpy.linalg as la
-print "errornorm =", la.norm(A.T-A_t)
+    krnl.func.prepared_call(
+                    (w // krnl.granularity, h // krnl.granularity),
+                    tgt.gpudata, src.gpudata, w, h)
+
+
+
+
+def transpose(src):
+    w, h = src.shape
+
+    result = gpuarray.empty((h, w), dtype=src.dtype)
+    _transpose(result, src)
+    return result
+
+
+
+
+
+def check_transpose():
+    from pycuda.curandom import rand
+
+    for i in numpy.arange(10, 13, 0.125):
+        size = int(((2**i) // 32) * 32)
+        print size
+
+        source = rand((size, size), dtype=numpy.float32)
+
+        result = transpose(source)
+
+        err = source.get().T - result.get()
+        err_norm = la.norm(err)
+
+        source.gpudata.free()
+        result.gpudata.free()
+
+        assert err_norm == 0, (size, err_norm)
+
+
+
+
+def run_benchmark():
+    from pycuda.curandom import rand
+
+    sizes = []
+    bandwidths = []
+    times = []
+    for i in numpy.arange(10, 13, 2**(-6)):
+        size = int(((2**i) // 16) * 16)
+
+        source = rand((size, size), dtype=numpy.float32)
+        target = gpuarray.empty((size, size), dtype=source.dtype)
+
+        start = pycuda.driver.Event()
+        stop = pycuda.driver.Event()
+
+        count = 10
+
+        cuda.Context.synchronize()
+        start.record()
+
+        for i in range(count):
+            _transpose(target, source)
+
+        stop.record()
+        stop.synchronize()
+
+        elapsed_seconds = stop.time_since(start)*1e-3
+        mem_bw = source.nbytes / elapsed_seconds * 2 * count
+
+        sizes.append(size)
+        bandwidths.append(mem_bw)
+        times.append(elapsed_seconds)
+
+        source.gpudata.free()
+        target.gpudata.free()
+
+    slow_sizes = [s for s, bw in zip(sizes, bandwidths) if bw < 40e9]
+    print slow_sizes
+    print [s % 64 for s in slow_sizes]
+    from matplotlib.pyplot import semilogx, loglog, show, savefig, clf
+    semilogx(sizes, bandwidths)
+    savefig("transpose-bw.png")
+    clf()
+    loglog(sizes, times)
+    savefig("transpose-times.png")
+
+
+
+
+check_transpose()
+#run_benchmark()
+
