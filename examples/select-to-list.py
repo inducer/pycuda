@@ -8,21 +8,16 @@ import pycuda.driver as cuda
 import pycuda.autoinit
 import pycuda.gpuarray as gpuarray
 from pycuda.compiler import SourceModule
-
 import numpy
 
-
 # Define block size and number of elements per thread
-
 block_size = 512
 el_per_thread = 1
 # !!! program only works for el_per_thread = 1            !!!
 # !!! otherwise the for-loops in the kernel cause a crash !!!
 multiple_block_size = el_per_thread * block_size
 
-
 # Create an array of random numbers and set limit
-
 amount = 256*2560
 limit = 0.9
 assert amount % multiple_block_size == 0
@@ -30,25 +25,16 @@ a = numpy.random.rand(amount)
 a = a.astype(numpy.float32)
 a_gpu = gpuarray.to_gpu(a)
 
-
 # Initialize array for the selection on device
-
 selec = numpy.zeros_like(a)
 selec = selec.astype(numpy.int32)
 selec.fill(-1)
 selec_gpu = gpuarray.to_gpu(selec)
 
-
 # Initialize a counter on device
-
-counter = numpy.zeros(1)
-counter = counter.astype(numpy.int32)
-counter_gpu = cuda.mem_alloc(counter.nbytes)
-cuda.memcpy_htod(counter_gpu, counter)
-
+counter_gpu = gpuarray.zeros(1, dtype=numpy.int32)
 
 # Computation on device
-
 mod = SourceModule("""
 #define BLOCK_SIZE %(block_size)d
 #define EL_PER_THREAD %(el_per_thread)d
@@ -112,46 +98,31 @@ __global__ void select_them(float *a, int *selec, float limit, int *counter)
 }
 """ % {"block_size": block_size, "el_per_thread": el_per_thread})
 
-
 # Prepare function call
-
 func = mod.get_function("select_them")
 func.prepare("PPfP", block=(block_size, 1, 1))
 
-
 # Prepare getting the time
-
 start = cuda.Event()
 stop = cuda.Event()
 
-
 # Call function and get time
-
 cuda.Context.synchronize()
 start.record()
 func.prepared_call((amount // multiple_block_size, 1),
-                   a_gpu.gpudata, selec_gpu.gpudata, limit, counter_gpu)
+                   a_gpu.gpudata, selec_gpu.gpudata, limit, counter_gpu.gpudata)
 stop.record()
 
-
 # Copy selection from device to host
-
 selec_gpu.get(selec)
 
 stop.synchronize()
 
-
 # Evaluate memory bandwidth and verify solution
-
-elems_in_selec = 0
-for i in range(0, amount):
-    if selec[i] >= 0:
-        elems_in_selec = elems_in_selec + 1
+elems_in_selec = len(numpy.nonzero(selec >= 0))
 
 elapsed_seconds = stop.time_since(start) * 1e-3
 print "mem bw:", (a.nbytes + elems_in_selec * 4) / elapsed_seconds / 1e9
-
-numpy.set_printoptions(threshold=2000)
 
 filtered_set = sorted(list(item for item in selec if item != -1))
 reference_set = sorted(list(i for i, x in enumerate(a) if x>limit))
