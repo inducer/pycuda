@@ -20,19 +20,21 @@ block_size = 16
 @memoize
 def _get_transpose_kernel():
     mod = SourceModule("""
-      #define BLOCK_SIZE %(block_size)d
-      #define A_BLOCK_STRIDE (BLOCK_SIZE*a_width)
-      #define A_T_BLOCK_STRIDE (BLOCK_SIZE*a_height)
+    #define BLOCK_SIZE %(block_size)d
+    #define A_BLOCK_STRIDE (BLOCK_SIZE * a_width)
+    #define A_T_BLOCK_STRIDE (BLOCK_SIZE * a_height)
 
-      __global__ void transpose(float *A_t, float *A, int a_width, int a_height)
-      {
+    __global__ void transpose(float *A_t, float *A, int a_width, int a_height)
+    {
         // Base indices in A and A_t
-        int base_idx_a   = blockIdx.x*BLOCK_SIZE + blockIdx.y*A_BLOCK_STRIDE;
-        int base_idx_a_t = blockIdx.y*BLOCK_SIZE + blockIdx.x*A_T_BLOCK_STRIDE;
+        int base_idx_a   = blockIdx.x * BLOCK_SIZE + 
+	blockIdx.y * A_BLOCK_STRIDE;
+        int base_idx_a_t = blockIdx.y * BLOCK_SIZE + 
+	blockIdx.x * A_T_BLOCK_STRIDE;
 
         // Global indices in A and A_t
-        int glob_idx_a   = base_idx_a + threadIdx.x + a_width*threadIdx.y;
-        int glob_idx_a_t = base_idx_a_t + threadIdx.x + a_height*threadIdx.y;
+        int glob_idx_a   = base_idx_a + threadIdx.x + a_width * threadIdx.y;
+        int glob_idx_a_t = base_idx_a_t + threadIdx.x + a_height * threadIdx.y;
 
         __shared__ float A_shared[BLOCK_SIZE][BLOCK_SIZE+1];
 
@@ -43,8 +45,8 @@ def _get_transpose_kernel():
 
         // Write transposed submatrix to global memory
         A_t[glob_idx_a_t] = A_shared[threadIdx.x][threadIdx.y];
-      }
-      """% {"block_size": block_size})
+    }
+    """% {"block_size": block_size})
 
     func = mod.get_function("transpose")
     func.prepare("PPii", block=(block_size, block_size, 1))
@@ -60,37 +62,44 @@ def _get_transpose_kernel():
 
 def _get_big_block_transpose_kernel():
     mod = SourceModule("""
-      #define BLOCK_SIZE %(block_size)d
-      #define A_BLOCK_STRIDE (BLOCK_SIZE*a_width)
-      #define A_T_BLOCK_STRIDE (BLOCK_SIZE*a_height)
+    #define BLOCK_SIZE %(block_size)d
+    #define A_BLOCK_STRIDE (BLOCK_SIZE * a_width)
+    #define A_T_BLOCK_STRIDE (BLOCK_SIZE * a_height)
 
-      __global__ void transpose(float *A, float *A_t, int a_width, int a_height)
-      {
+    __global__ void transpose(float *A, float *A_t, int a_width, int a_height)
+    {
         // Base indices in A and A_t
-        int base_idx_a   = 2*blockIdx.x*BLOCK_SIZE + 2*blockIdx.y*A_BLOCK_STRIDE;
-        int base_idx_a_t = 2*blockIdx.y*BLOCK_SIZE + 2*blockIdx.x*A_T_BLOCK_STRIDE;
+        int base_idx_a   = 2 * blockIdx.x * BLOCK_SIZE + 
+	2 * blockIdx.y * A_BLOCK_STRIDE;
+        int base_idx_a_t = 2 * blockIdx.y * BLOCK_SIZE + 
+	2 * blockIdx.x * A_T_BLOCK_STRIDE;
 
         // Global indices in A and A_t
-        int glob_idx_a   = base_idx_a + threadIdx.x + a_width*threadIdx.y;
-        int glob_idx_a_t = base_idx_a_t + threadIdx.x + a_height*threadIdx.y;
+        int glob_idx_a   = base_idx_a + threadIdx.x + a_width * threadIdx.y;
+        int glob_idx_a_t = base_idx_a_t + threadIdx.x + a_height * threadIdx.y;
 
-        __shared__ float A_shared[2*BLOCK_SIZE][2*BLOCK_SIZE+1];
+        __shared__ float A_shared[2 * BLOCK_SIZE][2 * BLOCK_SIZE + 1];
 
         // Store transposed submatrix to shared memory
         A_shared[threadIdx.y][threadIdx.x] = A[glob_idx_a];
-        A_shared[threadIdx.y][threadIdx.x+BLOCK_SIZE] = A[glob_idx_a+A_BLOCK_STRIDE];
-        A_shared[threadIdx.y+BLOCK_SIZE][threadIdx.x] = A[glob_idx_a+BLOCK_SIZE];
-        A_shared[threadIdx.y+BLOCK_SIZE][threadIdx.x+BLOCK_SIZE] = 
-          A[glob_idx_a+BLOCK_SIZE+A_BLOCK_STRIDE];
+        A_shared[threadIdx.y][threadIdx.x + BLOCK_SIZE] = 
+	A[glob_idx_a + A_BLOCK_STRIDE];
+        A_shared[threadIdx.y + BLOCK_SIZE][threadIdx.x] = 
+	A[glob_idx_a + BLOCK_SIZE];
+        A_shared[threadIdx.y + BLOCK_SIZE][threadIdx.x + BLOCK_SIZE] = 
+        A[glob_idx_a + BLOCK_SIZE + A_BLOCK_STRIDE];
           
         __syncthreads();
 
         // Write transposed submatrix to global memory
         A_t[glob_idx_a_t] = A_shared[threadIdx.x][threadIdx.y];
-        A_t[glob_idx_a_t+A_T_BLOCK_STRIDE] = A_shared[threadIdx.x+BLOCK_SIZE][threadIdx.y];
-        A_t[glob_idx_a_t+BLOCK_SIZE] = A_shared[threadIdx.x][threadIdx.y+BLOCK_SIZE];
-        A_t[glob_idx_a_t+A_T_BLOCK_STRIDE+BLOCK_SIZE] = A_shared[threadIdx.x+BLOCK_SIZE][threadIdx.y+BLOCK_SIZE];
-      }
+        A_t[glob_idx_a_t + A_T_BLOCK_STRIDE] = 
+	A_shared[threadIdx.x + BLOCK_SIZE][threadIdx.y];
+        A_t[glob_idx_a_t + BLOCK_SIZE] = 
+	A_shared[threadIdx.x][threadIdx.y + BLOCK_SIZE];
+        A_t[glob_idx_a_t + A_T_BLOCK_STRIDE + BLOCK_SIZE] = 
+	A_shared[threadIdx.x + BLOCK_SIZE][threadIdx.y + BLOCK_SIZE];
+    }
       """% {"block_size": block_size})
 
     func = mod.get_function("transpose")
