@@ -13,10 +13,12 @@ import numpy.linalg as la
 
 from pytools import memoize
 
+block_size = 16
+
 @memoize
 def _get_transpose_kernel():
     mod = SourceModule("""
-      #define BLOCK_SIZE 16
+      #define BLOCK_SIZE %(block_size)d
       #define A_BLOCK_STRIDE (BLOCK_SIZE*a_width)
       #define A_T_BLOCK_STRIDE (BLOCK_SIZE*a_height)
 
@@ -40,9 +42,8 @@ def _get_transpose_kernel():
         // Write transposed submatrix to global memory
         A_t[glob_idx_a_t] = A_shared[threadIdx.x][threadIdx.y];
       }
-      """)
+      """% {"block_size": block_size})
 
-    block_size = 16
     func = mod.get_function("transpose")
     func.prepare("PPii", block=(block_size, block_size, 1))
 
@@ -57,7 +58,7 @@ def _get_transpose_kernel():
 
 def _get_big_block_transpose_kernel():
     mod = SourceModule("""
-      #define BLOCK_SIZE 16
+      #define BLOCK_SIZE %(block_size)d
       #define A_BLOCK_STRIDE (BLOCK_SIZE*a_width)
       #define A_T_BLOCK_STRIDE (BLOCK_SIZE*a_height)
 
@@ -88,9 +89,8 @@ def _get_big_block_transpose_kernel():
         A_t[glob_idx_a_t+BLOCK_SIZE] = A_shared[threadIdx.x][threadIdx.y+BLOCK_SIZE];
         A_t[glob_idx_a_t+A_T_BLOCK_STRIDE+BLOCK_SIZE] = A_shared[threadIdx.x+BLOCK_SIZE][threadIdx.y+BLOCK_SIZE];
       }
-      """)
+      """% {"block_size": block_size})
 
-    block_size = 16
     func = mod.get_function("transpose")
     func.prepare("PPii", block=(block_size, block_size, 1))
 
