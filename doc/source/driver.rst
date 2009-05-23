@@ -1000,6 +1000,8 @@ Code on the Device: Modules and Functions
 
         Return one of the attributes given by the
         :class:`function_attribute` value *attr*.
+
+        Available in PyCUDA 0.93 and CUDA 2.2 and newer.
       
     .. attribute:: lmem
 
@@ -1008,6 +1010,8 @@ Code on the Device: Modules and Functions
 
         This attribute is deprecated when PyCUDA is compiled against
         CUDA 2.2 and newer. It will be removed in PyCUDA 0.94.
+        Use :meth:`get_attribute` with 
+        :attr:`function_attribute.LOCAL_SIZE_BYTES` instead.
 
     .. attribute:: smem
 
@@ -1016,6 +1020,8 @@ Code on the Device: Modules and Functions
 
         This attribute is deprecated when PyCUDA is compiled against
         CUDA 2.2 and newer. It will be removed in PyCUDA 0.94.
+        Use :meth:`get_attribute` with 
+        :attr:`function_attribute.SHARED_SIZE_BYTES` instead.
 
     .. attribute:: registers
 
@@ -1024,6 +1030,8 @@ Code on the Device: Modules and Functions
 
         This attribute is deprecated when PyCUDA is compiled against
         CUDA 2.2 and newer. It will be removed in PyCUDA 0.94.
+        Use :meth:`get_attribute` with 
+        :attr:`function_attribute.NUM_REGS` instead.
 
 .. class:: ArgumentHandler(array)
 
