@@ -3,7 +3,7 @@ import pycuda.elementwise as elementwise
 import numpy
 
 def _make_unary_array_func(name):
-    def f(array):
+    def f(array, stream=None):
         result = array._new_like_me()
         
         if array.dtype == numpy.float32:
@@ -13,7 +13,7 @@ def _make_unary_array_func(name):
 
         func = elementwise.get_unary_func_kernel(func_name, array.dtype)
         func.set_block_shape(*array._block)
-        func.prepared_async_call(array._grid, array.stream,
+        func.prepared_async_call(array._grid, stream,
                 array.gpudata, result.gpudata, array.mem_size)
         
         return result
@@ -38,19 +38,19 @@ sinh = _make_unary_array_func("sinh")
 cosh = _make_unary_array_func("cosh")
 tanh = _make_unary_array_func("tanh")
         
-def fmod(arg, mod):
+def fmod(arg, mod, stream=None):
     """Return the floating point remainder of the division `arg/mod`,
     for each element in `arg` and `mod`."""
     result = gpuarray.GPUArray(arg.shape, arg.dtype)
     
     func = elementwise.get_fmod_kernel()
     func.set_block_shape(*arg._block)
-    func.prepared_async_call(arg._grid, arg.stream,
+    func.prepared_async_call(arg._grid, stream,
             arg.gpudata, mod.gpudata, result.gpudata, arg.mem_size)
     
     return result
 
-def frexp(arg):
+def frexp(arg, stream=None):
     """Return a tuple `(significands, exponents)` such that 
     `arg == significand * 2**exponent`.
     """
@@ -59,12 +59,12 @@ def frexp(arg):
     
     func = elementwise.get_frexp_kernel()
     func.set_block_shape(*arg._block)
-    func.prepared_async_call(arg._grid, arg.stream,
+    func.prepared_async_call(arg._grid, stream,
             arg.gpudata, sig.gpudata, expt.gpudata, arg.mem_size)
     
     return sig, expt
     
-def ldexp(significand, exponent):
+def ldexp(significand, exponent, stream=None):
     """Return a new array of floating point values composed from the
     entries of `significand` and `exponent`, paired together as
     `result = significand * 2**exponent`.
@@ -73,13 +73,13 @@ def ldexp(significand, exponent):
     
     func = elementwise.get_ldexp_kernel()
     func.set_block_shape(*significand._block)
-    func.prepared_async_call(significand._grid, significand.stream,
+    func.prepared_async_call(significand._grid, stream,
             significand.gpudata, exponent.gpudata, result.gpudata, 
             significand.mem_size)
     
     return result
         
-def modf(arg):
+def modf(arg, stream=None):
     """Return a tuple `(fracpart, intpart)` of arrays containing the
     integer and fractional parts of `arg`. 
     """
@@ -89,7 +89,7 @@ def modf(arg):
     
     func = elementwise.get_modf_kernel()
     func.set_block_shape(*arg._block),
-    func.prepared_async_call(arg._grid, arg.stream,
+    func.prepared_async_call(arg._grid, stream,
             arg.gpudata, intpart.gpudata, fracpart.gpudata,
             arg.mem_size)
     
