@@ -211,55 +211,55 @@ workalikes for the functions contained in :mod:`math`.
 Rounding and Absolute Value
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-.. function:: fabs(array)
-.. function:: ceil(array)
-.. function:: floor(array)
+.. function:: fabs(array, stream=None)
+.. function:: ceil(array, stream=None)
+.. function:: floor(array, stream=None)
 
 Exponentials, Logarithms and Roots
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-.. function:: exp(array)
-.. function:: log(array)
-.. function:: log10(array)
-.. function:: sqrt(array)
+.. function:: exp(array, stream=None)
+.. function:: log(array, stream=None)
+.. function:: log10(array, stream=None)
+.. function:: sqrt(array, stream=None)
 
 Trigonometric Functions
 ^^^^^^^^^^^^^^^^^^^^^^^
 
-.. function:: sin(array)
-.. function:: cos(array)
-.. function:: tan(array)
-.. function:: asin(array)
-.. function:: acos(array)
-.. function:: atan(array)
+.. function:: sin(array, stream=None)
+.. function:: cos(array, stream=None)
+.. function:: tan(array, stream=None)
+.. function:: asin(array, stream=None)
+.. function:: acos(array, stream=None)
+.. function:: atan(array, stream=None)
 
 Hyperbolic Functions
 ^^^^^^^^^^^^^^^^^^^^
 
-.. function:: sinh(array)
-.. function:: cosh(array)
-.. function:: tanh(array)
+.. function:: sinh(array, stream=None)
+.. function:: cosh(array, stream=None)
+.. function:: tanh(array, stream=None)
 
 Floating Point Decomposition and Assembly
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-.. function:: fmod(arg, mod)
+.. function:: fmod(arg, mod, stream=None)
 
     Return the floating point remainder of the division `arg/mod`,
     for each element in `arg` and `mod`.
 
-.. function:: frexp(arg)
+.. function:: frexp(arg, stream=None)
 
     Return a tuple `(significands, exponents)` such that 
     `arg == significand * 2**exponent`.
     
-.. function:: ldexp(significand, exponent)
+.. function:: ldexp(significand, exponent, stream=None)
 
     Return a new array of floating point values composed from the
     entries of `significand` and `exponent`, paired together as
     `result = significand * 2**exponent`.
         
-.. function:: modf(arg)
+.. function:: modf(arg, stream=None)
 
     Return a tuple `(fracpart, intpart)` of arrays containing the
     integer and fractional parts of `arg`. 
