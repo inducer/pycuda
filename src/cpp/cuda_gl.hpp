@@ -57,7 +57,7 @@ namespace cuda { namespace gl {
           try
           {
             scoped_context_activation ca(get_context());
-            CUDAPP_CALL_GUARDED(cuGLUnregisterBufferObject, (m_handle));
+            CUDAPP_CALL_GUARDED_CLEANUP(cuGLUnregisterBufferObject, (m_handle));
             m_valid = false;
           }
           CUDAPP_CATCH_WARN_OOT_LEAK(buffer_object);
@@ -98,7 +98,7 @@ namespace cuda { namespace gl {
           try
           {
             scoped_context_activation ca(get_context());
-            CUDAPP_CALL_GUARDED(cuGLUnmapBufferObject, (m_buffer_object->handle()));
+            CUDAPP_CALL_GUARDED_CLEANUP(cuGLUnmapBufferObject, (m_buffer_object->handle()));
             m_valid = false;
           }
           CUDAPP_CATCH_WARN_OOT_LEAK(buffer_object_mapping)
