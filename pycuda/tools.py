@@ -352,7 +352,7 @@ def parse_c_arg(c_arg):
 
     # process and remove declarator
     import re
-    decl_re = re.compile(r"(\**)\s*([a-zA-Z0-9]+)(\s*\[[ 0-9]*\])*$")
+    decl_re = re.compile(r"(\**)\s*([_a-zA-Z0-9]+)(\s*\[[ 0-9]*\])*$")
     decl_match = decl_re.search(c_arg)
 
     if decl_match is None:
