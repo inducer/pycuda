@@ -32,7 +32,7 @@ OTHER DEALINGS IN THE SOFTWARE.
 
 from pytools import memoize
 import numpy
-from pycuda.tools import dtype_to_ctype
+from pycuda.tools import dtype_to_ctype, VectorArg, ScalarArg
 
 
 
@@ -57,7 +57,7 @@ def get_elwise_module(arguments, operation,
           }
         }
         """ % {
-            "arguments": arguments, 
+            "arguments": ", ".join(arg.declarator() for arg in arguments), 
             "operation": operation,
             "name": name,
             "preamble": preamble},
@@ -65,23 +65,27 @@ def get_elwise_module(arguments, operation,
 
 def get_elwise_kernel_and_types(arguments, operation, 
         name="kernel", keep=False, options=[]):
-    arguments += ", unsigned n"
+    if isinstance(arguments, str):
+        from pycuda.tools import parse_c_arg
+        arguments = [parse_c_arg(arg) for arg in arguments.split(",")]
+
+    arguments.append(ScalarArg(numpy.uintp, "n"))
+
     mod = get_elwise_module(arguments, operation, name,
             keep, options)
 
     from pycuda.tools import get_arg_type
     func = mod.get_function(name)
-    arg_types = [get_arg_type(arg) for arg in arguments.split(",")]
-    func.prepare("".join(arg_types), (1,1,1))
+    func.prepare("".join(arg.struct_char for arg in arguments), (1,1,1))
 
-    return func, arg_types
+    return func, arguments
 
 def get_elwise_kernel(arguments, operation, 
         name="kernel", keep=False, options=[]):
     """Return a L{pycuda.driver.Function} that performs the same scalar operation
     on one or several vectors.
     """
-    func, arg_types = get_elwise_kernel_and_types(
+    func, arguments = get_elwise_kernel_and_types(
             arguments, operation, name, keep, options)
 
     return func
@@ -92,10 +96,11 @@ def get_elwise_kernel(arguments, operation,
 class ElementwiseKernel:
     def __init__(self, arguments, operation, 
             name="kernel", keep=False, options=[]):
-        self.func, self.arg_types = get_elwise_kernel_and_types(
+        self.func, self.arguments = get_elwise_kernel_and_types(
             arguments, operation, name, keep, options)
 
-        assert [i for i, arg_tp in enumerate(self.arg_types) if arg_tp == "P"], \
+        assert [i for i, arg in enumerate(self.arguments) 
+                if isinstance(arg, VectorArg)], \
                 "ElementwiseKernel can only be used with functions that have at least one " \
                 "vector argument"
 
@@ -103,8 +108,8 @@ class ElementwiseKernel:
         vectors = []
 
         invocation_args = []
-        for arg, arg_tp in zip(args, self.arg_types):
-            if arg_tp == "P":
+        for arg, arg_descr in zip(args, self.arguments):
+            if isinstance(arg_descr, VectorArg):
                 vectors.append(arg)
                 invocation_args.append(arg.gpudata)
             else:
@@ -126,10 +131,9 @@ def get_take_kernel(dtype, idx_dtype, vec_count=1):
             "tex_tp": dtype_to_ctype(dtype, with_fp_tex_hack=True),
             }
 
-    args = ("%(idx_tp)s *idx, "
-            +", ".join("%(tp)s *dest"+str(i) 
-                for i in range(vec_count))
-            +", unsigned n") % ctx
+    args = [VectorArg(idx_dtype, "idx")] + [
+            VectorArg(dtype, "dest"+str(i))for i in range(vec_count)] + [
+            ScalarArg(numpy.intp, "n")]
     preamble = "#include <pycuda-helpers.hpp>\n\n" + "\n".join(
         "texture <%s, 1, cudaReadModeElementType> tex_src%d;" % (ctx["tex_tp"], i)
         for i in range(vec_count))

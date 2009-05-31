@@ -275,6 +275,10 @@ Devices and Contexts
         Return the (numeric) value of the attribute *attr*, which may be one of the
         :class:`device_attribute` values.
 
+        All :class:`device_attribute` values may also be directly read
+        as (lower-case) attributes on the :class:`Device` object itself,
+        e.g. `dev.clock_rate`.
+
     .. method:: get_attributes()
       
         Return all device attributes in a :class:`dict`, with keys from
@@ -1002,36 +1006,36 @@ Code on the Device: Modules and Functions
         :class:`function_attribute` value *attr*.
 
         Available in PyCUDA 0.93 and CUDA 2.2 and newer.
+
+        All :class:`function_attribute` values may also be directly read
+        as (lower-case) attributes on the :class:`Function` object itself,
+        e.g. `dev.clock_rate`.
       
-    .. attribute:: lmem
+    .. attribute:: local_size_bytes
 
         The number of bytes of local memory used by this function.
-        Only available if this function is part of a :class:`SourceModule`.
 
-        This attribute is deprecated when PyCUDA is compiled against
-        CUDA 2.2 and newer. It will be removed in PyCUDA 0.94.
-        Use :meth:`get_attribute` with 
-        :attr:`function_attribute.LOCAL_SIZE_BYTES` instead.
+        On CUDA 2.1 and below, this is only available if this function is part
+        of a :class:`SourceModule`.  It replaces the now-deprecated attribute
+        `lmem`.
 
-    .. attribute:: smem
+    .. attribute:: shared_size_bytes
 
         The number of bytes of shared memory used by this function.
         Only available if this function is part of a :class:`SourceModule`.
 
-        This attribute is deprecated when PyCUDA is compiled against
-        CUDA 2.2 and newer. It will be removed in PyCUDA 0.94.
-        Use :meth:`get_attribute` with 
-        :attr:`function_attribute.SHARED_SIZE_BYTES` instead.
+        On CUDA 2.1 and below, this is only available if this function is part
+        of a :class:`SourceModule`.  It replaces the now-deprecated attribute
+        `smem`.
 
-    .. attribute:: registers
+    .. attribute:: num_regs
 
         The number of 32-bit registers used by this function.
         Only available if this function is part of a :class:`SourceModule`.
 
-        This attribute is deprecated when PyCUDA is compiled against
-        CUDA 2.2 and newer. It will be removed in PyCUDA 0.94.
-        Use :meth:`get_attribute` with 
-        :attr:`function_attribute.NUM_REGS` instead.
+        On CUDA 2.1 and below, this is only available if this function is part
+        of a :class:`SourceModule`.  It replaces the now-deprecated attribute
+        `registers`.
 
 .. class:: ArgumentHandler(array)
 
