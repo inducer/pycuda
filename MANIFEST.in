@@ -1,5 +1,6 @@
 include src/cpp/*.hpp
 include src/cpp/*.cpp
+include src/cuda/*.hpp
 include src/wrapper/*.hpp
 include src/wrapper/*.cpp
 include test/*.py
