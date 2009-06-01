@@ -5,6 +5,7 @@
 .*.sw[po]
 *.dat
 *.pyc
+*.pyo
 build
 *.prof
 siteconf.py
