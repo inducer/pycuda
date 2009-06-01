@@ -1009,7 +1009,7 @@ Code on the Device: Modules and Functions
 
         All :class:`function_attribute` values may also be directly read
         as (lower-case) attributes on the :class:`Function` object itself,
-        e.g. `dev.clock_rate`.
+        e.g. `func.num_regs`.
       
     .. attribute:: local_size_bytes
 
@@ -1022,7 +1022,6 @@ Code on the Device: Modules and Functions
     .. attribute:: shared_size_bytes
 
         The number of bytes of shared memory used by this function.
-        Only available if this function is part of a :class:`SourceModule`.
 
         On CUDA 2.1 and below, this is only available if this function is part
         of a :class:`SourceModule`.  It replaces the now-deprecated attribute
@@ -1031,7 +1030,6 @@ Code on the Device: Modules and Functions
     .. attribute:: num_regs
 
         The number of 32-bit registers used by this function.
-        Only available if this function is part of a :class:`SourceModule`.
 
         On CUDA 2.1 and below, this is only available if this function is part
         of a :class:`SourceModule`.  It replaces the now-deprecated attribute
