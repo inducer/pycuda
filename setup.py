@@ -30,7 +30,7 @@ def get_config_schema():
 
 
 
-def search_on_path(filename):
+def search_on_path(filenames):
     """Find file on system path."""
     # http://aspn.activestate.com/ASPN/Cookbook/Python/Recipe/52224
 
@@ -38,19 +38,13 @@ def search_on_path(filename):
     from os import pathsep, environ
 
     search_path = environ["PATH"]
-    #print "*", search_path
 
     file_found = 0
     paths = search_path.split(pathsep)
     for path in paths:
-        #print path
-        if exists(join(path, filename)):
-             file_found = 1
-             break
-    if file_found:
-        return abspath(join(path, filename))
-    else:
-        return None
+        for filename in filenames:
+            if exists(join(path, filename)):
+                return abspath(join(path, filename))
 
 
 
@@ -69,7 +63,7 @@ def main():
     from os.path import dirname, join, normpath
 
     if conf["CUDA_ROOT"] is None:
-        nvcc_path = search_on_path("nvcc")
+        nvcc_path = search_on_path(["nvcc", "nvcc.exe"])
         if nvcc_path is None:
             print "*** CUDA_ROOT not set, and nvcc not in path. Giving up."
             import sys
