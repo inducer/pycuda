@@ -304,7 +304,7 @@ on one or several operands in a single pass.
     *name* specifies the name as which the kernel is compiled, *keep*
     and *options* are passed unmodified to :class:`pycuda.driver.SourceModule`.
 
-    .. method:: __call__(*args*)
+    .. method:: __call__(*args)
 
         Invoke the generated scalar kernel. The arguments may either be scalars or
         :class:`GPUArray` instances.
@@ -342,7 +342,7 @@ Reductions
 
 .. class:: ReductionKernel(dtype_out, neutral, reduce_expr, map_expr=None, arguments=None, name="reduce_kernel", keep=False, options=[])
 
-    .. method __call__(*args, stream=None*)
+    .. method __call__(*args, stream=None)
 
 Here's a usage example::
 
