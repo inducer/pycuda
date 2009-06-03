@@ -304,7 +304,7 @@ on one or several operands in a single pass.
     *name* specifies the name as which the kernel is compiled, *keep*
     and *options* are passed unmodified to :class:`pycuda.driver.SourceModule`.
 
-    .. method:: __call__(*args)
+    .. method:: __call__(*args*)
 
         Invoke the generated scalar kernel. The arguments may either be scalars or
         :class:`GPUArray` instances.
@@ -342,7 +342,7 @@ Reductions
 
 .. class:: ReductionKernel(dtype_out, neutral, reduce_expr, map_expr=None, arguments=None, name="reduce_kernel", keep=False, options=[])
 
-    .. method __call__(*args, stream=None)
+    .. method __call__(*args, stream=None*)
 
 Here's a usage example::
 
@@ -354,3 +354,9 @@ Here's a usage example::
             arguments="float *a, float *b")
 
     my_dot_prod = krnl(a, b).get()
+
+This example takes the following steps: 
+  It sets *neutral* as start value for a variable *acc*.
+  Next it performs *map_expr* with *i* = 0 and uses the outcome of that and *acc* to perform *reduce_expr*.
+  Then it goes on with *i* = 1.
+  So the outcome of this is 0+a[0]*b[0]+a[1]*b[1]+...+a[n]*b[n]

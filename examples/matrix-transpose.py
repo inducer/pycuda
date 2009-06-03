@@ -116,7 +116,7 @@ def _get_big_block_transpose_kernel():
 
 
 def _transpose(tgt, src):
-    krnl = _get_big_block_transpose_kernel()
+    krnl = _get_transpose_kernel()
 
     w, h = src.shape
     assert tgt.shape == (h, w)
@@ -178,6 +178,11 @@ def run_benchmark():
         start = pycuda.driver.Event()
         stop = pycuda.driver.Event()
 
+        warmup = 2
+
+	for i in range(warmup):
+	    _transpose(target, source)
+
         count = 10
 
         cuda.Context.synchronize()
@@ -196,9 +201,6 @@ def run_benchmark():
         bandwidths.append(mem_bw)
         times.append(elapsed_seconds)
 
-        source.gpudata.free()
-        target.gpudata.free()
-
     slow_sizes = [s for s, bw in zip(sizes, bandwidths) if bw < 40e9]
     print slow_sizes
     print [s % 64 for s in slow_sizes]
@@ -212,6 +214,6 @@ def run_benchmark():
 
 
 
-check_transpose()
-#run_benchmark()
+#check_transpose()
+run_benchmark()
 

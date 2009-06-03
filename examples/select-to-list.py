@@ -102,6 +102,15 @@ __global__ void select_them(float *a, int *selec, float limit, int *counter)
 func = mod.get_function("select_them")
 func.prepare("PPfP", block=(block_size, 1, 1))
 
+# Warmup
+warmup = 2
+for i in range(warmup):
+    func.prepared_call((amount // multiple_block_size, 1),
+                       a_gpu.gpudata, selec_gpu.gpudata, 
+		       limit, counter_gpu.gpudata)
+    counter_gpu = gpuarray.zeros(1, dtype=numpy.int32)
+
+
 # Prepare getting the time
 start = cuda.Event()
 stop = cuda.Event()
@@ -109,8 +118,12 @@ stop = cuda.Event()
 # Call function and get time
 cuda.Context.synchronize()
 start.record()
-func.prepared_call((amount // multiple_block_size, 1),
-                   a_gpu.gpudata, selec_gpu.gpudata, limit, counter_gpu.gpudata)
+count = 10
+for i in range(count):
+    func.prepared_call((amount // multiple_block_size, 1),
+                       a_gpu.gpudata, selec_gpu.gpudata, 
+	    	       limit, counter_gpu.gpudata)
+    counter_gpu = gpuarray.zeros(1, dtype=numpy.int32)
 stop.record()
 
 # Copy selection from device to host
@@ -122,7 +135,7 @@ stop.synchronize()
 elems_in_selec = len(numpy.nonzero(selec >= 0))
 
 elapsed_seconds = stop.time_since(start) * 1e-3
-print "mem bw:", (a.nbytes + elems_in_selec * 4) / elapsed_seconds / 1e9
+print "mem bw:", (a.nbytes + elems_in_selec * 4) / elapsed_seconds / 1e9 * count
 
 filtered_set = sorted(list(item for item in selec if item != -1))
 reference_set = sorted(list(i for i, x in enumerate(a) if x>limit))
