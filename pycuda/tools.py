@@ -283,6 +283,9 @@ def platform_bits():
 
 
 def dtype_to_ctype(dtype, with_fp_tex_hack=False):
+    if dtype is None:
+        raise ValueError("dtype may not be None")
+
     import numpy
     dtype = numpy.dtype(dtype)
     if dtype == numpy.int64 and platform_bits() == 64:
