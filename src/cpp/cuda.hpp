@@ -21,6 +21,11 @@
 #include <boost/python.hpp>
 #include <boost/thread/thread.hpp>
 #include <boost/thread/tss.hpp>
+#include <boost/version.hpp>
+
+#if (BOOST_VERSION/100) < 1035
+#warning **** Your version of Boost C++ is likely too old for PyCUDA. ****
+#endif
 
 
 
