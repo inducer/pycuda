@@ -747,22 +747,22 @@ def subset_dot(subset, a, b, dtype=None, stream=None):
     krnl = get_subset_dot_kernel(dtype, a.dtype, b.dtype)
     return krnl(subset, a, b, stream=stream)
 
-def max(a, b, dtype=None, stream=None):
+def max(a, dtype=None, stream=None):
     from pycuda.reduction import get_max_kernel
-    krnl = get_max_kernel(dtype, a.dtype, b.dtype)
-    return krnl(a, b, stream=stream)
+    krnl = get_max_kernel(dtype, a.dtype)
+    return krnl(a,  stream=stream)
 
 def subset_max(subset, a, dtype=None, stream=None):
     from pycuda.reduction import get_subset_max_kernel
     krnl = get_subset_max_kernel(dtype, a.dtype)
     return krnl(subset, a, stream=stream)
 
-def min(a, b, dtype=None, stream=None):
+def min(a, dtype=None, stream=None):
     from pycuda.reduction import get_min_kernel
-    krnl = get_min_kernel(dtype, a.dtype, b.dtype)
-    return krnl(a, b, stream=stream)
+    krnl = get_min_kernel(dtype, a.dtype)
+    return krnl(a, stream=stream)
 
-def subset_min(subset, a, b, dtype=None, stream=None):
+def subset_min(subset, a, dtype=None, stream=None):
     from pycuda.reduction import get_subset_min_kernel
-    krnl = get_subset_min_kernel(dtype, a.dtype, b.dtype)
-    return krnl(subset, a, b, stream=stream)
+    krnl = get_subset_min_kernel(dtype, a.dtype)
+    return krnl(subset, a, stream=stream)

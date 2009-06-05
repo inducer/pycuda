@@ -42,3 +42,7 @@ void pycuda_expose_gl()
       ;
   }
 }
+
+    def("perform_elwise_max_gpu",
+         perform_elwise_max_gpu<uniform_element_ranges,
+         GPUArray >, (arg("ers"), arg("in"), arg("out")));
