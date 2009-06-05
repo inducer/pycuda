@@ -24,7 +24,9 @@
 #include <boost/version.hpp>
 
 #if (BOOST_VERSION/100) < 1035
+#warning *****************************************************************
 #warning **** Your version of Boost C++ is likely too old for PyCUDA. ****
+#warning *****************************************************************
 #endif
 
 
