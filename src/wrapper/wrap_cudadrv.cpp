@@ -158,7 +158,7 @@ namespace
         PyExc_DeprecationWarning, \
         "Function." #ATTR_NAME " is deprecated. Use Function." #NEW_NAME ".", \
           1); \
-    return py::object(func.attr("_hacky_" #ATTR_NAME)); 
+    return py::object(func.attr("_hacky_" #ATTR_NAME)); \
   }
 #endif
 
