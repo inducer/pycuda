@@ -340,15 +340,25 @@ Reductions
 
 .. module:: pycuda.reduction
 
-.. class:: ReductionKernel(dtype_out, neutral, reduce_expr, map_expr=None, arguments=None, name="reduce_kernel", keep=False, options=[])
+.. class:: ReductionKernel(dtype_out, neutral, reduce_expr, map_expr=None, 
+   arguments=None, name="reduce_kernel", keep=False, options=[])
 
-    Generate a kernel that takes a number of scalar or vector *arguments* (at least one vector argument), performs the *map_expr*
-    on each entry of the vector argument and then the *reduce_expr* on the outcome of that. *neutral* serves as an initial value.
-    You can work with only one input argument and without a *map_expr*, too.
-    *dtype_out* specifies the numpy.dtype of the output. *neutral* is specified as float or integer formatted as string. *reduce_expr* and 
-    *map_expr* are specified as string formatted operations and *arguments* is specified as a string formatted as a C argument list.
-    *name* specifies the name as which the kernel is compiled, *keep* and *options* are passed unmodified to 
-    :class:`pycuda.driver.SourceModule`.
+    Generate a kernel that takes a number of scalar or vector *arguments* 
+    (at least one vector argument), performs the *map_expr* on each entry of 
+    the vector argument and then the *reduce_expr* on the outcome of that. 
+    *neutral* serves as an initial value. 
+    
+    Vectors in *map_expr* should be indexed by the variable *i*. *reduce_expr* 
+    uses theformal values "A" and "B" to indicate two operands of a binary 
+    reduction operation. You can work with only one input argument and 
+    without a *map_expr*, too. 
+
+    *dtype_out* specifies the numpy.dtype of the output. *neutral* is 
+    specified as float or integer formatted as string. *reduce_expr* and 
+    *map_expr* are specified as string formatted operations and *arguments* 
+    is specified as a string formatted as a C argument list. *name* specifies 
+    the name as which the kernel is compiled, *keep* and *options* are passed 
+    unmodified to :class:`pycuda.driver.SourceModule`.
 
     .. method __call__(*args, stream=None)
 
