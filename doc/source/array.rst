@@ -342,6 +342,14 @@ Reductions
 
 .. class:: ReductionKernel(dtype_out, neutral, reduce_expr, map_expr=None, arguments=None, name="reduce_kernel", keep=False, options=[])
 
+    Generate a kernel that takes a number of scalar or vector *arguments* (at least one vector argument), performs the *map_expr*
+    on each entry of the vector argument and then the *reduce_expr* on the outcome of that. *neutral* serves as an initial value.
+    You can work with only one input argument and without a *map_expr*, too.
+    *dtype_out* specifies the numpy.dtype of the output. *neutral* is specified as float or integer formatted as string. *reduce_expr* and 
+    *map_expr* are specified as string formatted operations and *arguments* is specified as a string formatted as a C argument list.
+    *name* specifies the name as which the kernel is compiled, *keep* and *options* are passed unmodified to 
+    :class:`pycuda.driver.SourceModule`.
+
     .. method __call__(*args, stream=None)
 
 Here's a usage example::
@@ -354,9 +362,3 @@ Here's a usage example::
             arguments="float *a, float *b")
 
     my_dot_prod = krnl(a, b).get()
-
-This example takes the following steps: 
-  It sets *neutral* as start value for a variable *acc*.
-  Next it performs *map_expr* with *i* = 0 and uses the outcome of that and *acc* to perform *reduce_expr*.
-  Then it goes on with *i* = 1.
-  So the outcome of this is 0+a[0]*b[0]+a[1]*b[1]+...+a[n]*b[n]
