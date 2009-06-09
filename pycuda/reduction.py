@@ -311,42 +311,76 @@ def get_subset_dot_kernel(dtype_out, dtype_a=None, dtype_b=None):
 
 @memoize
 def get_max_kernel(dtype_out, dtype_in):
-    return ReductionKernel(dtype_out, neutral="0", 
-            reduce_expr="fmax(a,b)", 
+    import numpy
+    if dtype_in == numpy.float64:
+        reduce = "fmax(a,b)"
+    elif dtype_in == numpy.float32:
+        reduce = "fmaxf(a,b)"
+    else:
+        reduce = "max(a,b)"
+
+    return ReductionKernel(dtype_out, neutral="-1E400", 
+            reduce_expr="%(reduce)s" % {"reduce": reduce}, 
             arguments="const %(tp)s *in" % { 
                 "tp": dtype_to_ctype(dtype_in),
-                }, keep=True)
+                })
  
 
 
 
 @memoize
 def get_subset_max_kernel(dtype_out, dtype_in):
-    return ReductionKernel(dtype_out, neutral="0", 
-            reduce_expr="fmax(a,b)",  
+    import numpy
+    if dtype_in == numpy.float64:
+        reduce = "fmax(a,b)"
+    elif dtype_in == numpy.float32:
+        reduce = "fmaxf(a,b)"
+    else:
+        reduce = "max(a,b)"
+
+    return ReductionKernel(dtype_out, neutral="-1E400", 
+            reduce_expr="%(reduce)s" % {"reduce": reduce}, 
+	    map_expr="in[lookup_tbl[i]]", 
             arguments="const unsigned int *lookup_tbl, "
 	    "const %(tp)s *in"  % {
             "tp": dtype_to_ctype(dtype_in),
-            })
+            },)
 
 
 
 
 @memoize
 def get_min_kernel(dtype_out, dtype_in):
-    return ReductionKernel(dtype_out, neutral="0", 
-            reduce_expr="fmin(a,b)", 
+    import numpy
+    if dtype_in == numpy.float64:
+        reduce = "fmin(a,b)"
+    elif dtype_in == numpy.float32:
+        reduce = "fminf(a,b)"
+    else:
+        reduce = "min(a,b)"
+
+    return ReductionKernel(dtype_out, neutral="1E400", 
+            reduce_expr="%(reduce)s" % {"reduce": reduce}, 
             arguments="const %(tp)s *in" % { 
                 "tp": dtype_to_ctype(dtype_in),
-                }, keep=True)
+                })
  
 
 
 
 @memoize
 def get_subset_min_kernel(dtype_out, dtype_in):
-    return ReductionKernel(dtype_out, neutral="0", 
-            reduce_expr="fmin(a,b)", 
+    import numpy
+    if dtype_in == numpy.float64:
+        reduce = "fmin(a,b)"
+    elif dtype_in == numpy.float32:
+        reduce = "fminf(a,b)"
+    else:
+        reduce = "min(a,b)"
+
+    return ReductionKernel(dtype_out, neutral="1E400", 
+            reduce_expr="%(reduce)s" % {"reduce": reduce}, 
+	    map_expr="in[lookup_tbl[i]]", 
             arguments="const unsigned int *lookup_tbl, "
             "const %(tp_in)s *in"  % {
             "tp": dtype_to_ctype(dtype_in),
