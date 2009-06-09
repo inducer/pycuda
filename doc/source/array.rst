@@ -348,10 +348,11 @@ Reductions
     the vector argument and then the *reduce_expr* on the outcome of that. 
     *neutral* serves as an initial value. 
     
-    Vectors in *map_expr* should be indexed by the variable *i*. *reduce_expr* 
-    uses theformal values "A" and "B" to indicate two operands of a binary 
-    reduction operation. You can work with only one input argument and 
-    without a *map_expr*, too. 
+    Vectors in *map_expr* should be indexed by the variable *i*. *reduce_expr*
+    uses theformal values "a" and "b" to indicate two operands of a binary 
+    reduction operation. If you do not specify a *map_expr*, "in[i]" -- and 
+    therefore the presence of only one input argument -- is automatically 
+    assumed.
 
     *dtype_out* specifies the numpy.dtype of the output. *neutral* is 
     specified as float or integer formatted as string. *reduce_expr* and 
