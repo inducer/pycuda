@@ -340,8 +340,7 @@ Reductions
 
 .. module:: pycuda.reduction
 
-.. class:: ReductionKernel(dtype_out, neutral, reduce_expr, map_expr=None, 
-   arguments=None, name="reduce_kernel", keep=False, options=[])
+.. class:: ReductionKernel(dtype_out, neutral, reduce_expr, map_expr=None, arguments=None, name="reduce_kernel", keep=False, options=[])
 
     Generate a kernel that takes a number of scalar or vector *arguments* 
     (at least one vector argument), performs the *map_expr* on each entry of 
@@ -349,12 +348,13 @@ Reductions
     *neutral* serves as an initial value. 
     
     Vectors in *map_expr* should be indexed by the variable *i*. *reduce_expr*
-    uses theformal values "a" and "b" to indicate two operands of a binary 
+    uses the formal values "a" and "b" to indicate two operands of a binary 
     reduction operation. If you do not specify a *map_expr*, "in[i]" -- and 
     therefore the presence of only one input argument -- is automatically 
     assumed.
 
-    *dtype_out* specifies the numpy.dtype of the output. *neutral* is 
+    *dtype_out* specifies the :class:`numpy.dtype` in which the reduction is 
+    performed and in which the result is returned. *neutral* is 
     specified as float or integer formatted as string. *reduce_expr* and 
     *map_expr* are specified as string formatted operations and *arguments* 
     is specified as a string formatted as a C argument list. *name* specifies 
