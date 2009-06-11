@@ -258,6 +258,9 @@ class ReductionKernel:
 
 @memoize
 def get_sum_kernel(dtype_out, dtype_in):
+    if dtype_out is None:
+        dtype_out = dtype_in
+
     return ReductionKernel(dtype_out, "0", "a+b",
             arguments="const %(tp)s *in" % {"tp": dtype_to_ctype(dtype_in)},
             keep=True)
@@ -267,6 +270,9 @@ def get_sum_kernel(dtype_out, dtype_in):
 
 @memoize
 def get_dot_kernel(dtype_out, dtype_a=None, dtype_b=None):
+    if dtype_out is None:
+        dtype_out = dtype_a
+
     if dtype_b is None:
         if dtype_a is None:
             dtype_b = dtype_out
@@ -288,6 +294,9 @@ def get_dot_kernel(dtype_out, dtype_a=None, dtype_b=None):
 
 @memoize
 def get_subset_dot_kernel(dtype_out, dtype_a=None, dtype_b=None):
+    if dtype_out is None:
+        dtype_out = dtype_a
+
     if dtype_b is None:
         if dtype_a is None:
             dtype_b = dtype_out

@@ -17,10 +17,11 @@ class TestGPUArray(test_abstract_array.TestAbstractArray):
 
     def test_random(self):
         from pycuda.curandom import rand as curand
-        a = curand((10, 100)).get()
+        for dtype in [numpy.float32, numpy.float64]:
+            a = curand((10, 100), dtype=dtype).get()
 
-        self.assert_((0 <= a).all())
-        self.assert_((a < 1).all())
+            self.assert_((0 <= a).all())
+            self.assert_((a < 1).all())
 
     def test_nan_arithmetic(self):
         def make_nan_contaminated_vector(size):

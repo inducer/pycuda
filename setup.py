@@ -30,7 +30,7 @@ def get_config_schema():
 
 
 
-def search_on_path(filename):
+def search_on_path(filenames):
     """Find file on system path."""
     # http://aspn.activestate.com/ASPN/Cookbook/Python/Recipe/52224
 
@@ -38,23 +38,136 @@ def search_on_path(filename):
     from os import pathsep, environ
 
     search_path = environ["PATH"]
-    #print "*", search_path
 
     file_found = 0
     paths = search_path.split(pathsep)
     for path in paths:
-        #print path
-        if exists(join(path, filename)):
-             file_found = 1
-             break
-    if file_found:
-        return abspath(join(path, filename))
+        for filename in filenames:
+            if exists(join(path, filename)):
+                return abspath(join(path, filename))
+
+
+
+
+# verification ----------------------------------------------------------------
+def verify_path(description, paths, names, extensions, subpaths=['/'], 
+        prefixes=[], maybe_ok=False):
+    from os.path import exists
+
+    defaultname = names[0] + extensions[0]
+    prefixes.append("")
+    looked_where = []
+
+    for path in paths:
+        for subpath in subpaths:
+            for prefix in prefixes:
+                for name in names:
+                    for extension in extensions:
+                        filename = path + subpath + prefix + name + extension
+
+                        looked_where.append(filename)
+
+                        if exists(filename):
+                            return
+    print "*** Cannot find %s. Checked locations:" % description
+    for path in looked_where:
+        print "   %s" % path
+
+    if maybe_ok:
+        print "*** Note that this may not be a problem as this " \
+                "component is often installed system-wide."
+
+
+
+
+def verify_siteconfig(sc_vars):
+    LIB_EXTS = ['.so', '.dylib', '.lib']
+    LIB_PREFIXES = ['lib']
+    APP_EXTS = ['', '.exe']
+    warn_prefix = '!! Warning: '
+
+    # BOOST_INC_DIR/boost/python.hpp
+    if 'BOOST_INC_DIR' in sc_vars:
+        verify_path (
+            description="Boost headers",
+            paths=sc_vars['BOOST_INC_DIR'],
+            subpaths=['/boost/'],
+            names=['python'],
+            extensions=['.hpp']
+            );
     else:
-        return None
+        print warn_prefix + 'BOOST_INC_DIR is not set, should be something like "/path/to/boost/include/boost-1_39".'
+
+    # BOOST_LIB_DIR/(lib)?BOOST_PYTHON_LIBNAME(.so|.dylib|?Windows?)
+    if 'BOOST_LIB_DIR' not in sc_vars:
+        print warn_prefix + 'BOOST_LIB_DIR is not set, should be like BOOST_INC_DIR but with "/lib" instead of "/include/boost-1_39".'
+
+    if 'BOOST_PYTHON_LIBNAME' in sc_vars:
+        verify_path (
+            description="Boost Python library",
+            paths=sc_vars['BOOST_LIB_DIR'],
+            names=sc_vars['BOOST_PYTHON_LIBNAME'],
+            extensions=LIB_EXTS,
+            prefixes=LIB_PREFIXES
+            )
+    else:
+        print warn_prefix + 'BOOST_PYTHON_LIBNAME is not set, should be something like "boost_python-*-mt".'
+
+    # BOOST_LIB_DIR/(lib)?BOOST_THREAD_LIBNAME(.so|.dylib|?Windows?)
+    if 'BOOST_THREAD_LIBNAME' in sc_vars:
+        verify_path(
+            description="Boost Thread library",
+            paths=sc_vars['BOOST_LIB_DIR'],
+            names=sc_vars['BOOST_THREAD_LIBNAME'],
+            extensions=LIB_EXTS,
+            prefixes=LIB_PREFIXES
+            )
+    else:
+        print warn_prefix + 'BOOST_THREAD_LIBNAME is not set, should be something like "boost_thread-*-mt".'
+
+    # CUDA_ROOT/bin/nvcc(.exe)?
+    if 'CUDA_ROOT' in sc_vars:
+        verify_path(
+            description="CUDA toolkit",
+            paths=[sc_vars['CUDA_ROOT']],
+            subpaths=['/bin/'],
+            names=['nvcc'],
+            extensions=APP_EXTS,
+            )
+    else:
+        print warn_prefix + 'CUDA_ROOT is not set, should point to the nVidia CUDA Toolkit.'
+
+    # CUDA_INC_DIR/cuda.h
+    if sc_vars.has_key('CUDA_INC_DIR'):
+        verify_path (
+            description="CUDA include directory",
+            paths=sc_vars['CUDA_INC_DIR'],
+            names=['cuda'],
+            extensions=['.h'],
+            )
+    else:
+        print warn_prefix + 'CUDA_INC_DIR is not set, should be something like CUDA_ROOT + "/include".'
+
+    # CUDADRV_LIB_DIR=(lib)?CUDADRV_LIBNAME(.so|.dylib|?Windows?)
+    if not sc_vars.has_key('CUDADRV_LIB_DIR'):
+        print warn_prefix + 'CUDADRV_LIB_DIR is not set, should be something like CUDA_ROOT + "/lib".'
+
+    if 'CUDADRV_LIBNAME' in sc_vars:
+        verify_path (
+            description="CUDA driver library",
+            paths=sc_vars['CUDADRV_LIB_DIR'],
+            names=sc_vars['CUDADRV_LIBNAME'],
+            extensions=LIB_EXTS,
+            prefixes=LIB_PREFIXES,
+            maybe_ok=True,
+            )
+    else:
+        print warn_prefix + 'CUDADRV_LIBNAME is not set, should most likely be "cuda".'
 
 
 
 
+# main functionality ----------------------------------------------------------
 def main():
     import glob
     from aksetup_helper import hack_distutils, get_config, setup, \
@@ -69,7 +182,7 @@ def main():
     from os.path import dirname, join, normpath
 
     if conf["CUDA_ROOT"] is None:
-        nvcc_path = search_on_path("nvcc")
+        nvcc_path = search_on_path(["nvcc", "nvcc.exe"])
         if nvcc_path is None:
             print "*** CUDA_ROOT not set, and nvcc not in path. Giving up."
             import sys
@@ -81,6 +194,8 @@ def main():
         conf["CUDA_INC_DIR"] = [join(conf["CUDA_ROOT"], "include")]
     if not conf["CUDADRV_LIB_DIR"]:
         conf["CUDADRV_LIB_DIR"] = [join(conf["CUDA_ROOT"], "lib")]
+
+    verify_siteconfig(conf)
 
     EXTRA_DEFINES = { }
     EXTRA_INCLUDE_DIRS = []
@@ -111,7 +226,7 @@ def main():
 
     setup(name="pycuda",
             # metadata
-            version="0.93rc1",
+            version="0.94beta",
             description="Python wrapper for Nvidia CUDA",
             long_description="""
             PyCUDA lets you access `Nvidia <http://nvidia.com>`_'s `CUDA
@@ -132,7 +247,8 @@ def main():
               convenient than with Nvidia's C-based runtime.
 
             * Completeness. PyCUDA puts the full power of CUDA's driver API at
-              your disposal, if you wish.
+              your disposal, if you wish. It also includes code for 
+              interoperability with OpenGL.
 
             * Automatic Error Checking. All CUDA errors are automatically
               translated into Python exceptions.
