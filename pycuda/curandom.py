@@ -185,13 +185,29 @@ def rand(shape, dtype=numpy.float32, stream=None):
         func = get_elwise_kernel(
             "float *dest, unsigned int seed", 
             md5_code + """
-            dest[i] = a/4294967296.0;
+            #define POW_2_M32 (1/4294967296.0f)
+            dest[i] = a*POW_2_M32;
             if ((i += total_threads) < n)
-                dest[i] = b/4294967296.0;
+                dest[i] = b*POW_2_M32;
             if ((i += total_threads) < n)
-                dest[i] = c/4294967296.0;
+                dest[i] = c*POW_2_M32;
             if ((i += total_threads) < n)
-                dest[i] = d/4294967296.0;
+                dest[i] = d*POW_2_M32;
+            """,
+            "md5_rng_float")
+    elif dtype == numpy.float64:
+        func = get_elwise_kernel(
+            "double *dest, unsigned int seed", 
+            md5_code + """
+            #define POW_2_M32 (1/4294967296.0)
+            #define POW_2_M64 (1/18446744073709551616.)
+
+            dest[i] = a*POW_2_M32 + b*POW_2_M64;
+
+            if ((i += total_threads) < n)
+            {
+              dest[i] = c*POW_2_M32 + d*POW_2_M64;
+            }
             """,
             "md5_rng_float")
     elif dtype in [numpy.int32, numpy.uint32]:

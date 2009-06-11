@@ -348,7 +348,7 @@ def get_subset_max_kernel(dtype_out, dtype_in):
             arguments="const unsigned int *lookup_tbl, "
 	    "const %(tp)s *in"  % {
             "tp": dtype_to_ctype(dtype_in),
-            },)
+            })
 
 
 
@@ -361,7 +361,7 @@ def get_min_kernel(dtype_out, dtype_in):
     elif dtype_in == numpy.float32:
         reduce_expr = "fminf(a,b)"
     elif dtype_in.kind in "iu":
-        reduce_expr = "max(a,b)"
+        reduce_expr = "min(a,b)"
     else:
         raise TypeError("invalid dtype specified")
 
@@ -378,11 +378,11 @@ def get_min_kernel(dtype_out, dtype_in):
 def get_subset_min_kernel(dtype_out, dtype_in):
     import numpy
     if dtype_in == numpy.float64:
-        reduce_epxr = "fmin(a,b)"
+        reduce_expr = "fmin(a,b)"
     elif dtype_in == numpy.float32:
         reduce_expr = "fminf(a,b)"
     elif dtype_in.kind in "iu":
-        reduce_expr = "max(a,b)"
+        reduce_expr = "min(a,b)"
     else:
         raise TypeError("invalid dtype specified")
 
@@ -390,6 +390,6 @@ def get_subset_min_kernel(dtype_out, dtype_in):
             reduce_expr="%(reduce_expr)s" % {"reduce_expr": reduce_expr}, 
 	    map_expr="in[lookup_tbl[i]]", 
             arguments="const unsigned int *lookup_tbl, "
-            "const %(tp_in)s *in"  % {
+            "const %(tp)s *in"  % {
             "tp": dtype_to_ctype(dtype_in),
             })
