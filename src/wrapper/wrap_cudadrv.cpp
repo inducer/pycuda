@@ -141,24 +141,30 @@ namespace
 
 
 #if CUDA_VERSION >= 2020
-#define MAKE_FUNCTION_HACKY_GETTER(ATTR_NAME, ATTR) \
+#define MAKE_FUNCTION_HACKY_GETTER(ATTR_NAME, ATTR, NEW_NAME) \
   int function_get_##ATTR_NAME(function const &f) \
   { \
     PyErr_WarnEx( \
         PyExc_DeprecationWarning, \
-        "Function." #ATTR_NAME " is deprecated when using CUDA 2.2 and newer. Use Function.get_attribute().", \
+        "Function." #ATTR_NAME " is deprecated. Use Function." #NEW_NAME ".", \
           1); \
     return f.get_attribute(ATTR); \
   }
 #else
-#define MAKE_FUNCTION_HACKY_GETTER(ATTR_NAME, ATTR) \
+#define MAKE_FUNCTION_HACKY_GETTER(ATTR_NAME, ATTR, NEW_NAME) \
   py::object function_get_##ATTR_NAME(py::object func) \
-  { return py::object(func.attr("_hacky_" #ATTR_NAME)); }
+  { \
+    PyErr_WarnEx( \
+        PyExc_DeprecationWarning, \
+        "Function." #ATTR_NAME " is deprecated. Use Function." #NEW_NAME ".", \
+          1); \
+    return py::object(func.attr("_hacky_" #ATTR_NAME)); \
+  }
 #endif
 
-  MAKE_FUNCTION_HACKY_GETTER(lmem, CU_FUNC_ATTRIBUTE_LOCAL_SIZE_BYTES);
-  MAKE_FUNCTION_HACKY_GETTER(smem, CU_FUNC_ATTRIBUTE_SHARED_SIZE_BYTES);
-  MAKE_FUNCTION_HACKY_GETTER(registers, CU_FUNC_ATTRIBUTE_NUM_REGS);
+  MAKE_FUNCTION_HACKY_GETTER(lmem, CU_FUNC_ATTRIBUTE_LOCAL_SIZE_BYTES, local_size_bytes);
+  MAKE_FUNCTION_HACKY_GETTER(smem, CU_FUNC_ATTRIBUTE_SHARED_SIZE_BYTES, shared_size_bytes);
+  MAKE_FUNCTION_HACKY_GETTER(registers, CU_FUNC_ATTRIBUTE_NUM_REGS, num_regs);
 
 
 
@@ -199,8 +205,8 @@ namespace
     CUDAPP_PRINT_CALL_TRACE("cuModuleLoadDataEx");
     CUresult cu_status_code; \
     cu_status_code = cuModuleLoadDataEx(&mod, mod_buf, options.size(), 
-         const_cast<CUjit_option *>(options.data()),
-         const_cast<void **>(option_values.data()));
+         const_cast<CUjit_option *>(&*options.begin()),
+         const_cast<void **>(&*option_values.begin()));
 
     size_t info_buf_size = size_t(option_values[1]);
     size_t error_buf_size = size_t(option_values[3]);

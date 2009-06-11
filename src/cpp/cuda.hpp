@@ -21,6 +21,13 @@
 #include <boost/python.hpp>
 #include <boost/thread/thread.hpp>
 #include <boost/thread/tss.hpp>
+#include <boost/version.hpp>
+
+#if (BOOST_VERSION/100) < 1035
+#warning *****************************************************************
+#warning **** Your version of Boost C++ is likely too old for PyCUDA. ****
+#warning *****************************************************************
+#endif
 
 
 
@@ -55,6 +62,18 @@
     if (cu_status_code != CUDA_SUCCESS) \
       throw cuda::error(#NAME, cu_status_code);\
   }
+#define CUDAPP_CALL_GUARDED_CLEANUP(NAME, ARGLIST) \
+  { \
+    CUDAPP_PRINT_CALL_TRACE(#NAME); \
+    CUresult cu_status_code; \
+    cu_status_code = NAME ARGLIST; \
+    if (cu_status_code != CUDA_SUCCESS) \
+      std::cerr \
+        << "PyCUDA WARNING: a clean-up operation failed (dead context maybe?)" \
+        << std::endl \
+        << cuda::error::make_message(#NAME, cu_status_code) \
+        << std::endl; \
+  }
 #define CUDAPP_CATCH_WARN_OOT_LEAK(TYPE) \
   catch (cuda::cannot_activate_out_of_thread_context) \
   { }
@@ -79,8 +98,8 @@ namespace cuda
       const char *m_routine;
       CUresult m_code;
 
-    private:
-      static std::string make_message(const char *rout, CUresult c, const char *msg)
+    public:
+      static std::string make_message(const char *rout, CUresult c, const char *msg=0)
       {
         std::string result = rout;
         result += " failed: ";
@@ -93,7 +112,6 @@ namespace cuda
         return result;
       }
 
-    public:
       error(const char *rout, CUresult c, const char *msg=0)
         : std::runtime_error(make_message(rout, c, msg)),
         m_routine(rout), m_code(c)
@@ -341,13 +359,13 @@ namespace cuda
         {
           if (current_context().get() == this)
           {
-            CUDAPP_CALL_GUARDED(cuCtxDetach, (m_context));
+            CUDAPP_CALL_GUARDED_CLEANUP(cuCtxDetach, (m_context));
           }
           else
           {
             if (m_thread == boost::this_thread::get_id())
             {
-              CUDAPP_CALL_GUARDED(cuCtxDestroy, (m_context));
+              CUDAPP_CALL_GUARDED_CLEANUP(cuCtxDestroy, (m_context));
             }
             else
             {
@@ -552,7 +570,7 @@ namespace cuda
         try
         {
           scoped_context_activation ca(get_context());
-          CUDAPP_CALL_GUARDED(cuStreamDestroy, (m_stream)); 
+          CUDAPP_CALL_GUARDED_CLEANUP(cuStreamDestroy, (m_stream)); 
         }
         CUDAPP_CATCH_WARN_OOT_LEAK(stream);
       }
@@ -616,7 +634,7 @@ namespace cuda
           try
           {
             scoped_context_activation ca(get_context());
-            CUDAPP_CALL_GUARDED(cuArrayDestroy, (m_array)); 
+            CUDAPP_CALL_GUARDED_CLEANUP(cuArrayDestroy, (m_array)); 
           }
           CUDAPP_CATCH_WARN_OOT_LEAK(array);
 
@@ -674,7 +692,7 @@ namespace cuda
       { 
         if (m_managed)
         {
-          CUDAPP_CALL_GUARDED(cuTexRefDestroy, (m_texref)); 
+          CUDAPP_CALL_GUARDED_CLEANUP(cuTexRefDestroy, (m_texref)); 
         }
       }
 
@@ -788,7 +806,7 @@ namespace cuda
         try
         {
           scoped_context_activation ca(get_context());
-          CUDAPP_CALL_GUARDED(cuModuleUnload, (m_module));
+          CUDAPP_CALL_GUARDED_CLEANUP(cuModuleUnload, (m_module));
         }
         CUDAPP_CATCH_WARN_OOT_LEAK(module);
       }
@@ -908,7 +926,7 @@ namespace cuda
   inline 
   void mem_free(CUdeviceptr devptr)
   {
-    CUDAPP_CALL_GUARDED(cuMemFree, (devptr));
+    CUDAPP_CALL_GUARDED_CLEANUP(cuMemFree, (devptr));
   }
 
   class device_allocation : public boost::noncopyable, public context_dependent
@@ -1118,7 +1136,7 @@ namespace cuda
 
   inline void mem_free_host(void *ptr)
   {
-    CUDAPP_CALL_GUARDED(cuMemFreeHost, (ptr));
+    CUDAPP_CALL_GUARDED_CLEANUP(cuMemFreeHost, (ptr));
   }
 
 
@@ -1191,7 +1209,7 @@ namespace cuda
         try
         {
           scoped_context_activation ca(get_context());
-          CUDAPP_CALL_GUARDED(cuEventDestroy, (m_event)); 
+          CUDAPP_CALL_GUARDED_CLEANUP(cuEventDestroy, (m_event)); 
         }
         CUDAPP_CATCH_WARN_OOT_LEAK(event);
       }

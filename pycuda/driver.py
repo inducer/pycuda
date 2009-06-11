@@ -51,6 +51,9 @@ def _add_functionality():
             for att in dir(device_attribute)
             if att[0].isupper())
 
+    def device___getattr__(dev, name):
+        return dev.get_attribute(getattr(device_attribute, name.upper()))
+
     def function_param_set(func, *args):
         try:
             import numpy
@@ -221,13 +224,25 @@ def _add_functionality():
             grid_x, grid_y = grid
             func.launch_grid_async(grid_x, grid_y, stream)
 
+    def function___getattr__(self, name):
+        if get_version() >= (2,2):
+            return self.get_attribute(getattr(function_attribute, name.upper()))
+        else:
+            if name == "num_regs": return self.registers
+            elif name == "shared_size_bytes": return self.smem
+            elif name == "local_size_bytes": return self.lmem
+            else:
+                raise AttributeError("no attribute '%s' in Function" % name)
+
     Device.get_attributes = device_get_attributes
+    Device.__getattr__ = device___getattr__
     Function.param_set = function_param_set
     Function.__call__ = function_call
     Function.prepare = function_prepare
     Function.prepared_call = function_prepared_call
     Function.prepared_timed_call = function_prepared_timed_call
     Function.prepared_async_call = function_prepared_async_call
+    Function.__getattr__ = function___getattr__
 
 
 

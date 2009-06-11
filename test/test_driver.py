@@ -109,7 +109,7 @@ class TestCuda(unittest.TestCase):
 
     def test_gpuarray(self):
         import numpy
-        a = numpy.arange(2000000, dtype=numpy.float32)
+        a = numpy.arange(200000, dtype=numpy.float32)
         b = a + 17
         import pycuda.gpuarray as gpuarray
         a_g = gpuarray.to_gpu(a)

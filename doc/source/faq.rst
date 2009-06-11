@@ -178,6 +178,14 @@ Version 0.93
   :class:`pycuda.compiler.SourceModule`. It is still available by
   the old name, but will print a warning about the impending
   deprecation.
+* :meth:`pycuda.driver.Device.get_attribute` with a 
+  :class:`pycuda.driver.device_attribute` `attr` can now be spelled
+  `dev.attr`, with no further namespace detours. (Suggested by Ian Cullinan)
+  Likewise for :meth:`pycuda.driver.Function.get_attribute`
+* :attr:`pycuda.driver.Function.registers`, 
+  :attr:`pycuda.driver.Function.lmem`, and
+  :attr:`pycuda.driver.Function.smem` have been deprecated in favor of the
+  mechanism above. See :attr:`pycuda.driver.Function.num_regs` for more.
 
 Version 0.92
 ------------
