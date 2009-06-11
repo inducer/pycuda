@@ -104,175 +104,89 @@ class TestGPUArray(test_abstract_array.TestAbstractArray):
 
     def test_max(self):
         from pycuda.curandom import rand as curand
-
-	a_gpu_d = curand((200000,), dtype=numpy.float64)
-	a_gpu_s = curand((200000,), dtype=numpy.float32)
-	a_gpu_i = curand((200000,), dtype=numpy.int32)
-
-	a_d = a_gpu_d.get()
-	a_s = a_gpu_s.get()
-	a_i = a_gpu_i.get()
-
-        max_a_d = numpy.max(a_d)
-	max_a_s = numpy.max(a_s)
-	max_a_i = numpy.max(a_i)
-
 	from pycuda.reduction import get_max_kernel
-	max_a_gpu_d = gpuarray.max(a_gpu_d, dtype=numpy.float64).get()
-	max_a_gpu_s = gpuarray.max(a_gpu_s, dtype=numpy.float32).get()
-	max_a_gpu_i = gpuarray.max(a_gpu_i, dtype=numpy.int32).get()
 
+        for dtype in [numpy.float64, numpy.float32, numpy.int32]:
+	    a_gpu = curand((200000,), dtype)
+	    a = a_gpu.get()
 
-	self.assert_(abs(max_a_gpu_d-max_a_d)/abs(max_a_d) < 1e-4)
-        self.assert_(abs(max_a_gpu_s-max_a_s)/abs(max_a_s) < 1e-4)
-        self.assert_(abs(max_a_gpu_i-max_a_i)/abs(max_a_i) < 1e-4)
+            max_a = numpy.max(a)
+	    max_a_gpu = gpuarray.max(a_gpu, dtype).get()
+
+	    self.assert_(max_a_gpu-max_a == 0)
 
     def test_subset_max(self):
         from pycuda.curandom import rand as curand
+	from pycuda.reduction import get_subset_max_kernel
 
         l_a = 200000
 	gran = 5
-        l_m = l_a - l_a / gran
+        l_m = l_a - l_a // gran
 
-	a_gpu_d = curand((l_a,), dtype=numpy.float64)
-	a_gpu_s = curand((l_a,), dtype=numpy.float32)
-	a_gpu_i = curand((l_a,), dtype=numpy.int32)
+        for dtype in [numpy.float64, numpy.float32, numpy.int32]:
+	    a_gpu = curand((l_a,), dtype)
+	    a = a_gpu.get()
 
-	a_d = a_gpu_d.get()
-        a_s = a_gpu_s.get()
-        a_i = a_gpu_i.get()
-
-        meaningful_indices_gpu = gpuarray.zeros(l_m, dtype=numpy.int32)
-	meaningful_indices = meaningful_indices_gpu.get()
-        j = 0
-	for i in range(len(meaningful_indices)):
-	    meaningful_indices[i] = j
-	    j = j + 1
-	    if j % 5 == 0:
+            meaningful_indices_gpu = gpuarray.zeros(l_m, dtype=numpy.int32)
+	    meaningful_indices = meaningful_indices_gpu.get()
+            j = 0
+	    for i in range(len(meaningful_indices)):
+	        meaningful_indices[i] = j
 	        j = j + 1
-        
-	meaningful_indices_gpu = gpuarray.to_gpu(meaningful_indices)
+	        if j % 5 == 0:
+	            j = j + 1
 
-        b_d = numpy.zeros(l_a)
-        j = 0
-        for i in meaningful_indices:
-	    b_d[j] = a_d[i]
-	    j = j + 1
+	    meaningful_indices_gpu = gpuarray.to_gpu(meaningful_indices)
+            b = a[meaningful_indices]
 
-        b_s = numpy.zeros(l_a)
-        j = 0
-        for i in meaningful_indices:
-            b_s[j] = a_s[i]
-            j = j + 1
+            max_a = numpy.max(b)
+	    max_a_gpu = gpuarray.subset_max(meaningful_indices_gpu, a_gpu, 
+	        dtype).get()
 
-        b_i = numpy.zeros(l_a)
-        j = 0
-        for i in meaningful_indices:
-            b_i[j] = a_i[i]
-            j = j + 1
-
-        max_a_d = numpy.max(b_d)
-        max_a_s = numpy.max(b_s)
-        max_a_i = numpy.max(b_i)
-
-	from pycuda.reduction import get_subset_max_kernel
-	max_a_gpu_d = gpuarray.subset_max(meaningful_indices_gpu, a_gpu_d, 
-	    dtype=numpy.float64).get()
-        max_a_gpu_s = gpuarray.subset_max(meaningful_indices_gpu, a_gpu_s,
-	            dtype=numpy.float32).get()
-        max_a_gpu_i = gpuarray.subset_max(meaningful_indices_gpu, a_gpu_i,
-	            dtype=numpy.int32).get()
-
-	self.assert_(abs(max_a_gpu_d-max_a_d)/abs(max_a_d) < 1e-4)
-        self.assert_(abs(max_a_gpu_s-max_a_s)/abs(max_a_s) < 1e-4)
-        self.assert_(abs(max_a_gpu_i-max_a_i)/abs(max_a_i) < 1e-4)
+	    self.assert_(max_a_gpu-max_a == 0)
 
     def test_min(self):
         from pycuda.curandom import rand as curand
+        from pycuda.reduction import get_min_kernel
 
-	a_gpu_d = curand((200000,), dtype=numpy.float64)
-	a_gpu_s = curand((200000,), dtype=numpy.float32)
-	a_gpu_i = curand((200000,), dtype=numpy.int32)
+        for dtype in [numpy.float64, numpy.float32, numpy.int32]:
+	    a_gpu = curand((200000,), dtype)
+	    a = a_gpu.get()
 
-	a_d = a_gpu_d.get()
-	a_s = a_gpu_s.get()
-	a_i = a_gpu_i.get()
+            min_a = numpy.min(a)
+	    min_a_gpu = gpuarray.min(a_gpu, dtype).get()
 
-        min_a_d = numpy.min(a_d)
-	min_a_s = numpy.min(a_s)
-	min_a_i = numpy.min(a_i)
-
-	from pycuda.reduction import get_min_kernel
-	min_a_gpu_d = gpuarray.min(a_gpu_d, dtype=numpy.float64).get()
-        min_a_gpu_s = gpuarray.min(a_gpu_s, dtype=numpy.float32).get()
-        min_a_gpu_i = gpuarray.min(a_gpu_i, dtype=numpy.int32).get()
-
-	self.assert_(abs(min_a_gpu_d-min_a_d)/abs(min_a_d) < 1e-4)
-	self.assert_(abs(min_a_gpu_s-min_a_s)/abs(min_a_s) < 1e-4)
-	self.assert_(abs(min_a_gpu_i-min_a_i)/abs(min_a_i) < 1e-4)
+	    self.assert_(min_a_gpu-min_a ==0)
 
     def test_subset_min(self):
         from pycuda.curandom import rand as curand
+	from pycuda.reduction import get_subset_min_kernel
 
         l_a = 200000
-	gran = 5
-        l_m = l_a - l_a / gran
+	gran = 2
+        l_m = l_a - l_a // gran
 
-	a_gpu_d = curand((l_a,), dtype=numpy.float64)
-	a_gpu_s = curand((l_a,), dtype=numpy.float32)
-	a_gpu_i = curand((l_a,), dtype=numpy.int32)
+        for dtype in [numpy.float64, numpy.float32, numpy.int32]:
+	    a_gpu = curand((l_a,), dtype)
+	    a = a_gpu.get()
 
-	a_d = a_gpu_d.get()
-	a_s = a_gpu_s.get()
-	a_i = a_gpu_i.get()
-
-        meaningful_indices_gpu = gpuarray.zeros(l_m, dtype=numpy.int32)
-	meaningful_indices = meaningful_indices_gpu.get()
-        j = 0
-	for i in range(len(meaningful_indices)):
-	    meaningful_indices[i] = j
-	    j = j + 1
-	    if j % 5 == 0:
+            meaningful_indices_gpu = gpuarray.zeros(l_m, dtype=numpy.int32)
+	    meaningful_indices = meaningful_indices_gpu.get()
+            j = 0
+	    for i in range(len(meaningful_indices)):
+	        meaningful_indices[i] = j
 	        j = j + 1
+	        if j % 5 == 0:
+	            j = j + 1
         
-	meaningful_indices_gpu = gpuarray.to_gpu(meaningful_indices)
+	    meaningful_indices_gpu = gpuarray.to_gpu(meaningful_indices)
+            b = a[meaningful_indices]
 
-        b_d = numpy.zeros(l_a)
-	b_d.fill(1)
-        j = 0
-        for i in meaningful_indices:
-	    b_d[j] = a_d[i]
-	    j = j + 1
+            min_a = numpy.min(b)
+	    min_a_gpu = gpuarray.subset_min(meaningful_indices_gpu, a_gpu, 
+	        dtype).get()
 
-        b_s = numpy.zeros(l_a)
-	b_s.fill(1)
-        j = 0
-        for i in meaningful_indices:
-	    b_s[j] = a_s[i]
-	    j = j + 1
-
-        b_i = numpy.zeros(l_a)
-	b_i.fill(1E10)
-        j = 0
-        for i in meaningful_indices:
-	    b_i[j] = a_i[i]
-	    j = j + 1
-
-        min_a_d = numpy.min(b_d)
-	min_a_s = numpy.min(b_s)
-	min_a_i = numpy.min(b_i)
-
-	from pycuda.reduction import get_subset_min_kernel
-	min_a_gpu_d = gpuarray.subset_min(meaningful_indices_gpu, a_gpu_d, 
-	    dtype=numpy.float64).get()
-	min_a_gpu_s = gpuarray.subset_min(meaningful_indices_gpu, a_gpu_s, 
-	    dtype=numpy.float32).get()
-	min_a_gpu_i = gpuarray.subset_min(meaningful_indices_gpu, a_gpu_i, 
-	    dtype=numpy.int32).get()
-
-	self.assert_(abs(min_a_gpu_d-min_a_d)/abs(min_a_d) < 1e-4)
-	self.assert_(abs(min_a_gpu_s-min_a_s)/abs(min_a_s) < 1e-4)
-	self.assert_(abs(min_a_gpu_i-min_a_i)/abs(min_a_i) < 1e-4)
+	    self.assert_(min_a_gpu-min_a == 0)
 
     def test_dot(self):
         from pycuda.curandom import rand as curand

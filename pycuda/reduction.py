@@ -76,6 +76,7 @@ def get_reduction_module(out_type, block_size,
         #define BLOCK_SIZE %(block_size)d
         #define READ_AND_MAP(i) (%(map_expr)s)
         #define REDUCE(a, b) (%(reduce_expr)s)
+	#define MY_INFINITY (1./0)
 
         typedef %(out_type)s out_type;
 
@@ -330,7 +331,7 @@ def get_max_kernel(dtype_out, dtype_in):
     else:
         raise TypeError("invalid dtype specified")
 
-    return ReductionKernel(dtype_out, neutral="-1E400", 
+    return ReductionKernel(dtype_out, neutral="-MY_INFINITY", 
             reduce_expr="%(reduce_expr)s" % {"reduce_expr": reduce_expr}, 
             arguments="const %(tp)s *in" % { 
                 "tp": dtype_to_ctype(dtype_in),
@@ -351,7 +352,7 @@ def get_subset_max_kernel(dtype_out, dtype_in):
     else:
         raise TypeError("invalid dtype specified")
 
-    return ReductionKernel(dtype_out, neutral="-1E400", 
+    return ReductionKernel(dtype_out, neutral="-MY_INFINITY", 
             reduce_expr="%(reduce_expr)s" % {"reduce_expr": reduce_expr}, 
 	    map_expr="in[lookup_tbl[i]]", 
             arguments="const unsigned int *lookup_tbl, "
@@ -374,7 +375,7 @@ def get_min_kernel(dtype_out, dtype_in):
     else:
         raise TypeError("invalid dtype specified")
 
-    return ReductionKernel(dtype_out, neutral="1E400", 
+    return ReductionKernel(dtype_out, neutral="MY_INFINITY", 
             reduce_expr="%(reduce_expr)s" % {"reduce_expr": reduce_expr}, 
             arguments="const %(tp)s *in" % { 
                 "tp": dtype_to_ctype(dtype_in),
@@ -395,7 +396,7 @@ def get_subset_min_kernel(dtype_out, dtype_in):
     else:
         raise TypeError("invalid dtype specified")
 
-    return ReductionKernel(dtype_out, neutral="1E400", 
+    return ReductionKernel(dtype_out, neutral="MY_INFINITY", 
             reduce_expr="%(reduce_expr)s" % {"reduce_expr": reduce_expr}, 
 	    map_expr="in[lookup_tbl[i]]", 
             arguments="const unsigned int *lookup_tbl, "
