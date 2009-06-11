@@ -76,7 +76,6 @@ def get_reduction_module(out_type, block_size,
         #define BLOCK_SIZE %(block_size)d
         #define READ_AND_MAP(i) (%(map_expr)s)
         #define REDUCE(a, b) (%(reduce_expr)s)
-	#define MY_INFINITY (1./0)
 
         typedef %(out_type)s out_type;
 
@@ -173,7 +172,7 @@ def get_reduction_kernel_and_types(out_type, block_size,
 class ReductionKernel:
     def __init__(self, dtype_out, 
             neutral, reduce_expr, map_expr=None, arguments=None,
-            name="reduce_kernel", keep=False, options=[]):
+            name="reduce_kernel", keep=False, options=[], preamble=""):
 
         self.dtype_out = dtype_out
 
@@ -182,14 +181,16 @@ class ReductionKernel:
         s1_func, self.stage1_arg_types = get_reduction_kernel_and_types(
                 dtype_to_ctype(dtype_out), self.block_size, 
                 neutral, reduce_expr, map_expr,
-                arguments, name=name+"_stage1", keep=keep, options=options)
+                arguments, name=name+"_stage1", keep=keep, options=options, 
+		preamble=preamble)
         self.stage1_func = s1_func.prepared_async_call
 
         # stage 2 has only one input and no map expression
         s2_func, self.stage2_arg_types = get_reduction_kernel_and_types(
                 dtype_to_ctype(dtype_out), self.block_size, 
                 neutral, reduce_expr,
-                name=name+"_stage2", keep=keep, options=options)
+                name=name+"_stage2", keep=keep, options=options, 
+		preamble=preamble)
         self.stage2_func = s2_func.prepared_async_call
 
         assert [i for i, arg_tp in enumerate(self.stage1_arg_types) if arg_tp == "P"], \
@@ -335,7 +336,7 @@ def get_max_kernel(dtype_out, dtype_in):
             reduce_expr="%(reduce_expr)s" % {"reduce_expr": reduce_expr}, 
             arguments="const %(tp)s *in" % { 
                 "tp": dtype_to_ctype(dtype_in),
-                })
+                }, preamble="#define MY_INFINITY (1./0)")
  
 
 
@@ -358,7 +359,7 @@ def get_subset_max_kernel(dtype_out, dtype_in):
             arguments="const unsigned int *lookup_tbl, "
 	    "const %(tp)s *in"  % {
             "tp": dtype_to_ctype(dtype_in),
-            })
+            }, preamble="#define MY_INFINITY (1./0)")
 
 
 
@@ -379,7 +380,7 @@ def get_min_kernel(dtype_out, dtype_in):
             reduce_expr="%(reduce_expr)s" % {"reduce_expr": reduce_expr}, 
             arguments="const %(tp)s *in" % { 
                 "tp": dtype_to_ctype(dtype_in),
-                })
+                }, preamble="#define MY_INFINITY (1./0)")
  
 
 
@@ -402,4 +403,4 @@ def get_subset_min_kernel(dtype_out, dtype_in):
             arguments="const unsigned int *lookup_tbl, "
             "const %(tp)s *in"  % {
             "tp": dtype_to_ctype(dtype_in),
-            })
+            }, preamble="#define MY_INFINITY (1./0)")

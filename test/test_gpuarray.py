@@ -113,7 +113,7 @@ class TestGPUArray(test_abstract_array.TestAbstractArray):
             max_a = numpy.max(a)
 	    max_a_gpu = gpuarray.max(a_gpu, dtype).get()
 
-	    self.assert_(max_a_gpu-max_a == 0)
+	    self.assert_(max_a_gpu == max_a)
 
     def test_subset_max(self):
         from pycuda.curandom import rand as curand
@@ -143,7 +143,7 @@ class TestGPUArray(test_abstract_array.TestAbstractArray):
 	    max_a_gpu = gpuarray.subset_max(meaningful_indices_gpu, a_gpu, 
 	        dtype).get()
 
-	    self.assert_(max_a_gpu-max_a == 0)
+	    self.assert_(max_a_gpu == max_a)
 
     def test_min(self):
         from pycuda.curandom import rand as curand
@@ -156,7 +156,7 @@ class TestGPUArray(test_abstract_array.TestAbstractArray):
             min_a = numpy.min(a)
 	    min_a_gpu = gpuarray.min(a_gpu, dtype).get()
 
-	    self.assert_(min_a_gpu-min_a ==0)
+	    self.assert_(min_a_gpu == min_a)
 
     def test_subset_min(self):
         from pycuda.curandom import rand as curand
@@ -186,7 +186,7 @@ class TestGPUArray(test_abstract_array.TestAbstractArray):
 	    min_a_gpu = gpuarray.subset_min(meaningful_indices_gpu, a_gpu, 
 	        dtype).get()
 
-	    self.assert_(min_a_gpu-min_a == 0)
+	    self.assert_(min_a_gpu == min_a)
 
     def test_dot(self):
         from pycuda.curandom import rand as curand
