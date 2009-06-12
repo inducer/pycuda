@@ -1,4 +1,6 @@
-# transposition of a matrix
+# Exercise 1 from http://webapp.dam.brown.edu/wiki/SciComp/CudaExercises
+
+# Transposition of a matrix
 # by Hendrik Riedmann <riedmann@dam.brown.edu>
 
 from __future__ import division
@@ -13,36 +15,39 @@ import numpy.linalg as la
 
 from pytools import memoize
 
+block_size = 16
+
 @memoize
 def _get_transpose_kernel():
     mod = SourceModule("""
-      #define BLOCK_SIZE 16
-      #define A_BLOCK_STRIDE (BLOCK_SIZE*a_width)
-      #define A_T_BLOCK_STRIDE (BLOCK_SIZE*a_height)
+    #define BLOCK_SIZE %(block_size)d
+    #define A_BLOCK_STRIDE (BLOCK_SIZE * a_width)
+    #define A_T_BLOCK_STRIDE (BLOCK_SIZE * a_height)
 
-      __global__ void transpose(float *A_t, float *A, int a_width, int a_height)
-      {
-        // Base Indices in A and A_t
-        int base_idx_a   = blockIdx.x*BLOCK_SIZE + blockIdx.y*A_BLOCK_STRIDE;
-        int base_idx_a_t = blockIdx.y*BLOCK_SIZE + blockIdx.x*A_T_BLOCK_STRIDE;
+    __global__ void transpose(float *A_t, float *A, int a_width, int a_height)
+    {
+        // Base indices in A and A_t
+        int base_idx_a   = blockIdx.x * BLOCK_SIZE + 
+	blockIdx.y * A_BLOCK_STRIDE;
+        int base_idx_a_t = blockIdx.y * BLOCK_SIZE + 
+	blockIdx.x * A_T_BLOCK_STRIDE;
 
-        // Global Indices in A and A_t
-        int glob_idx_a   = base_idx_a + threadIdx.x + a_width*threadIdx.y;
-        int glob_idx_a_t = base_idx_a_t + threadIdx.x + a_height*threadIdx.y;
+        // Global indices in A and A_t
+        int glob_idx_a   = base_idx_a + threadIdx.x + a_width * threadIdx.y;
+        int glob_idx_a_t = base_idx_a_t + threadIdx.x + a_height * threadIdx.y;
 
         __shared__ float A_shared[BLOCK_SIZE][BLOCK_SIZE+1];
 
-        // Store transposed Submatrix to shared memory
+        // Store transposed submatrix to shared memory
         A_shared[threadIdx.y][threadIdx.x] = A[glob_idx_a];
           
         __syncthreads();
 
-        // Write transposed Submatrix to global memory
+        // Write transposed submatrix to global memory
         A_t[glob_idx_a_t] = A_shared[threadIdx.x][threadIdx.y];
-      }
-      """)
+    }
+    """% {"block_size": block_size})
 
-    block_size = 16
     func = mod.get_function("transpose")
     func.prepare("PPii", block=(block_size, block_size, 1))
 
@@ -57,40 +62,46 @@ def _get_transpose_kernel():
 
 def _get_big_block_transpose_kernel():
     mod = SourceModule("""
-      #define BLOCK_SIZE 16
-      #define A_BLOCK_STRIDE (BLOCK_SIZE*a_width)
-      #define A_T_BLOCK_STRIDE (BLOCK_SIZE*a_height)
+    #define BLOCK_SIZE %(block_size)d
+    #define A_BLOCK_STRIDE (BLOCK_SIZE * a_width)
+    #define A_T_BLOCK_STRIDE (BLOCK_SIZE * a_height)
 
-      __global__ void transpose(float *A, float *A_t, int a_width, int a_height)
-      {
-        // Base Indices in A and A_t
-        int base_idx_a   = blockIdx.x*2*BLOCK_SIZE + blockIdx.y*A_BLOCK_STRIDE;
-        int base_idx_a_t = blockIdx.y*2*BLOCK_SIZE + blockIdx.x*A_T_BLOCK_STRIDE;
+    __global__ void transpose(float *A, float *A_t, int a_width, int a_height)
+    {
+        // Base indices in A and A_t
+        int base_idx_a   = 2 * blockIdx.x * BLOCK_SIZE + 
+	2 * blockIdx.y * A_BLOCK_STRIDE;
+        int base_idx_a_t = 2 * blockIdx.y * BLOCK_SIZE + 
+	2 * blockIdx.x * A_T_BLOCK_STRIDE;
 
-        // Global Indices in A and A_t
-        int glob_idx_a   = base_idx_a + threadIdx.x + a_width*threadIdx.y;
-        int glob_idx_a_t = base_idx_a_t + threadIdx.x + a_height*threadIdx.y;
+        // Global indices in A and A_t
+        int glob_idx_a   = base_idx_a + threadIdx.x + a_width * threadIdx.y;
+        int glob_idx_a_t = base_idx_a_t + threadIdx.x + a_height * threadIdx.y;
 
-        __shared__ float A_shared[2*BLOCK_SIZE][2*BLOCK_SIZE+1];
+        __shared__ float A_shared[2 * BLOCK_SIZE][2 * BLOCK_SIZE + 1];
 
-        // Store transposed Submatrix to shared memory
+        // Store transposed submatrix to shared memory
         A_shared[threadIdx.y][threadIdx.x] = A[glob_idx_a];
-        A_shared[threadIdx.y][threadIdx.x+BLOCK_SIZE] = A[glob_idx_a+BLOCK_SIZE];
-        A_shared[threadIdx.y+BLOCK_SIZE][threadIdx.x] = A[glob_idx_a+a_block_stride];
-        A_shared[threadIdx.y+BLOCK_SIZE][threadIdx.x+BLOCK_SIZE] = 
-          A[glob_idx_a+BLOCK_SIZE+a_block_stride];
+        A_shared[threadIdx.y][threadIdx.x + BLOCK_SIZE] = 
+	A[glob_idx_a + A_BLOCK_STRIDE];
+        A_shared[threadIdx.y + BLOCK_SIZE][threadIdx.x] = 
+	A[glob_idx_a + BLOCK_SIZE];
+        A_shared[threadIdx.y + BLOCK_SIZE][threadIdx.x + BLOCK_SIZE] = 
+        A[glob_idx_a + BLOCK_SIZE + A_BLOCK_STRIDE];
           
         __syncthreads();
 
-        // Write transposed Submatrix to global memory
+        // Write transposed submatrix to global memory
         A_t[glob_idx_a_t] = A_shared[threadIdx.x][threadIdx.y];
-        A_t[glob_idx_a_t+a_t_block_stride] = A_shared[threadIdx.x+BLOCK_SIZE][threadIdx.y];
-        A_t[glob_idx_a_t+BLOCK_SIZE] = A_shared[threadIdx.x][threadIdx.y+BLOCK_SIZE];
-        A_t[glob_idx_a_t+a_t_block_stride+BLOCK_SIZE] = A_shared[threadIdx.x+BLOCK_SIZE][threadIdx.y+BLOCK_SIZE];
-      }
-      """)
+        A_t[glob_idx_a_t + A_T_BLOCK_STRIDE] = 
+	A_shared[threadIdx.x + BLOCK_SIZE][threadIdx.y];
+        A_t[glob_idx_a_t + BLOCK_SIZE] = 
+	A_shared[threadIdx.x][threadIdx.y + BLOCK_SIZE];
+        A_t[glob_idx_a_t + A_T_BLOCK_STRIDE + BLOCK_SIZE] = 
+	A_shared[threadIdx.x + BLOCK_SIZE][threadIdx.y + BLOCK_SIZE];
+    }
+      """% {"block_size": block_size})
 
-    block_size = 16
     func = mod.get_function("transpose")
     func.prepare("PPii", block=(block_size, block_size, 1))
 
@@ -134,7 +145,7 @@ def check_transpose():
     from pycuda.curandom import rand
 
     for i in numpy.arange(10, 13, 0.125):
-        size = int(((2**i) // 16) * 16)
+        size = int(((2**i) // 32) * 32)
         print size
 
         source = rand((size, size), dtype=numpy.float32)
@@ -167,6 +178,11 @@ def run_benchmark():
         start = pycuda.driver.Event()
         stop = pycuda.driver.Event()
 
+        warmup = 2
+
+	for i in range(warmup):
+	    _transpose(target, source)
+
         count = 10
 
         cuda.Context.synchronize()
@@ -184,9 +200,6 @@ def run_benchmark():
         sizes.append(size)
         bandwidths.append(mem_bw)
         times.append(elapsed_seconds)
-
-        source.gpudata.free()
-        target.gpudata.free()
 
     slow_sizes = [s for s, bw in zip(sizes, bandwidths) if bw < 40e9]
     print slow_sizes
