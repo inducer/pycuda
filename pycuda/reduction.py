@@ -172,7 +172,7 @@ def get_reduction_kernel_and_types(out_type, block_size,
 class ReductionKernel:
     def __init__(self, dtype_out, 
             neutral, reduce_expr, map_expr=None, arguments=None,
-            name="reduce_kernel", keep=False, options=[]):
+            name="reduce_kernel", keep=False, options=[], preamble=""):
 
         self.dtype_out = dtype_out
 
@@ -181,14 +181,16 @@ class ReductionKernel:
         s1_func, self.stage1_arg_types = get_reduction_kernel_and_types(
                 dtype_to_ctype(dtype_out), self.block_size, 
                 neutral, reduce_expr, map_expr,
-                arguments, name=name+"_stage1", keep=keep, options=options)
+                arguments, name=name+"_stage1", keep=keep, options=options, 
+		preamble=preamble)
         self.stage1_func = s1_func.prepared_async_call
 
         # stage 2 has only one input and no map expression
         s2_func, self.stage2_arg_types = get_reduction_kernel_and_types(
                 dtype_to_ctype(dtype_out), self.block_size, 
                 neutral, reduce_expr,
-                name=name+"_stage2", keep=keep, options=options)
+                name=name+"_stage2", keep=keep, options=options, 
+		preamble=preamble)
         self.stage2_func = s2_func.prepared_async_call
 
         assert [i for i, arg_tp in enumerate(self.stage1_arg_types) if arg_tp == "P"], \
@@ -314,3 +316,91 @@ def get_subset_dot_kernel(dtype_out, dtype_a=None, dtype_b=None):
             "tp_a": dtype_to_ctype(dtype_a),
             "tp_b": dtype_to_ctype(dtype_b), 
             })
+
+
+
+
+@memoize
+def get_max_kernel(dtype_out, dtype_in):
+    import numpy
+    if dtype_in == numpy.float64:
+        reduce_expr = "fmax(a,b)"
+    elif dtype_in == numpy.float32:
+        reduce_expr = "fmaxf(a,b)"
+    elif dtype_in.kind in "iu":
+        reduce_expr = "max(a,b)"
+    else:
+        raise TypeError("invalid dtype specified")
+
+    return ReductionKernel(dtype_out, neutral="-MY_INFINITY", 
+            reduce_expr="%(reduce_expr)s" % {"reduce_expr": reduce_expr}, 
+            arguments="const %(tp)s *in" % { 
+                "tp": dtype_to_ctype(dtype_in),
+                }, preamble="#define MY_INFINITY (1./0)")
+ 
+
+
+
+@memoize
+def get_subset_max_kernel(dtype_out, dtype_in):
+    import numpy
+    if dtype_in == numpy.float64:
+        reduce_expr = "fmax(a,b)"
+    elif dtype_in == numpy.float32:
+        reduce_expr = "fmaxf(a,b)"
+    elif dtype_in.kind in "iu":
+        reduce_expr = "max(a,b)"
+    else:
+        raise TypeError("invalid dtype specified")
+
+    return ReductionKernel(dtype_out, neutral="-MY_INFINITY", 
+            reduce_expr="%(reduce_expr)s" % {"reduce_expr": reduce_expr}, 
+	    map_expr="in[lookup_tbl[i]]", 
+            arguments="const unsigned int *lookup_tbl, "
+	    "const %(tp)s *in"  % {
+            "tp": dtype_to_ctype(dtype_in),
+            }, preamble="#define MY_INFINITY (1./0)")
+
+
+
+
+@memoize
+def get_min_kernel(dtype_out, dtype_in):
+    import numpy
+    if dtype_in == numpy.float64:
+        reduce_expr = "fmin(a,b)"
+    elif dtype_in == numpy.float32:
+        reduce_expr = "fminf(a,b)"
+    elif dtype_in.kind in "iu":
+        reduce_expr = "min(a,b)"
+    else:
+        raise TypeError("invalid dtype specified")
+
+    return ReductionKernel(dtype_out, neutral="MY_INFINITY", 
+            reduce_expr="%(reduce_expr)s" % {"reduce_expr": reduce_expr}, 
+            arguments="const %(tp)s *in" % { 
+                "tp": dtype_to_ctype(dtype_in),
+                }, preamble="#define MY_INFINITY (1./0)")
+ 
+
+
+
+@memoize
+def get_subset_min_kernel(dtype_out, dtype_in):
+    import numpy
+    if dtype_in == numpy.float64:
+        reduce_expr = "fmin(a,b)"
+    elif dtype_in == numpy.float32:
+        reduce_expr = "fminf(a,b)"
+    elif dtype_in.kind in "iu":
+        reduce_expr = "min(a,b)"
+    else:
+        raise TypeError("invalid dtype specified")
+
+    return ReductionKernel(dtype_out, neutral="MY_INFINITY", 
+            reduce_expr="%(reduce_expr)s" % {"reduce_expr": reduce_expr}, 
+	    map_expr="in[lookup_tbl[i]]", 
+            arguments="const unsigned int *lookup_tbl, "
+            "const %(tp)s *in"  % {
+            "tp": dtype_to_ctype(dtype_in),
+            }, preamble="#define MY_INFINITY (1./0)")
