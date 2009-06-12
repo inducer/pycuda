@@ -209,7 +209,9 @@ def get_put_kernel(dtype, idx_dtype, vec_count=1):
             "tp": dtype_to_ctype(dtype),
             }
 
-    args = [
+    args = [ 
+            VectorArg(idx_dtype, "gmem_dest_idx"),
+            ] + [
             VectorArg(dtype, "dest%d" % i)
                 for i in range(vec_count)
             ] + [
