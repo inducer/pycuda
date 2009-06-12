@@ -13,11 +13,11 @@ The :class:`GPUArray` Array Class
   *allocator* is a callable that, upon being called with an argument of the number
   of bytes to be allocated, returns an object that can be cast to an
   :class:`int` representing the address of the newly allocated memory.
-  Observe that both :func:`pycuda.driver.mem_alloc` and 
+  Observe that both :func:`pycuda.driver.mem_alloc` and
   :meth:`pycuda.tools.DeviceMemoryPool.alloc` are a model of this interface.
 
   .. attribute :: gpudata
-    
+
     The :class:`pycuda.driver.DeviceAllocation` instance created for the memory that backs
     this :class:`GPUArray`.
 
@@ -25,32 +25,32 @@ The :class:`GPUArray` Array Class
 
     The tuple of lengths of each dimension in the array.
 
-  .. attribute :: dtype 
-    
+  .. attribute :: dtype
+
     The :class:`numpy.dtype` of the items in the GPU array.
-    
+
   .. attribute :: size
-    
+
     The number of meaningful entries in the array. Can also be computed by
     multiplying up the numbers in :attr:`shape`.
 
   .. attribute :: mem_size
-    
+
     The total number of entries, including padding, that are present in
-    the array. Padding may arise for example because of pitch adjustment by 
+    the array. Padding may arise for example because of pitch adjustment by
     :func:`pycuda.driver.mem_alloc_pitch`.
 
   .. attribute :: nbytes
-    
-    The size of the entire array in bytes. Computed as :attr:`size` times 
+
+    The size of the entire array in bytes. Computed as :attr:`size` times
     ``dtype.itemsize``.
 
   .. method :: __len__()
-    
+
     Returns the size of the leading dimension of *self*.
 
     .. warning ::
-      
+
       This method existed in version 0.93 and below, but it returned the value
       of :attr:`size` instead of its current value. The change was made in order
       to match :mod:`numpy`.
@@ -75,7 +75,7 @@ The :class:`GPUArray` Array Class
     Transfer the contents of *self* into *ary* or a newly allocated
     :mod:`numpy.ndarray`. If *ary* is given, it must have the right
     size (not necessarily shape) and dtype. If it is not given,
-    a *pagelocked* specifies whether the new array is allocated 
+    a *pagelocked* specifies whether the new array is allocated
     page-locked.
 
   .. method :: get_async(ary=None, stream=None)
@@ -86,9 +86,9 @@ The :class:`GPUArray` Array Class
     a page-locked* array is newly allocated.
 
   .. method :: mul_add(self, selffac, other, otherfac, add_timer=None, stream=None):
-    
-    Return `selffac*self + otherfac*other`. *add_timer*, if given, 
-    is invoked with the result from 
+
+    Return `selffac*self + otherfac*other`. *add_timer*, if given,
+    is invoked with the result from
     :meth:`pycuda.driver.Function.prepared_timed_call`.
 
   .. method :: __add__(other)
@@ -107,7 +107,7 @@ The :class:`GPUArray` Array Class
     element of *self*.
 
   .. UNDOC reverse()
-  
+
   .. method :: fill(scalar, stream=None)
 
     Fill the array with *scalar*.
@@ -122,7 +122,7 @@ The :class:`GPUArray` Array Class
     nonzero value of this offset will cause an exception to be raised.
 
     .. note::
-        It is recommended to use :meth:`bind_to_texref_ext` instead of 
+        It is recommended to use :meth:`bind_to_texref_ext` instead of
         this method.
 
   .. method:: bind_to_texref_ext(texref, channels=1, allow_offset=False)
@@ -130,7 +130,7 @@ The :class:`GPUArray` Array Class
     Bind *self* to the :class:`pycuda.driver.TextureReference` *texref*.
     In addition, set the texture reference's format to match :attr:`dtype`
     and its channel count to *channels*. This routine also sets the
-    texture reference's :data:`pycuda.driver.TRSF_READ_AS_INTEGER` flag, 
+    texture reference's :data:`pycuda.driver.TRSF_READ_AS_INTEGER` flag,
     if necessary.
 
     Due to alignment requirements, the effective texture bind address may be
@@ -139,25 +139,25 @@ The :class:`GPUArray` Array Class
     nonzero value of this offset will cause an exception to be raised.
 
     (Added in version 0.93.)
-    
+
 Constructing :class:`GPUArray` Instances
 ----------------------------------------
 
 .. function:: to_gpu(ary, allocator=None)
-  
+
   Return a :class:`GPUArray` that is an exact copy of the :class:`numpy.ndarray`
   instance *ary*.
 
   See :class:`GPUArray` for the meaning of *allocator*.
 
 .. function:: to_gpu_async(ary, allocator=None, stream=None)
-  
+
   Return a :class:`GPUArray` that is an exact copy of the :class:`numpy.ndarray`
   instance *ary*. The copy is done asynchronously, optionally sequenced into
   *stream*.
 
   See :class:`GPUArray` for the meaning of *allocator*.
-  
+
 .. function:: empty(shape, dtype)
 
   A synonym for the :class:`GPUArray` constructor.
@@ -169,7 +169,7 @@ Constructing :class:`GPUArray` Instances
 
 .. function:: empty_like(other_ary)
 
-  Make a new, uninitialized :class:`GPUArray` having the same properties 
+  Make a new, uninitialized :class:`GPUArray` having the same properties
   as *other_ary*.
 
 .. function:: zeros_like(other_ary)
@@ -181,7 +181,7 @@ Constructing :class:`GPUArray` Instances
 
   Create a :class:`GPUArray` filled with numbers spaced `step` apart,
   starting from `start` and ending at `stop`.
-  
+
   For floating point arguments, the length of the result is
   `ceil((stop - start)/step)`.  This rule may result in the last
   element of the result being greater than `stop`.
@@ -190,7 +190,7 @@ Constructing :class:`GPUArray` Instances
   of *start*, *stop* and *step*.
 
 .. function:: take(a, indices, stream=None)
-  
+
   Return the :class:`GPUArray` ``[a[indices[0]], ..., a[indices[n]]]``.
   For the moment, *a* must be a type that can be bound to a texture.
 
@@ -205,7 +205,7 @@ Elementwise Functions on :class:`GPUArrray` Instances
 
 .. module:: pycuda.cumath
 
-The :mod:`pycuda.cumath` module contains elementwise 
+The :mod:`pycuda.cumath` module contains elementwise
 workalikes for the functions contained in :mod:`math`.
 
 Rounding and Absolute Value
@@ -250,19 +250,19 @@ Floating Point Decomposition and Assembly
 
 .. function:: frexp(arg, stream=None)
 
-    Return a tuple `(significands, exponents)` such that 
+    Return a tuple `(significands, exponents)` such that
     `arg == significand * 2**exponent`.
-    
+
 .. function:: ldexp(significand, exponent, stream=None)
 
     Return a new array of floating point values composed from the
     entries of `significand` and `exponent`, paired together as
     `result = significand * 2**exponent`.
-        
+
 .. function:: modf(arg, stream=None)
 
     Return a tuple `(fracpart, intpart)` of arrays containing the
-    integer and fractional parts of `arg`. 
+    integer and fractional parts of `arg`.
 
 Generating Arrays of Random Numbers
 -----------------------------------
@@ -279,14 +279,14 @@ Single-pass Expression Evaluation
 
 .. warning::
 
-  The following functionality is included in this documentation in the 
+  The following functionality is included in this documentation in the
   hope that it may be useful, but its interface may change in future
   revisions. Feedback is welcome.
 
 .. module:: pycuda.elementwise
 
 Evaluating involved expressions on :class:`GPUArray` instances can be
-somewhat inefficient, because a new temporary is created for each 
+somewhat inefficient, because a new temporary is created for each
 intermediate result. The functionality in the module :mod:`pycuda.elementwise`
 contains tools to help generate kernels that evaluate multi-stage expressions
 on one or several operands in a single pass.
@@ -294,11 +294,11 @@ on one or several operands in a single pass.
 .. class:: ElementwiseKernel(arguments, operation, name="kernel", keep=False, options=[])
 
     Generate a kernel that takes a number of scalar or vector *arguments*
-    and performs the scalar *operation* on each entry of its arguments, if that 
+    and performs the scalar *operation* on each entry of its arguments, if that
     argument is a vector.
 
-    *arguments* is specified as a string formatted as a C argument list. 
-    *operation* is specified as a C assignment statement, without a semicolon. 
+    *arguments* is specified as a string formatted as a C argument list.
+    *operation* is specified as a C assignment statement, without a semicolon.
     Vectors in *operation* should be indexed by the variable *i*.
 
     *name* specifies the name as which the kernel is compiled, *keep*
@@ -332,7 +332,7 @@ Here's a usage example::
     import numpy.linalg as la
     assert la.norm((c_gpu - (5*a_gpu+6*b_gpu)).get()) < 1e-5
 
-(You can find this example as :file:`examples/demo_elementwise.py` in the PyCuda 
+(You can find this example as :file:`examples/demo_elementwise.py` in the PyCuda
 distribution.)
 
 Reductions
@@ -342,25 +342,25 @@ Reductions
 
 .. class:: ReductionKernel(dtype_out, neutral, reduce_expr, map_expr=None, arguments=None, name="reduce_kernel", keep=False, options=[], preamble="")
 
-    Generate a kernel that takes a number of scalar or vector *arguments* 
-    (at least one vector argument), performs the *map_expr* on each entry of 
-    the vector argument and then the *reduce_expr* on the outcome of that. 
-    *neutral* serves as an initial value. *preamble* offers the possibility 
-    to add preprocessor directives and other code (such as helper functions) 
+    Generate a kernel that takes a number of scalar or vector *arguments*
+    (at least one vector argument), performs the *map_expr* on each entry of
+    the vector argument and then the *reduce_expr* on the outcome of that.
+    *neutral* serves as an initial value. *preamble* offers the possibility
+    to add preprocessor directives and other code (such as helper functions)
     to be added before the actual reduction kernel code.
-    
+
     Vectors in *map_expr* should be indexed by the variable *i*. *reduce_expr*
-    uses the formal values "a" and "b" to indicate two operands of a binary 
-    reduction operation. If you do not specify a *map_expr*, "in[i]" -- and 
-    therefore the presence of only one input argument -- is automatically 
+    uses the formal values "a" and "b" to indicate two operands of a binary
+    reduction operation. If you do not specify a *map_expr*, "in[i]" -- and
+    therefore the presence of only one input argument -- is automatically
     assumed.
 
-    *dtype_out* specifies the :class:`numpy.dtype` in which the reduction is 
-    performed and in which the result is returned. *neutral* is 
-    specified as float or integer formatted as string. *reduce_expr* and 
-    *map_expr* are specified as string formatted operations and *arguments* 
-    is specified as a string formatted as a C argument list. *name* specifies 
-    the name as which the kernel is compiled, *keep* and *options* are passed 
+    *dtype_out* specifies the :class:`numpy.dtype` in which the reduction is
+    performed and in which the result is returned. *neutral* is
+    specified as float or integer formatted as string. *reduce_expr* and
+    *map_expr* are specified as string formatted operations and *arguments*
+    is specified as a string formatted as a C argument list. *name* specifies
+    the name as which the kernel is compiled, *keep* and *options* are passed
     unmodified to :class:`pycuda.driver.SourceModule`. *preamble* is specified
     as a string of code.
 
@@ -371,8 +371,8 @@ Here's a usage example::
     a = gpuarray.arange(400, dtype=numpy.float32)
     b = gpuarray.arange(400, dtype=numpy.float32)
 
-    krnl = ReductionKernel(numpy.float32, neutral="0", 
-            reduce_expr="a+b", map_expr="a[i]*b[i]", 
+    krnl = ReductionKernel(numpy.float32, neutral="0",
+            reduce_expr="a+b", map_expr="a[i]*b[i]",
             arguments="float *a, float *b")
 
     my_dot_prod = krnl(a, b).get()
