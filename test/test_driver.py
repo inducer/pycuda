@@ -1,23 +1,36 @@
 from __future__ import division
-import unittest
-import pycuda.autoinit
-import pycuda.driver as drv
-from pycuda.compiler import SourceModule
 import numpy
 import numpy.linalg as la
 
 
 
 
-assert isinstance(pycuda.autoinit.device.name(), str)
-assert isinstance(pycuda.autoinit.device.compute_capability(), tuple)
-assert isinstance(pycuda.autoinit.device.get_attributes(), dict)
+def have_gpu():
+    try:
+        import pycuda.autoinit
+        return True
+    except:
+        return False
+
+
+if have_gpu():
+    import pycuda.gpuarray as gpuarray
+
+    import pycuda.driver as drv
+    from pycuda.compiler import SourceModule
+
+    import pycuda.autoinit
+    assert isinstance(pycuda.autoinit.device.name(), str)
+    assert isinstance(pycuda.autoinit.device.compute_capability(), tuple)
+    assert isinstance(pycuda.autoinit.device.get_attributes(), dict)
 
 
 
 
 
-class TestCuda(unittest.TestCase):
+class TestDriver:
+    disabled = not have_gpu()
+
     def test_memory(self):
         z = numpy.random.randn(400).astype(numpy.float32)
         new_z = drv.from_device_like(drv.to_device(z), z)
@@ -42,7 +55,7 @@ class TestCuda(unittest.TestCase):
         multiply_them(
                 drv.Out(dest), drv.In(a), drv.In(b),
                 block=(400,1,1))
-        self.assert_(la.norm(dest-a*b) == 0)
+        assert la.norm(dest-a*b) == 0
 
     def test_simple_kernel_2(self):
         mod = SourceModule("""
@@ -65,7 +78,7 @@ class TestCuda(unittest.TestCase):
         multiply_them(
                 drv.Out(dest), a_gpu, b_gpu,
                 block=(400,1,1))
-        self.assert_(la.norm(dest-a*b) == 0)
+        assert la.norm(dest-a*b) == 0
 
         # now try with offsets
         dest = numpy.zeros_like(a)
@@ -73,7 +86,7 @@ class TestCuda(unittest.TestCase):
                 drv.Out(dest), numpy.intp(a_gpu)+1, b_gpu,
                 block=(399,1,1))
 
-        self.assert_(la.norm(dest-a*b) == 0)
+        assert la.norm(dest-a*b) == 0
 
     def test_streamed_kernel(self):
         # this differs from the "simple_kernel" case in that *all* computation
@@ -105,7 +118,7 @@ class TestCuda(unittest.TestCase):
                 block=shape+(1,), stream=strm)
         strm.synchronize()
 
-        self.assert_(la.norm(dest-a*b) == 0)
+        la.norm(dest-a*b) == 0
 
     def test_gpuarray(self):
         import numpy
@@ -120,16 +133,17 @@ class TestCuda(unittest.TestCase):
         diff = ((a_g*b_g).get()-a*b)
         assert la.norm(diff) == 0
 
-    def donottest_cublas_mixing(self):
-        self.test_streamed_kernel()
+    def donottest_cublas_mixing():
+        test_streamed_kernel()
 
         import pycuda.blas as blas
 
         shape = (10,)
         a = blas.ones(shape, dtype=numpy.float32)
         b = 33*blas.ones(shape, dtype=numpy.float32)
-        self.assert_(((-a+b).from_gpu() == 32).all())
-        self.test_streamed_kernel()
+        assert ((-a+b).from_gpu() == 32).all()
+
+        test_streamed_kernel()
 
     def test_2d_texture(self):
         mod = SourceModule("""
@@ -153,7 +167,7 @@ class TestCuda(unittest.TestCase):
 
         dest = numpy.zeros(shape, dtype=numpy.float32)
         copy_texture(drv.Out(dest),
-                block=shape+(1,), 
+                block=shape+(1,),
                 texrefs=[mtx_tex]
                 )
         assert la.norm(dest-a) == 0
@@ -168,7 +182,7 @@ class TestCuda(unittest.TestCase):
           int row = threadIdx.x;
           int col = threadIdx.y;
           int w = blockDim.y;
-          dest[row*w+col] = 
+          dest[row*w+col] =
               tex2D(mtx_tex, row, col)
               +
               tex2D(mtx2_tex, row, col);
@@ -187,7 +201,7 @@ class TestCuda(unittest.TestCase):
 
         dest = numpy.zeros(shape, dtype=numpy.float32)
         copy_texture(drv.Out(dest),
-                block=shape+(1,), 
+                block=shape+(1,),
                 texrefs=[mtx_tex, mtx2_tex]
                 )
         assert la.norm(dest-a-b) < 1e-6
@@ -223,7 +237,7 @@ class TestCuda(unittest.TestCase):
 
         dest = numpy.zeros(shape+(channels,), dtype=numpy.float32)
         copy_texture(drv.Out(dest),
-                block=shape+(1,), 
+                block=shape+(1,),
                 texrefs=[mtx_tex]
                 )
         reshaped_a = a.transpose(1,2,0)
@@ -270,7 +284,7 @@ class TestCuda(unittest.TestCase):
             assert asize >= s, s
             assert DMP.bin_number(asize) == bin_nr, s
             assert asize < asize*(1+1/8)
-            
+
     def test_mempool(self):
         from pycuda.tools import bitlog2
         from pycuda.tools import DeviceMemoryPool
@@ -417,7 +431,7 @@ class TestCuda(unittest.TestCase):
 
             dest = numpy.zeros(shape, dtype=tp)
             copy_texture(drv.Out(dest),
-                    block=shape+(1,1,), 
+                    block=shape+(1,1,),
                     texrefs=[my_tex])
 
             assert la.norm(dest-a) == 0
@@ -426,4 +440,5 @@ class TestCuda(unittest.TestCase):
 
 
 if __name__ == "__main__":
-    unittest.main()
+    from py.test.cmdline import main
+    main([__file__])
