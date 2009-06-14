@@ -28,7 +28,7 @@ Error Reporting
 
 .. exception:: LogicError
 
-    Thrown when PyCuda was confronted with a situation where it is likely 
+    Thrown when PyCuda was confronted with a situation where it is likely
     that the programmer has made a mistake. :exc:`LogicErrors` do not depend
     on outer circumstances defined by the run-time environment.
 
@@ -41,7 +41,7 @@ Error Reporting
 
 .. exception:: RuntimeError
 
-    Thrown when a unforeseen run-time failure is encountered that is not 
+    Thrown when a unforeseen run-time failure is encountered that is not
     likely due to programmer error.
 
     Example: A file was not found.
@@ -55,14 +55,14 @@ Constants
     Flags for :meth:`Device.make_context`. CUDA 2.0 and above only.
 
     .. attribute:: SCHED_AUTO
-      
+
         If there are more contexts than processors, yield, otherwise spin
         while waiting for CUDA calls to complete.
 
     .. attribute:: SCHED_SPIN
 
         Spin while waiting for CUDA calls to complete.
-        
+
     .. attribute:: SCHED_YIELD
 
          Yield to other threads while waiting for CUDA calls to complete.
@@ -111,11 +111,11 @@ Constants
         CUDA 2.0 and above only.
 
     .. attribute:: SHARED_MEMORY_PER_BLOCK
-      
+
         Deprecated as of CUDA 2.0. See below for replacement.
 
     .. attribute:: MAX_SHARED_MEMORY_PER_BLOCK
-      
+
         CUDA 2.0 and above only.
 
     .. attribute:: REGISTERS_PER_BLOCK
@@ -176,7 +176,7 @@ Constants
     .. attribute:: LINEAR
 
 .. class:: memory_type
-  
+
     .. attribute:: HOST
     .. attribute:: DEVICE
     .. attribute:: ARRAY
@@ -233,19 +233,19 @@ Devices and Contexts
 --------------------
 
 .. function:: get_version()
-  
+
     Obtain the version of CUDA against which PyCuda was compiled. Returns a
     3-tuple of integers as *(major, minor, revision)*.
 
 .. function:: get_driver_version()
-  
+
     Obtain the version of the CUDA driver on top of which PyCUDA is
     running. Returns an integer version number.
 
 .. function:: init(flags=0)
 
-    Initialize CUDA. 
-    
+    Initialize CUDA.
+
     .. warning:: This must be called before any other function in this module.
 
     See also :mod:`pycuda.autoinit`.
@@ -259,7 +259,7 @@ Devices and Contexts
         Return the number of CUDA devices found.
 
     .. method:: name()
-    
+
         Return the name of this CUDA device.
 
     .. method:: compute_cabability()
@@ -280,12 +280,12 @@ Devices and Contexts
         e.g. `dev.clock_rate`.
 
     .. method:: get_attributes()
-      
+
         Return all device attributes in a :class:`dict`, with keys from
         :class:`device_attribute`.
 
     .. method:: make_context(flags=ctx_flags.SCHED_AUTO)
-      
+
         Create a :class:`Context` on this device, with flags taken from the
         :class:`ctx_flags` values.
 
@@ -296,7 +296,7 @@ Devices and Contexts
     .. method:: __ne__()
 
 .. class:: Context
-  
+
     An equivalent of a UNIX process on the compute device.
     Create instances of this class using :meth:`Device.make_context`.
     See also :mod:`pycuda.autoinit`.
@@ -307,20 +307,20 @@ Devices and Contexts
         hits zero, the context is deleted.
 
     .. method:: push()
-      
+
         Make *self* the active context, pushing it on top of the context stack.
         CUDA 2.0 and above only.
 
     .. method:: pop()
 
-        Remove *self* from the top of the context stack, deactivating it.  
+        Remove *self* from the top of the context stack, deactivating it.
         CUDA 2.0 and above only.
 
-    .. staticmethod:: get_device() 
+    .. staticmethod:: get_device()
 
         Return the device that the current context is working on.
 
-    .. staticmethod:: synchronize() 
+    .. staticmethod:: synchronize()
 
         Wait for all activity in the current context to cease, then return.
 
@@ -328,11 +328,11 @@ Concurrency and Streams
 -----------------------
 
 .. class:: Stream(flags=0)
-  
+
     A handle for a queue of operations that will be carried out in order.
 
     .. method:: synchronize()
-      
+
         Wait for all activity on this stream to cease, then return.
 
     .. method:: is_done()
@@ -343,7 +343,7 @@ Concurrency and Streams
 
     An event is a temporal 'marker' in a :class:`Stream` that allows taking the time
     between two events--such as the time required to execute a kernel.
-    An event's time is recorded when the :class:`Stream` has finished all tasks 
+    An event's time is recorded when the :class:`Stream` has finished all tasks
     enqueued before the :meth:`record` call.
 
     See :class:`event_flags` for values for the *flags* parameter.
@@ -369,14 +369,14 @@ Concurrency and Streams
 
         Return the time in milliseconds that has passed between *self* and *event*.
         Use this method as `end.time_since(start)`. Note that this method will fail
-        with an "invalid value" error if either of the events has not been reached yet. 
+        with an "invalid value" error if either of the events has not been reached yet.
         Use :meth:`synchronize` to ensure that the event has been reached.
 
     .. method:: time_till(event)
 
         Return the time in milliseconds that has passed between *event* and *self*.
         Use this method as `start.time_till(end)`. Note that this method will fail
-        with an "invalid value" error if either of the events has not been reached yet. 
+        with an "invalid value" error if either of the events has not been reached yet.
         Use :meth:`synchronize` to ensure that the event has been reached.
 
 
@@ -397,19 +397,19 @@ Global Device Memory
     piece of device memory.
 
 .. function:: to_device(buffer)
-  
+
     Allocate enough device memory for *buffer*, which adheres to the Python
     :class:`buffer` interface. Copy the contents of *buffer* onto the device.
     Return a :class:`DeviceAllocation` object representing the newly-allocated
     memory.
 
 .. function:: from_device(devptr, shape, dtype, order="C")
-  
+
     Make a new :class:`numpy.ndarray` from the data at *devptr* on the
     GPU, interpreting them using *shape*, *dtype* and *order*.
 
 .. function:: from_device_like(devptr, other_ary)
-  
+
     Make a new :class:`numpy.ndarray` from the data at *devptr* on the
     GPU, interpreting them as having the same shape, dtype and order
     as *other_ary*.
@@ -427,13 +427,13 @@ Global Device Memory
 
     An object representing an allocation of linear device memory.
     Once this object is deleted, its associated device memory is
-    freed. 
+    freed.
 
     Objects of this type can be cast to :class:`int` to obtain a linear index
     into this :class:`Context`'s memory.
 
     .. method:: free()
-      
+
         Release the held device memory now instead of when this object
         becomes unreachable. Any further use of the object is an error
         and will lead to undefined behavior.
@@ -450,7 +450,7 @@ Pagelocked Host Memory
     *mem_flags* may be one of the values in :class:`host_alloc_flags`.
     It may only be non-zero on CUDA 2.2 and newer.
 
-    For the meaning of the other parameters, please refer to the :mod:`numpy` 
+    For the meaning of the other parameters, please refer to the :mod:`numpy`
     documentation.
 
 .. function:: pagelocked_zeros(shape, dtype, order="C", mem_flags=0)
@@ -461,7 +461,7 @@ Pagelocked Host Memory
     *mem_flags* may be one of the values in :class:`host_alloc_flags`.
     It may only be non-zero on CUDA 2.2 and newer.
 
-    For the meaning of the other parameters, please refer to the :mod:`numpy` 
+    For the meaning of the other parameters, please refer to the :mod:`numpy`
     documentation.
 
 .. function:: pagelocked_empty_like(array, mem_flags=0)
@@ -480,19 +480,19 @@ Pagelocked Host Memory
     *mem_flags* may be one of the values in :class:`host_alloc_flags`.
     It may only be non-zero on CUDA 2.2 and newer.
 
-The :class:`numpy.ndarray` instances returned by these functions 
+The :class:`numpy.ndarray` instances returned by these functions
 have an attribute *base* that references an object of type
 
 .. class:: HostAllocation
 
-    An object representing an allocation of pagelocked 
-    host memory.  Once this object is deleted, its associated 
-    device memory is freed. 
+    An object representing an allocation of pagelocked
+    host memory.  Once this object is deleted, its associated
+    device memory is freed.
 
     .. method:: free()
-      
+
         Release the held memory now instead of when this object
-        becomes unreachable. Any further use of the object (or its 
+        becomes unreachable. Any further use of the object (or its
         associated :mod:`numpy` array) is an error
         and will lead to undefined behavior.
 
@@ -507,17 +507,17 @@ Arrays and Textures
 ^^^^^^^^^^^^^^^^^^^
 
 .. class:: ArrayDescriptor
-  
+
     .. attribute:: width
     .. attribute:: height
     .. attribute:: format
-    
+
         A value of type :class:`array_format`.
 
     .. attribute:: num_channels
 
 .. class:: ArrayDescriptor3D
-  
+
     .. attribute:: width
     .. attribute:: height
     .. attribute:: depth
@@ -529,7 +529,7 @@ Arrays and Textures
 
 .. class:: Array(descriptor)
 
-    A 2D or 3D memory block that can only be accessed via 
+    A 2D or 3D memory block that can only be accessed via
     texture references.
 
     *descriptor* can be of type :class:`ArrayDescriptor` or
@@ -537,35 +537,35 @@ Arrays and Textures
 
     .. method::  free()
 
-        Release the array and its device memory now instead of when 
-        this object becomes unreachable. Any further use of the 
+        Release the array and its device memory now instead of when
+        this object becomes unreachable. Any further use of the
         object is an error and will lead to undefined behavior.
 
     .. method::  get_descriptor()
 
-        Return a :class:`ArrayDescriptor` object for this 2D array, 
+        Return a :class:`ArrayDescriptor` object for this 2D array,
         like the one that was used to create it.
 
     .. method::  get_descriptor_3d()
 
-        Return a :class:`ArrayDescriptor3D` object for this 3D array, 
+        Return a :class:`ArrayDescriptor3D` object for this 3D array,
         like the one that was used to create it.  CUDA 2.0 and above only.
 
 .. class:: TextureReference()
-  
+
     A handle to a binding of either linear memory or an :class:`Array` to
     a texture unit.
 
     .. method:: set_array(array)
-    
+
         Bind *self* to the :class:`Array` *array*.
 
         As long as *array* remains bound to this texture reference, it will not be
         freed--the texture reference keeps a reference to the array.
 
     .. method:: set_address(devptr, bytes, allow_offset=False)
-    
-        Bind *self* to the a chunk of linear memory starting at the integer address 
+
+        Bind *self* to the a chunk of linear memory starting at the integer address
         *devptr*, encompassing a number of *bytes*. Due to alignment requirements,
         the effective texture bind address may be different from the requested one
         by an offset. This method returns this offset in bytes. If *allow_offset*
@@ -579,12 +579,12 @@ Arrays and Textures
 
         Bind *self* as a 2-dimensional texture to a chunk of global memory
         at *devptr*. The line-to-line offset in bytes is given by *pitch*.
-        Width, height and format are given in the :class:`ArrayDescriptor` 
+        Width, height and format are given in the :class:`ArrayDescriptor`
         *descr*. :meth:`set_format` need not and should not be called in
         addition to this method.
 
     .. method:: set_format(fmt, num_components)
-      
+
         Set the texture to have :class:`array_format` *fmt* and to have
         *num_components* channels.
 
@@ -621,7 +621,7 @@ Arrays and Textures
 .. function:: matrix_to_array(matrix, order)
 
     Turn the two-dimensional :class:`numpy.ndarray` object *matrix* into an
-    :class:`Array`. 
+    :class:`Array`.
     The `order` argument can be either `"C"` or `"F"`. If
     it is `"C"`, then `tex2D(x,y)` is going to fetch `matrix[y,x]`,
     and vice versa for for `"F"`.
@@ -629,7 +629,7 @@ Arrays and Textures
 .. function:: make_multichannel_2d_array(matrix, order)
 
     Turn the three-dimensional :class:`numpy.ndarray` object *matrix* into
-    an 2D :class:`Array` with multiple channels. 
+    an 2D :class:`Array` with multiple channels.
 
     Depending on `order`, the `matrix`'s shape is interpreted as
 
@@ -637,11 +637,11 @@ Arrays and Textures
     * `num_channels, width, height` for `order == "F"`.
 
     .. note ::
-      
-        This function assumes that *matrix* has been created with 
+
+        This function assumes that *matrix* has been created with
         the memory order *order*. If that is not the case, the
         copied data will likely not be what you expect.
-  
+
 .. _memset:
 
 Initializing Device Memory
@@ -652,7 +652,7 @@ Initializing Device Memory
 .. function:: memset_d32(dest, data, count)
 
     .. note::
-        
+
         *count* is the number of elements, not bytes.
 
 .. function:: memset_d2d8(dest, pitch, data, width, height)
@@ -664,16 +664,16 @@ Unstructured Memory Transfers
 
 .. function:: memcpy_htod(dest, src)
 
-    Copy from the Python buffer *src* to the device pointer *dest* 
+    Copy from the Python buffer *src* to the device pointer *dest*
     (an :class:`int` or a :class:`DeviceAllocation`). The size of
-    the copy is determined by the size of the buffer. 
-  
+    the copy is determined by the size of the buffer.
+
 .. function:: memcpy_htod_async(dest, src, stream=None)
 
-    Copy from the Python buffer *src* to the device pointer *dest* 
-    (an :class:`int` or a :class:`DeviceAllocation`) asynchronously, 
+    Copy from the Python buffer *src* to the device pointer *dest*
+    (an :class:`int` or a :class:`DeviceAllocation`) asynchronously,
     optionally serialized via *stream*. The size of
-    the copy is determined by the size of the buffer. 
+    the copy is determined by the size of the buffer.
 
     New in 0.93.
 
@@ -710,7 +710,7 @@ Structured Memory Transfers
         X Offset of the origin of the copy. (initialized to 0)
 
     .. attribute:: src_y
-      
+
         Y offset of the origin of the copy. (initialized to 0)
 
     .. attribute:: src_pitch
@@ -721,7 +721,7 @@ Structured Memory Transfers
 
         Set the *buffer*, which must be a Python object adhering to the buffer interface,
         to be the origin of the copy.
-      
+
     .. method:: set_src_array(array)
 
         Set the :class:`Array` *array* to be the origin of the copy.
@@ -731,12 +731,12 @@ Structured Memory Transfers
         Set the device address *devptr* (an :class:`int` or a
         :class:`DeviceAllocation`) as the origin of the copy.
 
-    .. attribute :: dst_x_in_bytes 
-      
+    .. attribute :: dst_x_in_bytes
+
         X offset of the destination of the copy. (initialized to 0)
 
-    .. attribute :: dst_y 
-      
+    .. attribute :: dst_y
+
         Y offset of the destination of the copy. (initialized to 0)
 
     .. attribute :: dst_pitch
@@ -744,12 +744,12 @@ Structured Memory Transfers
         Size of a row in bytes at the destination of the copy.
 
     .. method:: set_dst_host(buffer)
-    
+
         Set the *buffer*, which must be a Python object adhering to the buffer interface,
         to be the destination of the copy.
 
     .. method:: set_dst_array(array)
-    
+
         Set the :class:`Array` *array* to be the destination of the copy.
 
     .. method:: set_dst_device(devptr)
@@ -768,8 +768,8 @@ Structured Memory Transfers
     .. method:: __call__([aligned=True])
 
         Perform the specified memory copy, waiting for it to finish.
-        If *aligned* is *False*, tolerate device-side misalignment 
-        for device-to-device copies that may lead to loss of 
+        If *aligned* is *False*, tolerate device-side misalignment
+        for device-to-device copies that may lead to loss of
         copy bandwidth.
 
     .. method:: __call__(stream)
@@ -779,24 +779,24 @@ Structured Memory Transfers
 
 
 .. class:: Memcpy3D()
- 
+
     :class:`Memcpy3D` has the same members as :class:`Memcpy2D`, and additionally
     all of the following:
 
     .. attribute:: src_height
-     
+
         Ignored when source is an :class:`Array`. May be 0 if Depth==1.
 
     .. attribute:: src_z
-      
+
         Z offset of the origin of the copy. (initialized to 0)
 
     .. attribute:: dst_height
-     
+
         Ignored when destination is an :class:`Array`. May be 0 if Depth==1.
 
     .. attribute:: dst_z
-      
+
         Z offset of the destination of the copy. (initialized to 0)
 
     .. attribute:: depth
@@ -807,12 +807,12 @@ Code on the Device: Modules and Functions
 -----------------------------------------
 
 .. class:: Module
-  
+
     Handle to a CUBIN module loaded onto the device. Can be created with
     :func:`module_from_file` and :func:`module_from_buffer`.
 
     .. method:: get_function(name)
-      
+
         Return the :class:`Function` *name* in this module.
 
         .. warning::
@@ -820,12 +820,12 @@ Code on the Device: Modules and Functions
             While you can obtain different handles to the same function using this
             method, these handles all share the same state that is set through
             the ``set_XXX`` methods of :class:`Function`. This means that you
-            can't obtain two different handles to the same function and 
+            can't obtain two different handles to the same function and
             :meth:`Function.prepare` them in two different ways.
 
     .. method:: get_global(name)
 
-        Return a tuple `(device_ptr, size_in_bytes)` giving the device address 
+        Return a tuple `(device_ptr, size_in_bytes)` giving the device address
         and size of the global *name* as an :class:`int`.
 
         The main use of this method is to find the address of pre-declared
@@ -837,13 +837,13 @@ Code on the Device: Modules and Functions
         Return the :class:`TextureReference` *name* from this module.
 
 .. function:: module_from_file(filename)
-  
+
     Create a :class:`Module` by loading the CUBIN file *filename*.
 
 .. function:: module_from_buffer(buffer, options=[], message_handler=None)
 
     Create a :class:`Module` by loading a PTX or CUBIN module from
-    *buffer*, which must support the Python buffer interface. 
+    *buffer*, which must support the Python buffer interface.
     (For example, :class:`str` and :class:`numpy.ndarray` do.)
 
     :param options: A list of tuples (:class:`jit_option`, value).
@@ -854,7 +854,7 @@ Code on the Device: Modules and Functions
 
     Loading PTX modules as well as non-default values of *options* and
     *message_handler* are only allowed on CUDA 2.1 and newer.
-  
+
 .. class:: Function
 
     Handle to a *__global__* function in a :class:`Module`. Create using
@@ -867,10 +867,10 @@ Code on the Device: Modules and Functions
 
         *arg1* through *argn* are the positional C arguments to the kernel. See
         :meth:`param_set` for details. See especially the warnings there.
-        
+
         *grid* specifies, as a 2-tuple, the number of thread blocks to launch, as a
         two-dimensional grid.
-        *stream*, if specified, is a :class:`Stream` instance serializing the 
+        *stream*, if specified, is a :class:`Stream` instance serializing the
         copying of input arguments (if any), execution, and the copying
         of output arguments (again, if any).
         *shared* gives the number of bytes available to the kernel in
@@ -888,10 +888,10 @@ Code on the Device: Modules and Functions
 
     .. method:: param_set(arg1, ... argn)
 
-        Set up *arg1* through *argn* as positional C arguments to *self*. They are 
+        Set up *arg1* through *argn* as positional C arguments to *self*. They are
         allowed to be of the following types:
 
-        * Subclasses of :class:`numpy.number`. These are sized number types 
+        * Subclasses of :class:`numpy.number`. These are sized number types
           such as :class:`numpy.uint32` or :class:`numpy.float32`.
 
         * :class:`DeviceAllocation` instances, which will become a device pointer
@@ -912,18 +912,18 @@ Code on the Device: Modules and Functions
             of these integers or floats, it complains with a :exc:`TypeError`.
 
         .. note::
-          
+
             This method has to guess the types of the arguments passed to it,
             which can make it somewhat slow. For a kernel that is invoked often,
             this can be inconvenient. For a faster (but mildly less convenient) way
             of invoking kernels, see :meth:`prepare` and :meth:`prepared_call`.
 
     .. method:: set_block_shape(x, y, z)
-      
+
         Set the thread block shape for this function.
 
     .. method:: set_shared_size(bytes)
-      
+
         Set *shared* to be the number of bytes available to the kernel in
         *extern __shared__* arrays.
 
@@ -944,24 +944,24 @@ Code on the Device: Modules and Functions
         Make the :class:`TextureReference` texref available to the function.
 
     .. method:: launch()
-      
+
         Launch a single thread block of *self*.
 
     .. method:: launch_grid(width, height)
-      
+
         Launch a width*height grid of thread blocks of *self*.
 
     .. method:: launch_grid_async(width, height, stream)
-      
+
         Launch a width*height grid of thread blocks of *self*, sequenced
         by the :class:`Stream` *stream*.
 
     .. method:: prepare(arg_types, block, shared=None, texrefs=[])
 
-        Prepare the invocation of this function by 
-        
+        Prepare the invocation of this function by
+
         * setting up the argument types as `arg_types`. `arg_types` is expected
-          to be an iterable containing type characters understood by the 
+          to be an iterable containing type characters understood by the
           :mod:`struct` module or :class:`numpy.dtype` objects.
 
         * setting the thread block shape for this function to `block`.
@@ -973,7 +973,7 @@ Code on the Device: Modules and Functions
           kernel.
 
         Return `self`.
-      
+
     .. method:: prepared_call(grid, *args)
 
         Invoke `self` using :meth:`launch_grid`, with `args` and a grid size of `grid`.
@@ -994,7 +994,7 @@ Code on the Device: Modules and Functions
 
     .. method:: prepared_async_call(grid, stream, *args)
 
-        Invoke `self` using :meth:`launch_grid_async`, with `args` and a grid 
+        Invoke `self` using :meth:`launch_grid_async`, with `args` and a grid
         size of `grid`, serialized into the :class:`pycuda.driver.Stream` `stream`.
         If `stream` is None, do the same as :meth:`prepared_call`.
         Assumes that :meth:`prepare` was called on *self*.
@@ -1011,7 +1011,7 @@ Code on the Device: Modules and Functions
         All :class:`function_attribute` values may also be directly read
         as (lower-case) attributes on the :class:`Function` object itself,
         e.g. `func.num_regs`.
-      
+
     .. attribute:: local_size_bytes
 
         The number of bytes of local memory used by this function.
@@ -1042,12 +1042,12 @@ Code on the Device: Modules and Functions
 
     Inherits from :class:`ArgumentHandler`. Indicates that :class:`buffer`
     *array* should be copied to the compute device before invoking the kernel.
-  
+
 .. class:: Out(array)
 
     Inherits from :class:`ArgumentHandler`. Indicates that :class:`buffer`
     *array* should be copied off the compute device after invoking the kernel.
-  
+
 .. class:: InOut(array)
 
     Inherits from :class:`ArgumentHandler`. Indicates that :class:`buffer`
@@ -1055,7 +1055,7 @@ Code on the Device: Modules and Functions
     the kernel, and off it afterwards.
 
 .. class:: SourceModule(source, nvcc="nvcc", options=[], keep=False, no_extern_c=False, arch=None, code=None, cache_dir=None)
-  
+
     Create a :class:`Module` from the CUDA source code *source*. The Nvidia
     compiler *nvcc* is assumed to be on the :envvar:`PATH` if no path to it is
     specified, and is invoked with *options* to compile the code. If *keep* is
@@ -1074,6 +1074,6 @@ Code on the Device: Modules and Functions
     sensible per-user default. If it is set to `False`, caching is
     disabled.
 
-    This class exhibits the same public interface as :class:`Module`, but 
+    This class exhibits the same public interface as :class:`Module`, but
     does not inherit from it.
 
