@@ -825,7 +825,8 @@ Code on the Device: Modules and Functions
 
     .. method:: get_global(name)
 
-        Return the device address of the global *name* as an :class:`int`.
+        Return a tuple `(device_ptr, size_in_bytes)` giving the device address 
+        and size of the global *name* as an :class:`int`.
 
         The main use of this method is to find the address of pre-declared
         `__constant__` arrays so they can be filled from the host before kernel
