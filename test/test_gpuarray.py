@@ -1,6 +1,4 @@
 #! /usr/bin/env python
-import pycuda.autoinit
-import pycuda.driver as drv
 import numpy
 import numpy.linalg as la
 import sys
@@ -18,6 +16,7 @@ def have_gpu():
 
 if have_gpu():
     import pycuda.gpuarray as gpuarray
+    import pycuda.driver as drv
 
 
 
