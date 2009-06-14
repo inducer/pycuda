@@ -436,6 +436,34 @@ class TestDriver:
 
             assert la.norm(dest-a) == 0
 
+    def test_constant_memory(self):
+        # contributed by Andrew Wagner
+
+        module = SourceModule("""
+        __constant__ float const_array[32];
+
+        __global__ void copy_constant_into_global(float* global_result_array)
+        {
+            global_result_array[threadIdx.x] = const_array[threadIdx.x];
+        }
+        """)
+
+        copy_constant_into_global = module.get_function("copy_constant_into_global")
+        const_array, _ = module.get_global('const_array')
+
+        host_array = numpy.random.randint(0,255,(32,)).astype(numpy.float32)
+
+        global_result_array = drv.mem_alloc_like(host_array)
+        drv.memcpy_htod(const_array, host_array)
+
+        copy_constant_into_global(
+                global_result_array,  
+                grid=(1, 1), block=(32, 1, 1))
+
+        host_result_array = numpy.zeros_like(host_array)
+        drv.memcpy_dtoh(host_result_array, global_result_array)
+
+        assert (host_result_array == host_array).all
 
 
 
