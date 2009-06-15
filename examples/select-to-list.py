@@ -38,6 +38,7 @@ counter_gpu = gpuarray.zeros(1, dtype=numpy.int32)
 mod = SourceModule("""
 #define BLOCK_SIZE %(block_size)d
 #define EL_PER_THREAD %(el_per_thread)d
+// #define USE_LOOPS 1
 
 __global__ void select_them(float *a, int *selec, float limit, int *counter)
 {
@@ -46,7 +47,7 @@ __global__ void select_them(float *a, int *selec, float limit, int *counter)
     __shared__ int *counter_smem_ptr;
 
     int jump = 16;
-    int idx = EL_PER_THREAD * blockIdx.x * BLOCK_SIZE + threadIdx.x + 
+    int idx = EL_PER_THREAD * blockIdx.x * BLOCK_SIZE + threadIdx.x +
               (EL_PER_THREAD - 1) * (threadIdx.x / 16) * jump;
 
     if (threadIdx.x == 1)
@@ -55,7 +56,7 @@ __global__ void select_them(float *a, int *selec, float limit, int *counter)
         counter_smem = 0;
     }
 
-    #if EL_PER_THREAD == 1
+    #if (EL_PER_THREAD == 1) && !defined(USE_LOOPS)
         selec_smem[threadIdx.x] = -1;
     #else
         for (int i = 0; i <= EL_PER_THREAD - 1; i++)
@@ -66,7 +67,7 @@ __global__ void select_them(float *a, int *selec, float limit, int *counter)
 
    // each counting thread writes its index to shared memory
 
-    #if EL_PER_THREAD == 1
+    #if (EL_PER_THREAD == 1) && !defined(USE_LOOPS)
         if (a[idx] >= limit)
             selec_smem[atomicAdd(counter_smem_ptr, 1)] = idx;
     #else
@@ -84,14 +85,14 @@ __global__ void select_them(float *a, int *selec, float limit, int *counter)
 
     __syncthreads();
 
-    #if EL_PER_THREAD == 1
+    #if (EL_PER_THREAD == 1) && !defined(USE_LOOPS)
         if (selec_smem[threadIdx.x] >= 0)
             selec[counter_smem + threadIdx.x] = selec_smem[threadIdx.x];
     #else
         for (int i = 0; i <= EL_PER_THREAD - 1; i++)
         {
             if (selec_smem[threadIdx.x + i * jump] >= 0)
-                selec[counter_smem + threadIdx.x + i * jump] = 
+                selec[counter_smem + threadIdx.x + i * jump] =
                 selec_smem[threadIdx.x + i * jump];
         }
     #endif
@@ -106,8 +107,8 @@ func.prepare("PPfP", block=(block_size, 1, 1))
 warmup = 2
 for i in range(warmup):
     func.prepared_call((amount // multiple_block_size, 1),
-                       a_gpu.gpudata, selec_gpu.gpudata, 
-		       limit, counter_gpu.gpudata)
+                       a_gpu.gpudata, selec_gpu.gpudata,
+                       limit, counter_gpu.gpudata)
     counter_gpu = gpuarray.zeros(1, dtype=numpy.int32)
 
 
@@ -121,8 +122,8 @@ start.record()
 count = 10
 for i in range(count):
     func.prepared_call((amount // multiple_block_size, 1),
-                       a_gpu.gpudata, selec_gpu.gpudata, 
-	    	       limit, counter_gpu.gpudata)
+                       a_gpu.gpudata, selec_gpu.gpudata,
+                       limit, counter_gpu.gpudata)
     counter_gpu = gpuarray.zeros(1, dtype=numpy.int32)
 stop.record()
 
@@ -138,5 +139,5 @@ elapsed_seconds = stop.time_since(start) * 1e-3
 print "mem bw:", (a.nbytes + elems_in_selec * 4) / elapsed_seconds / 1e9 * count
 
 filtered_set = sorted(list(item for item in selec if item != -1))
-reference_set = sorted(list(i for i, x in enumerate(a) if x>limit))
+reference_set = sorted(list(i for i, x in enumerate(a) if x >= limit))
 assert filtered_set == reference_set
