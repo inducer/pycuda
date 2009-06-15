@@ -162,7 +162,7 @@ class TestGPUArray(test_abstract_array.TestAbstractArray):
         from pycuda.curandom import rand as curand
 	from pycuda.reduction import get_subset_min_kernel
 
-        l_a = 200
+        l_a = 200000
 	gran = 5
         l_m = l_a - l_a // gran
 
