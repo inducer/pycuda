@@ -133,7 +133,7 @@ class TestGPUArray(test_abstract_array.TestAbstractArray):
 	    for i in range(len(meaningful_indices)):
 	        meaningful_indices[i] = j
 	        j = j + 1
-	        if j % 5 == 0:
+	        if j % gran == 0:
 	            j = j + 1
 
 	    meaningful_indices_gpu = gpuarray.to_gpu(meaningful_indices)
@@ -162,8 +162,8 @@ class TestGPUArray(test_abstract_array.TestAbstractArray):
         from pycuda.curandom import rand as curand
 	from pycuda.reduction import get_subset_min_kernel
 
-        l_a = 200000
-	gran = 2
+        l_a = 200
+	gran = 5
         l_m = l_a - l_a // gran
 
         for dtype in [numpy.float64, numpy.float32, numpy.int32]:
@@ -176,7 +176,7 @@ class TestGPUArray(test_abstract_array.TestAbstractArray):
 	    for i in range(len(meaningful_indices)):
 	        meaningful_indices[i] = j
 	        j = j + 1
-	        if j % 5 == 0:
+	        if j % gran == 0:
 	            j = j + 1
         
 	    meaningful_indices_gpu = gpuarray.to_gpu(meaningful_indices)
