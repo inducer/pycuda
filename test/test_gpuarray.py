@@ -121,7 +121,7 @@ class TestGPUArray(test_abstract_array.TestAbstractArray):
 
         l_a = 200000
 	gran = 5
-        l_m = l_a - l_a // gran
+        l_m = l_a - l_a // gran + 1
 
         for dtype in [numpy.float64, numpy.float32, numpy.int32]:
 	    a_gpu = curand((l_a,), dtype)
@@ -164,7 +164,7 @@ class TestGPUArray(test_abstract_array.TestAbstractArray):
 
         l_a = 200000
 	gran = 5
-        l_m = l_a - l_a // gran
+        l_m = l_a - l_a // gran + 1
 
         for dtype in [numpy.float64, numpy.float32, numpy.int32]:
 	    a_gpu = curand((l_a,), dtype)
