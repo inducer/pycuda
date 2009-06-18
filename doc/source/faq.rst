@@ -132,7 +132,7 @@ Acknowledgments
 
 * Gert Wohlgemuth ported PyCUDA to MacOS X and contributed large parts of
   :class:`pycuda.gpuarray.GPUArray`.
-* Znah on the Nvidia forums contributed fixes for Windows XP.
+* Alexander Mordvintsev contributed fixes for Windows XP.
 * Cosmin Stejerean provided multiple patches for PyCUDA's build system.
 * Tom Annau contributed an alternative SourceModule compiler cache as well
   as Windows build insight.
