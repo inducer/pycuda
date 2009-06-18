@@ -29,7 +29,7 @@ namespace pycuda
 
   inline unsigned bitlog2_32(boost::uint32_t v)
   {
-    if (uint16_t t = v >> 16)
+    if (boost::uint16_t t = v >> 16)
       return 16+bitlog2_16(t);
     else 
       return bitlog2_16(v);

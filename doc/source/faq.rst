@@ -132,7 +132,7 @@ Acknowledgments
 
 * Gert Wohlgemuth ported PyCUDA to MacOS X and contributed large parts of
   :class:`pycuda.gpuarray.GPUArray`.
-* Znah on the Nvidia forums contributed fixes for Windows XP.
+* Alexander Mordvintsev contributed fixes for Windows XP.
 * Cosmin Stejerean provided multiple patches for PyCUDA's build system.
 * Tom Annau contributed an alternative SourceModule compiler cache as well
   as Windows build insight.
@@ -140,6 +140,12 @@ Acknowledgments
 * Jozef Vesely contributed a massively improved random number generator derived from 
   the RSA Data Security, Inc. MD5 Message Digest Algorithm.
 * Chris Heuser provided a test cases for multi-threaded PyCUDA.
+* The reduction templating is based on code by Mark Harris at Nvidia.
+* Andrew Wagner provided a test case and contributed the port of the
+  convolution example. The original convolution code is based on an
+  example provided by Nvidia.
+* Hendrik Riedmann contributed the matrix transpose and list selection
+  examples.
 
 Licensing
 =========
