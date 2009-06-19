@@ -52,30 +52,35 @@ def search_on_path(filenames):
 # verification ----------------------------------------------------------------
 def verify_path(description, paths, names, extensions, subpaths=['/'], 
         prefixes=[], maybe_ok=False):
-    from os.path import exists
+    try:
+        from os.path import exists
 
-    defaultname = names[0] + extensions[0]
-    prefixes.append("")
-    looked_where = []
+        defaultname = names[0] + extensions[0]
+        prefixes.append("")
+        looked_where = []
 
-    for path in paths:
-        for subpath in subpaths:
-            for prefix in prefixes:
-                for name in names:
-                    for extension in extensions:
-                        filename = path + subpath + prefix + name + extension
+        for path in paths:
+            for subpath in subpaths:
+                for prefix in prefixes:
+                    for name in names:
+                        for extension in extensions:
+                            print path, subpath, prefix, name, extension
+                            filename = path + subpath + prefix + name + extension
 
-                        looked_where.append(filename)
+                            looked_where.append(filename)
 
-                        if exists(filename):
-                            return
-    print "*** Cannot find %s. Checked locations:" % description
-    for path in looked_where:
-        print "   %s" % path
+                            if exists(filename):
+                                return
+        print "*** Cannot find %s. Checked locations:" % description
+        for path in looked_where:
+            print "   %s" % path
 
-    if maybe_ok:
-        print "*** Note that this may not be a problem as this " \
-                "component is often installed system-wide."
+        if maybe_ok:
+            print "*** Note that this may not be a problem as this " \
+                    "component is often installed system-wide."
+    except:
+        print "*** Error occurred in plausibility checking for path of %s." \
+                % description
 
 
 
