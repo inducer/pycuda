@@ -228,9 +228,9 @@ def _add_functionality():
         if get_version() >= (2,2):
             return self.get_attribute(getattr(function_attribute, name.upper()))
         else:
-            if name == "num_regs": return self.registers
-            elif name == "shared_size_bytes": return self.smem
-            elif name == "local_size_bytes": return self.lmem
+            if name == "num_regs": return self._hacky_registers
+            elif name == "shared_size_bytes": return self._hacky_smem
+            elif name == "local_size_bytes": return self._hacky_lmem
             else:
                 raise AttributeError("no attribute '%s' in Function" % name)
 
