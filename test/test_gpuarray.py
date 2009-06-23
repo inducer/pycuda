@@ -315,7 +315,7 @@ class TestGPUArray:
 
         l_a = 200000
         gran = 5
-        l_m = l_a - l_a // gran
+        l_m = l_a - l_a // gran + 1
 
         for dtype in [numpy.float64, numpy.float32, numpy.int32]:
             a_gpu = curand((l_a,), dtype)
@@ -327,7 +327,7 @@ class TestGPUArray:
             for i in range(len(meaningful_indices)):
                 meaningful_indices[i] = j
                 j = j + 1
-                if j % 5 == 0:
+	        if j % gran == 0:
                     j = j + 1
 
             meaningful_indices_gpu = gpuarray.to_gpu(meaningful_indices)
@@ -357,8 +357,8 @@ class TestGPUArray:
         from pycuda.reduction import get_subset_min_kernel
 
         l_a = 200000
-        gran = 2
-        l_m = l_a - l_a // gran
+	gran = 5
+        l_m = l_a - l_a // gran + 1
 
         for dtype in [numpy.float64, numpy.float32, numpy.int32]:
             a_gpu = curand((l_a,), dtype)
@@ -370,7 +370,7 @@ class TestGPUArray:
             for i in range(len(meaningful_indices)):
                 meaningful_indices[i] = j
                 j = j + 1
-                if j % 5 == 0:
+	        if j % gran == 0:
                     j = j + 1
 
             meaningful_indices_gpu = gpuarray.to_gpu(meaningful_indices)
