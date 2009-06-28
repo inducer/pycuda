@@ -260,7 +260,7 @@ class ReductionKernel:
 
 
 @memoize
-def get_sum_kernel(what, dtype_out, dtype_in):
+def get_sum_kernel(dtype_out, dtype_in):
     if dtype_out is None:
         dtype_out = dtype_in
 
