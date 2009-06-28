@@ -12,9 +12,9 @@
 
 namespace cuda { namespace gl {
   inline
-  void gl_init() 
-  { 
-    CUDAPP_CALL_GUARDED(cuGLInit, ()); 
+  void gl_init()
+  {
+    CUDAPP_CALL_GUARDED(cuGLInit, ());
   }
 
 
@@ -45,7 +45,10 @@ namespace cuda { namespace gl {
       { CUDAPP_CALL_GUARDED(cuGLRegisterBufferObject, (handle)); }
 
       ~buffer_object()
-      { unregister(); }
+      {
+        if (m_valid)
+          unregister();
+      }
 
       GLuint handle()
       { return m_handle; }
@@ -86,9 +89,9 @@ namespace cuda { namespace gl {
       { }
 
       ~buffer_object_mapping()
-      { 
+      {
         if (m_valid)
-          unmap(); 
+          unmap();
       }
 
       void unmap()
