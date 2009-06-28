@@ -625,7 +625,8 @@ def multi_take(arrays, indices, out=None, stream=None):
         return []
     assert len(indices.shape) == 1
 
-    a_dtype = arrays[0].dtype
+    from pytools import single_valued
+    a_dtype = single_valued(a.dtype for a in arrays)
     a_allocator = arrays[0].dtype
 
     vec_count = len(arrays)
@@ -658,7 +659,8 @@ def multi_take_put(arrays, dest_indices, src_indices, dest_shape=None,
     if not len(arrays):
         return []
 
-    a_dtype = arrays[0].dtype
+    from pytools import single_valued
+    a_dtype = single_valued(a.dtype for a in arrays)
     a_allocator = arrays[0].allocator
 
     vec_count = len(arrays)
@@ -666,6 +668,8 @@ def multi_take_put(arrays, dest_indices, src_indices, dest_shape=None,
     if out is None:
         out = [GPUArray(dest_shape, a_dtype, a_allocator)
                 for i in range(vec_count)]
+    else:
+        assert a_dtype == single_valued(o.dtype for o in out)
 
     assert src_indices.dtype == dest_indices.dtype
     assert len(src_indices.shape) == 1
@@ -702,7 +706,8 @@ def multi_put(arrays, dest_indices, dest_shape=None, out=None, stream=None):
     if not len(arrays):
         return []
 
-    a_dtype = arrays[0].dtype
+    from pytools import single_valued
+    a_dtype = single_valued(a.dtype for a in arrays)
     a_allocator = arrays[0].allocator
 
     vec_count = len(arrays)
@@ -710,6 +715,8 @@ def multi_put(arrays, dest_indices, dest_shape=None, out=None, stream=None):
     if out is None:
         out = [GPUArray(dest_shape, a_dtype, a_allocator)
                 for i in range(vec_count)]
+    else:
+        assert a_dtype == single_valued(o.dtype for o in out)
 
     assert len(dest_indices.shape) == 1
     assert len(out) == len(arrays)
