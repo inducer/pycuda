@@ -38,10 +38,34 @@
 
 
 #ifdef CUDAPP_TRACE_CUDA
-  #define CUDAPP_PRINT_CALL_TRACE(NAME) std::cerr << NAME << std::endl;
+  #define CUDAPP_PRINT_CALL_TRACE(NAME) \
+    std::cerr << NAME << std::endl;
+  #define CUDAPP_PRINT_CALL_TRACE_INFO(NAME, EXTRA_INFO) \
+    std::cerr << NAME << " (" << EXTRA_INFO << ')' << std::endl;
 #else
   #define CUDAPP_PRINT_CALL_TRACE(NAME) /*nothing*/
+  #define CUDAPP_PRINT_CALL_TRACE_INFO(NAME, EXTRA_INFO) /*nothing*/
 #endif
+
+#define CUDAPP_CALL_GUARDED_THREADED_WITH_TRACE_INFO(NAME, ARGLIST, TRACE_INFO) \
+  { \
+    CUDAPP_PRINT_CALL_TRACE_INFO(#NAME, TRACE_INFO); \
+    CUresult cu_status_code; \
+    Py_BEGIN_ALLOW_THREADS \
+      cu_status_code = NAME ARGLIST; \
+    Py_END_ALLOW_THREADS \
+    if (cu_status_code != CUDA_SUCCESS) \
+      throw cuda::error(#NAME, cu_status_code);\
+  }
+
+#define CUDAPP_CALL_GUARDED_WITH_TRACE_INFO(NAME, ARGLIST, TRACE_INFO) \
+  { \
+    CUDAPP_PRINT_CALL_TRACE_INFO(#NAME, TRACE_INFO); \
+    CUresult cu_status_code; \
+    cu_status_code = NAME ARGLIST; \
+    if (cu_status_code != CUDA_SUCCESS) \
+      throw cuda::error(#NAME, cu_status_code);\
+  }
 
 #define CUDAPP_CALL_GUARDED_THREADED(NAME, ARGLIST) \
   { \
@@ -851,45 +875,73 @@ namespace cuda
   {
     private:
       CUfunction m_function;
+      std::string m_symbol;
 
     public:
-      function(CUfunction func)
-        : m_function(func)
+      function(CUfunction func, std::string const &sym)
+        : m_function(func), m_symbol(sym)
       { }
 
       void set_block_shape(int x, int y, int z)
-      { CUDAPP_CALL_GUARDED(cuFuncSetBlockShape, (m_function, x, y, z)); }
+      { 
+        CUDAPP_CALL_GUARDED_WITH_TRACE_INFO(
+            cuFuncSetBlockShape, (m_function, x, y, z), m_symbol); 
+      }
       void set_shared_size(unsigned int bytes)
-      { CUDAPP_CALL_GUARDED(cuFuncSetSharedSize, (m_function, bytes)); }
+      { 
+        CUDAPP_CALL_GUARDED_WITH_TRACE_INFO(
+            cuFuncSetSharedSize, (m_function, bytes), m_symbol); 
+      }
 
       void param_set_size(unsigned int bytes)
-      { CUDAPP_CALL_GUARDED(cuParamSetSize, (m_function, bytes)); }
+      { 
+        CUDAPP_CALL_GUARDED_WITH_TRACE_INFO(
+            cuParamSetSize, (m_function, bytes), m_symbol); 
+      }
       void param_set(int offset, unsigned int value)
-      { CUDAPP_CALL_GUARDED(cuParamSeti, (m_function, offset, value)); }
+      { 
+        CUDAPP_CALL_GUARDED_WITH_TRACE_INFO(
+            cuParamSeti, (m_function, offset, value), m_symbol); 
+      }
       void param_set(int offset, float value)
-      { CUDAPP_CALL_GUARDED(cuParamSetf, (m_function, offset, value)); }
+      { 
+        CUDAPP_CALL_GUARDED_WITH_TRACE_INFO(
+          cuParamSetf, (m_function, offset, value), m_symbol); 
+      }
       void param_setv(int offset, void *buf, unsigned long len)
       { 
-        CUDAPP_CALL_GUARDED(cuParamSetv, (m_function, offset, buf, len)); 
+        CUDAPP_CALL_GUARDED_WITH_TRACE_INFO(
+            cuParamSetv, (m_function, offset, buf, len), m_symbol); 
       }
       void param_set_texref(const texture_reference &tr)
       { 
-        CUDAPP_CALL_GUARDED(cuParamSetTexRef, (m_function, 
-            CU_PARAM_TR_DEFAULT, tr.handle())); 
+        CUDAPP_CALL_GUARDED_WITH_TRACE_INFO(cuParamSetTexRef, (m_function, 
+            CU_PARAM_TR_DEFAULT, tr.handle()), m_symbol); 
       }
 
       void launch()
-      { CUDAPP_CALL_GUARDED_THREADED(cuLaunch, (m_function)); }
+      { 
+        CUDAPP_CALL_GUARDED_THREADED_WITH_TRACE_INFO(
+            cuLaunch, (m_function), m_symbol); 
+      }
       void launch_grid(int grid_width, int grid_height)
-      { CUDAPP_CALL_GUARDED_THREADED(cuLaunchGrid, (m_function, grid_width, grid_height)); }
+      { 
+        CUDAPP_CALL_GUARDED_THREADED_WITH_TRACE_INFO(
+          cuLaunchGrid, (m_function, grid_width, grid_height), m_symbol); 
+      }
       void launch_grid_async(int grid_width, int grid_height, const stream &s)
-      { CUDAPP_CALL_GUARDED_THREADED(cuLaunchGridAsync, (m_function, grid_width, grid_height, s.handle())); }
+      { 
+        CUDAPP_CALL_GUARDED_THREADED_WITH_TRACE_INFO(
+            cuLaunchGridAsync, (m_function, grid_width, grid_height, s.handle()), 
+            m_symbol);
+      }
 
 #if CUDA_VERSION >= 2020
       int get_attribute(CUfunction_attribute attr) const
       {
         int result;
-        CUDAPP_CALL_GUARDED(cuFuncGetAttribute, (&result, attr, m_function));
+        CUDAPP_CALL_GUARDED_WITH_TRACE_INFO(
+            cuFuncGetAttribute, (&result, attr, m_function), m_symbol);
         return result;
       }
 #endif
@@ -900,7 +952,7 @@ namespace cuda
   {
     CUfunction func;
     CUDAPP_CALL_GUARDED(cuModuleGetFunction, (&func, m_module, name));
-    return function(func);
+    return function(func, name);
   }
 
 
