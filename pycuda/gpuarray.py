@@ -758,9 +758,9 @@ def subset_dot(subset, a, b, dtype=None, stream=None):
     return krnl(subset, a, b, stream=stream)
 
 def _make_minmax_kernel(what):
-    def f(a, dtype=None, stream=None):
+    def f(a, stream=None):
         from pycuda.reduction import get_minmax_kernel
-        krnl = get_minmax_kernel(what, dtype, a.dtype)
+        krnl = get_minmax_kernel(what, a.dtype)
         return krnl(a,  stream=stream)
 
     return f
@@ -769,10 +769,10 @@ min = _make_minmax_kernel("min")
 max = _make_minmax_kernel("max")
 
 def _make_subset_minmax_kernel(what):
-    def f(subset, a, dtype=None, stream=None):
+    def f(subset, a, stream=None):
         from pycuda.reduction import get_subset_minmax_kernel
         import pycuda.reduction
-        krnl = get_subset_minmax_kernel(what, dtype, a.dtype)
+        krnl = get_subset_minmax_kernel(what, a.dtype)
         return krnl(subset, a,  stream=stream)
 
     return f

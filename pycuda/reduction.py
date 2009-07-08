@@ -342,42 +342,42 @@ def get_minmax_neutral(what, dtype):
 
 
 @memoize
-def get_minmax_kernel(what, dtype_out, dtype_in):
-    if dtype_in == numpy.float64:
+def get_minmax_kernel(what, dtype):
+    if dtype == numpy.float64:
         reduce_expr = "f%s(a,b)" % what
-    elif dtype_in == numpy.float32:
+    elif dtype == numpy.float32:
         reduce_expr = "f%sf(a,b)" % what
-    elif dtype_in.kind in "iu":
+    elif dtype.kind in "iu":
         reduce_expr = "%s(a,b)" % what
     else:
-        raise TypeError("invalid dtype specified")
+        raise TypeError("unsupported dtype specified")
 
-    return ReductionKernel(dtype_out, 
-            neutral=get_minmax_neutral(what, dtype_out), 
+    return ReductionKernel(dtype, 
+            neutral=get_minmax_neutral(what, dtype), 
             reduce_expr="%(reduce_expr)s" % {"reduce_expr": reduce_expr}, 
             arguments="const %(tp)s *in" % { 
-                "tp": dtype_to_ctype(dtype_in),
+                "tp": dtype_to_ctype(dtype),
                 }, preamble="#define MY_INFINITY (1./0)")
  
 
 
 
 @memoize
-def get_subset_minmax_kernel(what, dtype_out, dtype_in):
-    if dtype_in == numpy.float64:
+def get_subset_minmax_kernel(what, dtype):
+    if dtype == numpy.float64:
         reduce_expr = "f%s(a,b)" % what
-    elif dtype_in == numpy.float32:
+    elif dtype == numpy.float32:
         reduce_expr = "f%sf(a,b)" % what
-    elif dtype_in.kind in "iu":
+    elif dtype.kind in "iu":
         reduce_expr = "%s(a,b)" % what
     else:
-        raise TypeError("invalid dtype specified")
+        raise TypeError("unsupported dtype specified")
 
-    return ReductionKernel(dtype_out, 
-            neutral=get_minmax_neutral(what, dtype_out), 
+    return ReductionKernel(dtype, 
+            neutral=get_minmax_neutral(what, dtype), 
             reduce_expr="%(reduce_expr)s" % {"reduce_expr": reduce_expr}, 
 	    map_expr="in[lookup_tbl[i]]", 
             arguments="const unsigned int *lookup_tbl, "
 	    "const %(tp)s *in"  % {
-            "tp": dtype_to_ctype(dtype_in),
+            "tp": dtype_to_ctype(dtype),
             }, preamble="#define MY_INFINITY (1./0)")

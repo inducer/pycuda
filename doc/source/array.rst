@@ -200,6 +200,14 @@ Constructing :class:`GPUArray` Instances
 
 .. function:: subset_dot(subset, a, b, dtype=None, stream=None)
 
+.. function:: max(a, stream=None)
+
+.. function:: min(a, stream=None)
+
+.. function:: subset_max(subset, a, stream=None)
+
+.. function:: subset_min(subset, a, stream=None)
+
 Elementwise Functions on :class:`GPUArrray` Instances
 -----------------------------------------------------
 

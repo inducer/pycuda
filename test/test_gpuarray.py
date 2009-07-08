@@ -305,7 +305,7 @@ class TestGPUArray:
                 a = a_gpu.get()
 
                 op_a = getattr(numpy, what)(a)
-                op_a_gpu = getattr(gpuarray, what)(a_gpu, dtype).get()
+                op_a_gpu = getattr(gpuarray, what)(a_gpu).get()
 
                 assert op_a_gpu == op_a, (op_a_gpu, op_gpu, dtype, what)
 
@@ -333,8 +333,7 @@ class TestGPUArray:
             b = a[meaningful_indices]
 
             min_a = numpy.min(b)
-            min_a_gpu = gpuarray.subset_min(meaningful_indices_gpu, a_gpu,
-                dtype).get()
+            min_a_gpu = gpuarray.subset_min(meaningful_indices_gpu, a_gpu).get()
 
             assert min_a_gpu == min_a
 
