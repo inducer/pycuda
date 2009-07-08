@@ -139,6 +139,9 @@ class GPUArray(object):
     def __repr__(self):
         return repr(self.get())
 
+    def __hash__(self):
+        raise TypeError("GPUArrays are not hashable.")
+
     # kernel invocation wrappers ----------------------------------------------
     def _axpbyz(self, selffac, other, otherfac, out, add_timer=None, stream=None):
         """Compute ``out = selffac * self + otherfac*other``, 
