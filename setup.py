@@ -289,6 +289,7 @@ def main():
 
             install_requires=[
                 "pytools>=8",
+                "py>=1.0.0b7"
                 ],
 
             ext_package="pycuda",
