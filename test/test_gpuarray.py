@@ -371,6 +371,9 @@ class TestGPUArray:
 
 
 if __name__ == "__main__":
+    # make sure that import failures get reported, instead of skipping the tests.
+    import pycuda.autoinit
+
     import sys
     if len(sys.argv) > 1:
         exec sys.argv[1]
