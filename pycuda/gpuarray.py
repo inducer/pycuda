@@ -92,11 +92,6 @@ class GPUArray(object):
 
         self._grid, self._block = splay(self.mem_size)
 
-    @classmethod
-    def compile_kernels(cls):
-        # useful for benchmarking
-        elementwise._compile_kernels(cls)
-
     def set(self, ary):
         assert ary.size == self.size
         assert ary.dtype == self.dtype

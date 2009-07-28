@@ -38,7 +38,8 @@ from pycuda.tools import dtype_to_ctype, VectorArg, ScalarArg
 
 
 def get_elwise_module(arguments, operation, 
-        name="kernel", keep=False, options=[], preamble=""):
+        name="kernel", keep=False, options=[], 
+        preamble="", loop_prep=""):
     from pycuda.compiler import SourceModule
     return SourceModule("""
         %(preamble)s
@@ -50,6 +51,8 @@ def get_elwise_module(arguments, operation,
           unsigned total_threads = gridDim.x*blockDim.x;
           unsigned cta_start = blockDim.x*blockIdx.x;
           unsigned i;
+
+          %(loop_prep)s;
                 
           for (i = cta_start + tid; i < n; i += total_threads) 
           {
@@ -60,7 +63,8 @@ def get_elwise_module(arguments, operation,
             "arguments": ", ".join(arg.declarator() for arg in arguments), 
             "operation": operation,
             "name": name,
-            "preamble": preamble},
+            "preamble": preamble,
+            "loop_prep": loop_prep},
         options=options, keep=keep)
 
 def get_elwise_kernel_and_types(arguments, operation, 
@@ -240,6 +244,57 @@ def get_copy_kernel(dtype_dest, dtype_src):
                 },
             "dest[i] = src[i]",
             "copy")
+
+
+
+@memoize
+def get_linear_combination_kernel(summand_descriptors,
+        dtype_z):
+    from pycuda.tools import dtype_to_ctype
+    from pycuda.elementwise import \
+            VectorArg, ScalarArg, get_elwise_module
+
+    args = []
+    preamble = [ "#include <pycuda-helpers.hpp>\n\n" ]
+    loop_prep = []
+    summands = []
+    tex_names = []
+
+    for i, (is_gpu_scalar, scalar_dtype, vector_dtype) in \
+            enumerate(summand_descriptors):
+        if is_gpu_scalar:
+            preamble.append(
+                    "texture <%s, 1, cudaReadModeElementType> tex_a%d;" 
+                    % (dtype_to_ctype(scalar_dtype, with_fp_tex_hack=True), i))
+            args.append(VectorArg(vector_dtype, "x%d" % i))
+            tex_names.append("tex_a%d" % i)
+            loop_prep.append(
+                    "%s a%d = fp_tex1Dfetch(tex_a%d, 0)" 
+                    % (dtype_to_ctype(scalar_dtype), i, i))
+        else:
+            args.append(ScalarArg(scalar_dtype, "a%d" % i))
+            args.append(VectorArg(vector_dtype, "x%d" % i))
+
+        summands.append("a%d*x%d[i]" % (i, i))
+
+    args.append(VectorArg(dtype_z, "z"))
+    args.append(ScalarArg(numpy.uintp, "n"))
+
+    mod = get_elwise_module(args, 
+            "z[i] = " + " + ".join(summands), 
+            "linear_combination", 
+            preamble="\n".join(preamble),
+            loop_prep=";\n".join(loop_prep))
+
+    func = mod.get_function("linear_combination")
+    tex_src = [mod.get_texref(tn) for tn in tex_names]
+    func.prepare("".join(arg.struct_char for arg in args), 
+            (1,1,1), texrefs=tex_src)
+
+    return func, tex_src
+
+
+
 
 @memoize
 def get_axpbyz_kernel(dtype_x, dtype_y, dtype_z):
