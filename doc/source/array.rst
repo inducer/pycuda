@@ -5,194 +5,194 @@ The :class:`GPUArray` Array Class
 
 .. class:: GPUArray(shape, dtype, allocator=None)
 
-  A :class:`numpy.ndarray` work-alike that stores its data and performs its
-  computations on the compute device.  *shape* and *dtype* work exactly as in
-  :mod:`numpy`.  Arithmetic methods in :class:`GPUArray` support the
-  broadcasting of scalars. (e.g. `array+5`) If the
+    A :class:`numpy.ndarray` work-alike that stores its data and performs its
+    computations on the compute device.  *shape* and *dtype* work exactly as in
+    :mod:`numpy`.  Arithmetic methods in :class:`GPUArray` support the
+    broadcasting of scalars. (e.g. `array+5`) If the
 
-  *allocator* is a callable that, upon being called with an argument of the number
-  of bytes to be allocated, returns an object that can be cast to an
-  :class:`int` representing the address of the newly allocated memory.
-  Observe that both :func:`pycuda.driver.mem_alloc` and
-  :meth:`pycuda.tools.DeviceMemoryPool.alloc` are a model of this interface.
+    *allocator* is a callable that, upon being called with an argument of the number
+    of bytes to be allocated, returns an object that can be cast to an
+    :class:`int` representing the address of the newly allocated memory.
+    Observe that both :func:`pycuda.driver.mem_alloc` and
+    :meth:`pycuda.tools.DeviceMemoryPool.alloc` are a model of this interface.
 
-  .. attribute :: gpudata
+    .. attribute :: gpudata
 
-    The :class:`pycuda.driver.DeviceAllocation` instance created for the memory that backs
-    this :class:`GPUArray`.
+        The :class:`pycuda.driver.DeviceAllocation` instance created for the memory that backs
+        this :class:`GPUArray`.
 
-  .. attribute :: shape
+    .. attribute :: shape
 
-    The tuple of lengths of each dimension in the array.
+        The tuple of lengths of each dimension in the array.
 
-  .. attribute :: dtype
+    .. attribute :: dtype
 
-    The :class:`numpy.dtype` of the items in the GPU array.
+        The :class:`numpy.dtype` of the items in the GPU array.
 
-  .. attribute :: size
+    .. attribute :: size
 
-    The number of meaningful entries in the array. Can also be computed by
-    multiplying up the numbers in :attr:`shape`.
+        The number of meaningful entries in the array. Can also be computed by
+        multiplying up the numbers in :attr:`shape`.
 
-  .. attribute :: mem_size
+    .. attribute :: mem_size
 
-    The total number of entries, including padding, that are present in
-    the array. Padding may arise for example because of pitch adjustment by
-    :func:`pycuda.driver.mem_alloc_pitch`.
+        The total number of entries, including padding, that are present in
+        the array. Padding may arise for example because of pitch adjustment by
+        :func:`pycuda.driver.mem_alloc_pitch`.
 
-  .. attribute :: nbytes
+    .. attribute :: nbytes
 
-    The size of the entire array in bytes. Computed as :attr:`size` times
-    ``dtype.itemsize``.
+        The size of the entire array in bytes. Computed as :attr:`size` times
+        ``dtype.itemsize``.
 
-  .. method :: __len__()
+    .. method :: __len__()
 
-    Returns the size of the leading dimension of *self*.
+        Returns the size of the leading dimension of *self*.
 
-    .. warning ::
+      .. warning ::
 
-      This method existed in version 0.93 and below, but it returned the value
-      of :attr:`size` instead of its current value. The change was made in order
-      to match :mod:`numpy`.
+        This method existed in version 0.93 and below, but it returned the value
+        of :attr:`size` instead of its current value. The change was made in order
+        to match :mod:`numpy`.
 
-  .. method :: set(ary)
+    .. method :: set(ary)
 
-    Transfer the contents the :class:`numpy.ndarray` object *ary*
-    onto the device.
+        Transfer the contents the :class:`numpy.ndarray` object *ary*
+        onto the device.
 
-    *ary* must have the same dtype and size (not necessarily shape) as *self*.
+        *ary* must have the same dtype and size (not necessarily shape) as *self*.
 
-  .. method :: set_async(ary, stream=None)
+    .. method :: set_async(ary, stream=None)
 
-    Asynchronously transfer the contents the :class:`numpy.ndarray` object *ary*
-    onto the device, optionally sequenced on *stream*.
+        Asynchronously transfer the contents the :class:`numpy.ndarray` object *ary*
+        onto the device, optionally sequenced on *stream*.
 
-    *ary* must have the same dtype and size (not necessarily shape) as *self*.
+        *ary* must have the same dtype and size (not necessarily shape) as *self*.
 
+    .. method :: get(ary=None, stream=None, pagelocked=False)
 
-  .. method :: get(ary=None, stream=None, pagelocked=False)
+        Transfer the contents of *self* into *ary* or a newly allocated
+        :mod:`numpy.ndarray`. If *ary* is given, it must have the right
+        size (not necessarily shape) and dtype. If it is not given,
+        a *pagelocked* specifies whether the new array is allocated
+        page-locked.
 
-    Transfer the contents of *self* into *ary* or a newly allocated
-    :mod:`numpy.ndarray`. If *ary* is given, it must have the right
-    size (not necessarily shape) and dtype. If it is not given,
-    a *pagelocked* specifies whether the new array is allocated
-    page-locked.
+    .. method :: get_async(ary=None, stream=None)
 
-  .. method :: get_async(ary=None, stream=None)
+        Transfer the contents of *self* into *ary* or a newly allocated
+        :mod:`numpy.ndarray`. If *ary* is given, it must have the right
+        size (not necessarily shape) and dtype. If it is not given,
+        a page-locked* array is newly allocated.
 
-    Transfer the contents of *self* into *ary* or a newly allocated
-    :mod:`numpy.ndarray`. If *ary* is given, it must have the right
-    size (not necessarily shape) and dtype. If it is not given,
-    a page-locked* array is newly allocated.
+    .. method :: mul_add(self, selffac, other, otherfac, add_timer=None, stream=None):
 
-  .. method :: mul_add(self, selffac, other, otherfac, add_timer=None, stream=None):
+        Return `selffac*self + otherfac*other`. *add_timer*, if given,
+        is invoked with the result from
+        :meth:`pycuda.driver.Function.prepared_timed_call`.
 
-    Return `selffac*self + otherfac*other`. *add_timer*, if given,
-    is invoked with the result from
-    :meth:`pycuda.driver.Function.prepared_timed_call`.
+    .. method :: __add__(other)
+    .. method :: __sub__(other)
+    .. method :: __iadd__(other)
+    .. method :: __isub__(other)
+    .. method :: __neg__(other)
+    .. method :: __mul__(other)
+    .. method :: __div__(other)
+    .. method :: __rdiv__(other)
+    .. method :: __pow__(other)
 
-  .. method :: __add__(other)
-  .. method :: __sub__(other)
-  .. method :: __iadd__(other)
-  .. method :: __isub__(other)
-  .. method :: __neg__(other)
-  .. method :: __mul__(other)
-  .. method :: __div__(other)
-  .. method :: __rdiv__(other)
-  .. method :: __pow__(other)
+    .. method :: __abs__()
 
-  .. method :: __abs__()
+        Return a :class:`GPUArray` containing the absolute value of each
+        element of *self*.
 
-    Return a :class:`GPUArray` containing the absolute value of each
-    element of *self*.
+    .. UNDOC reverse()
 
-  .. UNDOC reverse()
+    .. method :: fill(scalar, stream=None)
 
-  .. method :: fill(scalar, stream=None)
+        Fill the array with *scalar*.
 
-    Fill the array with *scalar*.
+    .. method:: bind_to_texref(texref, allow_offset=False)
 
-  .. method:: bind_to_texref(texref, allow_offset=False)
+        Bind *self* to the :class:`pycuda.driver.TextureReference` *texref*.
 
-    Bind *self* to the :class:`pycuda.driver.TextureReference` *texref*.
+        Due to alignment requirements, the effective texture bind address may be
+        different from the requested one by an offset. This method returns this
+        offset in units of *self*'s data type.  If *allow_offset* is ``False``, a
+        nonzero value of this offset will cause an exception to be raised.
 
-    Due to alignment requirements, the effective texture bind address may be
-    different from the requested one by an offset. This method returns this
-    offset in units of *self*'s data type.  If *allow_offset* is ``False``, a
-    nonzero value of this offset will cause an exception to be raised.
+        .. note::
 
-    .. note::
-        It is recommended to use :meth:`bind_to_texref_ext` instead of
-        this method.
+            It is recommended to use :meth:`bind_to_texref_ext` instead of
+            this method.
 
-  .. method:: bind_to_texref_ext(texref, channels=1, allow_offset=False)
+    .. method:: bind_to_texref_ext(texref, channels=1, allow_offset=False)
 
-    Bind *self* to the :class:`pycuda.driver.TextureReference` *texref*.
-    In addition, set the texture reference's format to match :attr:`dtype`
-    and its channel count to *channels*. This routine also sets the
-    texture reference's :data:`pycuda.driver.TRSF_READ_AS_INTEGER` flag,
-    if necessary.
+        Bind *self* to the :class:`pycuda.driver.TextureReference` *texref*.
+        In addition, set the texture reference's format to match :attr:`dtype`
+        and its channel count to *channels*. This routine also sets the
+        texture reference's :data:`pycuda.driver.TRSF_READ_AS_INTEGER` flag,
+        if necessary.
 
-    Due to alignment requirements, the effective texture bind address may be
-    different from the requested one by an offset. This method returns this
-    offset in units of *self*'s data type.  If *allow_offset* is ``False``, a
-    nonzero value of this offset will cause an exception to be raised.
+        Due to alignment requirements, the effective texture bind address may be
+        different from the requested one by an offset. This method returns this
+        offset in units of *self*'s data type.  If *allow_offset* is ``False``, a
+        nonzero value of this offset will cause an exception to be raised.
 
-    (Added in version 0.93.)
+        (Added in version 0.93.)
 
 Constructing :class:`GPUArray` Instances
 ----------------------------------------
 
 .. function:: to_gpu(ary, allocator=None)
 
-  Return a :class:`GPUArray` that is an exact copy of the :class:`numpy.ndarray`
-  instance *ary*.
+    Return a :class:`GPUArray` that is an exact copy of the :class:`numpy.ndarray`
+    instance *ary*.
 
-  See :class:`GPUArray` for the meaning of *allocator*.
+    See :class:`GPUArray` for the meaning of *allocator*.
 
 .. function:: to_gpu_async(ary, allocator=None, stream=None)
 
-  Return a :class:`GPUArray` that is an exact copy of the :class:`numpy.ndarray`
-  instance *ary*. The copy is done asynchronously, optionally sequenced into
-  *stream*.
+    Return a :class:`GPUArray` that is an exact copy of the :class:`numpy.ndarray`
+    instance *ary*. The copy is done asynchronously, optionally sequenced into
+    *stream*.
 
-  See :class:`GPUArray` for the meaning of *allocator*.
+    See :class:`GPUArray` for the meaning of *allocator*.
 
 .. function:: empty(shape, dtype)
 
-  A synonym for the :class:`GPUArray` constructor.
+    A synonym for the :class:`GPUArray` constructor.
 
 .. function:: zeros(shape, dtype)
 
-  Same as :func:`empty`, but the :class:`GPUArray` is zero-initialized before
-  being returned.
+    Same as :func:`empty`, but the :class:`GPUArray` is zero-initialized before
+    being returned.
 
 .. function:: empty_like(other_ary)
 
-  Make a new, uninitialized :class:`GPUArray` having the same properties
-  as *other_ary*.
+    Make a new, uninitialized :class:`GPUArray` having the same properties
+    as *other_ary*.
 
 .. function:: zeros_like(other_ary)
 
-  Make a new, zero-initialized :class:`GPUArray` having the same properties
-  as *other_ary*.
+    Make a new, zero-initialized :class:`GPUArray` having the same properties
+    as *other_ary*.
 
 .. function:: arange(start, stop, step, dtype=None, stream=None)
 
-  Create a :class:`GPUArray` filled with numbers spaced `step` apart,
-  starting from `start` and ending at `stop`.
+    Create a :class:`GPUArray` filled with numbers spaced `step` apart,
+    starting from `start` and ending at `stop`.
 
-  For floating point arguments, the length of the result is
-  `ceil((stop - start)/step)`.  This rule may result in the last
-  element of the result being greater than `stop`.
+    For floating point arguments, the length of the result is
+    `ceil((stop - start)/step)`.  This rule may result in the last
+    element of the result being greater than `stop`.
 
-  *dtype*, if not specified, is taken as the largest common type
-  of *start*, *stop* and *step*.
+    *dtype*, if not specified, is taken as the largest common type
+    of *start*, *stop* and *step*.
 
 .. function:: take(a, indices, stream=None)
 
-  Return the :class:`GPUArray` ``[a[indices[0]], ..., a[indices[n]]]``.
-  For the moment, *a* must be a type that can be bound to a texture.
+    Return the :class:`GPUArray` ``[a[indices[0]], ..., a[indices[n]]]``.
+    For the moment, *a* must be a type that can be bound to a texture.
 
 .. function:: sum(a, dtype=None, stream=None)
 
@@ -279,17 +279,17 @@ Generating Arrays of Random Numbers
 
 .. function:: rand(shape, dtype=numpy.float32, stream=None)
 
-  Return an array of `shape` filled with random values of `dtype`
-  in the range [0,1).
+    Return an array of `shape` filled with random values of `dtype`
+    in the range [0,1).
 
 Single-pass Expression Evaluation
 ---------------------------------
 
 .. warning::
 
-  The following functionality is included in this documentation in the
-  hope that it may be useful, but its interface may change in future
-  revisions. Feedback is welcome.
+    The following functionality is included in this documentation in the
+    hope that it may be useful, but its interface may change in future
+    revisions. Feedback is welcome.
 
 .. module:: pycuda.elementwise
 
