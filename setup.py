@@ -229,9 +229,12 @@ def main():
         extra_sources.append("src/wrapper/wrap_cudagl.cpp")
         EXTRA_DEFINES["HAVE_GL"] = 1
 
+    ver_dic = {}
+    execfile("pycuda/__init__.py", ver_dic)
+
     setup(name="pycuda",
             # metadata
-            version="0.93rc4",
+            version=ver_dic["VERSION_TEXT"],
             description="Python wrapper for Nvidia CUDA",
             long_description="""
             PyCUDA lets you access `Nvidia <http://nvidia.com>`_'s `CUDA
