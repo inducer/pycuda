@@ -264,7 +264,9 @@ def main():
             * Speed. PyCUDA's base layer is written in C++, so all the niceties
               above are virtually free.
 
-            * Helpful `Documentation <http://documen.tician.de/pycuda>`_.
+            * Helpful `Documentation <http://documen.tician.de/pycuda>`_ and a
+              `Wiki <http://wiki.tiker.net/PyCuda>`_.
+
             """,
             author=u"Andreas Kloeckner",
             author_email="inform@tiker.net",
