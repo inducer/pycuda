@@ -125,7 +125,7 @@ The :class:`GPUArray` Array Class
             It is recommended to use :meth:`bind_to_texref_ext` instead of
             this method.
 
-    .. method:: bind_to_texref_ext(texref, channels=1, allow_offset=False)
+    .. method:: bind_to_texref_ext(texref, channels=1, allow_double_hack=False, allow_offset=False)
 
         Bind *self* to the :class:`pycuda.driver.TextureReference` *texref*.
         In addition, set the texture reference's format to match :attr:`dtype`
@@ -139,6 +139,30 @@ The :class:`GPUArray` Array Class
         nonzero value of this offset will cause an exception to be raised.
 
         (Added in version 0.93.)
+
+        .. highlight:: c
+
+        As of this writing, CUDA textures do not natively support double-precision 
+        floating point data. To remedy this deficiency, PyCUDA contains a workaround,
+        which can be enabled by passing *True* for allow_double_hack. In this case,
+        use the following code for texture access in your kernel code::
+
+            #include <pycuda-helpers.hpp>
+
+            texture<fp_tex_double, 1, cudaReadModeElementType> my_tex;
+
+            __global__ void f()
+            {
+              ...
+              fp_tex1Dfetch(my_tex, threadIdx.x);
+              ...
+            }
+
+        .. highlight:: python
+
+        (This workaround was added in version 0.94.)
+
+
 
 Constructing :class:`GPUArray` Instances
 ----------------------------------------
