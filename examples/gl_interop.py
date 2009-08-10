@@ -1,5 +1,6 @@
-# This is an (unfinished) attempt at a GL interop demo,
-# submitted by Peter Berrington.
+# GL interoperability example, by Peter Berrington.
+# Draws a rotating teapot, using cuda to invert the RGB value
+# each frame
 
 from OpenGL.GL import *
 from OpenGL.GLUT import *
@@ -10,13 +11,13 @@ import pycuda.driver as cuda_driver
 import pycuda.gl as cuda_gl
 from pycuda.compiler import SourceModule
 
-#yeah yeah i know theres a lot of ugly global variables, ill fix it later
 #this is all munged together from the CUDA SDK postprocessGL example.
 
-initial_size = 640,640
+initial_size = 512,512
 current_size = initial_size
 animate = True
-window = None              # Number of the glut window.
+enable_cuda = True
+window = None     # Number of the glut window.
 time_of_last_draw = 0.0
 time_of_last_titleupdate = 0.0
 frames_per_second = 0.0
@@ -64,13 +65,12 @@ def create_texture(w,h):
 
 def destroy_texture():
     global output_texture
-    glDeleteTextures(1, output_texture);
+    glDeleteTextures(output_texture);
     output_texture = None
 
 def init_gl():
-    global current_size
     Width, Height = current_size
-    glClearColor(0.5, 0.5, 0.5, 1.0)
+    glClearColor(0.1, 0.1, 0.5, 1.0)
     glDisable(GL_DEPTH_TEST)
     glViewport(0, 0, Width, Height)
     glMatrixMode(GL_PROJECTION);
@@ -90,19 +90,33 @@ def resize(Width, Height):
     glViewport(0, 0, Width, Height)        # Reset The Current Viewport And Perspective Transformation
     glMatrixMode(GL_PROJECTION)
     glLoadIdentity()
-    gluOrtho2D(0,Width,Height,0)
-    glMatrixMode(GL_MODELVIEW)
-    glLoadIdentity()
+    gluPerspective(60.0, Width/float(Height), 0.1, 10.0)
 
 def do_tick():
     global time_of_last_titleupdate, frame_counter, frames_per_second
     if ((time.clock () * 1000.0) - time_of_last_titleupdate >= 1000.):
         frames_per_second = frame_counter                   # Save The FPS
         frame_counter = 0  # Reset The FPS Counter
-        szTitle = "Hurrrrrrr - %d FPS" % (frames_per_second )
+        szTitle = "%d FPS" % (frames_per_second )
         glutSetWindowTitle ( szTitle )
         time_of_last_titleupdate = time.clock () * 1000.0
     frame_counter += 1
+
+# The function called whenever a key is pressed. Note the use of Python tuples to pass in: (key, x, y)
+def keyPressed(*args):
+    global animate, enable_cuda
+    # If escape is pressed, kill everything.
+    if args[0] == '\033':
+        print 'Closing..'
+        destroy_PBOs()
+        destroy_texture()
+        exit()
+    elif args[0] == 'a':
+        print 'toggling animation'
+        animate = not animate
+    elif args[0] == 'e':
+        print 'toggling cuda'
+        enable_cuda = not enable_cuda
 
 def idle():
     global heading, pitch, bank
@@ -116,19 +130,18 @@ def idle():
 def display():
     try:
         render_scene()
-        process_image()
-        display_image()
+        if enable_cuda:
+            process_image()
+            display_image()
         glutSwapBuffers()
     except:
         from traceback import print_exc
         print_exc()
         from os import _exit
-        _exit()
+        _exit(0)
 
 def process(width, height):
-    """ use pycuda to munge the pbo """
-    #just doing a simple inversion for now :P
-    assert invert != None #depending on this function to exist by now
+    """ Use PyCuda """
     grid_dimensions   = (width//16,height//16)
 
     source_mapping = pycuda_source_pbo.map()
@@ -152,16 +165,10 @@ def process_image():
     # tell cuda we are going to get into these buffers
     pycuda_source_pbo.unregister()
 
-    # Note: in the cuda source the pbo is unregistered and reregistered every
-    # frame.  I assume pycuda pbo's unregister automatically because
-    # uncommenting the above line will cause an error as pycuda attempts to
-    # unregister an already unregistered PBO.
-
     # activate destination buffer
     glBindBufferARB(GL_PIXEL_PACK_BUFFER_ARB, long(source_pbo))
 
     # read data into pbo. note: use BGRA format for optimal performance
-
     import OpenGL.raw.GL as rawgl
 
     rawgl.glReadPixels(
@@ -174,17 +181,17 @@ def process_image():
              ctypes.c_void_p(0))
 
     pycuda_source_pbo = cuda_gl.BufferObject(long(source_pbo))
-
+    
     # run the Cuda kernel
     process(image_width, image_height)
     # blit convolved texture onto the screen
     # download texture from PBO
-    glBindBuffer(GL_PIXEL_UNPACK_BUFFER_ARB, dest_pbo)
+    glBindBuffer(GL_PIXEL_UNPACK_BUFFER_ARB, long(dest_pbo))
     glBindTexture(GL_TEXTURE_2D, output_texture)
 
     rawgl.glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0,
                     image_width, image_height,
-                    GL_BGRA, GL_UNSIGNED_BYTE, 0)
+                    GL_BGRA, GL_UNSIGNED_BYTE, ctypes.c_void_p(0))
 
 def display_image():
     """ render a screen sized quad """
@@ -217,14 +224,14 @@ def display_image():
 
 
 def render_scene():
-    glClear (GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT)# Clear Screen And Depth Buffer
+    glClear (GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT)# Clear Screen And Depth Buffer    
     glMatrixMode(GL_MODELVIEW)
     glLoadIdentity ()      # Reset The Modelview Matrix
     glTranslatef(0.0, 0.0, -3.0);
     glRotatef(heading, 1.0, 0.0, 0.0)
     glRotatef(pitch  , 0.0, 1.0, 0.0)
     glRotatef(bank   , 0.0, 0.0, 1.0)
-    glViewport(0, 0, 512, 512)
+    glViewport(0, 0, current_size[0],current_size[1])
     glEnable(GL_LIGHTING)
     glEnable(GL_DEPTH_TEST)
     glDepthFunc(GL_LESS)
@@ -232,25 +239,13 @@ def render_scene():
     do_tick()#just for fps display..
     return True
 
-# The function called whenever a key is pressed. Note the use of Python tuples to pass in: (key, x, y)
-def keyPressed(*args):
-    global animate
-    # If escape is pressed, kill everything.
-    if args[0] == '\033':
-        print 'detected Escape.. quitting'
-        destroy_PBOs()
-        destroy_texture()
-        exit()
-    elif args[0] == 'a':
-        animate = not animate # toggle whether we are currently animating
-
 def main():
     global window, cuda_module, cuda_gl, cuda_driver, invert
     glutInit(sys.argv)
     glutInitDisplayMode(GLUT_RGBA | GLUT_DOUBLE | GLUT_ALPHA | GLUT_DEPTH)
     glutInitWindowSize(*initial_size)
     glutInitWindowPosition(0, 0)
-    window = glutCreateWindow("ZZZZZZZZZZZZZZZZZZ")
+    window = glutCreateWindow("PyCuda GL Interop Example")
     glutDisplayFunc(display)
     glutIdleFunc(idle)
     glutReshapeFunc(resize)
@@ -270,14 +265,19 @@ def main():
     cuda_module = SourceModule("""
     __global__ void invert(unsigned char *source, unsigned char *dest)
     {
-      int idx = 3*(256*(blockIdx.x + blockIdx.y * 16) + 
-        threadIdx.y * blockDim.x + threadIdx.x);
+      int block_num        = blockIdx.x + blockIdx.y * gridDim.x;
+      int thread_num       = threadIdx.y * blockDim.x + threadIdx.x;
+      int threads_in_block = blockDim.x * blockDim.y;
+      //Since the image is RGBA we multiply the index 4.
+      //We'll only use the first 3 (RGB) channels though
+      int idx              = 4 * (threads_in_block * block_num + thread_num);
       dest[idx  ] = 255 - source[idx  ];
       dest[idx+1] = 255 - source[idx+1];
       dest[idx+2] = 255 - source[idx+2];
     }
     """)
     invert = cuda_module.get_function("invert")
+    # The argument "PP" indicates that the invert function will take two PBOs as arguments
     invert.prepare("PP", (16, 16, 1))
 
     # create source and destination pixel buffer objects for processing
@@ -287,5 +287,5 @@ def main():
 
 # Print message to console, and kick off the main to get it rolling.
 if __name__ == "__main__":
-    print "Hit ESC key to quit."
+    print "Hit ESC key to quit, 'a' to toggle animation, and 'e' to toggle cuda"
     main()
