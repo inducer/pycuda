@@ -4,23 +4,14 @@ Tutorial Introduction
 Getting started
 ---------------
 
-Before you can use PyCuda, you have to initialize it and create a 
-context::
+Before you can use PyCuda, you have to import and initialize it::
 
   import pycuda.driver as cuda
   import pycuda.autoinit
 
-Pretty much equivalently, you could have used the following, wordier
-initialization sequence::
-
-  import pycuda.driver as cuda
-  import pycuda.autoinit
-
-  cuda.init()
-  assert cuda.Device.count() >= 1
-
-  dev = cuda.Device(0)
-  ctx = dev.make_context()
+Note that you do not *have* to use :mod:`pycuda.autoinit`--
+initialization, context creation, and cleanup can also be performed
+manually, if desired.
 
 Transferring Data
 -----------------
