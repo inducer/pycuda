@@ -8,6 +8,7 @@ Before you can use PyCuda, you have to import and initialize it::
 
   import pycuda.driver as cuda
   import pycuda.autoinit
+  from pycuda.compiler import SourceModule
 
 Note that you do not *have* to use :mod:`pycuda.autoinit`--
 initialization, context creation, and cleanup can also be performed
@@ -45,9 +46,9 @@ Executing a Kernel
 For this tutorial, we'll stick to something simple: We will write code to
 double each entry in *a_gpu*. To this end, we write the corresponding CUDA C
 code, and feed it into the constructor of a
-:class:`pycuda.driver.SourceModule`::
+:class:`pycuda.compiler.SourceModule`::
 
-  mod = cuda.SourceModule("""
+  mod = SourceModule("""
     __global__ void doublify(float *a)
     {
       int idx = threadIdx.x + threadIdx.y*4;
@@ -138,7 +139,7 @@ Structures
 Suppose we have the following structure, for doubling a number of variable
 length arrays::
 
-  mod = cuda.SourceModule("""
+  mod = SourceModule("""
       struct DoubleOperation {
           int datalen, __padding; // so 64-bit ptrs can be aligned
           float *ptr;

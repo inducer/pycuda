@@ -110,7 +110,8 @@ metaprogramming technique::
         block_size=block_size,
         thread_block_size=thread_block_size)
 
-    mod = cuda.SourceModule(rendered_tpl)
+    from pycuda.compiler import SourceModule
+    mod = SourceModule(rendered_tpl)
 
 This snippet in a working context can be found in 
 :file:`examples/demo_meta_template.py`.
@@ -150,7 +151,8 @@ metaprogramming. It accomplishes exactly the same as the above program::
             )
         ])
 
-    mod = cuda.SourceModule(mod)
+    from pycuda.compiler import SourceModule
+    mod = SourceModule(mod)
 
 This snippet in a working context can be found in 
 :file:`examples/demo_meta_codepy.py`.

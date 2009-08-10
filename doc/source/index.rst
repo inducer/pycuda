@@ -34,7 +34,8 @@ Here's an example, to given you an impression::
   import pycuda.driver as drv
   import numpy
 
-  mod = drv.SourceModule("""
+  from pycuda.compiler import SourceModule
+  mod = SourceModule("""
   __global__ void multiply_them(float *dest, float *a, float *b)
   {
     const int i = threadIdx.x;

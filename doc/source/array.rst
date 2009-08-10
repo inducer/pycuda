@@ -310,7 +310,7 @@ on one or several operands in a single pass.
     Vectors in *operation* should be indexed by the variable *i*.
 
     *name* specifies the name as which the kernel is compiled, *keep*
-    and *options* are passed unmodified to :class:`pycuda.driver.SourceModule`.
+    and *options* are passed unmodified to :class:`pycuda.compiler.SourceModule`.
 
     .. method:: __call__(*args)
 
@@ -369,7 +369,7 @@ Reductions
     *map_expr* are specified as string formatted operations and *arguments*
     is specified as a string formatted as a C argument list. *name* specifies
     the name as which the kernel is compiled, *keep* and *options* are passed
-    unmodified to :class:`pycuda.driver.SourceModule`. *preamble* is specified
+    unmodified to :class:`pycuda.compiler.SourceModule`. *preamble* is specified
     as a string of code.
 
     .. method __call__(*args, stream=None)

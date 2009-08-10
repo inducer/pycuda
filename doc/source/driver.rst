@@ -1078,6 +1078,11 @@ Code on the Device: Modules and Functions
     *array* should be copied both onto the compute device before invoking
     the kernel, and off it afterwards.
 
+Just-in-time Compilation
+========================
+
+.. module:: pycuda.compiler
+
 .. class:: SourceModule(source, nvcc="nvcc", options=[], keep=False, no_extern_c=False, arch=None, code=None, cache_dir=None)
 
     Create a :class:`Module` from the CUDA source code *source*. The Nvidia
@@ -1101,3 +1106,13 @@ Code on the Device: Modules and Functions
     This class exhibits the same public interface as :class:`Module`, but
     does not inherit from it.
 
+    *Change note:* :class:`SourceModule` was moved from :mod:`pycuda.driver` to
+    :mod:`pycuda.compiler` in version 0.93.
+
+.. function:: compile(source, nvcc="nvcc", options=[], keep=False,
+        no_extern_c=False, arch=None, code=None, cache_dir=None,
+        include_dirs=[])
+
+    Perform the same compilation as the corresponding 
+    :class:`SourceModule` constructor, but only returns
+    resulting *cubin* file as a string.

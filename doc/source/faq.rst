@@ -115,7 +115,7 @@ Version 0.91
   GTX200-generation devices.
 * Make :class:`pycuda.driver.Function` resource usage available
   to the program. (See, e.g. :attr:`pycuda.driver.Function.registers`.)
-* Cache kernels compiled by :class:`pycuda.driver.SourceModule`.
+* Cache kernels compiled by :class:`pycuda.compiler.SourceModule`.
   (Tom Annau)
 * Allow for faster, prepared kernel invocation. 
   See :meth:`pycuda.driver.Function.prepare`. 
