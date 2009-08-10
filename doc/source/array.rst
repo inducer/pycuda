@@ -162,8 +162,6 @@ The :class:`GPUArray` Array Class
 
         (This workaround was added in version 0.94.)
 
-
-
 Constructing :class:`GPUArray` Instances
 ----------------------------------------
 

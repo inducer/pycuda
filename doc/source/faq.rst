@@ -147,6 +147,8 @@ Acknowledgments
   example provided by Nvidia.
 * Hendrik Riedmann contributed the matrix transpose and list selection
   examples.
+* Peter Berrington contributed a working example for CUDA-OpenGL
+  interoperability.
 
 Licensing
 =========
