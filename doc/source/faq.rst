@@ -48,6 +48,7 @@ Version 0.93
   :attr:`pycuda.driver.Function.lmem`, and
   :attr:`pycuda.driver.Function.smem` have been deprecated in favor of the
   mechanism above. See :attr:`pycuda.driver.Function.num_regs` for more.
+* Add PyCUDA version query mechanism, see :data:`pycuda.VERSION`.
 
 Version 0.92
 ------------

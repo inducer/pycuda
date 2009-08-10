@@ -1,13 +1,37 @@
 .. _reference-doc:
 
+PyCUDA Version Queries
+======================
+
+.. module:: pycuda
+.. moduleauthor:: Andreas Kloeckner <inform@tiker.net>
+
+.. data:: VERSION
+
+    Gives the numeric version of PyCUDA as a variable-length tuple 
+    of integers. Enables easy version checks such as
+    *VERSION >= (0, 93)*.
+
+    Added in PyCUDA 0.93.
+
+.. data:: VERSION_STATUS
+
+    A text string such as `"rc4"` or `"beta"` qualifying the status
+    of the release.
+
+    Added in PyCUDA 0.93.
+
+.. data:: VERSION_TEXT
+
+    The full release name (such as `"0.93rc4"`) in string form.
+
+    Added in PyCUDA 0.93.
+
 Device Interface Reference Documentation
 ========================================
 
 .. module:: pycuda.driver
-   :synopsis: Use CUDA devices from Python
-
-.. moduleauthor:: Andreas Kloeckner <inform@tiker.net>
-
+    :synopsis: Use CUDA devices from Python
 
 .. _errors:
 
