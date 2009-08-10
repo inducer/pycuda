@@ -307,6 +307,9 @@ class TestDriver:
     def test_multi_context(self):
         if drv.get_version() < (2,0,0):
             return
+        if drv.get_version() >= (2,2,0):
+            if pycuda.autoinit.device.compute_mode == drv.compute_mode.EXCLUSIVE:
+                return
 
         mem_a = drv.mem_alloc(50)
         ctx2 = pycuda.autoinit.device.make_context()
