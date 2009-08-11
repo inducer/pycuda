@@ -1114,5 +1114,6 @@ Just-in-time Compilation
         include_dirs=[])
 
     Perform the same compilation as the corresponding 
-    :class:`SourceModule` constructor, but only returns
-    resulting *cubin* file as a string.
+    :class:`SourceModule` constructor, but only return
+    resulting *cubin* file as a string. In particular,
+    do not upload the code to the GPU.

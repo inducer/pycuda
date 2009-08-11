@@ -1,14 +1,18 @@
 User-visible Changes
 ====================
 
+Version 0.94
+------------
+.. note::
+
+    Version 0.94 is the current development version. You can get it from
+    PyCUDA's version control repository.
+
+* Add sparse matrix-vector multiplication and linear system solving code,
+  in :mod:`pycuda.sparse`.
+
 Version 0.93
 ------------
-
-.. note:: 
-
-    Version 0.93 is currently in release candidate status. If you'd 
-    like to try a snapshot, you may access PyCUDA's source control 
-    archive via the PyCUDA homepage.
 
 .. warning::
 

@@ -92,7 +92,7 @@ Contents
     gl
     array
     metaprog
-    faq
+    misc
 
 Note that this guide will not explain CUDA programming and technology.  Please
 refer to Nvidia's `programming documentation
