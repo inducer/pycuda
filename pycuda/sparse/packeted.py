@@ -120,11 +120,9 @@ class PacketedSpMV:
             adj_mat = csr_mat
 
         while True:
-            print "metis"
             cut_count, dof_to_packet_nr = part_graph(self.block_count, 
                     xadj=adj_mat.indptr, adjncy=adj_mat.indices)
 
-            print "postproc metis"
             # build packet_nr_to_dofs
             packet_nr_to_dofs = {}
             for i, packet_nr in enumerate(dof_to_packet_nr):
@@ -157,14 +155,12 @@ class PacketedSpMV:
         assert len(packet_nr_to_dofs) == self.block_count
 
         # permutations, base rows ---------------------------------------------
-        print "indexy stuff"
         new2old_fetch_indices, \
                 old2new_fetch_indices, \
                 packet_base_rows = self.find_simple_index_stuff(
                         packet_nr_to_dofs)
 
         # find local row cost and remaining_coo -------------------------------
-        print "row costs"
         local_row_costs, remaining_coo = \
                 self.find_local_row_costs_and_remaining_coo(
                         csr_mat, dof_to_packet_nr, old2new_fetch_indices)
@@ -173,7 +169,6 @@ class PacketedSpMV:
         assert remaining_coo.nnz == csr_mat.nnz - local_nnz
 
         # find thread assignment for each block -------------------------------
-        print "thread assignment"
         thread_count = len(packet_nr_to_dofs)*self.threads_per_packet
         thread_assignments, thread_costs = self.find_thread_assignment(
                 packet_nr_to_dofs, local_row_costs, thread_count)
@@ -181,7 +176,6 @@ class PacketedSpMV:
         max_thread_costs = numpy.max(thread_costs)
 
         # build data structure ------------------------------------------------
-        print "data structure"
         from pkt_build import build_pkt_data_structure
         build_pkt_data_structure(self, packet_nr_to_dofs, max_thread_costs,
             old2new_fetch_indices, csr_mat, thread_count, thread_assignments,
@@ -196,7 +190,6 @@ class PacketedSpMV:
         from coordinate import CoordinateSpMV
         self.remaining_coo_gpu = CoordinateSpMV(
                 remaining_coo, dtype)
-        print "done"
 
     def find_simple_index_stuff(self, packet_nr_to_dofs):
         new2old_fetch_indices = numpy.zeros(

@@ -1,5 +1,6 @@
 from __future__ import division
 import pycuda.driver as drv
+import pycuda.gpuarray as gpuarray
 
 
 

@@ -1,5 +1,7 @@
 from __future__ import division
-from pycuda.sparse_matrix.inner import AsyncInnerProduct
+from pycuda.sparse.inner import AsyncInnerProduct
+from pytools import memoize_method
+import pycuda.gpuarray as gpuarray
 
 
 
@@ -176,7 +178,7 @@ def solve_pkt_with_cg(pkt_spmv, b, precon=None, x=None, tol=1e-7, max_iterations
     if pagelocked_allocator is None:
         pagelocked_allocator = drv.pagelocked_empty
 
-    cg = GPUCGStateContainer(pkt_spmv, precon,
+    cg = CGStateContainer(pkt_spmv, precon,
             pagelocked_allocator=pagelocked_allocator)
 
     cg.reset(pkt_spmv.permute(b), x)

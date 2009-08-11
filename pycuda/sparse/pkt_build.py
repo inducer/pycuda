@@ -19,11 +19,7 @@ def build_pkt_data_structure(spmv, packet_nr_to_dofs, max_thread_costs,
     thread_ends = numpy.zeros(
             thread_count, dtype=spmv.index_dtype)
 
-    from pytools import ProgressBar
-    pb = ProgressBar("gpu structure", len(packet_nr_to_dofs))
     for packet_nr, packet_dofs in enumerate(packet_nr_to_dofs):
-        pb.progress()
-
         base_thread_nr = packet_nr*spmv.threads_per_packet
         max_packet_items = 0
 
@@ -61,8 +57,6 @@ def build_pkt_data_structure(spmv, packet_nr_to_dofs, max_thread_costs,
 
         base_dof_nr += len(packet_dofs)
         packet_start += max_packet_items*spmv.threads_per_packet
-
-    pb.finished()
 
     spmv.thread_starts = gpuarray.to_gpu(thread_starts)
     spmv.thread_ends = gpuarray.to_gpu(thread_ends)

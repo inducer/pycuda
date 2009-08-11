@@ -1,5 +1,6 @@
 from __future__ import division
 from pytools import memoize_method
+import pycuda.autoinit
 import pycuda.driver as drv
 import pycuda.gpuarray as gpuarray
 import numpy
@@ -28,10 +29,11 @@ def main_cg():
     from hedge.iterative import DiagonalPreconditioner
 
     print "building..."
-    from packeted import PacketedSpMV
+    from pycuda.sparse.packeted import PacketedSpMV
     spmv = PacketedSpMV(csr_mat, options.is_symmetric, csr_mat.dtype)
     rhs = numpy.random.rand(spmv.shape[0]).astype(spmv.dtype)
 
+    from pycuda.sparse.operator import DiagonalPreconditioner
     if True:
         precon = DiagonalPreconditioner(
                 spmv.permute(gpuarray.to_gpu(
@@ -39,6 +41,7 @@ def main_cg():
     else:
         precon = None
 
+    from pycuda.sparse.cg import solve_pkt_with_cg
     print "start solve"
     for i in range(4):
         start = drv.Event()
