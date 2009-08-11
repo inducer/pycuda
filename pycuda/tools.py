@@ -276,8 +276,7 @@ def allow_user_edit(s, filename, descr="the file"):
 # C code generation helpers ---------------------------------------------------
 @memoize
 def platform_bits():
-    from struct import calcsize
-    return calcsize('l') * 8
+    return tuple.__itemsize__ * 8
 
 
 
