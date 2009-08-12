@@ -119,7 +119,7 @@ def _find_pycuda_include_path():
     development_path = join(pathname, "..", "src", "cuda")
 
     usr_path = "/usr/include/pycuda"
-    usr_local_path = "/usr/include/pycuda"
+    usr_local_path = "/usr/local/include/pycuda"
 
     import sys
 
