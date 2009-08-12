@@ -314,7 +314,7 @@ def main():
                 ],
                 
             data_files=[
-                ("include/cuda", glob.glob("src/cuda/*.hpp"))
+                ("include/pycuda", glob.glob("src/cuda/*.hpp"))
                 ],
             )
 
