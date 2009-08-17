@@ -144,20 +144,18 @@ namespace
 #define MAKE_FUNCTION_HACKY_GETTER(ATTR_NAME, ATTR, NEW_NAME) \
   int function_get_##ATTR_NAME(function const &f) \
   { \
-    PyErr_WarnEx( \
+    PyErr_Warn( \
         PyExc_DeprecationWarning, \
-        "Function." #ATTR_NAME " is deprecated. Use Function." #NEW_NAME ".", \
-          1); \
+        "Function." #ATTR_NAME " is deprecated. Use Function." #NEW_NAME "."); \
     return f.get_attribute(ATTR); \
   }
 #else
 #define MAKE_FUNCTION_HACKY_GETTER(ATTR_NAME, ATTR, NEW_NAME) \
   py::object function_get_##ATTR_NAME(py::object func) \
   { \
-    PyErr_WarnEx( \
+    PyErr_Warn( \
         PyExc_DeprecationWarning, \
-        "Function." #ATTR_NAME " is deprecated. Use Function." #NEW_NAME ".", \
-          1); \
+        "Function." #ATTR_NAME " is deprecated. Use Function." #NEW_NAME "."); \
     return py::object(func.attr("_hacky_" #ATTR_NAME)); \
   }
 #endif
@@ -304,10 +302,9 @@ namespace
     }
     else
     {
-      PyErr_WarnEx(
+      PyErr_Warn(
           PyExc_DeprecationWarning,
-          "memcpy_htod with a stream argument is deprecated. Use memcpy_dtoh_async instead.",
-          1);
+          "memcpy_htod with a stream argument is deprecated. Use memcpy_dtoh_async instead.");
       const stream &s = py::extract<const stream &>(stream_py);
       CUDAPP_CALL_GUARDED(cuMemcpyHtoDAsync, (dst, buf, len, s.handle()));
     }
@@ -351,10 +348,9 @@ namespace
     }
     else
     {
-      PyErr_WarnEx(
+      PyErr_Warn(
           PyExc_DeprecationWarning,
-          "memcpy_dtoh with a stream argument is deprecated. Use memcpy_dtoh_async instead.",
-          1);
+          "memcpy_dtoh with a stream argument is deprecated. Use memcpy_dtoh_async instead.");
 
       const stream &s = py::extract<const stream &>(stream_py);
       CUDAPP_CALL_GUARDED(cuMemcpyDtoHAsync, (buf, src, len, s.handle()));
