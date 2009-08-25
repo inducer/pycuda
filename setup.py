@@ -267,6 +267,8 @@ def main():
             * Helpful `Documentation <http://documen.tician.de/pycuda>`_ and a
               `Wiki <http://wiki.tiker.net/PyCuda>`_.
 
+            Relatedly, like-minded computing goodness for `OpenCL <http://khronos.org>`_
+            is provided by PyCUDA's sister project `PyOpenCL <http://pypi.python.org/pypi/pyopencl>`_.
             """,
             author=u"Andreas Kloeckner",
             author_email="inform@tiker.net",
