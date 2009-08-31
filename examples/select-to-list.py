@@ -13,8 +13,6 @@ import numpy
 # Define block size and number of elements per thread
 block_size = 512
 el_per_thread = 1
-# !!! program only works for el_per_thread = 1            !!!
-# !!! otherwise the for-loops in the kernel cause a crash !!!
 multiple_block_size = el_per_thread * block_size
 
 # Create an array of random numbers and set limit
@@ -44,7 +42,7 @@ __global__ void select_them(float *a, int *selec, float limit, int *counter)
 {
     __shared__ int selec_smem[EL_PER_THREAD * BLOCK_SIZE];
     __shared__ int counter_smem;
-    __shared__ int *counter_smem_ptr;
+    int *counter_smem_ptr;
 
     int jump = 16;
     int idx = EL_PER_THREAD * blockIdx.x * BLOCK_SIZE + threadIdx.x +
