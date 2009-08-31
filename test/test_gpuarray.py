@@ -367,6 +367,26 @@ class TestGPUArray:
 
             assert la.norm(a_gpu_slice.get()-a_slice) == 0
 
+    def test_if_positive(self):
+        from pycuda.curandom import rand as curand
+
+        l = 20
+        a_gpu = curand((l,))
+        b_gpu = curand((l,))
+        a = a_gpu.get()
+        b = b_gpu.get()
+
+        import pycuda.gpuarray as gpuarray
+
+        max_a_b_gpu = gpuarray.maximum(a_gpu, b_gpu)
+        min_a_b_gpu = gpuarray.minimum(a_gpu, b_gpu)
+
+        print max_a_b_gpu
+        print numpy.maximum(a, b)
+
+        assert la.norm(max_a_b_gpu.get()- numpy.maximum(a, b)) == 0
+        assert la.norm(min_a_b_gpu.get()- numpy.minimum(a, b)) == 0
+
 
 
 

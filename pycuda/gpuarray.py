@@ -475,6 +475,24 @@ class GPUArray(object):
         # FIXME
         return self
 
+    # rich comparisons (or rather, lack thereof) ------------------------------
+    def __eq__(self, other):
+        raise NotImplementedError
+
+    def __ne__(self, other):
+        raise NotImplementedError
+
+    def __le__(self, other):
+        raise NotImplementedError
+
+    def __ge__(self, other):
+        raise NotImplementedError
+
+    def __lt__(self, other):
+        raise NotImplementedError
+
+    def __gt__(self, other):
+        raise NotImplementedError
 
 
 
@@ -732,6 +750,45 @@ def multi_put(arrays, dest_indices, dest_shape=None, out=None, stream=None):
                 + [dest_indices.size]))
 
     return out
+
+
+
+
+def if_positive(criterion, then_, else_, out=None, stream=None):
+    if not (criterion.shape == then_.shape == else_.shape):
+        raise ValueError("shapes do not match")
+
+    if not (then_.dtype == else_.dtype):
+        raise ValueError("dtypes do not match")
+
+    func = elementwise.get_if_positive_kernel(
+            criterion.dtype, then_.dtype)
+
+    if out is None:
+        out = empty_like(then_)
+
+    func.set_block_shape(*criterion._block)
+    func.prepared_async_call(criterion._grid, stream,
+            criterion.gpudata, then_.gpudata, else_.gpudata, out.gpudata,
+            criterion.size)
+
+    return out
+
+
+
+
+def maximum(a, b, out=None, stream=None):
+    # silly, but functional
+    return if_positive(a.mul_add(1, b, -1, stream=stream), a, b, 
+            stream=stream, out=out)
+
+
+
+
+def minimum(a, b, out=None, stream=None):
+    # silly, but functional
+    return if_positive(a.mul_add(1, b, -1, stream=stream), b, a, 
+            stream=stream, out=out)
 
 
 

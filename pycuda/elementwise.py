@@ -346,8 +346,6 @@ def get_rdivide_elwise_kernel(dtype):
             "z[i] = y / x[i]",
             "divide_r")
 
-
-
 @memoize
 def get_fill_kernel(dtype):
     return get_elwise_kernel(
@@ -450,3 +448,17 @@ def get_unary_func_kernel(func_name, in_dtype, out_dtype=None):
                 },
             "z[i] = %s(y[i])" % func_name,
             "%s_kernel" % func_name)    
+
+
+
+
+@memoize
+def get_if_positive_kernel(crit_dtype, dtype):
+    return get_elwise_kernel([ 
+            VectorArg(crit_dtype, "crit"),
+            VectorArg(dtype, "then_"),
+            VectorArg(dtype, "else_"),
+            VectorArg(dtype, "result"),
+            ],
+            "result[i] = crit[i] > 0 ? then_[i] : else_[i]",
+            "if_positive")

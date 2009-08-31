@@ -116,8 +116,10 @@ metaprogramming technique::
 This snippet in a working context can be found in 
 :file:`examples/demo_meta_template.py`.
 
-You can also find an example of matrix multiplication optimization using template metaprogramming with Cheetah in
-:file:`demo_meta_matrixmul_cheetah.py` and :file:`demo_meta_matrixmul_cheetah.template.cu.
+You can also find an example of matrix multiplication optimization
+using template metaprogramming with Cheetah in
+:file:`demo_meta_matrixmul_cheetah.py` and
+:file:`demo_meta_matrixmul_cheetah.template.cu`.
 
 Metaprogramming using :mod:`codepy`
 -----------------------------------

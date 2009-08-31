@@ -216,6 +216,25 @@ Constructing :class:`GPUArray` Instances
     Return the :class:`GPUArray` ``[a[indices[0]], ..., a[indices[n]]]``.
     For the moment, *a* must be a type that can be bound to a texture.
 
+Conditionals
+^^^^^^^^^^^^
+
+.. function:: if_positive(criterion, then_, else_, out=None, stream=None)
+
+    Return an array like *then_*, which, for the element at index *i*,
+    contains *then_[i]* if *criterion[i]>0*, else *else_[i]*. (added in 0.94)
+
+.. function:: maximum(a, b, out=None, stream=None)
+
+    Return the elementwise maximum of *a* and *b*. (added in 0.94)
+
+.. function:: minimum(a, b, out=None, stream=None)
+
+    Return the elementwise minimum of *a* and *b*. (added in 0.94)
+
+Reductions
+^^^^^^^^^^
+
 .. function:: sum(a, dtype=None, stream=None)
 
 .. function:: dot(a, b, dtype=None, stream=None)
@@ -304,8 +323,8 @@ Generating Arrays of Random Numbers
     Return an array of `shape` filled with random values of `dtype`
     in the range [0,1).
 
-Single-pass Expression Evaluation
----------------------------------
+Single-pass Custom Expression Evaluation
+----------------------------------------
 
 .. warning::
 
@@ -365,8 +384,8 @@ Here's a usage example::
 (You can find this example as :file:`examples/demo_elementwise.py` in the PyCuda
 distribution.)
 
-Reductions
-----------
+Custom Reductions
+-----------------
 
 .. module:: pycuda.reduction
 

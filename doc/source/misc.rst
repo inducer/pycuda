@@ -10,6 +10,8 @@ Version 0.94
 
 * Add sparse matrix-vector multiplication and linear system solving code,
   in :mod:`pycuda.sparse`.
+* Add :func:`pycuda.gpuarray.if_positive`, :func:`pycuda.gpuarray.maximum`,
+  :func:`pycuda.gpuarray.minimum`.
 
 Version 0.93
 ------------
