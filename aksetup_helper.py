@@ -15,9 +15,9 @@ def setup(*args, **kwargs):
     except SystemExit:
         raise
     except:
-        print "--------------------------------------------------------------------------"
-        print "Sorry, your build failed. Try rerunning configure with different options."
-        print "--------------------------------------------------------------------------"
+        print "----------------------------------------------------------------------------"
+        print "Sorry, your build failed. Try rerunning configure.py with different options."
+        print "----------------------------------------------------------------------------"
         raise
 
 
@@ -110,20 +110,20 @@ def get_config(schema=None):
         schema = get_config_schema()
 
     if not schema.have_config() and not schema.have_global_config():
-        print "********************************************************"
-        print "*** I have detected that you have not run configure."
-        print "********************************************************"
+        print "*************************************************************"
+        print "*** I have detected that you have not run configure.py."
+        print "*************************************************************"
         print "*** Additionally, no global config files were found."
         print "*** I will go ahead with the default configuration."
         print "*** In all likelihood, this will not work out."
         print "*** "
         print "*** See README_SETUP.txt for more information."
         print "*** "
-        print "*** If the build does fail, just re-run configure with the"
+        print "*** If the build does fail, just re-run configure.py with the"
         print "*** correct arguments, and then retry. Good luck!"
-        print "********************************************************"
+        print "*************************************************************"
         print "*** HIT Ctrl-C NOW IF THIS IS NOT WHAT YOU WANT"
-        print "********************************************************"
+        print "*************************************************************"
 
         delay = 10
 
