@@ -91,26 +91,27 @@ metaprogramming technique::
     from jinja2 import Template
 
     tpl = Template("""
-        typedef {{ type_name }} value_type;
-
-        __global__ void add(value_type *result, value_type *op1, value_type *op2)
+        __global__ void add(
+                {{ type_name }} *tgt, 
+                {{ type_name }} *op1, 
+                {{ type_name }} *op2)
         {
-          int idx = threadIdx.x + {{ thread_block_size }} * {{block_size}} * blockIdx.x;
+          int idx = threadIdx.x + 
+            {{ thread_block_size }} * {{block_size}}
+            * blockIdx.x;
 
-          #for i in range(block_size)
-              #set offset = i*thread_block_size
-              result[idx + {{ offset }}] = op1[idx + {{ offset }}] + op2[idx + {{ offset }}];
-          #endfor
-        }
-        """,
-        line_statement_prefix="#")
+          {% for i in range(block_size) %}
+              {% set offset = i*thread_block_size %}
+              tgt[idx + {{ offset }}] = 
+                op1[idx + {{ offset }}] 
+                + op2[idx + {{ offset }}];
+          {% endfor %}
+        }""")
 
     rendered_tpl = tpl.render(
-        type_name="float",
-        block_size=block_size,
+        type_name="float", block_size=block_size,
         thread_block_size=thread_block_size)
 
-    from pycuda.compiler import SourceModule
     mod = SourceModule(rendered_tpl)
 
 This snippet in a working context can be found in 
@@ -132,31 +133,30 @@ of generating CUDA source code from a Python data structure.
 The following example demonstrates the use of :mod:`codepy` for 
 metaprogramming. It accomplishes exactly the same as the above program::
 
-    from codepy.cgen import FunctionBody, FunctionDeclaration, \
-            Typedef, POD, Value, Pointer, Module, Block, Initializer, Assign
-
+    from codepy.cgen import FunctionBody, \
+            FunctionDeclaration, Typedef, POD, Value, \
+            Pointer, Module, Block, Initializer, Assign
     from codepy.cgen.cuda import CudaGlobal
+
     mod = Module([
-        Typedef(POD(dtype, "value_type")),
         FunctionBody(
             CudaGlobal(FunctionDeclaration(
                 Value("void", "add"),
-                [Pointer(POD(dtype, name)) for name in ["result", "op1", "op2"]])),
+                arg_decls=[Pointer(POD(dtype, name)) 
+                    for name in ["tgt", "op1", "op2"]])),
             Block([
                 Initializer(
                     POD(numpy.int32, "idx"),
-                    "threadIdx.x + %d*blockIdx.x" % (thread_block_size*block_size)),
+                    "threadIdx.x + %d*blockIdx.x" 
+                    % (thread_block_size*block_size)),
                 ]+[
-                Assign("result[idx+%d]" % (o*thread_block_size),
+                Assign(
+                    "tgt[idx+%d]" % (o*thread_block_size),
                     "op1[idx+%d] + op2[idx+%d]" % (
                         o*thread_block_size, 
                         o*thread_block_size))
-                for o in range(block_size)
-                ])
-            )
-        ])
+                for o in range(block_size)]))])
 
-    from pycuda.compiler import SourceModule
     mod = SourceModule(mod)
 
 This snippet in a working context can be found in 
