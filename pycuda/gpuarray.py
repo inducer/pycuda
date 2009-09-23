@@ -652,7 +652,7 @@ def multi_take(arrays, indices, out=None, stream=None):
         out = [GPUArray(indices.shape, a_dtype, a_allocator)
                 for i in range(vec_count)]
     else:
-        if len(out) == len(arrays):
+        if len(out) != len(arrays):
             raise ValueError("out and arrays must have the same length")
 
     chunk_size = _builtin_min(vec_count, 20)
