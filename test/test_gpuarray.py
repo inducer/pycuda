@@ -387,6 +387,21 @@ class TestGPUArray:
         assert la.norm(max_a_b_gpu.get()- numpy.maximum(a, b)) == 0
         assert la.norm(min_a_b_gpu.get()- numpy.minimum(a, b)) == 0
 
+    def test_take_put(self):
+        n = 5
+        one_field_size = 8
+        buf_gpu = gpuarray.zeros(n*one_field_size, dtype=numpy.float32)
+        dest_indices = gpuarray.to_gpu(numpy.array([ 0,  1,  2,  3, 32, 33, 34, 35], dtype=numpy.uint32))
+        read_map = gpuarray.to_gpu(numpy.array([7, 6, 5, 4, 3, 2, 1, 0], dtype=numpy.uint32))
+
+        gpuarray.multi_take_put(
+                arrays=[buf_gpu for i in range(n)],
+                dest_indices=dest_indices,
+                src_indices=read_map,
+                src_offsets=[i*one_field_size for i in range(n)],
+                dest_shape=(96,))
+
+        drv.Context.synchronize()
 
 
 
