@@ -150,7 +150,7 @@ def get_take_kernel(dtype, idx_dtype, vec_count=1):
     mod = get_elwise_module(args, body, "take", preamble=preamble)
     func = mod.get_function("take")
     tex_src = [mod.get_texref("tex_src%d" % i) for i in range(vec_count)]
-    func.prepare("P"+(vec_count*"P")+"I", (1,1,1), texrefs=tex_src)
+    func.prepare("P"+(vec_count*"P")+numpy.dtype(numpy.uintp).char, (1,1,1), texrefs=tex_src)
     return func, tex_src
 
 
@@ -196,10 +196,11 @@ def get_take_put_kernel(dtype, idx_dtype, with_offsets, vec_count=1):
     mod = get_elwise_module(args, body, "take_put", preamble=preamble)
     func = mod.get_function("take_put")
     tex_src = [mod.get_texref("tex_src%d" % i) for i in range(vec_count)]
+
     func.prepare(
             "PP"+(vec_count*"P")
-            +(bool(with_offsets)*vec_count*"I")
-            +"I", 
+            +(bool(with_offsets)*vec_count*idx_dtype.char)
+            +numpy.dtype(numpy.uintp).char, 
             (1,1,1), texrefs=tex_src)
     return func, tex_src
             
@@ -229,7 +230,7 @@ def get_put_kernel(dtype, idx_dtype, vec_count=1):
                 for i in range(vec_count)))
 
     func = get_elwise_module(args, body, "put").get_function("put")
-    func.prepare("P"+(2*vec_count*"P")+"I", (1,1,1))
+    func.prepare("P"+(2*vec_count*"P")+numpy.dtype(numpy.uintp).char, (1,1,1))
     return func
             
 
