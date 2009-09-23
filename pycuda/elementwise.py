@@ -37,8 +37,8 @@ from pycuda.tools import dtype_to_ctype, VectorArg, ScalarArg
 
 
 
-def get_elwise_module(arguments, operation, 
-        name="kernel", keep=False, options=[], 
+def get_elwise_module(arguments, operation,
+        name="kernel", keep=False, options=[],
         preamble="", loop_prep=""):
     from pycuda.compiler import SourceModule
     return SourceModule("""
@@ -53,21 +53,21 @@ def get_elwise_module(arguments, operation,
           unsigned i;
 
           %(loop_prep)s;
-                
-          for (i = cta_start + tid; i < n; i += total_threads) 
+
+          for (i = cta_start + tid; i < n; i += total_threads)
           {
             %(operation)s;
           }
         }
         """ % {
-            "arguments": ", ".join(arg.declarator() for arg in arguments), 
+            "arguments": ", ".join(arg.declarator() for arg in arguments),
             "operation": operation,
             "name": name,
             "preamble": preamble,
             "loop_prep": loop_prep},
         options=options, keep=keep)
 
-def get_elwise_kernel_and_types(arguments, operation, 
+def get_elwise_kernel_and_types(arguments, operation,
         name="kernel", keep=False, options=[]):
     if isinstance(arguments, str):
         from pycuda.tools import parse_c_arg
@@ -84,7 +84,7 @@ def get_elwise_kernel_and_types(arguments, operation,
 
     return func, arguments
 
-def get_elwise_kernel(arguments, operation, 
+def get_elwise_kernel(arguments, operation,
         name="kernel", keep=False, options=[]):
     """Return a L{pycuda.driver.Function} that performs the same scalar operation
     on one or several vectors.
@@ -98,12 +98,12 @@ def get_elwise_kernel(arguments, operation,
 
 
 class ElementwiseKernel:
-    def __init__(self, arguments, operation, 
+    def __init__(self, arguments, operation,
             name="kernel", keep=False, options=[]):
         self.func, self.arguments = get_elwise_kernel_and_types(
             arguments, operation, name, keep, options)
 
-        assert [i for i, arg in enumerate(self.arguments) 
+        assert [i for i, arg in enumerate(self.arguments)
                 if isinstance(arg, VectorArg)], \
                 "ElementwiseKernel can only be used with functions that have at least one " \
                 "vector argument"
@@ -164,11 +164,11 @@ def get_take_put_kernel(dtype, idx_dtype, with_offsets, vec_count=1):
             "tex_tp": dtype_to_ctype(dtype, with_fp_tex_hack=True),
             }
 
-    args = [ 
+    args = [
             VectorArg(idx_dtype, "gmem_dest_idx"),
             VectorArg(idx_dtype, "gmem_src_idx"),
             ] + [
-            VectorArg(dtype, "dest%d" % i) 
+            VectorArg(dtype, "dest%d" % i)
                 for i in range(vec_count)
             ] + [
             ScalarArg(idx_dtype, "offset%d" % i)
@@ -182,14 +182,14 @@ def get_take_put_kernel(dtype, idx_dtype, with_offsets, vec_count=1):
     if with_offsets:
         def get_copy_insn(i):
             return ("dest%d[dest_idx] = "
-                    "fp_tex1Dfetch(tex_src%d, src_idx+offset%d);" 
+                    "fp_tex1Dfetch(tex_src%d, src_idx+offset%d);"
                     % (i, i, i))
     else:
         def get_copy_insn(i):
             return ("dest%d[dest_idx] = "
                     "fp_tex1Dfetch(tex_src%d, src_idx);" % (i, i))
 
-    body = (("%(idx_tp)s src_idx = gmem_src_idx[i];\n" 
+    body = (("%(idx_tp)s src_idx = gmem_src_idx[i];\n"
                 "%(idx_tp)s dest_idx = gmem_dest_idx[i];\n" % ctx)
             + "\n".join(get_copy_insn(i) for i in range(vec_count)))
 
@@ -200,10 +200,10 @@ def get_take_put_kernel(dtype, idx_dtype, with_offsets, vec_count=1):
     func.prepare(
             "PP"+(vec_count*"P")
             +(bool(with_offsets)*vec_count*idx_dtype.char)
-            +numpy.dtype(numpy.uintp).char, 
+            +numpy.dtype(numpy.uintp).char,
             (1,1,1), texrefs=tex_src)
     return func, tex_src
-            
+
 
 
 
@@ -214,7 +214,7 @@ def get_put_kernel(dtype, idx_dtype, vec_count=1):
             "tp": dtype_to_ctype(dtype),
             }
 
-    args = [ 
+    args = [
             VectorArg(idx_dtype, "gmem_dest_idx"),
             ] + [
             VectorArg(dtype, "dest%d" % i)
@@ -232,7 +232,7 @@ def get_put_kernel(dtype, idx_dtype, vec_count=1):
     func = get_elwise_module(args, body, "put").get_function("put")
     func.prepare("P"+(2*vec_count*"P")+numpy.dtype(numpy.uintp).char, (1,1,1))
     return func
-            
+
 
 
 
@@ -265,12 +265,12 @@ def get_linear_combination_kernel(summand_descriptors,
             enumerate(summand_descriptors):
         if is_gpu_scalar:
             preamble.append(
-                    "texture <%s, 1, cudaReadModeElementType> tex_a%d;" 
+                    "texture <%s, 1, cudaReadModeElementType> tex_a%d;"
                     % (dtype_to_ctype(scalar_dtype, with_fp_tex_hack=True), i))
             args.append(VectorArg(vector_dtype, "x%d" % i))
             tex_names.append("tex_a%d" % i)
             loop_prep.append(
-                    "%s a%d = fp_tex1Dfetch(tex_a%d, 0)" 
+                    "%s a%d = fp_tex1Dfetch(tex_a%d, 0)"
                     % (dtype_to_ctype(scalar_dtype), i, i))
         else:
             args.append(ScalarArg(scalar_dtype, "a%d" % i))
@@ -281,15 +281,15 @@ def get_linear_combination_kernel(summand_descriptors,
     args.append(VectorArg(dtype_z, "z"))
     args.append(ScalarArg(numpy.uintp, "n"))
 
-    mod = get_elwise_module(args, 
-            "z[i] = " + " + ".join(summands), 
-            "linear_combination", 
+    mod = get_elwise_module(args,
+            "z[i] = " + " + ".join(summands),
+            "linear_combination",
             preamble="\n".join(preamble),
             loop_prep=";\n".join(loop_prep))
 
     func = mod.get_function("linear_combination")
     tex_src = [mod.get_texref(tn) for tn in tex_names]
-    func.prepare("".join(arg.struct_char for arg in args), 
+    func.prepare("".join(arg.struct_char for arg in args),
             (1,1,1), texrefs=tex_src)
 
     return func, tex_src
@@ -411,7 +411,7 @@ def get_fmod_kernel():
             "float *arg, float *mod, float *z",
             "z[i] = fmod(arg[i], mod[i])",
             "fmod_kernel")
-    
+
 @memoize
 def get_modf_kernel():
     return get_elwise_kernel(
@@ -448,14 +448,14 @@ def get_unary_func_kernel(func_name, in_dtype, out_dtype=None):
                 "tp_out": dtype_to_ctype(out_dtype),
                 },
             "z[i] = %s(y[i])" % func_name,
-            "%s_kernel" % func_name)    
+            "%s_kernel" % func_name)
 
 
 
 
 @memoize
 def get_if_positive_kernel(crit_dtype, dtype):
-    return get_elwise_kernel([ 
+    return get_elwise_kernel([
             VectorArg(crit_dtype, "crit"),
             VectorArg(dtype, "then_"),
             VectorArg(dtype, "else_"),
