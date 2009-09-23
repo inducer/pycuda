@@ -639,6 +639,7 @@ def take(a, indices, out=None, stream=None):
 def multi_take(arrays, indices, out=None, stream=None):
     if not len(arrays):
         return []
+
     assert len(indices.shape) == 1
 
     from pytools import single_valued
@@ -650,20 +651,33 @@ def multi_take(arrays, indices, out=None, stream=None):
     if out is None:
         out = [GPUArray(indices.shape, a_dtype, a_allocator)
                 for i in range(vec_count)]
+    else:
+        if len(out) == len(arrays):
+            raise ValueError("out and arrays must have the same length")
 
-    assert len(out) == len(arrays)
+    chunk_size = _builtin_min(vec_count, 20)
 
-    func, tex_src = elementwise.get_take_kernel(a_dtype, indices.dtype, 
-            vec_count=vec_count)
-    for i, a in enumerate(arrays):
-        a.bind_to_texref_ext(tex_src[i], allow_double_hack=True)
+    def make_func_for_chunk_size(chunk_size):
+        func, tex_src = elementwise.get_take_kernel(a_dtype, indices.dtype, 
+                vec_count=chunk_size)
+        func.set_block_shape(*indices._block)
+        return func, tex_src
 
-    one_result_vec = out[0]
+    func, tex_src = make_func_for_chunk_size(chunk_size)
 
-    func.set_block_shape(*indices._block)
-    func.prepared_async_call(indices._grid, stream,
-            indices.gpudata, 
-            *([o.gpudata for o in out] + [indices.size]))
+    for start_i in range(0, len(arrays), chunk_size):
+        chunk_slice = slice(start_i, start_i+chunk_size)
+
+        if start_i + chunk_size > vec_count:
+            func, tex_src = make_func_for_chunk_size(vec_count-start_i)
+
+        for i, a in enumerate(arrays[chunk_slice]):
+            a.bind_to_texref_ext(tex_src[i], allow_double_hack=True)
+
+        func.prepared_async_call(indices._grid, stream, 
+                indices.gpudata, 
+                *([o.gpudata for o in out[chunk_slice]]
+                    + [indices.size]))
 
     return out
 
@@ -685,31 +699,55 @@ def multi_take_put(arrays, dest_indices, src_indices, dest_shape=None,
         out = [GPUArray(dest_shape, a_dtype, a_allocator)
                 for i in range(vec_count)]
     else:
-        assert a_dtype == single_valued(o.dtype for o in out)
+        if a_dtype != single_valued(o.dtype for o in out):
+            raise TypeError("arrays and out must have the same dtype")
+        if len(out) != vec_count:
+            raise ValueError("out and arrays must have the same length")
 
-    assert src_indices.dtype == dest_indices.dtype
-    assert len(src_indices.shape) == 1
-    assert src_indices.shape == dest_indices.shape
-    assert len(out) == len(arrays)
+    if src_indices.dtype != dest_indices.dtype:
+        raise TypeError("src_indices and dest_indices must have the same dtype")
 
-    func, tex_src = elementwise.get_take_put_kernel(
-            a_dtype, src_indices.dtype, 
-            with_offsets=src_offsets is not None,
-            vec_count=vec_count)
-    for src_tr, a in zip(tex_src, arrays):
-        a.bind_to_texref_ext(src_tr, allow_double_hack=True)
+    if len(src_indices.shape) != 1:
+        raise ValueError("src_indices must be 1D")
+
+    if src_indices.shape != dest_indices.shape:
+        raise ValueError("src_indices and dest_indices must have the same shape")
 
     if src_offsets is None:
         src_offsets = []
+        max_chunk_size = 20
     else:
-        assert len(src_offsets) == len(arrays)
+        if len(src_offsets) != vec_count:
+            raise ValueError("src_indices and src_offsets must have the same length")
+        max_chunk_size = 10
 
-    func.set_block_shape(*src_indices._block)
-    func.prepared_async_call(src_indices._grid, stream,
-            dest_indices.gpudata, src_indices.gpudata,
-            *([o.gpudata for o in out] 
-                + src_offsets
-                + [src_indices.size]))
+    chunk_size = _builtin_min(vec_count, max_chunk_size)
+
+    def make_func_for_chunk_size(chunk_size):
+        func, tex_src = elementwise.get_take_put_kernel(
+                a_dtype, src_indices.dtype, 
+                with_offsets=src_offsets is not None,
+                vec_count=chunk_size)
+
+        func.set_block_shape(*src_indices._block)
+        return func, tex_src
+
+    func, tex_src = make_func_for_chunk_size(chunk_size)
+
+    for start_i in range(0, len(arrays), chunk_size):
+        chunk_slice = slice(start_i, start_i+chunk_size)
+
+        if start_i + chunk_size > vec_count:
+            func, tex_src = make_func_for_chunk_size(vec_count-start_i)
+
+        for src_tr, a in zip(tex_src, arrays[chunk_slice]):
+            a.bind_to_texref_ext(src_tr, allow_double_hack=True)
+
+        func.prepared_async_call(src_indices._grid, stream,
+                dest_indices.gpudata, src_indices.gpudata,
+                *([o.gpudata for o in out[chunk_slice]]
+                    + src_offsets[chunk_slice]
+                    + [src_indices.size]))
 
     return out
 
@@ -730,20 +768,35 @@ def multi_put(arrays, dest_indices, dest_shape=None, out=None, stream=None):
         out = [GPUArray(dest_shape, a_dtype, a_allocator)
                 for i in range(vec_count)]
     else:
-        assert a_dtype == single_valued(o.dtype for o in out)
+        if a_dtype != single_valued(o.dtype for o in out):
+            raise TypeError("arrays and out must have the same dtype")
+        if len(out) != vec_count:
+            raise ValueError("out and arrays must have the same length")
 
-    assert len(dest_indices.shape) == 1
-    assert len(out) == len(arrays)
+    if len(dest_indices.shape) != 1:
+        raise ValueError("src_indices must be 1D")
 
-    func = elementwise.get_put_kernel(
-            a_dtype, dest_indices.dtype, vec_count=vec_count)
+    chunk_size = _builtin_min(vec_count, 10)
 
-    func.set_block_shape(*dest_indices._block)
-    func.prepared_async_call(dest_indices._grid, stream,
-            dest_indices.gpudata, 
-            *([o.gpudata for o in out] 
-                + [i.gpudata for i in arrays] 
-                + [dest_indices.size]))
+    def make_func_for_chunk_size(chunk_size):
+        func = elementwise.get_put_kernel(
+                a_dtype, dest_indices.dtype, vec_count=chunk_size)
+        func.set_block_shape(*dest_indices._block)
+        return func
+
+    func = make_func_for_chunk_size(chunk_size)
+
+    for start_i in range(0, len(arrays), chunk_size):
+        chunk_slice = slice(start_i, start_i+chunk_size)
+
+        if start_i + chunk_size > vec_count:
+            func = make_func_for_chunk_size(vec_count-start_i)
+
+        func.prepared_async_call(dest_indices._grid, stream,
+                dest_indices.gpudata, 
+                *([o.gpudata for o in out[chunk_slice]]
+                    + [i.gpudata for i in arrays[chunk_slice]]
+                    + [dest_indices.size]))
 
     return out
 
@@ -813,6 +866,8 @@ def _make_minmax_kernel(what):
 
     return f
 
+_builtin_min = min
+_builtin_max = max
 min = _make_minmax_kernel("min")
 max = _make_minmax_kernel("max")
 
