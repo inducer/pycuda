@@ -714,9 +714,10 @@ def multi_take_put(arrays, dest_indices, src_indices, dest_shape=None,
         raise ValueError("src_indices and dest_indices must have the same shape")
 
     if src_offsets is None:
-        src_offsets = []
+        src_offsets_list = []
         max_chunk_size = 20
     else:
+        src_offsets_list = src_offsets
         if len(src_offsets) != vec_count:
             raise ValueError("src_indices and src_offsets must have the same length")
         max_chunk_size = 10
@@ -746,7 +747,7 @@ def multi_take_put(arrays, dest_indices, src_indices, dest_shape=None,
         func.prepared_async_call(src_indices._grid, stream,
                 dest_indices.gpudata, src_indices.gpudata,
                 *([o.gpudata for o in out[chunk_slice]]
-                    + src_offsets[chunk_slice]
+                    + src_offsets_list[chunk_slice]
                     + [src_indices.size]))
 
     return out
