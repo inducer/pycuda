@@ -4,15 +4,15 @@ import numpy
 import numpy.linalg as la
 from pycuda.compiler import SourceModule
 
-block_size = 16
-thread_block_size = 32
+thread_strides = 16
+block_size = 256
 macroblock_count = 33
+
+total_size = thread_strides*block_size*macroblock_count
 dtype = numpy.float32
 
-a = numpy.random.randn(block_size*thread_block_size*macroblock_count)\
-        .astype(dtype)
-b = numpy.random.randn(block_size*thread_block_size*macroblock_count)\
-        .astype(dtype)
+a = numpy.random.randn(total_size).astype(dtype)
+b = numpy.random.randn(total_size).astype(dtype)
 
 a_gpu = cuda.to_device(a)
 b_gpu = cuda.to_device(b)
@@ -33,20 +33,20 @@ mod = Module([
             Initializer(
                 POD(numpy.int32, "idx"),
                 "threadIdx.x + %d*blockIdx.x" 
-                % (thread_block_size*block_size)),
+                % (block_size*thread_strides)),
             ]+[
             Assign(
-                "tgt[idx+%d]" % (o*thread_block_size),
+                "tgt[idx+%d]" % (o*block_size),
                 "op1[idx+%d] + op2[idx+%d]" % (
-                    o*thread_block_size, 
-                    o*thread_block_size))
-            for o in range(block_size)]))])
+                    o*block_size, 
+                    o*block_size))
+            for o in range(thread_strides)]))])
 
 mod = SourceModule(mod)
 
 func = mod.get_function("add")
 func(c_gpu, a_gpu, b_gpu, 
-        block=(thread_block_size,1,1),
+        block=(block_size,1,1),
         grid=(macroblock_count,1))
 
 c = cuda.from_device_like(c_gpu, a)
