@@ -41,3 +41,4 @@ tmp
 temp*
 *.so
 *.pyd
+setuptools.pth
