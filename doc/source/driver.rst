@@ -1,10 +1,13 @@
 .. _reference-doc:
 
-PyCUDA Version Queries
-======================
+Device Interface Reference Documentation
+========================================
 
 .. module:: pycuda
 .. moduleauthor:: Andreas Kloeckner <inform@tiker.net>
+
+Version Queries
+---------------
 
 .. data:: VERSION
 
@@ -27,8 +30,6 @@ PyCUDA Version Queries
 
     Added in PyCUDA 0.93.
 
-Device Interface Reference Documentation
-========================================
 
 .. module:: pycuda.driver
     :synopsis: Use CUDA devices from Python
