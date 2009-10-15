@@ -292,7 +292,6 @@ def main():
 
             # build info
             packages=["pycuda", "pycuda.gl"],
-            zip_safe=False,
 
             install_requires=[
                 "pytools>=8",
