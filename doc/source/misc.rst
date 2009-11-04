@@ -155,6 +155,7 @@ Acknowledgments
   examples.
 * Peter Berrington contributed a working example for CUDA-OpenGL
   interoperability.
+* Maarten Breddels provided a patch for 'flat-egg' support.
 
 Licensing
 =========

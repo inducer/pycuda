@@ -118,10 +118,12 @@ def _find_pycuda_include_path():
     installed_path = join(pathname, "..", "include", "pycuda")
     development_path = join(pathname, "..", "src", "cuda")
 
+    import sys
+
     usr_path = "/usr/include/pycuda"
     usr_local_path = "/usr/local/include/pycuda"
+    prefix_path = join(sys.prefix, "include" , "pycuda")
 
-    import sys
 
     if exists(installed_path):
         return installed_path
@@ -129,7 +131,9 @@ def _find_pycuda_include_path():
         return development_path
     else:
         if sys.platform == "linux2":
-            if exists(usr_path):
+            if exists(prefix_path):
+                return prefix_path
+            elif exists(usr_path):
                 return usr_path
             elif exists(usr_local_path):
                 return usr_local_path
