@@ -6,28 +6,46 @@ Automatic Initialization
 
 .. module:: pycuda.autoinit
 
-This module, when imported, automatically performs all the steps necessary
-to get CUDA ready for submission of compute kernels.
-When imported, this module will automatically initialize CUDA and create a
-:class:`pycuda.driver.Context` on the device.
+The module :mod:`pycuda.autoinit`,  when imported, automatically performs 
+all the steps necessary to get CUDA ready for submission of compute kernels.
+It uses :func:`pycuda.tools.make_default_context` to create a compute context.
 
 .. data:: device
 
   An instance of :class:`pycuda.driver.Device` that was used for automatic
-  initialization. The appropriate device is found by calling 
-  :func:`pycuda.tools.get_default_device`.
+  initialization. 
 
 .. data:: context
 
   A default-constructed instance of :class:`pycuda.driver.Context` 
-  on :data:`device`.
+  on :data:`device`. This context is created by calling
+  :func:`pycuda.tools.make_default_context`.
 
 Choice of Device
 ----------------
 
 .. module:: pycuda.tools
 
+.. function:: make_default_context()
+
+  Return a :class:`pycuda.driver.Context` instance chosen according to the
+  following rules:
+
+   * If the environment variable :envvar:`CUDA_DEVICE` is set, its integer
+     value is used as the device number.
+
+   * If the file :file:`.cuda-device` is present in the user's home directory,
+     the integer value of its contents is used as the device number.
+
+   * Otherwise, all available CUDA devices are tried in a round-robin fashion.
+
+  An error is raised if this does not lead to a usable context.
+
+  .. versionadded: 0.94
+
 .. function:: get_default_device(default=0)
+
+  Deprecated. Use :func:`make_default_context`.
 
   Return a :class:`pycuda.driver.Device` instance chosen according to the
   following rules:
@@ -39,6 +57,10 @@ Choice of Device
      the integer value of its contents is used as the device number.
 
    * Otherwise, `default` is used as the device number.
+
+  .. versionchanged: 0.94
+
+    Deprecated.
 
 
 Device Metadata and Occupancy

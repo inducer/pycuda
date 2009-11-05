@@ -12,6 +12,10 @@ Version 0.94
   in :mod:`pycuda.sparse`.
 * Add :func:`pycuda.gpuarray.if_positive`, :func:`pycuda.gpuarray.maximum`,
   :func:`pycuda.gpuarray.minimum`.
+* Deprecate :func:`pycuda.tools.get_default_device` 
+* Add :func:`pycuda.tools.make_default_context`.
+* Use :func:`pycuda.tools.make_default_context` in :mod:`pycuda.autoinit`,
+  which changes its behavior.
 
 Version 0.93
 ------------
@@ -156,6 +160,8 @@ Acknowledgments
 * Peter Berrington contributed a working example for CUDA-OpenGL
   interoperability.
 * Maarten Breddels provided a patch for 'flat-egg' support.
+* Nicolas Pinto refactored :mod:`pycuda.autoinit` for automatic device
+  finding.
 
 Licensing
 =========

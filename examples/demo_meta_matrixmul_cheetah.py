@@ -17,7 +17,7 @@ from Cheetah.Template import Template
 import pycuda.autoinit
 
 # -- default parameters
-DEFAULT_BLOCK_SIZE = 8
+DEFAULT_BLOCK_SIZE = 16
 DEFAULT_WORK_SIZE = 1
 DEFAULT_UNROLL = 0
 DEFAULT_SPILL = False
@@ -126,10 +126,10 @@ def matrixmul_opt(mat_a, mat_b,
 if __name__ == "__main__": 
 
     # matrix sizes
-    a_height = 2516 
-    a_width = 1475
+    a_height = 1024
+    a_width = 1024
     b_height = a_width
-    b_width = 2147
+    b_width = 1024
     
     # create random square matrices
     np.random.seed(0)

@@ -76,9 +76,9 @@ class DebugMemoryPool(DeviceMemoryPool):
                 "\n  Allocation of size %d occurring " \
                 "(mem: last_free:%d, free: %d, total:%d) (pool: held:%d, active:%d):" \
                 "\n      at: %s" % (
-                (size, self.last_free) 
+                (size, self.last_free)
                 + cuda.mem_get_info()
-                + (self.held_blocks, self.active_blocks, 
+                + (self.held_blocks, self.active_blocks,
                     description))
 
         hist_items = sorted(list(histogram.iteritems()))
@@ -138,6 +138,10 @@ def _int_floor(value, multiple_of=1):
 
 
 def get_default_device(default=0):
+    from warnings import warn
+    warn("get_default_device() is deprecated; "
+            "use make_default_context() instead", DeprecationWarning)
+
     from pycuda.driver import Device
     import os
     dev = os.environ.get("CUDA_DEVICE")
@@ -156,8 +160,60 @@ def get_default_device(default=0):
         dev = int(dev)
     except TypeError:
         raise TypeError("CUDA device number (CUDA_DEVICE or ~/.cuda-device) must be an integer")
-        
+
     return Device(dev)
+
+
+
+
+def make_default_context():
+    ndevices = cuda.Device.count()
+    if ndevices == 0:
+        errmsg = "No CUDA enabled device found. Please check your installation."
+        raise RuntimeError, errmsg
+
+    ndevices = cuda.Device.count()
+    if ndevices == 0:
+        raise RuntimeError("No CUDA enabled device found. "
+                "Please check your installation.")
+
+    # Is CUDA_DEVICE set?
+    import os
+    devn = os.environ.get("CUDA_DEVICE")
+
+    # Is $HOME/.cuda_device set ?
+    if devn is None:
+        try:
+            homedir = os.environ.get("HOME")
+            assert homedir is not None
+            devn = (open(os.path.join(homedir, ".cuda_device"))
+                    .read().strip())
+        except:
+            pass
+
+    # If either CUDA_DEVICE or $HOME/.cuda_device is set, try to use it ;-)
+    if devn is not None:
+        try:
+            devn = int(devn)
+        except TypeError:
+            raise TypeError("CUDA device number (CUDA_DEVICE or ~/.cuda_device)"
+                    " must be an integer")
+
+        dev = cuda.Device(devn)
+        return dev.make_context()
+
+    # Otherwise, try to use any available device
+    else:
+        selected_device = None
+        for devn in xrange(ndevices):
+            dev = cuda.Device(devn)
+            try:
+                return dev.make_context()
+            except cuda.Error:
+                pass
+
+        raise RuntimeError("autoinit wasn't able to create a context "
+                "on any of the %d detected devices" % ndevices)
 
 
 
@@ -187,7 +243,7 @@ class DeviceData:
         return _int_ceiling(bytes, self.align_bytes(word_size))
 
     def align_dtype(self, elements, dtype_size):
-        return _int_ceiling(elements, 
+        return _int_ceiling(elements,
                 self.align_words(dtype_size))
 
     def align_words(self, word_size):
@@ -261,7 +317,7 @@ def allow_user_edit(s, filename, descr="the file"):
     outf.write(str(s))
     outf.close()
 
-    raw_input("Edit %s at %s now, then hit [Enter]:" 
+    raw_input("Edit %s at %s now, then hit [Enter]:"
             % (descr, full_name))
 
     inf = open(full_name, "r")
@@ -374,7 +430,7 @@ def parse_c_arg(c_arg):
     elif tp == "double": dtype = numpy.float64
     elif tp in ["int", "signed int"]: dtype = numpy.int32
     elif tp in ["unsigned", "unsigned int"]: dtype = numpy.uint32
-    elif tp in ["long", "long int"]: 
+    elif tp in ["long", "long int"]:
         if platform_bits() == 64:
             dtype = numpy.int64
         else:
