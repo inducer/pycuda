@@ -73,6 +73,7 @@ namespace
 
 
   class host_alloc_flags { };
+  class array3d_flags { };
 
 
 
@@ -106,24 +107,49 @@ namespace
 
 
 
-  void  _cuMemsetD8( CUdeviceptr dstDevice, unsigned char uc, unsigned int N ) 
-  { CUDAPP_CALL_GUARDED_THREADED(cuMemsetD8, (dstDevice, uc, N )); }
-  void  _cuMemsetD16( CUdeviceptr dstDevice, unsigned short us, unsigned int N ) 
-  { CUDAPP_CALL_GUARDED_THREADED(cuMemsetD16, (dstDevice, us, N )); }
-  void  _cuMemsetD32( CUdeviceptr dstDevice, unsigned int ui, unsigned int N ) 
-  { CUDAPP_CALL_GUARDED_THREADED(cuMemsetD32, (dstDevice, ui, N )); }
+  void  py_memset_d8(CUdeviceptr dst, unsigned char uc, unsigned int n ) 
+  { CUDAPP_CALL_GUARDED_THREADED(cuMemsetD8, (dst, uc, n )); }
+  void  py_memset_d16(CUdeviceptr dst, unsigned short us, unsigned int n ) 
+  { CUDAPP_CALL_GUARDED_THREADED(cuMemsetD16, (dst, us, n )); }
+  void  py_memset_d32(CUdeviceptr dst, unsigned int ui, unsigned int n ) 
+  { CUDAPP_CALL_GUARDED_THREADED(cuMemsetD32, (dst, ui, n )); }
 
-  void  _cuMemsetD2D8( CUdeviceptr dstDevice, unsigned int dstPitch, unsigned char uc, unsigned int Width, unsigned int Height )
-  { CUDAPP_CALL_GUARDED_THREADED(cuMemsetD2D8, (dstDevice, dstPitch, uc, Width, Height)); }
+  void  py_memset_d2d8(CUdeviceptr dst, unsigned int dst_pitch, 
+      unsigned char uc, unsigned int width, unsigned int height )
+  { CUDAPP_CALL_GUARDED_THREADED(cuMemsetD2D8, (dst, dst_pitch, uc, width, height)); }
 
-  void  _cuMemsetD2D16( CUdeviceptr dstDevice, unsigned int dstPitch, unsigned short us, unsigned int Width, unsigned int Height )
-  { CUDAPP_CALL_GUARDED_THREADED(cuMemsetD2D16, (dstDevice, dstPitch, us, Width, Height)); }
+  void  py_memset_d2d16(CUdeviceptr dst, unsigned int dst_pitch, 
+      unsigned short us, unsigned int width, unsigned int height )
+  { CUDAPP_CALL_GUARDED_THREADED(cuMemsetD2D16, (dst, dst_pitch, us, width, height)); }
 
-  void  _cuMemsetD2D32( CUdeviceptr dstDevice, unsigned int dstPitch, unsigned int ui, unsigned int Width, unsigned int Height )
-  { CUDAPP_CALL_GUARDED_THREADED(cuMemsetD2D32, (dstDevice, dstPitch, ui, Width, Height)); }
+  void  py_memset_d2d32(CUdeviceptr dst, unsigned int dst_pitch, 
+      unsigned int ui, unsigned int width, unsigned int height )
+  { CUDAPP_CALL_GUARDED_THREADED(cuMemsetD2D32, (dst, dst_pitch, ui, width, height)); }
 
-  void  _cuMemcpyDtoD (CUdeviceptr dstDevice, CUdeviceptr srcDevice, unsigned int ByteCount )
-  { CUDAPP_CALL_GUARDED_THREADED(cuMemcpyDtoD, (dstDevice, srcDevice, ByteCount)); }
+  void  py_memcpy_dtod(CUdeviceptr dst, CUdeviceptr src, 
+      unsigned int byte_count)
+  { CUDAPP_CALL_GUARDED_THREADED(cuMemcpyDtoD, (dst, src, byte_count)); }
+
+
+
+
+#if CUDA_VERSION >= 3000
+  void  py_memcpy_dtod_async(CUdeviceptr dst, CUdeviceptr src, 
+      unsigned int byte_count, py::object stream_py)
+  {
+    CUstream s_handle;
+    if (stream_py.ptr() != Py_None)
+    {
+      const stream &s = py::extract<const stream &>(stream_py);
+      s_handle = s.handle();
+    }
+    else
+      s_handle = 0;
+
+    CUDAPP_CALL_GUARDED_THREADED(cuMemcpyDtoDAsync, 
+        (dst, src, byte_count, s_handle)); 
+  }
+#endif
 
 
 
@@ -431,6 +457,13 @@ BOOST_PYTHON_MODULE(_driver)
     .value("FLOAT"         , CU_AD_FORMAT_FLOAT)
     ;
 
+#if CUDA_VERSION >= 3000
+  {
+    py::class_<array3d_flags> cls("array3d_flags", py::no_init);
+    cls.attr("ARRAY3D_2DARRAY") = CUDA_ARRAY3D_2DARRAY;
+  }
+#endif
+
   py::enum_<CUaddress_mode>("address_mode")
     .value("WRAP", CU_TR_ADDRESS_MODE_WRAP)
     .value("CLAMP", CU_TR_ADDRESS_MODE_CLAMP)
@@ -472,6 +505,17 @@ BOOST_PYTHON_MODULE(_driver)
     .value("INTEGRATED", CU_DEVICE_ATTRIBUTE_INTEGRATED)
     .value("CAN_MAP_HOST_MEMORY", CU_DEVICE_ATTRIBUTE_CAN_MAP_HOST_MEMORY)
     .value("COMPUTE_MODE", CU_DEVICE_ATTRIBUTE_COMPUTE_MODE)
+#endif
+#if CUDA_VERSION >= 3000
+    .value("MAXIMUM_TEXTURE1D_WIDTH", CU_DEVICE_ATTRIBUTE_MAXIMUM_TEXTURE1D_WIDTH)
+    .value("MAXIMUM_TEXTURE2D_WIDTH", CU_DEVICE_ATTRIBUTE_MAXIMUM_TEXTURE2D_WIDTH)
+    .value("MAXIMUM_TEXTURE2D_HEIGHT", CU_DEVICE_ATTRIBUTE_MAXIMUM_TEXTURE2D_HEIGHT)
+    .value("MAXIMUM_TEXTURE3D_WIDTH", CU_DEVICE_ATTRIBUTE_MAXIMUM_TEXTURE3D_WIDTH)
+    .value("MAXIMUM_TEXTURE3D_HEIGHT", CU_DEVICE_ATTRIBUTE_MAXIMUM_TEXTURE3D_HEIGHT)
+    .value("MAXIMUM_TEXTURE3D_DEPTH", CU_DEVICE_ATTRIBUTE_MAXIMUM_TEXTURE3D_DEPTH)
+    .value("MAXIMUM_TEXTURE2D_ARRAY_WIDTH", CU_DEVICE_ATTRIBUTE_MAXIMUM_TEXTURE2D_ARRAY_WIDTH)
+    .value("MAXIMUM_TEXTURE2D_ARRAY_HEIGHT", CU_DEVICE_ATTRIBUTE_MAXIMUM_TEXTURE2D_ARRAY_HEIGHT)
+    .value("MAXIMUM_TEXTURE2D_ARRAY_NUMSLICES", CU_DEVICE_ATTRIBUTE_MAXIMUM_TEXTURE2D_ARRAY_NUMSLICES)
 #endif
     ;
 
@@ -520,6 +564,9 @@ BOOST_PYTHON_MODULE(_driver)
     .value("COMPUTE_11", CU_TARGET_COMPUTE_11)
     .value("COMPUTE_12", CU_TARGET_COMPUTE_12)
     .value("COMPUTE_13", CU_TARGET_COMPUTE_13)
+#if CUDA_VERSION >= 3000
+    .value("COMPUTE_20", CU_TARGET_COMPUTE_20)
+#endif
     ;
 
   py::enum_<CUjit_fallback>("jit_fallback")
@@ -535,6 +582,28 @@ BOOST_PYTHON_MODULE(_driver)
     cls.attr("DEVICEMAP") = CU_MEMHOSTALLOC_DEVICEMAP;
     cls.attr("WRITECOMBINED") = CU_MEMHOSTALLOC_WRITECOMBINED;
   }
+#endif
+
+  // graphics enums -----------------------------------------------------------
+#if CUDA_VERSION >= 3000
+  py::enum_<CUgraphicsRegisterFlags>("graphics_register_flags")
+    .value("NONE", CU_GRAPHICS_REGISTER_FLAGS_NONE)
+    ;
+
+  py::enum_<CUgraphicsMapResourceFlags>("graphics_map_resource_flags")
+    .value("NONE", CU_GRAPHICS_MAP_RESOURCE_FLAGS_NONE)
+    .value("READ_ONLY", CU_GRAPHICS_MAP_RESOURCE_FLAGS_READ_ONLY)
+    .value("WRITE_DISCARD", CU_GRAPHICS_MAP_RESOURCE_FLAGS_WRITE_DISCARD)
+    ;
+
+  py::enum_<CUarray_cubemap_face_enum>("array_cubemap_face")
+    .value("POSITIVE_X", CU_CUBEMAP_FACE_POSITIVE_X)
+    .value("NEGATIVE_X", CU_CUBEMAP_FACE_NEGATIVE_X)
+    .value("POSITIVE_Y", CU_CUBEMAP_FACE_POSITIVE_Y)
+    .value("NEGATIVE_Y", CU_CUBEMAP_FACE_NEGATIVE_Y)
+    .value("POSITIVE_Z", CU_CUBEMAP_FACE_POSITIVE_Z)
+    .value("NEGATIVE_Z", CU_CUBEMAP_FACE_NEGATIVE_Z)
+    ;
 #endif
 
 
@@ -654,15 +723,15 @@ BOOST_PYTHON_MODULE(_driver)
       py::args("width", "height", "access_size"));
   DEF_SIMPLE_FUNCTION(mem_get_address_range);
 
-  py::def("memset_d8", _cuMemsetD8, py::args("dest", "data", "size"));
-  py::def("memset_d16", _cuMemsetD16, py::args("dest", "data", "size"));
-  py::def("memset_d32", _cuMemsetD32, py::args("dest", "data", "size"));
+  py::def("memset_d8",  py_memset_d8, py::args("dest", "data", "size"));
+  py::def("memset_d16", py_memset_d16, py::args("dest", "data", "size"));
+  py::def("memset_d32", py_memset_d32, py::args("dest", "data", "size"));
 
-  py::def("memset_d2d8", _cuMemsetD2D8, 
+  py::def("memset_d2d8", py_memset_d2d8, 
       py::args("dest", "pitch", "data", "width", "height"));
-  py::def("memset_d2d16", _cuMemsetD2D16, 
+  py::def("memset_d2d16", py_memset_d2d16, 
       py::args("dest", "pitch", "data", "width", "height"));
-  py::def("memset_d2d32", _cuMemsetD2D32, 
+  py::def("memset_d2d32", py_memset_d2d32, 
       py::args("dest", "pitch", "data", "width", "height"));
 
   py::def("memcpy_htod", py_memcpy_htod, 
@@ -673,7 +742,12 @@ BOOST_PYTHON_MODULE(_driver)
       (py::args("dest"), py::arg("src")));
   py::def("memcpy_dtoh_async", py_memcpy_dtoh_async, 
       (py::args("dest"), py::arg("src"), py::arg("stream")=py::object()));
-  py::def("memcpy_dtod", _cuMemcpyDtoD, py::args("dest", "src", "size"));
+
+  py::def("memcpy_dtod", py_memcpy_dtod, py::args("dest", "src", "size"));
+#if CUDA_VERSION >= 3000
+  py::def("memcpy_dtod_async", py_memcpy_dtod_async, 
+      (py::args("dest", "src", "size"), py::arg("stream")=py::object()));
+#endif
 
   DEF_SIMPLE_FUNCTION_WITH_ARGS(memcpy_dtoa,
       ("ary", "index", "src", "len"));

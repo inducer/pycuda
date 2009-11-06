@@ -25,14 +25,14 @@ class ArgumentHandler(object):
 class In(ArgumentHandler):
     def pre_call(self, stream):
         if stream is not None:
-            memcpy_htod_async(self.get_device_alloc(), self.array, stream)
+            memcpy_htod(self.get_device_alloc(), self.array)
         else:
-            memcpy_htod_async(self.get_device_alloc(), self.array)
+            memcpy_htod(self.get_device_alloc(), self.array)
 
 class Out(ArgumentHandler):
     def post_call(self, stream):
         if stream is not None:
-            memcpy_dtoh_async(self.array, self.get_device_alloc(), stream)
+            memcpy_dtoh(self.array, self.get_device_alloc())
         else:
             memcpy_dtoh(self.array, self.get_device_alloc())
 

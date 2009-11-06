@@ -176,6 +176,10 @@ namespace cuda
           case CUDA_ERROR_NO_BINARY_FOR_GPU: return "no binary for gpu";
           case CUDA_ERROR_ALREADY_ACQUIRED: return "already acquired";
           case CUDA_ERROR_NOT_MAPPED: return "not mapped";
+#if CUDA_VERSION >= 3000
+          case CUDA_ERROR_NOT_MAPPED_AS_ARRAY: return "not mapped as array";
+          case CUDA_ERROR_NOT_MAPPED_AS_POINTER: return "not mapped as pointer";
+#endif
 
           case CUDA_ERROR_INVALID_SOURCE: return "invalid source";
           case CUDA_ERROR_FILE_NOT_FOUND: return "file not found";
@@ -190,6 +194,11 @@ namespace cuda
           case CUDA_ERROR_LAUNCH_OUT_OF_RESOURCES: return "launch out of resources";
           case CUDA_ERROR_LAUNCH_TIMEOUT: return "launch timeout";
           case CUDA_ERROR_LAUNCH_INCOMPATIBLE_TEXTURING: return "launch incompatible texturing";
+
+#if CUDA_VERSION >= 3000
+          case CUDA_ERROR_POINTER_IS_64BIT: return "pointer is 64-bit";
+          case CUDA_ERROR_SIZE_IS_64BIT: return "size is 64-bit";
+#endif
 
           case CUDA_ERROR_UNKNOWN: return "unknown";
 

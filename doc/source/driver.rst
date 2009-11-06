@@ -165,7 +165,21 @@ Constants
 
     .. attribute:: COMPUTE_MODE
 
-        CUDA 2.2 and above.
+        CUDA 2.2 and above. See :class:`compute_mode`.
+
+    .. attribute:: MAXIMUM_TEXTURE1D_WIDTH
+        MAXIMUM_TEXTURE2D_WIDTH
+        MAXIMUM_TEXTURE2D_HEIGHT
+        MAXIMUM_TEXTURE3D_WIDTH
+        MAXIMUM_TEXTURE3D_HEIGHT
+        MAXIMUM_TEXTURE3D_DEPTH
+        MAXIMUM_TEXTURE2D_ARRAY_WIDTH
+        MAXIMUM_TEXTURE2D_ARRAY_HEIGHT
+        MAXIMUM_TEXTURE2D_ARRAY_NUMSLICES
+
+        CUDA 3.0 and above
+
+        .. versionadded:: 0.94
 
 .. class:: function_attribute
 
@@ -188,6 +202,14 @@ Constants
     .. attribute:: SIGNED_INT32
     .. attribute:: HALF
     .. attribute:: FLOAT
+
+.. class:: array3d_flags
+
+    .. attribute ARRAY3D_2DARRAY
+
+        CUDA 3.0 and above
+
+        .. versionadded:: 0.94
 
 .. class:: address_mode
 
@@ -238,6 +260,11 @@ Constants
     .. attribute:: COMPUTE_11
     .. attribute:: COMPUTE_12
     .. attribute:: COMPUTE_13
+    .. attribute:: COMPUTE_20
+
+        CUDA 3.0 and above
+
+        .. versionadded:: 0.94
 
 .. class:: jit_fallback
 
@@ -719,6 +746,12 @@ Unstructured Memory Transfers
     is determined by the size of the buffer.
 
 .. function:: memcpy_dtod(dest, src, size)
+.. function:: memcpy_dtod_async(dest, src, size, stream=None)
+
+    CUDA 3.0 and above
+
+    .. versionadded:: 0.94
+
 .. function:: memcpy_dtoa(ary, index, src, len)
 .. function:: memcpy_atod(dest, ary, index, len)
 .. function:: memcpy_htoa(ary, index, src)
