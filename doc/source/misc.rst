@@ -16,6 +16,17 @@ Version 0.94
 * Add :func:`pycuda.tools.make_default_context`.
 * Use :func:`pycuda.tools.make_default_context` in :mod:`pycuda.autoinit`,
   which changes its behavior.
+* Remove previously deprecated features:
+    + :attr:`pycuda.driver.Function.registers`, 
+      :attr:`pycuda.driver.Function.lmem`, and
+      :attr:`pycuda.driver.Function.smem` have been deprecated in favor of the
+      mechanism above. See :attr:`pycuda.driver.Function.num_regs` for more.
+    + the three-argument forms (i.e. with streams)
+      of :func:`pycuda.driver.memcpy_dtoh` and
+      :func:`pycuda.driver.memcpy_htod`. Use 
+      :func:`pycuda.driver.memcpy_dtoh_async`
+      and :func:`pycuda.driver.memcpy_htod_async` instead.
+    + :class:`pycuda.driver.SourceModule`.
 
 Version 0.93
 ------------

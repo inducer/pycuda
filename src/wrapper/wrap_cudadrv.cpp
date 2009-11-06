@@ -140,33 +140,6 @@ namespace
 
 
 
-#if CUDA_VERSION >= 2020
-#define MAKE_FUNCTION_HACKY_GETTER(ATTR_NAME, ATTR, NEW_NAME) \
-  int function_get_##ATTR_NAME(function const &f) \
-  { \
-    PyErr_Warn( \
-        PyExc_DeprecationWarning, \
-        "Function." #ATTR_NAME " is deprecated. Use Function." #NEW_NAME "."); \
-    return f.get_attribute(ATTR); \
-  }
-#else
-#define MAKE_FUNCTION_HACKY_GETTER(ATTR_NAME, ATTR, NEW_NAME) \
-  py::object function_get_##ATTR_NAME(py::object func) \
-  { \
-    PyErr_Warn( \
-        PyExc_DeprecationWarning, \
-        "Function." #ATTR_NAME " is deprecated. Use Function." #NEW_NAME "."); \
-    return py::object(func.attr("_hacky_" #ATTR_NAME)); \
-  }
-#endif
-
-  MAKE_FUNCTION_HACKY_GETTER(lmem, CU_FUNC_ATTRIBUTE_LOCAL_SIZE_BYTES, local_size_bytes);
-  MAKE_FUNCTION_HACKY_GETTER(smem, CU_FUNC_ATTRIBUTE_SHARED_SIZE_BYTES, shared_size_bytes);
-  MAKE_FUNCTION_HACKY_GETTER(registers, CU_FUNC_ATTRIBUTE_NUM_REGS, num_regs);
-
-
-
-
   module *module_from_buffer(py::object buffer, py::object py_options, 
       py::object message_handler)
   {
@@ -289,25 +262,14 @@ namespace
 
 
 
-  void py_memcpy_htod(CUdeviceptr dst, py::object src, py::object stream_py)
+  void py_memcpy_htod(CUdeviceptr dst, py::object src)
   {
     const void *buf;
     PYCUDA_BUFFER_SIZE_T len;
     if (PyObject_AsReadBuffer(src.ptr(), &buf, &len))
       throw py::error_already_set();
 
-    if (stream_py.ptr() == Py_None)
-    {
-      CUDAPP_CALL_GUARDED(cuMemcpyHtoD, (dst, buf, len));
-    }
-    else
-    {
-      PyErr_Warn(
-          PyExc_DeprecationWarning,
-          "memcpy_htod with a stream argument is deprecated. Use memcpy_dtoh_async instead.");
-      const stream &s = py::extract<const stream &>(stream_py);
-      CUDAPP_CALL_GUARDED(cuMemcpyHtoDAsync, (dst, buf, len, s.handle()));
-    }
+    CUDAPP_CALL_GUARDED(cuMemcpyHtoD, (dst, buf, len));
   }
 
 
@@ -335,26 +297,14 @@ namespace
 
 
 
-  void py_memcpy_dtoh(py::object dest, CUdeviceptr src, py::object stream_py)
+  void py_memcpy_dtoh(py::object dest, CUdeviceptr src)
   {
     void *buf;
     PYCUDA_BUFFER_SIZE_T len;
     if (PyObject_AsWriteBuffer(dest.ptr(), &buf, &len))
       throw py::error_already_set();
 
-    if (stream_py.ptr() == Py_None)
-    {
-      CUDAPP_CALL_GUARDED(cuMemcpyDtoH, (buf, src, len));
-    }
-    else
-    {
-      PyErr_Warn(
-          PyExc_DeprecationWarning,
-          "memcpy_dtoh with a stream argument is deprecated. Use memcpy_dtoh_async instead.");
-
-      const stream &s = py::extract<const stream &>(stream_py);
-      CUDAPP_CALL_GUARDED(cuMemcpyDtoHAsync, (buf, src, len, s.handle()));
-    }
+    CUDAPP_CALL_GUARDED(cuMemcpyDtoH, (buf, src, len));
   }
 
 
@@ -673,10 +623,6 @@ BOOST_PYTHON_MODULE(_driver)
 #if CUDA_VERSION >= 2020
       .DEF_SIMPLE_METHOD(get_attribute)
 #endif
-
-      .add_property("lmem", function_get_lmem)
-      .add_property("smem", function_get_smem)
-      .add_property("registers", function_get_registers)
       ;
   }
 
@@ -720,11 +666,11 @@ BOOST_PYTHON_MODULE(_driver)
       py::args("dest", "pitch", "data", "width", "height"));
 
   py::def("memcpy_htod", py_memcpy_htod, 
-      (py::args("dest"), py::arg("src"), py::arg("stream")=py::object()));
+      (py::args("dest"), py::arg("src")));
   py::def("memcpy_htod_async", py_memcpy_htod_async, 
       (py::args("dest"), py::arg("src"), py::arg("stream")=py::object()));
   py::def("memcpy_dtoh", py_memcpy_dtoh, 
-      (py::args("dest"), py::arg("src"), py::arg("stream")=py::object()));
+      (py::args("dest"), py::arg("src")));
   py::def("memcpy_dtoh_async", py_memcpy_dtoh_async, 
       (py::args("dest"), py::arg("src"), py::arg("stream")=py::object()));
   py::def("memcpy_dtod", _cuMemcpyDtoD, py::args("dest", "src", "size"));

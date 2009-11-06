@@ -166,5 +166,4 @@ intersphinx_mapping = {
         'http://docs.python.org/dev': None,
         'http://docs.scipy.org/doc/numpy/': None,
         'http://documen.tician.de/codepy/': None,
-        'http://documen.tician.de/boostmpi/': None,
         }

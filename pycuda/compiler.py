@@ -194,25 +194,6 @@ class SourceModule(object):
         cubin = compile(source, nvcc, options, keep, no_extern_c, 
                 arch, code, cache_dir, include_dirs)
 
-        from pycuda.driver import get_version
-        if get_version < (2,2,0):
-            # FIXME This is wrong--these are per-function attributes.
-            # Remove this in 0.94.
-            def failsafe_extract(key, cubin):
-                pattern = r"%s\s*=\s*([0-9]+)" % key
-                import re
-                match = re.search(pattern, cubin)
-                if match is None:
-                    from warnings import warn
-                    warn("Reading '%s' from cubin failed--SourceModule metadata may be unavailable." % key)
-                    return None
-                else:
-                    return int(match.group(1))
-
-            self.lmem = failsafe_extract("lmem", cubin)
-            self.smem = failsafe_extract("smem", cubin)
-            self.registers = failsafe_extract("reg", cubin)
-
         from pycuda.driver import module_from_buffer
         self.module = module_from_buffer(cubin)
 
@@ -220,15 +201,4 @@ class SourceModule(object):
         self.get_texref = self.module.get_texref
 
     def get_function(self, name):
-        func = self.module.get_function(name)
-
-        from pycuda.driver import get_version
-        if get_version < (2,2,0):
-            # FIXME: Bzzt, wrong. This should truly be per-function.
-            # Won't fix, though, because Function now has get_attribute.
-            func._hacky_lmem = self.lmem
-            func._hacky_smem = self.smem
-            func._hacky_registers = self.registers
-
-        return func
-
+        return self.module.get_function(name)

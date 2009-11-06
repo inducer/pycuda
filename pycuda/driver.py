@@ -425,13 +425,3 @@ def from_device_like(devptr, other_ary):
     result = numpy.empty_like(other_ary)
     memcpy_dtoh(result, devptr)
     return result
-
-
-
-
-from pycuda.compiler import SourceModule as _SourceModule
-class SourceModule(_SourceModule):
-    def __init__(self, *args, **kwargs):
-        from warnings import warn
-        warn("pycuda.driver.SourceModule is deprecated. Use pycuda.compiler.SourceModule instead.")
-        _SourceModule.__init__(self, *args, **kwargs)
