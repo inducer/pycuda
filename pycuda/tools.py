@@ -462,15 +462,16 @@ def context_dependent_memoize(func, *args):
     try:
         ctx_dict = func._pycuda_ctx_dep_memoize_dic
     except AttributeError:
-        from weakref import WeakKeyDictionary
-        ctx_dict = func._pycuda_ctx_dep_memoize_dic = WeakKeyDictionary()
+        # FIXME: This may keep contexts alive longer than desired.
+        # But I guess since the memory in them is freed, who cares.
+        ctx_dict = func._pycuda_ctx_dep_memoize_dic = {}
 
     cur_ctx = cuda.Context.get_current()
-    arg_dict = ctx_dict.setdefault(cur_ctx, {})
 
     try:
-        return arg_dict[args]
+        return ctx_dict[cur_ctx][args]
     except KeyError:
+        arg_dict = ctx_dict.setdefault(cur_ctx, {})
         result = func(*args)
         arg_dict[args] = result
         return result
