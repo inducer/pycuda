@@ -847,9 +847,9 @@ BOOST_PYTHON_MODULE(_driver)
     typedef event cl;
     py::class_<cl, boost::noncopyable>
       ("Event", py::init<py::optional<unsigned int> >(py::arg("flags")))
-      .DEF_SIMPLE_METHOD(record)
-      .def("record", &cl::record_in_stream)
-      .DEF_SIMPLE_METHOD(synchronize)
+      .def("record", &cl::record,
+          py::arg("stream")=py::object(), py::return_self<>())
+      .def("synchronize", &cl::synchronize, py::return_self<>())
       .DEF_SIMPLE_METHOD(query)
       .DEF_SIMPLE_METHOD(time_since)
       .DEF_SIMPLE_METHOD(time_till)

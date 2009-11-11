@@ -1290,14 +1290,26 @@ namespace cuda
         CUDAPP_CATCH_WARN_OOT_LEAK(event);
       }
 
-      void record()
-      { CUDAPP_CALL_GUARDED(cuEventRecord, (m_event, 0)); }
+      event *record(py::object stream_py)
+      { 
+        CUstream s_handle;
+        if (stream_py.ptr() != Py_None)
+        {
+          const stream &s = py::extract<const stream &>(stream_py);
+          s_handle = s.handle();
+        }
+        else
+          s_handle = 0;
 
-      void record_in_stream(stream const &str)
-      { CUDAPP_CALL_GUARDED(cuEventRecord, (m_event, str.handle())); }
+        CUDAPP_CALL_GUARDED(cuEventRecord, (m_event, s_handle)); 
+        return this;
+      }
 
-      void synchronize()
-      { CUDAPP_CALL_GUARDED_THREADED(cuEventSynchronize, (m_event)); }
+      event *synchronize()
+      { 
+        CUDAPP_CALL_GUARDED_THREADED(cuEventSynchronize, (m_event)); 
+        return this;
+      }
 
       bool query() const
       { 

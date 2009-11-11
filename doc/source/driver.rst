@@ -400,18 +400,15 @@ Concurrency and Streams
 
     See :class:`event_flags` for values for the *flags* parameter.
 
-    .. method:: record()
+    .. method:: record(stream=None)
 
-        Insert a recording point for *self* into the global device execution
-        stream.
-
-    .. method:: record(stream)
-
-        Insert a recording point for *self* into the :class:`Stream` *stream*
+        Insert a recording point for *self* into the :class:`Stream` *stream*.
+        Return *self*.
 
     .. method:: synchronize()
 
         Wait until the device execution stream reaches this event.
+        Return *self*.
 
     .. method:: query()
 
