@@ -403,6 +403,26 @@ class TestGPUArray:
 
             drv.Context.synchronize()
 
+    def test_astype(self):
+        from pycuda.curandom import rand as curand
+
+        a_gpu = curand((2000,), dtype=numpy.float32)
+
+        a = a_gpu.get().astype(numpy.float64)
+        a2 = a_gpu.astype(numpy.float64).get()
+
+        assert a2.dtype == numpy.float64
+        assert la.norm(a - a2) == 0
+
+        a_gpu = curand((2000,), dtype=numpy.float64)
+
+        a = a_gpu.get().astype(numpy.float32)
+        a2 = a_gpu.astype(numpy.float32).get()
+
+        assert a2.dtype == numpy.float32
+        assert la.norm(a - a2)/la.norm(a) < 1e-7
+
+
 
 
 if __name__ == "__main__":

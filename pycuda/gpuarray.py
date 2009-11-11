@@ -206,7 +206,9 @@ class GPUArray(object):
         return out
 
     def _new_like_me(self, dtype=None):
-        return self.__class__(self.shape, dtype or self.dtype, 
+        if dtype is None:
+            dtype = self.dtype
+        return self.__class__(self.shape, dtype,
                 allocator=self.allocator)
 
     # operators ---------------------------------------------------------------
@@ -436,6 +438,21 @@ class GPUArray(object):
 
         return result
 
+    def astype(self, dtype, stream=None):
+        if dtype == self.dtype:
+            return self
+
+        result = self._new_like_me(dtype=dtype)
+
+        func = elementwise.get_copy_kernel(dtype, self.dtype)
+        func.set_block_shape(*self._block)
+        func.prepared_async_call(self._grid, stream,
+                result.gpudata, self.gpudata,
+                self.mem_size)
+
+        return result
+
+
     # slicing -----------------------------------------------------------------
     def __getitem__(self, idx):
         if idx == ():
@@ -443,7 +460,7 @@ class GPUArray(object):
 
         if len(self.shape) > 1:
             raise NotImplementedError("multi-d slicing is not yet implemented")
-        
+
         if not isinstance(idx, slice):
             raise ValueError("non-slice indexing not supported: %s" % (idx,))
 

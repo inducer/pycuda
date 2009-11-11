@@ -111,6 +111,10 @@ The :class:`GPUArray` Array Class
 
         Fill the array with *scalar*.
 
+    .. method :: astype(dtype, stream=None)
+
+        Return *self*, cast to *dtype*.
+
     .. method:: bind_to_texref(texref, allow_offset=False)
 
         Bind *self* to the :class:`pycuda.driver.TextureReference` *texref*.
