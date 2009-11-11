@@ -631,6 +631,10 @@ BOOST_PYTHON_MODULE(_driver)
   {
     typedef context cl;
     py::class_<cl, shared_ptr<cl>, boost::noncopyable >("Context", py::no_init)
+      .def(py::self == py::self)
+      .def(py::self != py::self)
+      .def("__hash__", &cl::hash)
+
       .DEF_SIMPLE_METHOD(detach)
 
 #if CUDA_VERSION >= 2000
@@ -642,6 +646,9 @@ BOOST_PYTHON_MODULE(_driver)
 
       .DEF_SIMPLE_METHOD(synchronize)
       .staticmethod("synchronize")
+
+      .def("get_current", (boost::shared_ptr<cl> (*)()) &cl::current_context)
+      .staticmethod("get_current")
       ;
   }
 

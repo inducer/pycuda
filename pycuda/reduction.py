@@ -61,7 +61,7 @@ source code with only those rights set forth herein.
 
 
 
-from pytools import memoize
+from pycuda.tools import context_dependent_memoize
 from pycuda.tools import dtype_to_ctype
 import numpy
 
@@ -259,7 +259,7 @@ class ReductionKernel:
 
 
 
-@memoize
+@context_dependent_memoize
 def get_sum_kernel(dtype_out, dtype_in):
     if dtype_out is None:
         dtype_out = dtype_in
@@ -271,7 +271,7 @@ def get_sum_kernel(dtype_out, dtype_in):
 
 
 
-@memoize
+@context_dependent_memoize
 def get_dot_kernel(dtype_out, dtype_a=None, dtype_b=None):
     if dtype_out is None:
         dtype_out = dtype_a
@@ -295,7 +295,7 @@ def get_dot_kernel(dtype_out, dtype_a=None, dtype_b=None):
 
 
 
-@memoize
+@context_dependent_memoize
 def get_subset_dot_kernel(dtype_out, dtype_a=None, dtype_b=None):
     if dtype_out is None:
         dtype_out = dtype_a
@@ -341,7 +341,7 @@ def get_minmax_neutral(what, dtype):
 
 
 
-@memoize
+@context_dependent_memoize
 def get_minmax_kernel(what, dtype):
     if dtype == numpy.float64:
         reduce_expr = "f%s(a,b)" % what
@@ -362,7 +362,7 @@ def get_minmax_kernel(what, dtype):
 
 
 
-@memoize
+@context_dependent_memoize
 def get_subset_minmax_kernel(what, dtype):
     if dtype == numpy.float64:
         reduce_expr = "f%s(a,b)" % what

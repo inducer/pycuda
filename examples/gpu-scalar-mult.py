@@ -2,7 +2,7 @@ import numpy
 import pycuda.autoinit
 import pycuda.driver as drv
 import pycuda.gpuarray as gpuarray
-from pytools import memoize
+from pycuda.tools import context_dependent_memoize
 
 
 
@@ -43,7 +43,7 @@ def main(dtype):
 
 
 
-@memoize
+@context_dependent_memoize
 def get_lin_comb_kernel_no_tex(summand_descriptors,
         dtype_z):
     from pycuda.tools import dtype_to_ctype

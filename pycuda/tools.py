@@ -28,7 +28,7 @@ OTHER DEALINGS IN THE SOFTWARE.
 """
 
 import pycuda.driver as cuda
-from pytools import memoize
+from pytools import memoize, decorator
 import pycuda._driver as _drv
 import numpy
 
@@ -453,3 +453,24 @@ def parse_c_arg(c_arg):
 
 def get_arg_type(c_arg):
     return parse_c_arg(c_arg).struct_char
+
+
+
+
+@decorator
+def context_dependent_memoize(func, *args):
+    try:
+        ctx_dict = func._pycuda_ctx_dep_memoize_dic
+    except AttributeError:
+        from weakref import WeakKeyDictionary
+        ctx_dict = func._pycuda_ctx_dep_memoize_dic = WeakKeyDictionary()
+
+    cur_ctx = cuda.Context.get_current()
+    arg_dict = ctx_dict.setdefault(cur_ctx, {})
+
+    try:
+        return arg_dict[args]
+    except KeyError:
+        result = func(*args)
+        arg_dict[args] = result
+        return result

@@ -28,6 +28,8 @@ Version 0.94
       :func:`pycuda.driver.memcpy_dtoh_async`
       and :func:`pycuda.driver.memcpy_htod_async` instead.
     + :class:`pycuda.driver.SourceModule`.
+* Add :func:`pycuda.tools.context_dependent_memoize`, use it for
+  context-dependent caching of PyCUDA's canned kernels.
 
 Version 0.93
 ------------

@@ -13,11 +13,11 @@ from pycuda.compiler import SourceModule
 import numpy
 import numpy.linalg as la
 
-from pytools import memoize
+from pycuda.tools import context_dependent_memoize
 
 block_size = 16
 
-@memoize
+@context_dependent_memoize
 def _get_transpose_kernel():
     mod = SourceModule("""
     #define BLOCK_SIZE %(block_size)d

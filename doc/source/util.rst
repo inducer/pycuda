@@ -62,6 +62,14 @@ Choice of Device
 
     Deprecated.
 
+Kernel Caching
+--------------
+
+.. function:: context_dependent_memoize(func)
+    
+    This decorator caches the result of the decorated function, *if* a 
+    subsequent occurs in the same :class:`pycuda.driver.Context`.
+    This is useful for caching of kernels.
 
 Device Metadata and Occupancy
 -----------------------------

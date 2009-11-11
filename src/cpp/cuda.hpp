@@ -383,6 +383,21 @@ namespace cuda
       CUcontext handle() const
       { return m_context; }
 
+      bool operator==(const context &other) const
+      {
+        return m_context == other.m_context;
+      }
+
+      bool operator!=(const context &other) const
+      {
+        return m_context != other.m_context;
+      }
+
+      long hash() const
+      {
+        return long(m_context);
+      }
+
       boost::thread::id thread_id() const
       { return m_thread; }
 
