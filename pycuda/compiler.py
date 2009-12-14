@@ -117,18 +117,19 @@ def _find_pycuda_include_path():
     from os.path import join, exists
     installed_path = join(pathname, "..", "include", "pycuda")
     development_path = join(pathname, "..", "src", "cuda")
+    development_path2 = join(pathname, "..", "..", "..", "src", "cuda")
 
     import sys
-
     usr_path = "/usr/include/pycuda"
     usr_local_path = "/usr/local/include/pycuda"
     prefix_path = join(sys.prefix, "include" , "pycuda")
-
 
     if exists(installed_path):
         return installed_path
     elif exists(development_path):
         return development_path
+    elif exists(development_path2):
+        return development_path2
     else:
         if sys.platform == "linux2":
             if exists(prefix_path):
@@ -138,7 +139,7 @@ def _find_pycuda_include_path():
             elif exists(usr_local_path):
                 return usr_local_path
 
-        raise RuntimeError("could not find path PyCUDA's C header files")
+        raise RuntimeError("could not find path to PyCUDA's C header files")
 
 
 

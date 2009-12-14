@@ -9,6 +9,3 @@ device = context.get_device()
 
 import atexit
 atexit.register(context.pop)
-
-
-

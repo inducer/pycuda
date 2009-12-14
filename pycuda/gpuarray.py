@@ -86,8 +86,6 @@ class GPUArray(object):
         else:
             self.gpudata = gpudata
 
-            assert base is not None
-
         self.base = base
 
         self._grid, self._block = splay(self.mem_size)
