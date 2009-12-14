@@ -138,7 +138,7 @@ def _find_pycuda_include_path():
             elif exists(usr_local_path):
                 return usr_local_path
 
-        raise RuntimeError("could not find path PyCUDA's C header files")
+        raise RuntimeError("could not find path to PyCUDA's C header files")
 
 
 
