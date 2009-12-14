@@ -359,6 +359,8 @@ def dtype_to_ctype(dtype, with_fp_tex_hack=False):
         return "signed char"
     elif dtype == numpy.uint8:
         return "unsigned char"
+    elif dtype == numpy.bool:
+        return "bool"
     elif dtype == numpy.float32:
         if with_fp_tex_hack:
             return "fp_tex_float"
@@ -444,6 +446,7 @@ def parse_c_arg(c_arg):
     elif tp in ["unsigned short", "unsigned short int"]: dtype = numpy.uint16
     elif tp in ["char"]: dtype = numpy.int8
     elif tp in ["unsigned char"]: dtype = numpy.uint8
+    elif tp in ["bool"]: dtype = numpy.bool
     else: raise ValueError, "unknown type '%s'" % tp
 
     return arg_class(dtype, name)
