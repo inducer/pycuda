@@ -52,7 +52,7 @@ def _get_common_dtype(obj1, obj2):
 
 
 class GPUArray(object): 
-    """A GPUArray is used to do array based calculation on the GPU. 
+    """A GPUArray is used to do array-based calculation on the GPU. 
 
     This is mostly supposed to be a numpy-workalike. Operators
     work on an element-by-element basis, just like numpy.ndarray.

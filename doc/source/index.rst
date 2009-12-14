@@ -55,7 +55,7 @@ Here's an example, to given you an impression::
 
   print dest-a*b
 
-(You can find this example as :file:`examples/hello_gpu.py` in the PyCUDA
+(This example is :file:`examples/hello_gpu.py` in the PyCUDA
 source distribution.)
 
 On the surface, this program will print a screenful of zeros. Behind
