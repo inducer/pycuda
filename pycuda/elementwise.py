@@ -39,7 +39,7 @@ from pycuda.tools import dtype_to_ctype, VectorArg, ScalarArg
 
 def get_elwise_module(arguments, operation,
         name="kernel", keep=False, options=[],
-        preamble="", loop_prep=""):
+        preamble="", loop_prep="", after_loop=""):
     from pycuda.compiler import SourceModule
     return SourceModule("""
         %(preamble)s
@@ -58,17 +58,21 @@ def get_elwise_module(arguments, operation,
           {
             %(operation)s;
           }
+
+          %(after_loop)s;
         }
         """ % {
             "arguments": ", ".join(arg.declarator() for arg in arguments),
             "operation": operation,
             "name": name,
             "preamble": preamble,
-            "loop_prep": loop_prep},
+            "loop_prep": loop_prep,
+            "after_loop": after_loop,
+            },
         options=options, keep=keep)
 
 def get_elwise_kernel_and_types(arguments, operation,
-        name="kernel", keep=False, options=[]):
+        name="kernel", keep=False, options=[], **kwargs):
     if isinstance(arguments, str):
         from pycuda.tools import parse_c_arg
         arguments = [parse_c_arg(arg) for arg in arguments.split(",")]
@@ -76,7 +80,7 @@ def get_elwise_kernel_and_types(arguments, operation,
     arguments.append(ScalarArg(numpy.uintp, "n"))
 
     mod = get_elwise_module(arguments, operation, name,
-            keep, options)
+            keep, options, **kwargs)
 
     from pycuda.tools import get_arg_type
     func = mod.get_function(name)
@@ -85,12 +89,12 @@ def get_elwise_kernel_and_types(arguments, operation,
     return func, arguments
 
 def get_elwise_kernel(arguments, operation,
-        name="kernel", keep=False, options=[]):
+        name="kernel", keep=False, options=[], **kwargs):
     """Return a L{pycuda.driver.Function} that performs the same scalar operation
     on one or several vectors.
     """
     func, arguments = get_elwise_kernel_and_types(
-            arguments, operation, name, keep, options)
+            arguments, operation, name, keep, options, **kwargs)
 
     return func
 
@@ -99,9 +103,9 @@ def get_elwise_kernel(arguments, operation,
 
 class ElementwiseKernel:
     def __init__(self, arguments, operation,
-            name="kernel", keep=False, options=[]):
+            name="kernel", keep=False, options=[], **kwargs):
         self.func, self.arguments = get_elwise_kernel_and_types(
-            arguments, operation, name, keep, options)
+            arguments, operation, name, keep, options, **kwargs)
 
         assert [i for i, arg in enumerate(self.arguments)
                 if isinstance(arg, VectorArg)], \
