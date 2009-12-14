@@ -42,3 +42,4 @@ temp*
 *.so
 *.pyd
 setuptools.pth
+distribute*tar.gz
