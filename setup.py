@@ -21,9 +21,9 @@ def get_config_schema():
         LibraryDir("CUDADRV", []),
         Libraries("CUDADRV", ["cuda"]),
 
-        StringListOption("CXXFLAGS", [], 
+        StringListOption("CXXFLAGS", [],
             help="Any extra C++ compiler options to include"),
-        StringListOption("LDFLAGS", [], 
+        StringListOption("LDFLAGS", [],
             help="Any extra linker options to include"),
         ])
 
@@ -50,7 +50,7 @@ def search_on_path(filenames):
 
 
 # verification ----------------------------------------------------------------
-def verify_path(description, paths, names, extensions, subpaths=['/'], 
+def verify_path(description, paths, names, extensions, subpaths=['/'],
         prefixes=[], maybe_ok=False):
     try:
         from os.path import exists
@@ -192,7 +192,7 @@ def main():
             print "*** CUDA_ROOT not set, and nvcc not in path. Giving up."
             import sys
             sys.exit(1)
-            
+
         conf["CUDA_ROOT"] = normpath(join(dirname(nvcc_path), ".."))
 
     if conf["CUDA_INC_DIR"] is None:
@@ -255,7 +255,7 @@ def main():
               convenient than with Nvidia's C-based runtime.
 
             * Completeness. PyCUDA puts the full power of CUDA's driver API at
-              your disposal, if you wish. It also includes code for 
+              your disposal, if you wish. It also includes code for
               interoperability with OpenGL.
 
             * Automatic Error Checking. All CUDA errors are automatically
@@ -300,13 +300,13 @@ def main():
 
             ext_package="pycuda",
             ext_modules=[
-                NumpyExtension("_driver", 
+                NumpyExtension("_driver",
                     [
-                        "src/cpp/cuda.cpp", 
-                        "src/cpp/bitlog.cpp", 
-                        "src/wrapper/wrap_cudadrv.cpp", 
-                        "src/wrapper/mempool.cpp", 
-                        ]+extra_sources, 
+                        "src/cpp/cuda.cpp",
+                        "src/cpp/bitlog.cpp",
+                        "src/wrapper/wrap_cudadrv.cpp",
+                        "src/wrapper/mempool.cpp",
+                        ]+extra_sources,
                     include_dirs=INCLUDE_DIRS + EXTRA_INCLUDE_DIRS,
                     library_dirs=LIBRARY_DIRS + conf["CUDADRV_LIB_DIR"],
                     libraries=LIBRARIES + conf["CUDADRV_LIBNAME"],
@@ -315,7 +315,7 @@ def main():
                     extra_link_args=conf["LDFLAGS"],
                     ),
                 ],
-                
+
             data_files=[
                 ("include/pycuda", glob.glob("src/cuda/*.hpp"))
                 ],
