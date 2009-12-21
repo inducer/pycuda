@@ -66,10 +66,19 @@ Kernel Caching
 --------------
 
 .. function:: context_dependent_memoize(func)
-    
+
     This decorator caches the result of the decorated function, *if* a 
     subsequent occurs in the same :class:`pycuda.driver.Context`.
     This is useful for caching of kernels.
+
+Testing
+-------
+
+.. function:: mark_cuda_test(func)
+
+    This function, meant for use with :mod:`py.test`, will mark *func* with a
+    "cuda" tag and make sure it has a CUDA context available when invoked.
+
 
 Device Metadata and Occupancy
 -----------------------------

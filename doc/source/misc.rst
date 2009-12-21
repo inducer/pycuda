@@ -30,6 +30,7 @@ Version 0.94
     + :class:`pycuda.driver.SourceModule`.
 * Add :func:`pycuda.tools.context_dependent_memoize`, use it for
   context-dependent caching of PyCUDA's canned kernels.
+* Add :func:`pycuda.tools.mark_cuda_test`.
 
 Version 0.93
 ------------

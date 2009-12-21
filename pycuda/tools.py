@@ -212,7 +212,7 @@ def make_default_context():
             except cuda.Error:
                 pass
 
-        raise RuntimeError("autoinit wasn't able to create a context "
+        raise RuntimeError("make_default_context() wasn't able to create a context "
                 "on any of the %d detected devices" % ndevices)
 
 
@@ -478,3 +478,26 @@ def context_dependent_memoize(func, *args):
         result = func(*args)
         arg_dict[args] = result
         return result
+
+
+
+
+def mark_cuda_test(inner_f):
+    def f(*args, **kwargs):
+        import pycuda.driver
+        # appears to be idempotent, i.e. no harm in calling it more than once
+        pycuda.driver.init()
+
+        ctx = make_default_context()
+        try:
+            assert isinstance(ctx.get_device().name(), str)
+            assert isinstance(ctx.get_device().compute_capability(), tuple)
+            assert isinstance(ctx.get_device().get_attributes(), dict)
+            inner_f(*args, **kwargs)
+        finally:
+            ctx.pop()
+            ctx.detach()
+
+    from py.test import mark as mark_test
+
+    return mark_test.cuda(f)
