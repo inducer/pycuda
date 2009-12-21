@@ -1,19 +1,21 @@
 from __future__ import division
 import math
 import numpy
+from pycuda.tools import mark_cuda_test
 
-def have_gpu():
+def have_pycuda():
     try:
-        import pycuda.autoinit
+        import pycuda
         return True
     except:
         return False
 
 
-if have_gpu():
-    import pycuda.autoinit
+if have_pycuda():
     import pycuda.gpuarray as gpuarray
+    import pycuda.driver as drv
     import pycuda.cumath as cumath
+    from pycuda.compiler import SourceModule
 
 
 
@@ -47,12 +49,12 @@ def make_unary_function_test(name, (a, b)=(0, 1), threshold=0):
                 assert (max_err <= threshold).all(), \
                         (max_err, name, dtype)
 
-    return test
+    return mark_cuda_test(test)
 
 
 
 
-if have_gpu():
+if have_pycuda():
     test_ceil = make_unary_function_test("ceil", (-10, 10))
     test_floor = make_unary_function_test("ceil", (-10, 10))
     test_fabs = make_unary_function_test("fabs", (-10, 10))
@@ -77,8 +79,9 @@ if have_gpu():
 
 
 class TestMath:
-    disabled = not have_gpu()
+    disabled = not have_pycuda()
 
+    @mark_cuda_test
     def test_fmod(self):
         """tests if the fmod function works"""
         for s in sizes:
@@ -93,6 +96,7 @@ class TestMath:
             for i in range(s):
                 assert math.fmod(a[i], a2[i]) == b[i]
 
+    @mark_cuda_test
     def test_ldexp(self):
         """tests if the ldexp function works"""
         for s in sizes:
@@ -107,6 +111,7 @@ class TestMath:
             for i in range(s):
                 assert math.ldexp(a[i], int(a2[i])) == b[i]
 
+    @mark_cuda_test
     def test_modf(self):
         """tests if the modf function works"""
         for s in sizes:
@@ -123,6 +128,7 @@ class TestMath:
                 assert intpart_true == intpart[i]
                 assert abs(fracpart_true - fracpart[i]) < 1e-4
 
+    @mark_cuda_test
     def test_frexp(self):
         """tests if the frexp function works"""
         for s in sizes:

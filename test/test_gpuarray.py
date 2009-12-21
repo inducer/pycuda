@@ -2,28 +2,31 @@
 import numpy
 import numpy.linalg as la
 import sys
+from pycuda.tools import mark_cuda_test
 
 
 
 
-def have_gpu():
+def have_pycuda():
     try:
-        import pycuda.autoinit
+        import pycuda
         return True
     except:
         return False
 
 
-if have_gpu():
+if have_pycuda():
     import pycuda.gpuarray as gpuarray
     import pycuda.driver as drv
+    from pycuda.compiler import SourceModule
 
 
 
 
 class TestGPUArray:
-    disabled = not have_gpu()
+    disabled = not have_pycuda()
 
+    @mark_cuda_test
     def test_pow_array(self):
         a = numpy.array([1,2,3,4,5]).astype(numpy.float32)
         a_gpu = gpuarray.to_gpu(a)
@@ -37,6 +40,7 @@ class TestGPUArray:
 
 
 
+    @mark_cuda_test
     def test_pow_number(self):
         a = numpy.array([1,2,3,4,5,6,7,8,9,10]).astype(numpy.float32)
         a_gpu = gpuarray.to_gpu(a)
@@ -46,6 +50,7 @@ class TestGPUArray:
 
 
 
+    @mark_cuda_test
     def test_abs(self):
         a = -gpuarray.arange(111, dtype=numpy.float32)
         res = a.get()
@@ -62,6 +67,7 @@ class TestGPUArray:
             assert res[i] == i
 
 
+    @mark_cuda_test
     def test_len(self):
         a = numpy.array([1,2,3,4,5,6,7,8,9,10]).astype(numpy.float32)
         a_cpu = gpuarray.to_gpu(a)
@@ -70,6 +76,7 @@ class TestGPUArray:
 
 
 
+    @mark_cuda_test
     def test_multiply(self):
         """Test the muliplication of an array with a scalar. """
 
@@ -89,6 +96,7 @@ class TestGPUArray:
 
 
 
+    @mark_cuda_test
     def test_multiply_array(self):
         """Test the multiplication of two arrays."""
 
@@ -104,6 +112,7 @@ class TestGPUArray:
 
 
 
+    @mark_cuda_test
     def test_addition_array(self):
         """Test the addition of two arrays."""
 
@@ -116,6 +125,7 @@ class TestGPUArray:
 
 
 
+    @mark_cuda_test
     def test_addition_scalar(self):
         """Test the addition of an array and a scalar."""
 
@@ -128,6 +138,7 @@ class TestGPUArray:
 
 
 
+    @mark_cuda_test
     def test_substract_array(self):
         """Test the substraction of two arrays."""
         #test data
@@ -146,6 +157,7 @@ class TestGPUArray:
 
 
 
+    @mark_cuda_test
     def test_substract_scalar(self):
         """Test the substraction of an array and a scalar."""
 
@@ -164,6 +176,7 @@ class TestGPUArray:
 
 
 
+    @mark_cuda_test
     def test_divide_scalar(self):
         """Test the division of an array and a scalar."""
 
@@ -179,6 +192,7 @@ class TestGPUArray:
 
 
 
+    @mark_cuda_test
     def test_divide_array(self):
         """Test the division of an array and a scalar. """
 
@@ -198,6 +212,7 @@ class TestGPUArray:
 
 
 
+    @mark_cuda_test
     def test_random(self):
         from pycuda.curandom import rand as curand
         for dtype in [numpy.float32, numpy.float64]:
@@ -209,6 +224,7 @@ class TestGPUArray:
 
 
 
+    @mark_cuda_test
     def test_nan_arithmetic(self):
         def make_nan_contaminated_vector(size):
             shape = (size,)
@@ -236,6 +252,7 @@ class TestGPUArray:
 
 
 
+    @mark_cuda_test
     def test_elwise_kernel(self):
         from pycuda.curandom import rand as curand
 
@@ -256,6 +273,7 @@ class TestGPUArray:
 
 
 
+    @mark_cuda_test
     def test_take(self):
         idx = gpuarray.arange(0, 200000, 2, dtype=numpy.uint32)
         a = gpuarray.arange(0, 600000, 3, dtype=numpy.float32)
@@ -265,6 +283,7 @@ class TestGPUArray:
 
 
 
+    @mark_cuda_test
     def test_arange(self):
         a = gpuarray.arange(12, dtype=numpy.float32)
         assert (numpy.arange(12, dtype=numpy.float32) == a.get()).all()
@@ -272,6 +291,7 @@ class TestGPUArray:
 
 
 
+    @mark_cuda_test
     def test_reverse(self):
         a = numpy.array([1,2,3,4,5,6,7,8,9,10]).astype(numpy.float32)
         a_cpu = gpuarray.to_gpu(a)
@@ -284,6 +304,7 @@ class TestGPUArray:
         for i in range(0,10):
             assert a[len(a)-1-i] == b[i]
 
+    @mark_cuda_test
     def test_sum(self):
         from pycuda.curandom import rand as curand
         a_gpu = curand((200000,))
@@ -296,6 +317,7 @@ class TestGPUArray:
 
         assert abs(sum_a_gpu-sum_a)/abs(sum_a) < 1e-4
 
+    @mark_cuda_test
     def test_minmax(self):
         from pycuda.curandom import rand as curand
 
@@ -309,6 +331,7 @@ class TestGPUArray:
 
                 assert op_a_gpu == op_a, (op_a_gpu, op_gpu, dtype, what)
 
+    @mark_cuda_test
     def test_subset_minmax(self):
         from pycuda.curandom import rand as curand
 
@@ -337,6 +360,7 @@ class TestGPUArray:
 
             assert min_a_gpu == min_a
 
+    @mark_cuda_test
     def test_dot(self):
         from pycuda.curandom import rand as curand
         a_gpu = curand((200000,))
@@ -350,6 +374,7 @@ class TestGPUArray:
 
         assert abs(dot_ab_gpu-dot_ab)/abs(dot_ab) < 1e-4
 
+    @mark_cuda_test
     def test_slice(self):
         from pycuda.curandom import rand as curand
 
@@ -367,6 +392,7 @@ class TestGPUArray:
 
             assert la.norm(a_gpu_slice.get()-a_slice) == 0
 
+    @mark_cuda_test
     def test_if_positive(self):
         from pycuda.curandom import rand as curand
 
@@ -387,6 +413,7 @@ class TestGPUArray:
         assert la.norm(max_a_b_gpu.get()- numpy.maximum(a, b)) == 0
         assert la.norm(min_a_b_gpu.get()- numpy.minimum(a, b)) == 0
 
+    @mark_cuda_test
     def test_take_put(self):
         for n in [5, 17, 333]:
             one_field_size = 8
@@ -403,6 +430,7 @@ class TestGPUArray:
 
             drv.Context.synchronize()
 
+    @mark_cuda_test
     def test_astype(self):
         from pycuda.curandom import rand as curand
 

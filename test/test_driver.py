@@ -1,41 +1,37 @@
 from __future__ import division
 import numpy
 import numpy.linalg as la
+from pycuda.tools import mark_cuda_test
 
 
 
 
-def have_gpu():
+def have_pycuda():
     try:
-        import pycuda.autoinit
+        import pycuda
         return True
     except:
         return False
 
 
-if have_gpu():
+if have_pycuda():
     import pycuda.gpuarray as gpuarray
-
     import pycuda.driver as drv
     from pycuda.compiler import SourceModule
-
-    import pycuda.autoinit
-    assert isinstance(pycuda.autoinit.device.name(), str)
-    assert isinstance(pycuda.autoinit.device.compute_capability(), tuple)
-    assert isinstance(pycuda.autoinit.device.get_attributes(), dict)
-
 
 
 
 
 class TestDriver:
-    disabled = not have_gpu()
+    disabled = not have_pycuda()
 
+    @mark_cuda_test
     def test_memory(self):
         z = numpy.random.randn(400).astype(numpy.float32)
         new_z = drv.from_device_like(drv.to_device(z), z)
         assert la.norm(new_z-z) == 0
 
+    @mark_cuda_test
     def test_simple_kernel(self):
         mod = SourceModule("""
         __global__ void multiply_them(float *dest, float *a, float *b)
@@ -57,6 +53,7 @@ class TestDriver:
                 block=(400,1,1))
         assert la.norm(dest-a*b) == 0
 
+    @mark_cuda_test
     def test_simple_kernel_2(self):
         mod = SourceModule("""
         __global__ void multiply_them(float *dest, float *a, float *b)
@@ -88,6 +85,7 @@ class TestDriver:
 
         assert la.norm(dest-a*b) == 0
 
+    @mark_cuda_test
     def test_streamed_kernel(self):
         # this differs from the "simple_kernel" case in that *all* computation
         # and data copying is asynchronous. Observe how this necessitates the
@@ -120,6 +118,7 @@ class TestDriver:
 
         la.norm(dest-a*b) == 0
 
+    @mark_cuda_test
     def test_gpuarray(self):
         import numpy
         a = numpy.arange(200000, dtype=numpy.float32)
@@ -133,6 +132,7 @@ class TestDriver:
         diff = ((a_g*b_g).get()-a*b)
         assert la.norm(diff) == 0
 
+    @mark_cuda_test
     def donottest_cublas_mixing():
         test_streamed_kernel()
 
@@ -145,6 +145,7 @@ class TestDriver:
 
         test_streamed_kernel()
 
+    @mark_cuda_test
     def test_2d_texture(self):
         mod = SourceModule("""
         texture<float, 2, cudaReadModeElementType> mtx_tex;
@@ -172,6 +173,7 @@ class TestDriver:
                 )
         assert la.norm(dest-a) == 0
 
+    @mark_cuda_test
     def test_multiple_2d_textures(self):
         mod = SourceModule("""
         texture<float, 2, cudaReadModeElementType> mtx_tex;
@@ -206,6 +208,7 @@ class TestDriver:
                 )
         assert la.norm(dest-a-b) < 1e-6
 
+    @mark_cuda_test
     def test_multichannel_2d_texture(self):
         mod = SourceModule("""
         #define CHANNELS 4
@@ -245,6 +248,7 @@ class TestDriver:
         #print dest
         assert la.norm(dest-reshaped_a) == 0
 
+    @mark_cuda_test
     def test_large_smem(self):
         n = 4000
         mod = SourceModule("""
@@ -265,6 +269,7 @@ class TestDriver:
 
         kernel(arg, block=(1,1,1,), )
 
+    @mark_cuda_test
     def test_bitlog(self):
         from pycuda.tools import bitlog2
         assert bitlog2(17) == 4
@@ -272,6 +277,7 @@ class TestDriver:
         assert bitlog2(0x3affe) == 17
         assert bitlog2(0xcc3affe) == 27
 
+    @mark_cuda_test
     def test_mempool_2(self):
         from pycuda.tools import DeviceMemoryPool as DMP
         from random import randrange
@@ -285,6 +291,7 @@ class TestDriver:
             assert DMP.bin_number(asize) == bin_nr, s
             assert asize < asize*(1+1/8)
 
+    @mark_cuda_test
     def test_mempool(self):
         from pycuda.tools import bitlog2
         from pycuda.tools import DeviceMemoryPool
@@ -304,21 +311,23 @@ class TestDriver:
         del queue
         pool.stop_holding()
 
+    @mark_cuda_test
     def test_multi_context(self):
         if drv.get_version() < (2,0,0):
             return
         if drv.get_version() >= (2,2,0):
-            if pycuda.autoinit.device.compute_mode == drv.compute_mode.EXCLUSIVE:
+            if drv.Context.get_device().compute_mode == drv.compute_mode.EXCLUSIVE:
                 return
 
         mem_a = drv.mem_alloc(50)
-        ctx2 = pycuda.autoinit.device.make_context()
+        ctx2 = drv.Context.get_device().make_context()
         mem_b = drv.mem_alloc(60)
 
         del mem_a
         del mem_b
         ctx2.detach()
 
+    @mark_cuda_test
     def test_3d_texture(self):
         # adapted from code by Nicolas Pinto
         w = 2
@@ -374,6 +383,7 @@ class TestDriver:
         copy_texture(drv.Out(dest), block=shape, texrefs=[mtx_tex])
         assert la.norm(dest-a) == 0
 
+    @mark_cuda_test
     def test_prepared_invocation(self):
         a = numpy.random.randn(4,4).astype(numpy.float32)
         a_gpu = drv.mem_alloc(a.size * a.dtype.itemsize)
@@ -402,8 +412,9 @@ class TestDriver:
         drv.memcpy_dtoh(a_quadrupled, a_gpu)
         assert la.norm(a_quadrupled[1:]-4*a[1:]) == 0
 
+    @mark_cuda_test
     def test_fp_textures(self):
-        if pycuda.autoinit.device.compute_capability() < (1, 3):
+        if drv.Context.get_device().compute_capability() < (1, 3):
             return
 
         for tp in [numpy.float32, numpy.float64]:
@@ -439,6 +450,7 @@ class TestDriver:
 
             assert la.norm(dest-a) == 0
 
+    @mark_cuda_test
     def test_constant_memory(self):
         # contributed by Andrew Wagner
 
