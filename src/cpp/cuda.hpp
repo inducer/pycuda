@@ -478,7 +478,15 @@ namespace cuda
       void pop()
       { 
         prepare_context_switch();
-        get_context_stack().pop();
+        context_stack_t &ctx_stack = get_context_stack();
+
+        if (ctx_stack.size() == 0)
+        {
+          throw error("context::pop", CUDA_ERROR_INVALID_CONTEXT,
+              "cannot pop non-current context");
+        }
+
+        ctx_stack.pop();
         --m_use_count;
 
         boost::shared_ptr<context> current = current_context();
