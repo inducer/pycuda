@@ -98,14 +98,18 @@
         << cuda::error::make_message(#NAME, cu_status_code) \
         << std::endl; \
   }
-#define CUDAPP_CATCH_WARN_OOT_LEAK(TYPE) \
+#define CUDAPP_CATCH_CLEANUP_ON_DEAD_CONTEXT(TYPE) \
   catch (cuda::cannot_activate_out_of_thread_context) \
-  { }
+  { } \
+  catch (cuda::cannot_activate_dead_context) \
+  { \
+    /* PyErr_Warn( \
+        PyExc_UserWarning, #TYPE " in dead context was implicitly cleaned up");*/ \
+  }
   // In all likelihood, this TYPE's managing thread has exited, and
   // therefore its context has already been deleted. No need to harp
   // on the fact that we still thought there was cleanup to do.
 
-  // std::cerr << "PyCUDA WARNING: leaked out-of-thread " #TYPE " instance" << std::endl; */
 
 
 
@@ -214,6 +218,12 @@ namespace cuda
     { }
   };
 
+  struct cannot_activate_dead_context : public std::logic_error
+  { 
+    cannot_activate_dead_context(std::string const &w)
+      : std::logic_error(w)
+    { }
+  };
 
 
 
@@ -395,17 +405,23 @@ namespace cuda
 
       long hash() const
       {
-        return long(m_context);
+        return long(m_context) ^ long(this);
       }
 
       boost::thread::id thread_id() const
       { return m_thread; }
 
+      bool is_valid() const
+      {
+        return m_valid;
+      }
+
       void detach()
       {
         if (m_valid)
         {
-          if (current_context().get() == this)
+          bool active_before_destruction = current_context().get() == this;
+          if (active_before_destruction)
           {
             CUDAPP_CALL_GUARDED_CLEANUP(cuCtxDetach, (m_context));
           }
@@ -427,9 +443,14 @@ namespace cuda
 
           m_valid = false;
 
-          boost::shared_ptr<context> new_active = current_context(this);
-          if (new_active.get())
-            CUDAPP_CALL_GUARDED(cuCtxPushCurrent, (new_active->m_context)); 
+          if (active_before_destruction)
+          {
+            boost::shared_ptr<context> new_active = current_context(this);
+            if (new_active.get())
+            {
+              CUDAPP_CALL_GUARDED(cuCtxPushCurrent, (new_active->m_context)); 
+            }
+          }
         }
         else
           throw error("context::detach", CUDA_ERROR_INVALID_CONTEXT,
@@ -478,17 +499,16 @@ namespace cuda
           if (get_context_stack().size() == 0)
             return boost::shared_ptr<context>();
           boost::weak_ptr<context> result(get_context_stack().top());
-          if (!result.expired() && result.lock().get() != except)
+          if (!result.expired())
           {
             // good, weak pointer didn't expire
-            // (treating except as expired weak pointer)
-            return result.lock();
+            boost::shared_ptr<context> locked_result = result.lock();
+            if (locked_result.get() != except && locked_result->is_valid())
+              return locked_result;
           }
-          else
-          {
-            // weak pointer invalidated, pop it and try again.
-            get_context_stack().pop();
-          }
+
+          // context invalid, pop it and try again.
+          get_context_stack().pop();
         }
       }
 
@@ -578,6 +598,10 @@ namespace cuda
       scoped_context_activation(boost::shared_ptr<context> ctx)
         : m_context(ctx)
       { 
+        if (!m_context->is_valid())
+          throw cuda::cannot_activate_dead_context(
+              "cannot activate dead context");
+
         m_did_switch = context::current_context() != m_context;
         if (m_did_switch)
         {
@@ -617,10 +641,10 @@ namespace cuda
       { 
         try
         {
-          scoped_context_activation ca(get_context());
+          scoped_context_activation ca();
           CUDAPP_CALL_GUARDED_CLEANUP(cuStreamDestroy, (m_stream)); 
         }
-        CUDAPP_CATCH_WARN_OOT_LEAK(stream);
+        CUDAPP_CATCH_CLEANUP_ON_DEAD_CONTEXT(stream);
       }
 
       void synchronize()
@@ -684,7 +708,7 @@ namespace cuda
             scoped_context_activation ca(get_context());
             CUDAPP_CALL_GUARDED_CLEANUP(cuArrayDestroy, (m_array)); 
           }
-          CUDAPP_CATCH_WARN_OOT_LEAK(array);
+          CUDAPP_CATCH_CLEANUP_ON_DEAD_CONTEXT(array);
 
           m_managed = false;
           release_context();
@@ -856,7 +880,7 @@ namespace cuda
           scoped_context_activation ca(get_context());
           CUDAPP_CALL_GUARDED_CLEANUP(cuModuleUnload, (m_module));
         }
-        CUDAPP_CATCH_WARN_OOT_LEAK(module);
+        CUDAPP_CATCH_CLEANUP_ON_DEAD_CONTEXT(module);
       }
 
       CUmodule handle() const
@@ -1027,7 +1051,7 @@ namespace cuda
             scoped_context_activation ca(get_context());
             mem_free(m_devptr);
           }
-          CUDAPP_CATCH_WARN_OOT_LEAK(device_allocation);
+          CUDAPP_CATCH_CLEANUP_ON_DEAD_CONTEXT(device_allocation);
 
           release_context();
           m_valid = false;
@@ -1244,7 +1268,7 @@ namespace cuda
             scoped_context_activation ca(get_context());
             mem_free_host(m_data); 
           }
-          CUDAPP_CATCH_WARN_OOT_LEAK(host_allocation);
+          CUDAPP_CATCH_CLEANUP_ON_DEAD_CONTEXT(host_allocation);
 
           release_context();
           m_valid = false;
@@ -1287,7 +1311,7 @@ namespace cuda
           scoped_context_activation ca(get_context());
           CUDAPP_CALL_GUARDED_CLEANUP(cuEventDestroy, (m_event)); 
         }
-        CUDAPP_CATCH_WARN_OOT_LEAK(event);
+        CUDAPP_CATCH_CLEANUP_ON_DEAD_CONTEXT(event);
       }
 
       event *record(py::object stream_py)
