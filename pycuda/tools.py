@@ -371,6 +371,10 @@ def dtype_to_ctype(dtype, with_fp_tex_hack=False):
             return "fp_tex_double"
         else:
             return "double"
+    elif dtype == numpy.complex64:
+        return "pycuda::complex<float>"
+    elif dtype == numpy.float64:
+        return "pycuda::complex<double>"
     else:
         raise ValueError, "unable to map dtype '%s'" % dtype
 
@@ -430,6 +434,8 @@ def parse_c_arg(c_arg):
 
     if tp == "float": dtype = numpy.float32
     elif tp == "double": dtype = numpy.float64
+    elif tp == "pycuda::complex<float>": dtype = numpy.complex64
+    elif tp == "pycuda::complex<double>": dtype = numpy.complex128
     elif tp in ["int", "signed int"]: dtype = numpy.int32
     elif tp in ["unsigned", "unsigned int"]: dtype = numpy.uint32
     elif tp in ["long", "long int"]:
