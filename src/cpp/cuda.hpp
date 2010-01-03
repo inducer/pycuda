@@ -429,7 +429,8 @@ namespace cuda
           {
             if (m_thread == boost::this_thread::get_id())
             {
-              CUDAPP_CALL_GUARDED_CLEANUP(cuCtxDestroy, (m_context));
+              CUDAPP_CALL_GUARDED_CLEANUP(cuCtxPushCurrent, (m_context));
+              CUDAPP_CALL_GUARDED_CLEANUP(cuCtxDetach, (m_context));
             }
             else
             {
