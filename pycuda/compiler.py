@@ -199,6 +199,17 @@ class SourceModule(object):
     def __init__(self, source, nvcc="nvcc", options=[], keep=False,
             no_extern_c=False, arch=None, code=None, cache_dir=None,
             include_dirs=[]):
+        if arch is not None:
+            try:
+                from pycuda.driver import Context
+                capability = Context.get_device().compute_capability()
+                if tuple(map(int, tuple(arch.split("_")[1]))) > capability:
+                    from warnings import warn
+                    warn("trying to compile for a compute capability "
+                            "higher than selected GPU")
+            except:
+                pass
+
         cubin = compile(source, nvcc, options, keep, no_extern_c, 
                 arch, code, cache_dir, include_dirs)
 
