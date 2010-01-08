@@ -429,7 +429,8 @@ namespace cuda
           {
             if (m_thread == boost::this_thread::get_id())
             {
-              CUDAPP_CALL_GUARDED_CLEANUP(cuCtxDestroy, (m_context));
+              CUDAPP_CALL_GUARDED_CLEANUP(cuCtxPushCurrent, (m_context));
+              CUDAPP_CALL_GUARDED_CLEANUP(cuCtxDetach, (m_context));
             }
             else
             {
@@ -475,7 +476,7 @@ namespace cuda
         }
       }
 
-      void pop()
+      static void pop()
       { 
         prepare_context_switch();
         context_stack_t &ctx_stack = get_context_stack();
@@ -486,10 +487,13 @@ namespace cuda
               "cannot pop non-current context");
         }
 
-        ctx_stack.pop();
-        --m_use_count;
-
         boost::shared_ptr<context> current = current_context();
+        if (current)
+          --current->m_use_count;
+
+        ctx_stack.pop();
+
+        current = current_context();
         if (current)
           CUDAPP_CALL_GUARDED(cuCtxPushCurrent, (current_context()->m_context)); 
       }

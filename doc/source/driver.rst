@@ -363,9 +363,9 @@ Devices and Contexts
         Make *self* the active context, pushing it on top of the context stack.
         CUDA 2.0 and above only.
 
-    .. method:: pop()
+    .. staticmethod:: pop()
 
-        Remove *self* from the top of the context stack, deactivating it.
+        Remove any context from the top of the context stack, deactivating it.
         CUDA 2.0 and above only.
 
     .. staticmethod:: get_device()

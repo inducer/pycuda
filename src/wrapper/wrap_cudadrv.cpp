@@ -640,6 +640,7 @@ BOOST_PYTHON_MODULE(_driver)
 #if CUDA_VERSION >= 2000
       .def("push", context_push)
       .DEF_SIMPLE_METHOD(pop)
+      .staticmethod("pop")
       .DEF_SIMPLE_METHOD(get_device)
       .staticmethod("get_device")
 #endif

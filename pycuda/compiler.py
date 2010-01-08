@@ -6,9 +6,16 @@ from pytools import memoize
 
 @memoize
 def get_nvcc_version(nvcc):
-    from pytools.prefork import call_capture_stdout
+    cmdline = [nvcc, "--version"]
     try:
-        return call_capture_stdout([nvcc, "--version"])
+        try:
+            from pytools.prefork import call_capture_output
+        except ImportError:
+            from pytools.prefork import call_capture_stdout
+            return call_capture_stdout(cmdline)
+        else:
+            retcode, stdout, stderr = call_capture_output(cmdline)
+            return stdout
     except OSError, e:
         raise OSError, "%s was not found (is it on the PATH?) [%s]" % (
                 nvcc, str(e))
@@ -192,6 +199,17 @@ class SourceModule(object):
     def __init__(self, source, nvcc="nvcc", options=[], keep=False,
             no_extern_c=False, arch=None, code=None, cache_dir=None,
             include_dirs=[]):
+        if arch is not None:
+            try:
+                from pycuda.driver import Context
+                capability = Context.get_device().compute_capability()
+                if tuple(map(int, tuple(arch.split("_")[1]))) > capability:
+                    from warnings import warn
+                    warn("trying to compile for a compute capability "
+                            "higher than selected GPU")
+            except:
+                pass
+
         cubin = compile(source, nvcc, options, keep, no_extern_c, 
                 arch, code, cache_dir, include_dirs)
 
