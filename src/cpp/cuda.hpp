@@ -13,7 +13,6 @@
 #include <stdexcept>
 #include <boost/shared_ptr.hpp>
 #include <boost/foreach.hpp>
-#include <boost/weak_ptr.hpp>
 #include <utility>
 #include <stack>
 #include <iostream>
@@ -340,8 +339,7 @@ namespace cuda
         make_gl_context(device const &dev, unsigned int flags);
   }
 
-  typedef std::stack<boost::weak_ptr<context>,
-    std::vector<boost::weak_ptr<context> > > context_stack_t;
+  typedef std::stack<boost::shared_ptr<context> > context_stack_t;
   extern boost::thread_specific_ptr<context_stack_t> context_stack_ptr;
 
   inline context_stack_t &get_context_stack()
@@ -367,24 +365,17 @@ namespace cuda
       { }
 
       ~context()
-      { 
+      {
         if (m_valid)
         {
           if (m_use_count)
             std::cerr 
               << "-----------------------------------------------------------" << std::endl
-              << "PyCUDA WARNING: I'm being asked to destroy a " << std::endl
+              << "PyCUDA ERROR: I'm being asked to destroy a " << std::endl
               << "context that's part of the current context stack." << std::endl
               << "-----------------------------------------------------------" << std::endl
-              << "I will pick the next lower active context from the" << std::endl
-              << "context stack. Since this choice is happening" << std::endl
-              << "at an unspecified point in time, your code" << std::endl
-              << "may be making false assumptions about which" << std::endl
-              << "context is active at what point." << std::endl
-              << "Call Context.pop() to avoid this warning." << std::endl
-              << "-----------------------------------------------------------" << std::endl
-              << "If Python is terminating abnormally (eg. exiting upon an" << std::endl
-              << "unhandled exception), you may ignore this." << std::endl
+              << "Something went horribly wrong, I'll abort now. Sorry." << std::endl
+              << "Please report this issue to the PyCUDA mailing list." << std::endl
               << "-----------------------------------------------------------" << std::endl;
           detach();
         }
@@ -508,15 +499,15 @@ namespace cuda
       {
         while (true)
         {
-          if (get_context_stack().size() == 0)
+          if (get_context_stack().empty())
             return boost::shared_ptr<context>();
-          boost::weak_ptr<context> result(get_context_stack().top());
-          if (!result.expired())
+
+          boost::shared_ptr<context> result(get_context_stack().top());
+          if (result.get() != except 
+              && result->is_valid())
           {
             // good, weak pointer didn't expire
-            boost::shared_ptr<context> locked_result = result.lock();
-            if (locked_result.get() != except && locked_result->is_valid())
-              return locked_result;
+            return result;
           }
 
           // context invalid, pop it and try again.
