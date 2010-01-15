@@ -259,6 +259,42 @@ class TestDriver:
         assert la.norm(dest-reshaped_a) == 0
 
     @mark_cuda_test
+    def test_multichannel_linear_texture(self):
+        mod = SourceModule("""
+        #define CHANNELS 4
+        texture<float4, 1, cudaReadModeElementType> mtx_tex;
+
+        __global__ void copy_texture(float *dest)
+        {
+          int i = threadIdx.x+blockDim.x*threadIdx.y;
+          float4 texval = tex1Dfetch(mtx_tex, i);
+          dest[i*CHANNELS + 0] = texval.x;
+          dest[i*CHANNELS + 1] = texval.y;
+          dest[i*CHANNELS + 2] = texval.z;
+          dest[i*CHANNELS + 3] = texval.w;
+        }
+        """)
+
+        copy_texture = mod.get_function("copy_texture")
+        mtx_tex = mod.get_texref("mtx_tex")
+
+        shape = (16, 16)
+        channels = 4
+        a = numpy.random.randn(*(shape+(channels,))).astype(numpy.float32)
+        a_gpu = drv.to_device(a)
+        mtx_tex.set_address(a_gpu, a.nbytes)
+        mtx_tex.set_format(drv.array_format.FLOAT, 4)
+
+        dest = numpy.zeros(shape+(channels,), dtype=numpy.float32)
+        copy_texture(drv.Out(dest),
+                block=shape+(1,),
+                texrefs=[mtx_tex]
+                )
+        #print a
+        #print dest
+        assert la.norm(dest-a) == 0
+
+    @mark_cuda_test
     def test_large_smem(self):
         n = 4000
         mod = SourceModule("""

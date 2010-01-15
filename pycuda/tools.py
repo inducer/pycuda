@@ -498,6 +498,9 @@ def mark_cuda_test(inner_f):
             ctx.pop()
             ctx.detach()
 
-    from py.test import mark as mark_test
+    try:
+        from py.test import mark as mark_test
+    except ImportError:
+        return f
 
     return mark_test.cuda(f)
