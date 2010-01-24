@@ -217,10 +217,12 @@ def main():
 
     if 'darwin' in sys.platform:
         # prevent from building ppc since cuda on OS X is not compiled for ppc
+        # also, default to 32-bit build, since there doesn't appear to be a
+        # 64-bit CUDA on Mac yet.
         if "-arch" not in conf["CXXFLAGS"]:
-            conf["CXXFLAGS"].extend(['-arch', 'i386'])
+            conf["CXXFLAGS"].extend(['-arch', 'i386', '-m32'])
         if "-arch" not in conf["LDFLAGS"]:
-            conf["LDFLAGS"].extend(['-arch', 'i386'])
+            conf["LDFLAGS"].extend(['-arch', 'i386', '-m32'])
 
     ext_kwargs = dict()
 
