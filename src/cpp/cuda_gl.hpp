@@ -26,7 +26,7 @@ namespace cuda { namespace gl {
     CUcontext ctx;
     CUDAPP_CALL_GUARDED(cuGLCtxCreate, (&ctx, flags, dev.handle()));
     boost::shared_ptr<context> result(new context(ctx));
-    get_context_stack().push(result);
+    context_stack::get().push(result);
     return result;
   }
 

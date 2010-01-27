@@ -45,11 +45,24 @@ class InOut(In, Out):
 
 def _add_functionality():
     def device_get_attributes(dev):
-        return dict((getattr(device_attribute, att), 
-            dev.get_attribute(getattr(device_attribute, att))
-            )
-            for att in dir(device_attribute)
-            if att[0].isupper())
+        result = {}
+
+        for att_name in dir(device_attribute):
+            if not att_name[0].isupper():
+                continue
+
+            att_id = getattr(device_attribute, att_name)
+
+            try:
+                att_value = dev.get_attribute(att_id)
+            except LogicError, e:
+                from warnings import warn
+                warn("CUDA driver raised '%s' when querying '%s' on '%s'"
+                        % (e, att_name, dev))
+            else:
+                result[att_id] = att_value
+
+        return result
 
     def device___getattr__(dev, name):
         return dev.get_attribute(getattr(device_attribute, name.upper()))

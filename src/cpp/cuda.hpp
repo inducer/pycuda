@@ -339,16 +339,44 @@ namespace cuda
         make_gl_context(device const &dev, unsigned int flags);
   }
 
-  typedef std::stack<boost::shared_ptr<context> > context_stack_t;
-  extern boost::thread_specific_ptr<context_stack_t> context_stack_ptr;
+  class context_stack;
+  extern boost::thread_specific_ptr<context_stack> context_stack_ptr;
 
-  inline context_stack_t &get_context_stack()
+  class context_stack
   {
-    if (context_stack_ptr.get() == 0)
-      context_stack_ptr.reset(new context_stack_t);
+      /* This wrapper is necessary because we need to pop the contents
+       * off the stack before we destroy each of the contexts. This, in turn,
+       * is because the contexts need to be able to access the stack in order
+       * to be destroyed.
+       */
+    private:
+      typedef std::stack<boost::shared_ptr<context> > stack_t;
+      typedef stack_t::value_type value_type;;
+      stack_t m_stack;
 
-    return *context_stack_ptr;
-  }
+    public:
+      ~context_stack();
+
+      bool empty() const
+      { return m_stack.empty(); }
+
+      value_type &top()
+      { return m_stack.top(); }
+
+      void pop()
+      { m_stack.pop(); }
+
+      void push(value_type v)
+      { m_stack.push(v); }
+
+      static context_stack &get()
+      {
+        if (context_stack_ptr.get() == 0)
+          context_stack_ptr.reset(new context_stack);
+
+        return *context_stack_ptr;
+      }
+  };
 
   class context : boost::noncopyable
   {
@@ -368,15 +396,10 @@ namespace cuda
       {
         if (m_valid)
         {
-          if (m_use_count)
-            std::cerr 
-              << "-----------------------------------------------------------" << std::endl
-              << "PyCUDA ERROR: I'm being asked to destroy a " << std::endl
-              << "context that's part of the current context stack." << std::endl
-              << "-----------------------------------------------------------" << std::endl
-              << "Something went horribly wrong, I'll abort now. Sorry." << std::endl
-              << "Please report this issue to the PyCUDA mailing list." << std::endl
-              << "-----------------------------------------------------------" << std::endl;
+          /* It's possible that we get here with a non-zero m_use_count. Since the context
+           * stack holds shared_ptrs, this must mean that the context stack itself is getting
+           * destroyed, which means it's ok for this context to sign off, too.
+           */
           detach();
         }
       }
@@ -422,6 +445,7 @@ namespace cuda
             {
               CUDAPP_CALL_GUARDED_CLEANUP(cuCtxPushCurrent, (m_context));
               CUDAPP_CALL_GUARDED_CLEANUP(cuCtxDetach, (m_context));
+              /* pop is implicit in detach */
             }
             else
             {
@@ -460,7 +484,7 @@ namespace cuda
 
       static void prepare_context_switch()
       {
-        if (get_context_stack().size())
+        if (!context_stack::get().empty())
         {
           CUcontext popped;
           CUDAPP_CALL_GUARDED(cuCtxPopCurrent, (&popped)); 
@@ -470,9 +494,9 @@ namespace cuda
       static void pop()
       { 
         prepare_context_switch();
-        context_stack_t &ctx_stack = get_context_stack();
+        context_stack &ctx_stack = context_stack::get();
 
-        if (ctx_stack.size() == 0)
+        if (ctx_stack.empty())
         {
           throw error("context::pop", CUDA_ERROR_INVALID_CONTEXT,
               "cannot pop non-current context");
@@ -499,10 +523,10 @@ namespace cuda
       {
         while (true)
         {
-          if (get_context_stack().empty())
+          if (context_stack::get().empty())
             return boost::shared_ptr<context>();
 
-          boost::shared_ptr<context> result(get_context_stack().top());
+          boost::shared_ptr<context> result(context_stack::get().top());
           if (result.get() != except 
               && result->is_valid())
           {
@@ -511,7 +535,7 @@ namespace cuda
           }
 
           // context invalid, pop it and try again.
-          get_context_stack().pop();
+          context_stack::get().pop();
         }
       }
 
@@ -532,7 +556,7 @@ namespace cuda
     CUcontext ctx;
     CUDAPP_CALL_GUARDED(cuCtxCreate, (&ctx, flags, m_device));
     boost::shared_ptr<context> result(new context(ctx));
-    get_context_stack().push(result);
+    context_stack::get().push(result);
     return result;
   }
 
@@ -546,10 +570,31 @@ namespace cuda
     context::prepare_context_switch();
 
     CUDAPP_CALL_GUARDED(cuCtxPushCurrent, (ctx->m_context)); 
-    get_context_stack().push(ctx);
+    context_stack::get().push(ctx);
     ++ctx->m_use_count;
   }
 #endif
+
+
+
+
+  inline context_stack::~context_stack()
+  {
+    if (!m_stack.empty())
+    {
+      std::cerr 
+        << "-------------------------------------------------------------------" << std::endl
+        << "PyCUDA ERROR: The context stack was not empty upon module cleanup." << std::endl
+        << "-------------------------------------------------------------------" << std::endl
+        << "A context was still active when the context stack was being" << std::endl
+        << "cleaned up. At this point in our execution, CUDA may already" << std::endl
+        << "have been deinitialized, so there is no way we can finish" << std::endl
+        << "cleanly. The program will be aborted now." << std::endl
+        << "Use Context.pop() to avoid this problem." << std::endl
+        << "-------------------------------------------------------------------" << std::endl;
+      abort();
+    }
+  }
 
 
 
