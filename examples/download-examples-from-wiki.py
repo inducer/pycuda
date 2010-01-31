@@ -9,6 +9,7 @@ try:
 except OSError:
     pass
 
+print "downloading  wiki examples from http://wiki.tiker.net/PyCuda/Examples to wiki-examples/..."
 print "fetching page list..."
 all_pages = destwiki.getAllPages()
 
