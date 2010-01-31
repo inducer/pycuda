@@ -43,3 +43,4 @@ temp*
 *.pyd
 setuptools.pth
 distribute*tar.gz
+*.sess
