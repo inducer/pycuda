@@ -17,8 +17,8 @@ def get_nvcc_version(nvcc):
             retcode, stdout, stderr = call_capture_output(cmdline)
             return stdout
     except OSError, e:
-        raise OSError, "%s was not found (is it on the PATH?) [%s]" % (
-                nvcc, str(e))
+        raise OSError("%s was not found (is it on the PATH?) [%s]" 
+                % (nvcc, str(e)))
 
 
 
@@ -71,21 +71,41 @@ def compile_plain(source, options, keep, nvcc, cache_dir):
 
         print "*** compiler output in %s" % file_dir
 
-    from pytools.prefork import call
+    cmdline = [nvcc] + options + [cu_file_name]
     try:
-        result = call([nvcc, "--cubin"]
-                + options
-                + [cu_file_name],
-            cwd=file_dir)
-    except OSError, e:
-        raise OSError, "%s was not found (is it on the PATH?) [%s]" % (
-                nvcc, str(e))
+        from pytools.prefork import call_capture_output
+    except ImportError:
+        from pytools.prefork import call
+        try:
+            result = call(cmdline, cwd=file_dir)
+        except OSError, e:
+            raise OSError("%s was not found (is it on the PATH?) [%s]" 
+                    % (nvcc, str(e)))
 
-    if result != 0:
+        stdout = None
+        stderr = None
+
+    else:
+        result, stdout, stderr = call_capture_output(cmdline, cwd=file_dir)
+
+    try:
+        cubin_f = open(join(file_dir, file_root + ".cubin"), "r")
+    except IOError:
+        no_output = True
+    else:
+        no_output = False
+
+    if result != 0 or (no_output and (stdout or stderr)):
+        if result == 0:
+            from warnings import warn
+            warn("PyCUDA: nvcc exited with status 0, but appears to have "
+                    "encountered an error")
         from pycuda.driver import CompileError
-        raise CompileError, "nvcc compilation of %s failed" % cu_file_path
+        raise CompileError("nvcc compilation of %s failed" % cu_file_path,
+                cmdline, stdout=stdout, stderr=stderr)
 
-    cubin = open(join(file_dir, file_root + ".cubin"), "r").read()
+    cubin = cubin_f.read()
+    cubin_f.close()
 
     if cache_dir:
         outf = open(cache_path, "w")

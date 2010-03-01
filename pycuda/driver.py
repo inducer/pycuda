@@ -4,7 +4,25 @@ from _driver import *
 
 
 class CompileError(Error):
-    pass
+    def __init__(self, msg, command_line, stdout=None, stderr=None):
+        self.msg = msg
+        self.command_line = command_line
+        self.stdout = stdout
+        self.stderr = stderr
+
+    def __str__(self):
+        result = self.msg
+        if self.command_line:
+            try:
+                result += "\n[command: %s]" % (" ".join(self.command_line))
+            except Exception, e:
+                print e
+        if self.stdout:
+            result += "\n[stdout:\n%s]" % self.stdout
+        if self.stderr:
+            result += "\n[stderr:\n%s]" % self.stderr
+
+        return result
 
 
 
