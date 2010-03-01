@@ -71,7 +71,7 @@ def compile_plain(source, options, keep, nvcc, cache_dir):
 
         print "*** compiler output in %s" % file_dir
 
-    cmdline = [nvcc] + options + [cu_file_name]
+    cmdline = [nvcc, "--cubin"] + options + [cu_file_name]
     try:
         from pytools.prefork import call_capture_output
     except ImportError:
