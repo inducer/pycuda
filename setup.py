@@ -176,7 +176,7 @@ def verify_siteconfig(sc_vars):
 def main():
     import glob
     from aksetup_helper import hack_distutils, get_config, setup, \
-            NumpyExtension
+            NumpyExtension, Extension
 
     hack_distutils()
     conf = get_config(get_config_schema())
@@ -316,7 +316,9 @@ def main():
                     extra_compile_args=conf["CXXFLAGS"],
                     extra_link_args=conf["LDFLAGS"],
                     ),
-                ],
+                Extension("_pycuda_struct",
+                    ["src/wrapper/_pycuda_struct.c"],
+                    )],
 
             data_files=[
                 ("include/pycuda", glob.glob("src/cuda/*.hpp"))

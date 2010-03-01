@@ -119,8 +119,8 @@ def _add_functionality():
                     arg_data.append(int(gpudata))
                     format += "P"
 
-        import struct
-        buf = struct.pack(format, *arg_data)
+        from pycuda._pvt_struct import pack
+        buf = pack(format, *arg_data)
 
         func.param_setv(0, buf)
         func.param_set_size(len(buf))
@@ -208,13 +208,13 @@ def _add_functionality():
             else:
                 func.arg_format += numpy.dtype(numpy.intp).char
 
-        from struct import calcsize
+        from pycuda._pvt_struct import calcsize
         func.param_set_size(calcsize(func.arg_format))
 
         return func
 
     def function_prepared_call(func, grid, *args):
-        from struct import pack
+        from pycuda._pvt_struct import pack
         func.param_setv(0, pack(func.arg_format, *args))
 
         for texref in func.texrefs:
@@ -223,7 +223,7 @@ def _add_functionality():
         func.launch_grid(*grid)
 
     def function_prepared_timed_call(func, grid, *args):
-        from struct import pack
+        from pycuda._pvt_struct import pack
         func.param_setv(0, pack(func.arg_format, *args))
 
         for texref in func.texrefs:
@@ -243,7 +243,7 @@ def _add_functionality():
         return get_call_time
 
     def function_prepared_async_call(func, grid, stream, *args):
-        from struct import pack
+        from pycuda._pvt_struct import pack
         func.param_setv(0, pack(func.arg_format, *args))
 
         for texref in func.texrefs:
