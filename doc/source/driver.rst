@@ -22,14 +22,13 @@ Version Queries
     A text string such as `"rc4"` or `"beta"` qualifying the status
     of the release.
 
-    Added in PyCUDA 0.93.
+    .. versionadded:: 0.93
 
 .. data:: VERSION_TEXT
 
     The full release name (such as `"0.93rc4"`) in string form.
 
-    Added in PyCUDA 0.93.
-
+    .. versionadded:: 0.93
 
 .. module:: pycuda.driver
     :synopsis: Use CUDA devices from Python
@@ -46,6 +45,23 @@ Error Reporting
 .. exception:: CompileError
 
     Thrown when :class:`SourceModule` compilation fails.
+
+    .. attribute:: msg
+
+        .. versionadded:: 0.94
+
+    .. attribute:: stdout
+
+        .. versionadded:: 0.94
+
+    .. attribute:: stderr
+
+        .. versionadded:: 0.94
+
+    .. attribute:: command_line
+
+        .. versionadded:: 0.94
+
 
 .. exception:: MemoryError
 

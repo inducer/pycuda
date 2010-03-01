@@ -13,7 +13,7 @@ CUDA API already exist--so why the need for PyCUDA?
   it won't detach from a context before all memory allocated in it is also
   freed.
 
-* Convenience. Abstractions like :class:`pycuda.driver.SourceModule` and
+* Convenience. Abstractions like :class:`pycuda.compiler.SourceModule` and
   :class:`pycuda.gpuarray.GPUArray` make CUDA programming even more convenient
   than with Nvidia's C-based runtime.
 
