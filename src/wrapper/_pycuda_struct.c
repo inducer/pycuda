@@ -3,6 +3,10 @@
 /* New version supporting byte order, alignment and size options,
    character strings, and unsigned numbers */
 
+/* Compared with vanilla Python's struct module, this adds support
+ * for packing complex values and only supports native packing.
+ * (the minimum that's needed for PyCUDA.) */
+
 #define PY_SSIZE_T_CLEAN
 
 #include "Python.h"
@@ -123,6 +127,8 @@ static char *integer_codes = "bBhHiIlLqQ";
 static PyObject *
 get_pylong(PyObject *v)
 {
+        PyNumberMethods *m;
+
 	assert(v != NULL);
 	if (PyInt_Check(v))
 		return PyLong_FromLong(PyInt_AS_LONG(v));
@@ -130,13 +136,17 @@ get_pylong(PyObject *v)
 		Py_INCREF(v);
 		return v;
 	}
-#ifdef PY_STRUCT_FLOAT_COERCE
-	if (PyFloat_Check(v)) {
-		if (PyErr_WarnEx(PyExc_DeprecationWarning, FLOAT_COERCE, 2)<0)
-			return NULL;
-		return PyNumber_Long(v);
-	}
-#endif
+
+        m = Py_TYPE(v)->tp_as_number;
+        if (m != NULL && m->nb_long != NULL) {
+                v = m->nb_long(v);
+                if (v == NULL)
+                        return NULL;
+                if (PyLong_Check(v))
+                        return v;
+                Py_DECREF(v);
+        }
+
 	PyErr_SetString(StructError,
 			"cannot convert argument to long");
 	return NULL;
@@ -428,6 +438,24 @@ nu_double(const char *p, const formatdef *f)
 }
 
 static PyObject *
+nu_complex_float(const char *p, const formatdef *f)
+{
+	float re, im;
+	memcpy((char *)&re, p, sizeof re);
+	memcpy((char *)&im, p+sizeof re, sizeof im);
+	return PyComplex_FromDoubles((double)re, (double) im);
+}
+
+static PyObject *
+nu_complex_double(const char *p, const formatdef *f)
+{
+	double re, im;
+	memcpy((char *)&re, p, sizeof re);
+	memcpy((char *)&im, p+sizeof re, sizeof im);
+	return PyComplex_FromDoubles(re, im);
+}
+
+static PyObject *
 nu_void_p(const char *p, const formatdef *f)
 {
 	void *x;
@@ -624,6 +652,38 @@ np_double(char *p, PyObject *v, const formatdef *f)
 }
 
 static int
+np_complex_float(char *p, PyObject *v, const formatdef *f)
+{
+        Py_complex cplx = PyComplex_AsCComplex(v);
+	if (PyErr_Occurred()) {
+		PyErr_SetString(StructError,
+				"required argument is not a complex");
+		return -1;
+	}
+        float re = (float)cplx.real;
+        float im = (float)cplx.imag;
+	memcpy(p, (char *)&re, sizeof re);
+	memcpy(p+sizeof re, (char *)&im, sizeof im);
+	return 0;
+}
+
+static int
+np_complex_double(char *p, PyObject *v, const formatdef *f)
+{
+        Py_complex cplx = PyComplex_AsCComplex(v);
+	if (PyErr_Occurred()) {
+		PyErr_SetString(StructError,
+				"required argument is not a complex");
+		return -1;
+	}
+        double re = cplx.real;
+        double im = cplx.imag;
+	memcpy(p, (char *)&re, sizeof re);
+	memcpy(p+sizeof re, (char *)&im, sizeof im);
+	return 0;
+}
+
+static int
 np_void_p(char *p, PyObject *v, const formatdef *f)
 {
 	void *x;
@@ -660,473 +720,11 @@ static formatdef native_table[] = {
 	{'?',	sizeof(BOOL_TYPE),	BOOL_ALIGN,	nu_bool,	np_bool},
 	{'f',	sizeof(float),	FLOAT_ALIGN,	nu_float,	np_float},
 	{'d',	sizeof(double),	DOUBLE_ALIGN,	nu_double,	np_double},
+	{'F',	2*sizeof(float),	FLOAT_ALIGN,	nu_complex_float,	np_complex_float},
+	{'D',	2*sizeof(double),	DOUBLE_ALIGN,	nu_complex_double,	np_complex_double},
 	{'P',	sizeof(void *),	VOID_P_ALIGN,	nu_void_p,	np_void_p},
 	{0}
 };
-
-/* Big-endian routines. *****************************************************/
-
-static PyObject *
-bu_int(const char *p, const formatdef *f)
-{
-	long x = 0;
-	Py_ssize_t i = f->size;
-	const unsigned char *bytes = (const unsigned char *)p;
-	do {
-		x = (x<<8) | *bytes++;
-	} while (--i > 0);
-	/* Extend the sign bit. */
-	if (SIZEOF_LONG > f->size)
-		x |= -(x & (1L << ((8 * f->size) - 1)));
-	return PyInt_FromLong(x);
-}
-
-static PyObject *
-bu_uint(const char *p, const formatdef *f)
-{
-	unsigned long x = 0;
-	Py_ssize_t i = f->size;
-	const unsigned char *bytes = (const unsigned char *)p;
-	do {
-		x = (x<<8) | *bytes++;
-	} while (--i > 0);
-	if (x <= LONG_MAX)
-		return PyInt_FromLong((long)x);
-	return PyLong_FromUnsignedLong(x);
-}
-
-static PyObject *
-bu_longlong(const char *p, const formatdef *f)
-{
-#ifdef HAVE_LONG_LONG
-	PY_LONG_LONG x = 0;
-	Py_ssize_t i = f->size;
-	const unsigned char *bytes = (const unsigned char *)p;
-	do {
-		x = (x<<8) | *bytes++;
-	} while (--i > 0);
-	/* Extend the sign bit. */
-	if (SIZEOF_LONG_LONG > f->size)
-		x |= -(x & ((PY_LONG_LONG)1 << ((8 * f->size) - 1)));
-	if (x >= LONG_MIN && x <= LONG_MAX)
-		return PyInt_FromLong(Py_SAFE_DOWNCAST(x, PY_LONG_LONG, long));
-	return PyLong_FromLongLong(x);
-#else
-	return _PyLong_FromByteArray((const unsigned char *)p,
-				      8,
-				      0, /* little-endian */
-				      1  /* signed */);
-#endif
-}
-
-static PyObject *
-bu_ulonglong(const char *p, const formatdef *f)
-{
-#ifdef HAVE_LONG_LONG
-	unsigned PY_LONG_LONG x = 0;
-	Py_ssize_t i = f->size;
-	const unsigned char *bytes = (const unsigned char *)p;
-	do {
-		x = (x<<8) | *bytes++;
-	} while (--i > 0);
-	if (x <= LONG_MAX)
-		return PyInt_FromLong(Py_SAFE_DOWNCAST(x, unsigned PY_LONG_LONG, long));
-	return PyLong_FromUnsignedLongLong(x);
-#else
-	return _PyLong_FromByteArray((const unsigned char *)p,
-				      8,
-				      0, /* little-endian */
-				      0  /* signed */);
-#endif
-}
-
-static PyObject *
-bu_float(const char *p, const formatdef *f)
-{
-	return unpack_float(p, 0);
-}
-
-static PyObject *
-bu_double(const char *p, const formatdef *f)
-{
-	return unpack_double(p, 0);
-}
-
-static PyObject *
-bu_bool(const char *p, const formatdef *f)
-{
-	char x;
-	memcpy((char *)&x, p, sizeof x);
-	return PyBool_FromLong(x != 0);
-}
-
-static int
-bp_int(char *p, PyObject *v, const formatdef *f)
-{
-	long x;
-	Py_ssize_t i;
-	if (get_long(v, &x) < 0)
-		return -1;
-	i = f->size;
-	if (i != SIZEOF_LONG) {
-		if ((i == 2) && (x < -32768 || x > 32767))
-			return _range_error(f, 0);
-#if (SIZEOF_LONG != 4)
-		else if ((i == 4) && (x < -2147483648L || x > 2147483647L))
-			return _range_error(f, 0);
-#endif
-	}
-	do {
-		p[--i] = (char)x;
-		x >>= 8;
-	} while (i > 0);
-	return 0;
-}
-
-static int
-bp_uint(char *p, PyObject *v, const formatdef *f)
-{
-	unsigned long x;
-	Py_ssize_t i;
-	if (get_ulong(v, &x) < 0)
-		return -1;
-	i = f->size;
-	if (i != SIZEOF_LONG) {
-		unsigned long maxint = 1;
-		maxint <<= (unsigned long)(i * 8);
-		if (x >= maxint)
-			return _range_error(f, 1);
-	}
-	do {
-		p[--i] = (char)x;
-		x >>= 8;
-	} while (i > 0);
-	return 0;
-}
-
-static int
-bp_longlong(char *p, PyObject *v, const formatdef *f)
-{
-	int res;
-	v = get_pylong(v);
-	if (v == NULL)
-		return -1;
-	res = _PyLong_AsByteArray((PyLongObject *)v,
-			   	  (unsigned char *)p,
-				  8,
-				  0, /* little_endian */
-				  1  /* signed */);
-	Py_DECREF(v);
-	return res;
-}
-
-static int
-bp_ulonglong(char *p, PyObject *v, const formatdef *f)
-{
-	int res;
-	v = get_pylong(v);
-	if (v == NULL)
-		return -1;
-	res = _PyLong_AsByteArray((PyLongObject *)v,
-			   	  (unsigned char *)p,
-				  8,
-				  0, /* little_endian */
-				  0  /* signed */);
-	Py_DECREF(v);
-	return res;
-}
-
-static int
-bp_float(char *p, PyObject *v, const formatdef *f)
-{
-	double x = PyFloat_AsDouble(v);
-	if (x == -1 && PyErr_Occurred()) {
-		PyErr_SetString(StructError,
-				"required argument is not a float");
-		return -1;
-	}
-	return _PyFloat_Pack4(x, (unsigned char *)p, 0);
-}
-
-static int
-bp_double(char *p, PyObject *v, const formatdef *f)
-{
-	double x = PyFloat_AsDouble(v);
-	if (x == -1 && PyErr_Occurred()) {
-		PyErr_SetString(StructError,
-				"required argument is not a float");
-		return -1;
-	}
-	return _PyFloat_Pack8(x, (unsigned char *)p, 0);
-}
-
-static int
-bp_bool(char *p, PyObject *v, const formatdef *f)
-{
-	char y; 
-	y = PyObject_IsTrue(v);
-	memcpy(p, (char *)&y, sizeof y);
-	return 0;
-}
-
-static formatdef bigendian_table[] = {
-	{'x',	1,		0,		NULL},
-	{'b',	1,		0,		nu_byte,	np_byte},
-	{'B',	1,		0,		nu_ubyte,	np_ubyte},
-	{'c',	1,		0,		nu_char,	np_char},
-	{'s',	1,		0,		NULL},
-	{'p',	1,		0,		NULL},
-	{'h',	2,		0,		bu_int,		bp_int},
-	{'H',	2,		0,		bu_uint,	bp_uint},
-	{'i',	4,		0,		bu_int,		bp_int},
-	{'I',	4,		0,		bu_uint,	bp_uint},
-	{'l',	4,		0,		bu_int,		bp_int},
-	{'L',	4,		0,		bu_uint,	bp_uint},
-	{'q',	8,		0,		bu_longlong,	bp_longlong},
-	{'Q',	8,		0,		bu_ulonglong,	bp_ulonglong},
-	{'?',	1,		0,		bu_bool,	bp_bool},
-	{'f',	4,		0,		bu_float,	bp_float},
-	{'d',	8,		0,		bu_double,	bp_double},
-	{0}
-};
-
-/* Little-endian routines. *****************************************************/
-
-static PyObject *
-lu_int(const char *p, const formatdef *f)
-{
-	long x = 0;
-	Py_ssize_t i = f->size;
-	const unsigned char *bytes = (const unsigned char *)p;
-	do {
-		x = (x<<8) | bytes[--i];
-	} while (i > 0);
-	/* Extend the sign bit. */
-	if (SIZEOF_LONG > f->size)
-		x |= -(x & (1L << ((8 * f->size) - 1)));
-	return PyInt_FromLong(x);
-}
-
-static PyObject *
-lu_uint(const char *p, const formatdef *f)
-{
-	unsigned long x = 0;
-	Py_ssize_t i = f->size;
-	const unsigned char *bytes = (const unsigned char *)p;
-	do {
-		x = (x<<8) | bytes[--i];
-	} while (i > 0);
-	if (x <= LONG_MAX)
-		return PyInt_FromLong((long)x);
-	return PyLong_FromUnsignedLong((long)x);
-}
-
-static PyObject *
-lu_longlong(const char *p, const formatdef *f)
-{
-#ifdef HAVE_LONG_LONG
-	PY_LONG_LONG x = 0;
-	Py_ssize_t i = f->size;
-	const unsigned char *bytes = (const unsigned char *)p;
-	do {
-		x = (x<<8) | bytes[--i];
-	} while (i > 0);
-	/* Extend the sign bit. */
-	if (SIZEOF_LONG_LONG > f->size)
-		x |= -(x & ((PY_LONG_LONG)1 << ((8 * f->size) - 1)));
-	if (x >= LONG_MIN && x <= LONG_MAX)
-		return PyInt_FromLong(Py_SAFE_DOWNCAST(x, PY_LONG_LONG, long));
-	return PyLong_FromLongLong(x);
-#else
-	return _PyLong_FromByteArray((const unsigned char *)p,
-				      8,
-				      1, /* little-endian */
-				      1  /* signed */);
-#endif
-}
-
-static PyObject *
-lu_ulonglong(const char *p, const formatdef *f)
-{
-#ifdef HAVE_LONG_LONG
-	unsigned PY_LONG_LONG x = 0;
-	Py_ssize_t i = f->size;
-	const unsigned char *bytes = (const unsigned char *)p;
-	do {
-		x = (x<<8) | bytes[--i];
-	} while (i > 0);
-	if (x <= LONG_MAX)
-		return PyInt_FromLong(Py_SAFE_DOWNCAST(x, unsigned PY_LONG_LONG, long));
-	return PyLong_FromUnsignedLongLong(x);
-#else
-	return _PyLong_FromByteArray((const unsigned char *)p,
-				      8,
-				      1, /* little-endian */
-				      0  /* signed */);
-#endif
-}
-
-static PyObject *
-lu_float(const char *p, const formatdef *f)
-{
-	return unpack_float(p, 1);
-}
-
-static PyObject *
-lu_double(const char *p, const formatdef *f)
-{
-	return unpack_double(p, 1);
-}
-
-static int
-lp_int(char *p, PyObject *v, const formatdef *f)
-{
-	long x;
-	Py_ssize_t i;
-	if (get_long(v, &x) < 0)
-		return -1;
-	i = f->size;
-	if (i != SIZEOF_LONG) {
-		if ((i == 2) && (x < -32768 || x > 32767))
-			return _range_error(f, 0);
-#if (SIZEOF_LONG != 4)
-		else if ((i == 4) && (x < -2147483648L || x > 2147483647L))
-			return _range_error(f, 0);
-#endif
-	}
-	do {
-		*p++ = (char)x;
-		x >>= 8;
-	} while (--i > 0);
-	return 0;
-}
-
-static int
-lp_uint(char *p, PyObject *v, const formatdef *f)
-{
-	unsigned long x;
-	Py_ssize_t i;
-	if (get_ulong(v, &x) < 0)
-		return -1;
-	i = f->size;
-	if (i != SIZEOF_LONG) {
-		unsigned long maxint = 1;
-		maxint <<= (unsigned long)(i * 8);
-		if (x >= maxint)
-			return _range_error(f, 1);
-	}
-	do {
-		*p++ = (char)x;
-		x >>= 8;
-	} while (--i > 0);
-	return 0;
-}
-
-static int
-lp_longlong(char *p, PyObject *v, const formatdef *f)
-{
-	int res;
-	v = get_pylong(v);
-	if (v == NULL)
-		return -1;
-	res = _PyLong_AsByteArray((PyLongObject*)v,
-			   	  (unsigned char *)p,
-				  8,
-				  1, /* little_endian */
-				  1  /* signed */);
-	Py_DECREF(v);
-	return res;
-}
-
-static int
-lp_ulonglong(char *p, PyObject *v, const formatdef *f)
-{
-	int res;
-	v = get_pylong(v);
-	if (v == NULL)
-		return -1;
-	res = _PyLong_AsByteArray((PyLongObject*)v,
-			   	  (unsigned char *)p,
-				  8,
-				  1, /* little_endian */
-				  0  /* signed */);
-	Py_DECREF(v);
-	return res;
-}
-
-static int
-lp_float(char *p, PyObject *v, const formatdef *f)
-{
-	double x = PyFloat_AsDouble(v);
-	if (x == -1 && PyErr_Occurred()) {
-		PyErr_SetString(StructError,
-				"required argument is not a float");
-		return -1;
-	}
-	return _PyFloat_Pack4(x, (unsigned char *)p, 1);
-}
-
-static int
-lp_double(char *p, PyObject *v, const formatdef *f)
-{
-	double x = PyFloat_AsDouble(v);
-	if (x == -1 && PyErr_Occurred()) {
-		PyErr_SetString(StructError,
-				"required argument is not a float");
-		return -1;
-	}
-	return _PyFloat_Pack8(x, (unsigned char *)p, 1);
-}
-
-static formatdef lilendian_table[] = {
-	{'x',	1,		0,		NULL},
-	{'b',	1,		0,		nu_byte,	np_byte},
-	{'B',	1,		0,		nu_ubyte,	np_ubyte},
-	{'c',	1,		0,		nu_char,	np_char},
-	{'s',	1,		0,		NULL},
-	{'p',	1,		0,		NULL},
-	{'h',	2,		0,		lu_int,		lp_int},
-	{'H',	2,		0,		lu_uint,	lp_uint},
-	{'i',	4,		0,		lu_int,		lp_int},
-	{'I',	4,		0,		lu_uint,	lp_uint},
-	{'l',	4,		0,		lu_int,		lp_int},
-	{'L',	4,		0,		lu_uint,	lp_uint},
-	{'q',	8,		0,		lu_longlong,	lp_longlong},
-	{'Q',	8,		0,		lu_ulonglong,	lp_ulonglong},
-	{'?',	1,		0,		bu_bool,	bp_bool}, /* Std rep not endian dep,
-		but potentially different from native rep -- reuse bx_bool funcs. */
-	{'f',	4,		0,		lu_float,	lp_float},
-	{'d',	8,		0,		lu_double,	lp_double},
-	{0}
-};
-
-
-static const formatdef *
-whichtable(char **pfmt)
-{
-	const char *fmt = (*pfmt)++; /* May be backed out of later */
-	switch (*fmt) {
-	case '<':
-		return lilendian_table;
-	case '>':
-	case '!': /* Network byte order is big-endian */
-		return bigendian_table;
-	case '=': { /* Host byte order -- different from native in aligment! */
-		int n = 1;
-		char *p = (char *) &n;
-		if (*p == 1)
-			return lilendian_table;
-		else
-			return bigendian_table;
-	}
-	default:
-		--*pfmt; /* Back out of pointer increment */
-		/* Fall through */
-	case '@':
-		return native_table;
-	}
-}
-
 
 /* Get the table entry for a format code */
 
@@ -1175,7 +773,7 @@ prepare_s(PyStructObject *self)
 
 	fmt = PyString_AS_STRING(self->s_format);
 
-	f = whichtable((char **)&fmt);
+	f = native_table;
 
 	s = fmt;
 	size = 0;
@@ -1884,13 +1482,6 @@ as Python strings. It uses format strings (explained below) as compact\n\
 descriptions of the lay-out of the C structs and the intended conversion\n\
 to/from Python values.\n\
 \n\
-The optional first format char indicates byte order, size and alignment:\n\
-  @: native order, size & alignment (default)\n\
-  =: native order, std. size & alignment\n\
-  <: little-endian, std. size & alignment\n\
-  >: big-endian, std. size & alignment\n\
-  !: same as >\n\
-\n\
 The remaining chars indicate types of args and must match exactly;\n\
 these can be preceded by a decimal repeat count:\n\
   x: pad byte (no data); c:char; b:signed byte; B:unsigned byte;\n\
@@ -1928,48 +1519,9 @@ init_pvt_struct(void)
 	   away, because native endian always raises exceptions
 	   instead of overflow masking. */
 
-	/* Check endian and swap in faster functions */
-	{
-		int one = 1;
-		formatdef *native = native_table;
-		formatdef *other, *ptr;
-		if ((int)*(unsigned char*)&one)
-			other = lilendian_table;
-		else
-			other = bigendian_table;
-		/* Scan through the native table, find a matching
-		   entry in the endian table and swap in the
-		   native implementations whenever possible
-		   (64-bit platforms may not have "standard" sizes) */
-		while (native->format != '\0' && other->format != '\0') {
-			ptr = other;
-			while (ptr->format != '\0') {
-				if (ptr->format == native->format) {
-					/* Match faster when formats are
-					   listed in the same order */
-					if (ptr == other)
-						other++;
-					/* Only use the trick if the
-					   size matches */
-					if (ptr->size != native->size)
-						break;
-					/* Skip float and double, could be
-					   "unknown" float format */
-					if (ptr->format == 'd' || ptr->format == 'f')
-						break;
-					ptr->pack = native->pack;
-					ptr->unpack = native->unpack;
-					break;
-				}
-				ptr++;
-			}
-			native++;
-		}
-	}
-
 	/* Add some symbolic constants to the module */
 	if (StructError == NULL) {
-		StructError = PyErr_NewException("struct.error", NULL, NULL);
+		StructError = PyErr_NewException("pycuda._pvt_struct.error", NULL, NULL);
 		if (StructError == NULL)
 			return;
 	}

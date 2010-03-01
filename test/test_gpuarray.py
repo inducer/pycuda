@@ -80,21 +80,17 @@ class TestGPUArray:
     def test_multiply(self):
         """Test the muliplication of an array with a scalar. """
 
-        # small array
-        a = numpy.array([1,2,3,4,5,6,7,8,9,10]).astype(numpy.float32)
-        a_gpu = gpuarray.to_gpu(a)
-        a_doubled = (2*a_gpu).get()
-        assert (a * 2 == a_doubled).all()
+        for sz in [10, 50000]:
+            for dtype, scalars in [
+                (numpy.float32, [2]),
+                (numpy.complex64, [2, 2j])
+                ]:
+                for scalar in scalars:
+                    a = numpy.arange(sz).astype(dtype)
+                    a_gpu = gpuarray.to_gpu(a)
+                    a_doubled = (scalar * a_gpu).get()
 
-        # large array
-        a = numpy.arange(50000).astype(numpy.float32)
-        a_gpu = gpuarray.to_gpu(a)
-        a_doubled = (2 * a_gpu).get()
-
-        assert (a * 2 == a_doubled).all()
-
-
-
+                    assert (a * scalar == a_doubled).all()
 
     @mark_cuda_test
     def test_multiply_array(self):

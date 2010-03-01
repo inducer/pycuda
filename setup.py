@@ -316,7 +316,7 @@ def main():
                     extra_compile_args=conf["CXXFLAGS"],
                     extra_link_args=conf["LDFLAGS"],
                     ),
-                Extension("_pycuda_struct",
+                Extension("_pvt_struct",
                     ["src/wrapper/_pycuda_struct.c"],
                     )],
 

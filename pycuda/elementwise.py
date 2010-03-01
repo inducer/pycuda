@@ -42,6 +42,8 @@ def get_elwise_module(arguments, operation,
         preamble="", loop_prep="", after_loop=""):
     from pycuda.compiler import SourceModule
     return SourceModule("""
+        #include <pycuda-complex.hpp>
+
         %(preamble)s
 
         __global__ void %(name)s(%(arguments)s)

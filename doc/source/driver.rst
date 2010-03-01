@@ -1035,6 +1035,9 @@ Code on the Device: Modules and Functions
           to be an iterable containing type characters understood by the
           :mod:`struct` module or :class:`numpy.dtype` objects.
 
+          (In addition, PyCUDA understands *'F'* and *'D'* for single- and
+          double precision floating point numbers.)
+
         * setting the thread block shape for this function to `block`.
 
         * Registering the texture references `texrefs` for use with this functions.

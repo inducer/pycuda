@@ -34,6 +34,8 @@ Version 0.94
 * Add :func:`pycuda.tools.mark_cuda_test`.
 * Add attributes of :exc:`pycuda.driver.CompileError`.
   (requested by Dan Lepage)
+* Add preliminary support for complex numbers.
+  (initial discussion with Daniel Fan)
 
 Version 0.93
 ------------
