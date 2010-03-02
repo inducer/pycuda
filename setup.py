@@ -223,7 +223,8 @@ def main():
             conf["CXXFLAGS"].extend(['-arch', 'i386', '-m32'])
         if "-arch" not in conf["LDFLAGS"]:
             conf["LDFLAGS"].extend(['-arch', 'i386', '-m32'])
-
+        if conf["CUDA_ENABLE_GL"]:
+            EXTRA_INCLUDE_DIRS.append('/usr/X11/include/')
     ext_kwargs = dict()
 
     extra_sources = []
