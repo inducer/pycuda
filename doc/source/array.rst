@@ -429,3 +429,10 @@ Here's a usage example::
             arguments="float *a, float *b")
 
     my_dot_prod = krnl(a, b).get()
+
+Fast Fourier Transforms
+-----------------------
+
+Bogdan Opanchuk's `pycudafft <http://pypi.python.org/pypi/pycudafft>`_ offers a
+variety of GPU-based FFT implementations designed to work with
+:class:`pycuda.gpuarray.GPUArray` objects.
