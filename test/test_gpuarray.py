@@ -325,7 +325,7 @@ class TestGPUArray:
                 op_a = getattr(numpy, what)(a)
                 op_a_gpu = getattr(gpuarray, what)(a_gpu).get()
 
-                assert op_a_gpu == op_a, (op_a_gpu, op_gpu, dtype, what)
+                assert op_a_gpu == op_a, (op_a_gpu, op_a, dtype, what)
 
     @mark_cuda_test
     def test_subset_minmax(self):
@@ -436,7 +436,7 @@ class TestGPUArray:
         a2 = a_gpu.astype(numpy.float64).get()
 
         assert a2.dtype == numpy.float64
-        assert la.norm(a - a2) == 0
+        assert la.norm(a - a2) == 0, (a, a2)
 
         a_gpu = curand((2000,), dtype=numpy.float64)
 
