@@ -4,10 +4,13 @@
 
 
 #include <cuda.hpp>
+#if defined(__APPLE__) || defined(MACOSX)
+#include <OpenGL/gl.h>
+#else  /* __APPLE__ */
 #include <GL/gl.h>
+#endif 
+
 #include <cudaGL.h>
-
-
 
 
 namespace cuda { namespace gl {
