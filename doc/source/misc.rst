@@ -182,6 +182,7 @@ Acknowledgments
 * Maarten Breddels provided a patch for 'flat-egg' support.
 * Nicolas Pinto refactored :mod:`pycuda.autoinit` for automatic device
   finding.
+* Ian Oszvald and Fabrizio Misto provided patches.
 
 Licensing
 =========
