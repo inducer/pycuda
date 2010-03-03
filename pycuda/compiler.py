@@ -104,6 +104,11 @@ def compile_plain(source, options, keep, nvcc, cache_dir):
         raise CompileError("nvcc compilation of %s failed" % cu_file_path,
                 cmdline, stdout=stdout, stderr=stderr)
 
+    if stdout or stderr:
+        from warnings import warn
+        warn("The CUDA compiler suceeded, but said the following:\n"
+                +stdout+stderr)
+
     cubin = cubin_f.read()
     cubin_f.close()
 
