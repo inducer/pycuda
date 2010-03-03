@@ -654,14 +654,16 @@ np_double(char *p, PyObject *v, const formatdef *f)
 static int
 np_complex_float(char *p, PyObject *v, const formatdef *f)
 {
+        float re = 0.0f;
+        float im = 0.0f;
         Py_complex cplx = PyComplex_AsCComplex(v);
 	if (PyErr_Occurred()) {
 		PyErr_SetString(StructError,
 				"required argument is not a complex");
 		return -1;
 	}
-        float re = (float)cplx.real;
-        float im = (float)cplx.imag;
+        re = (float)cplx.real;
+        im = (float)cplx.imag;
 	memcpy(p, (char *)&re, sizeof re);
 	memcpy(p+sizeof re, (char *)&im, sizeof im);
 	return 0;
@@ -670,14 +672,16 @@ np_complex_float(char *p, PyObject *v, const formatdef *f)
 static int
 np_complex_double(char *p, PyObject *v, const formatdef *f)
 {
+        double re = 0.0;
+        double im = 0.0;
         Py_complex cplx = PyComplex_AsCComplex(v);
 	if (PyErr_Occurred()) {
 		PyErr_SetString(StructError,
 				"required argument is not a complex");
 		return -1;
 	}
-        double re = cplx.real;
-        double im = cplx.imag;
+        re = cplx.real;
+        im = cplx.imag;
 	memcpy(p, (char *)&re, sizeof re);
 	memcpy(p+sizeof re, (char *)&im, sizeof im);
 	return 0;
