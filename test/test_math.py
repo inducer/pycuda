@@ -145,3 +145,13 @@ class TestMath:
                 assert sig_true == significands[i]
                 assert ex_true == exponents[i]
 
+if __name__ == "__main__":
+    # make sure that import failures get reported, instead of skipping the tests.
+    import pycuda.autoinit
+
+    import sys
+    if len(sys.argv) > 1:
+        exec sys.argv[1]
+    else:
+        from py.test.cmdline import main
+        main([__file__])
