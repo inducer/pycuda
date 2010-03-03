@@ -689,7 +689,7 @@ namespace cuda
       { 
         try
         {
-          scoped_context_activation ca();
+          scoped_context_activation ca(get_context());
           CUDAPP_CALL_GUARDED_CLEANUP(cuStreamDestroy, (m_stream)); 
         }
         CUDAPP_CATCH_CLEANUP_ON_DEAD_CONTEXT(stream);
