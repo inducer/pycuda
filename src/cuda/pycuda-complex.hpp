@@ -206,25 +206,25 @@ struct _STLP_CLASS_DECLSPEC complex<float> {
 
   // Arithmetic op= operations involving one real argument.
 
-  _Self& __device__ operator= (value_type __x) {
+  __device__ _Self& operator= (value_type __x) {
     _M_re = __x;
     _M_im = 0.0f;
     return *this;
   }
-  _Self& __device__ operator+= (value_type __x) {
+  __device__ _Self& operator+= (value_type __x) {
     _M_re += __x;
     return *this;
   }
-  _Self& __device__ operator-= (value_type __x) {
+  __device__ _Self& operator-= (value_type __x) {
     _M_re -= __x;
     return *this;
   }
-  _Self& __device__ operator*= (value_type __x) {
+  __device__ _Self& operator*= (value_type __x) {
     _M_re *= __x;
     _M_im *= __x;
     return *this;
   }
-  _Self& __device__ operator/= (value_type __x) {
+  __device__ _Self& operator/= (value_type __x) {
     _M_re /= __x;
     _M_im /= __x;
     return *this;
@@ -232,37 +232,41 @@ struct _STLP_CLASS_DECLSPEC complex<float> {
 
   // Arithmetic op= operations involving two complex arguments.
 
-  static void __device__ _div(const float& __z1_r, const float& __z1_i,
+  static __device__ void _div(const float& __z1_r, const float& __z1_i,
                               const float& __z2_r, const float& __z2_i,
                               float& __res_r, float& __res_i);
 
-  static void __device__ _div(const float& __z1_r,
+  static __device__ void _div(const float& __z1_r,
                               const float& __z2_r, const float& __z2_i,
                               float& __res_r, float& __res_i);
 
   template <class _Tp2>
-  complex<float>& __device__ operator=(const complex<_Tp2>& __z) {
+  __device__ 
+  complex<float>& operator=(const complex<_Tp2>& __z) {
     _M_re = __z._M_re;
     _M_im = __z._M_im;
     return *this;
   }
 
   template <class _Tp2>
-  complex<float>& __device__ operator+= (const complex<_Tp2>& __z) {
+  __device__ 
+  complex<float>& operator+= (const complex<_Tp2>& __z) {
     _M_re += __z._M_re;
     _M_im += __z._M_im;
     return *this;
   }
 
   template <class _Tp2>
-  complex<float>& __device__ operator-= (const complex<_Tp2>& __z) {
+  __device__ 
+  complex<float>& operator-= (const complex<_Tp2>& __z) {
     _M_re -= __z._M_re;
     _M_im -= __z._M_im;
     return *this;
   }
 
   template <class _Tp2>
-  complex<float>& __device__ operator*= (const complex<_Tp2>& __z) {
+  __device__ 
+  complex<float>& operator*= (const complex<_Tp2>& __z) {
     float __r = _M_re * __z._M_re - _M_im * __z._M_im;
     float __i = _M_re * __z._M_im + _M_im * __z._M_re;
     _M_re = __r;
@@ -271,7 +275,8 @@ struct _STLP_CLASS_DECLSPEC complex<float> {
   }
 
   template <class _Tp2>
-  complex<float>& __device__ operator/= (const complex<_Tp2>& __z) {
+  __device__ 
+  complex<float>& operator/= (const complex<_Tp2>& __z) {
     float __r;
     float __i;
     _div(_M_re, _M_im, __z._M_re, __z._M_im, __r, __i);
@@ -280,25 +285,29 @@ struct _STLP_CLASS_DECLSPEC complex<float> {
     return *this;
   }
 
-  _Self& __device__ operator=(const _Self& __z) {
+  __device__ 
+  _Self& operator=(const _Self& __z) {
     _M_re = __z._M_re;
     _M_im = __z._M_im;
     return *this;
   }
 
-  _Self& __device__ operator+= (const _Self& __z) {
+  __device__ 
+  _Self& operator+= (const _Self& __z) {
     _M_re += __z._M_re;
     _M_im += __z._M_im;
     return *this;
   }
 
-  _Self& __device__ operator-= (const _Self& __z) {
+  __device__ 
+  _Self& operator-= (const _Self& __z) {
     _M_re -= __z._M_re;
     _M_im -= __z._M_im;
     return *this;
   }
 
-  _Self& __device__ operator*= (const _Self& __z) {
+  __device__ 
+  _Self& operator*= (const _Self& __z) {
     value_type __r = _M_re * __z._M_re - _M_im * __z._M_im;
     value_type __i = _M_re * __z._M_im + _M_im * __z._M_re;
     _M_re = __r;
@@ -306,7 +315,8 @@ struct _STLP_CLASS_DECLSPEC complex<float> {
     return *this;
   }
 
-  _Self& __device__ operator/= (const _Self& __z) {
+  __device__ 
+  _Self& operator/= (const _Self& __z) {
     value_type __r;
     value_type __i;
     _div(_M_re, _M_im, __z._M_re, __z._M_im, __r, __i);
@@ -338,36 +348,36 @@ struct _STLP_CLASS_DECLSPEC complex<double> {
   inline complex(const complex<float>& __z);
   // Element access.
   __device__
-  value_type __device__ real() const { return _M_re; }
+  value_type real() const { return _M_re; }
   __device__
-  value_type __device__ imag() const { return _M_im; }
+  value_type imag() const { return _M_im; }
 
   // Arithmetic op= operations involving one real argument.
 
   __device__
-  _Self& __device__ operator= (value_type __x) {
+  _Self& operator= (value_type __x) {
     _M_re = __x;
     _M_im = 0.0;
     return *this;
   }
   __device__
-  _Self& __device__ operator+= (value_type __x) {
+  _Self& operator+= (value_type __x) {
     _M_re += __x;
     return *this;
   }
   __device__
-  _Self& __device__ operator-= (value_type __x) {
+  _Self& operator-= (value_type __x) {
     _M_re -= __x;
     return *this;
   }
   __device__
-  _Self& __device__ operator*= (value_type __x) {
+  _Self& operator*= (value_type __x) {
     _M_re *= __x;
     _M_im *= __x;
     return *this;
   }
   __device__
-  _Self& __device__ operator/= (value_type __x) {
+  _Self& operator/= (value_type __x) {
     _M_re /= __x;
     _M_im /= __x;
     return *this;
@@ -375,37 +385,41 @@ struct _STLP_CLASS_DECLSPEC complex<double> {
 
   // Arithmetic op= operations involving two complex arguments.
 
-  static void __device__ _div(const double& __z1_r, const double& __z1_i,
+  static __device__ void _div(const double& __z1_r, const double& __z1_i,
                               const double& __z2_r, const double& __z2_i,
                               double& __res_r, double& __res_i);
-  static void __device__ _div(const double& __z1_r,
+  static __device__ void _div(const double& __z1_r,
                               const double& __z2_r, const double& __z2_i,
                               double& __res_r, double& __res_i);
 
 #if defined (_STLP_FUNCTION_TMPL_PARTIAL_ORDER)
   template <class _Tp2>
-  complex<double>& __device__ operator=(const complex<_Tp2>& __z) {
+  __device__
+  complex<double>& operator=(const complex<_Tp2>& __z) {
     _M_re = __z._M_re;
     _M_im = __z._M_im;
     return *this;
   }
 
   template <class _Tp2>
-  complex<double>& __device__ operator+= (const complex<_Tp2>& __z) {
+  __device__
+  complex<double>& operator+= (const complex<_Tp2>& __z) {
     _M_re += __z._M_re;
     _M_im += __z._M_im;
     return *this;
   }
 
   template <class _Tp2>
-  complex<double>& __device__ operator-= (const complex<_Tp2>& __z) {
+  __device__ 
+  complex<double>& operator-= (const complex<_Tp2>& __z) {
     _M_re -= __z._M_re;
     _M_im -= __z._M_im;
     return *this;
   }
 
   template <class _Tp2>
-  complex<double>& __device__ operator*= (const complex<_Tp2>& __z) {
+  __device__ 
+  complex<double>& operator*= (const complex<_Tp2>& __z) {
     double __r = _M_re * __z._M_re - _M_im * __z._M_im;
     double __i = _M_re * __z._M_im + _M_im * __z._M_re;
     _M_re = __r;
@@ -414,7 +428,8 @@ struct _STLP_CLASS_DECLSPEC complex<double> {
   }
 
   template <class _Tp2>
-  complex<double>& __device__ operator/= (const complex<_Tp2>& __z) {
+  __device__ 
+  complex<double>& operator/= (const complex<_Tp2>& __z) {
     double __r;
     double __i;
     _div(_M_re, _M_im, __z._M_re, __z._M_im, __r, __i);
@@ -424,26 +439,29 @@ struct _STLP_CLASS_DECLSPEC complex<double> {
   }
 
 #endif /* _STLP_FUNCTION_TMPL_PARTIAL_ORDER */
-
-  _Self& __device__ operator=(const _Self& __z) {
+  __device__ 
+  _Self& operator=(const _Self& __z) {
     _M_re = __z._M_re;
     _M_im = __z._M_im;
     return *this;
   }
 
-  _Self& __device__ operator+= (const _Self& __z) {
+  __device__ 
+  _Self& operator+= (const _Self& __z) {
     _M_re += __z._M_re;
     _M_im += __z._M_im;
     return *this;
   }
 
-  _Self& __device__ operator-= (const _Self& __z) {
+  __device__ 
+  _Self& operator-= (const _Self& __z) {
     _M_re -= __z._M_re;
     _M_im -= __z._M_im;
     return *this;
   }
 
-  _Self& __device__ operator*= (const _Self& __z) {
+  __device__ 
+  _Self& operator*= (const _Self& __z) {
     value_type __r = _M_re * __z._M_re - _M_im * __z._M_im;
     value_type __i = _M_re * __z._M_im + _M_im * __z._M_re;
     _M_re = __r;
@@ -451,7 +469,8 @@ struct _STLP_CLASS_DECLSPEC complex<double> {
     return *this;
   }
 
-  _Self& __device__ operator/= (const _Self& __z) {
+  __device__ 
+  _Self& operator/= (const _Self& __z) {
     value_type __r;
     value_type __i;
     _div(_M_re, _M_im, __z._M_re, __z._M_im, __r, __i);
@@ -486,31 +505,38 @@ inline complex<_Tp> __device__  operator-(const complex<_Tp>& __z)
 // Non-member arithmetic operations involving one real argument.
 
 template <class _Tp>
-inline complex<_Tp> __device__ operator+(const _Tp& __x, const complex<_Tp>& __z)
+__device__
+inline complex<_Tp> operator+(const _Tp& __x, const complex<_Tp>& __z)
 { return complex<_Tp>(__x + __z._M_re, __z._M_im); }
 
 template <class _Tp>
-inline complex<_Tp> __device__ operator+(const complex<_Tp>& __z, const _Tp& __x)
+__device__
+inline complex<_Tp> operator+(const complex<_Tp>& __z, const _Tp& __x)
 { return complex<_Tp>(__z._M_re + __x, __z._M_im); }
 
 template <class _Tp>
-inline complex<_Tp> __device__ operator-(const _Tp& __x, const complex<_Tp>& __z)
+__device__
+inline complex<_Tp> operator-(const _Tp& __x, const complex<_Tp>& __z)
 { return complex<_Tp>(__x - __z._M_re, -__z._M_im); }
 
 template <class _Tp>
-inline complex<_Tp> __device__ operator-(const complex<_Tp>& __z, const _Tp& __x)
+__device__
+inline complex<_Tp> operator-(const complex<_Tp>& __z, const _Tp& __x)
 { return complex<_Tp>(__z._M_re - __x, __z._M_im); }
 
 template <class _Tp>
-inline complex<_Tp> __device__ operator*(const _Tp& __x, const complex<_Tp>& __z)
+__device__
+inline complex<_Tp> operator*(const _Tp& __x, const complex<_Tp>& __z)
 { return complex<_Tp>(__x * __z._M_re, __x * __z._M_im); }
 
 template <class _Tp>
-inline complex<_Tp> __device__ operator*(const complex<_Tp>& __z, const _Tp& __x)
+__device__
+inline complex<_Tp> operator*(const complex<_Tp>& __z, const _Tp& __x)
 { return complex<_Tp>(__z._M_re * __x, __z._M_im * __x); }
 
 template <class _Tp>
-inline complex<_Tp> __device__ operator/(const _Tp& __x, const complex<_Tp>& __z) {
+__device__
+inline complex<_Tp> operator/(const _Tp& __x, const complex<_Tp>& __z) {
   complex<_Tp> __result;
   complex<_Tp>::_div(__x,
                      __z._M_re, __z._M_im,
@@ -519,22 +545,26 @@ inline complex<_Tp> __device__ operator/(const _Tp& __x, const complex<_Tp>& __z
 }
 
 template <class _Tp>
-inline complex<_Tp> __device__ operator/(const complex<_Tp>& __z, const _Tp& __x)
+__device__
+inline complex<_Tp> operator/(const complex<_Tp>& __z, const _Tp& __x)
 { return complex<_Tp>(__z._M_re / __x, __z._M_im / __x); }
 
 // Non-member arithmetic operations involving two complex arguments
 
 template <class _Tp>
-inline complex<_Tp> __device__
+__device__
+inline complex<_Tp>
 operator+(const complex<_Tp>& __z1, const complex<_Tp>& __z2)
 { return complex<_Tp>(__z1._M_re + __z2._M_re, __z1._M_im + __z2._M_im); }
 
 template <class _Tp>
+__device__
 inline complex<_Tp> __device__
 operator-(const complex<_Tp>& __z1, const complex<_Tp>& __z2)
 { return complex<_Tp>(__z1._M_re - __z2._M_re, __z1._M_im - __z2._M_im); }
 
 template <class _Tp>
+__device__
 inline complex<_Tp> __device__
 operator*(const complex<_Tp>& __z1, const complex<_Tp>& __z2) {
   return complex<_Tp>(__z1._M_re * __z2._M_re - __z1._M_im * __z2._M_im,
@@ -542,6 +572,7 @@ operator*(const complex<_Tp>& __z1, const complex<_Tp>& __z2) {
 }
 
 template <class _Tp>
+__device__
 inline complex<_Tp> __device__
 operator/(const complex<_Tp>& __z1, const complex<_Tp>& __z2) {
   complex<_Tp> __result;
@@ -554,15 +585,18 @@ operator/(const complex<_Tp>& __z1, const complex<_Tp>& __z2) {
 // Comparison operators.
 
 template <class _Tp>
-inline bool __device__ operator==(const complex<_Tp>& __z1, const complex<_Tp>& __z2)
+__device__
+inline bool operator==(const complex<_Tp>& __z1, const complex<_Tp>& __z2)
 { return __z1._M_re == __z2._M_re && __z1._M_im == __z2._M_im; }
 
 template <class _Tp>
-inline bool __device__ operator==(const complex<_Tp>& __z, const _Tp& __x)
+__device__
+inline bool operator==(const complex<_Tp>& __z, const _Tp& __x)
 { return __z._M_re == __x && __z._M_im == 0; }
 
 template <class _Tp>
-inline bool __device__ operator==(const _Tp& __x, const complex<_Tp>& __z)
+__device__
+inline bool operator==(const _Tp& __x, const complex<_Tp>& __z)
 { return __x == __z._M_re && 0 == __z._M_im; }
 
 //04/27/04 dums: removal of this check, if it is restablish
@@ -570,170 +604,132 @@ inline bool __device__ operator==(const _Tp& __x, const complex<_Tp>& __z)
 //#ifdef _STLP_FUNCTION_TMPL_PARTIAL_ORDER
 
 template <class _Tp>
-inline bool __device__ operator!=(const complex<_Tp>& __z1, const complex<_Tp>& __z2)
+__device__
+inline bool operator!=(const complex<_Tp>& __z1, const complex<_Tp>& __z2)
 { return __z1._M_re != __z2._M_re || __z1._M_im != __z2._M_im; }
 
 //#endif /* _STLP_FUNCTION_TMPL_PARTIAL_ORDER */
 
 template <class _Tp>
-inline bool __device__ operator!=(const complex<_Tp>& __z, const _Tp& __x)
+__device__
+inline bool operator!=(const complex<_Tp>& __z, const _Tp& __x)
 { return __z._M_re != __x || __z._M_im != 0; }
 
 template <class _Tp>
-inline bool __device__ operator!=(const _Tp& __x, const complex<_Tp>& __z)
+__device__
+inline bool operator!=(const _Tp& __x, const complex<_Tp>& __z)
 { return __x != __z._M_re || 0 != __z._M_im; }
 
 // Other basic arithmetic operations
 template <class _Tp>
-inline _Tp __device__ real(const complex<_Tp>& __z)
+__device__
+inline _Tp real(const complex<_Tp>& __z)
 { return __z._M_re; }
 
 template <class _Tp>
-inline _Tp __device__ imag(const complex<_Tp>& __z)
+__device__
+inline _Tp imag(const complex<_Tp>& __z)
 { return __z._M_im; }
 
 template <class _Tp>
-_Tp __device__ abs(const complex<_Tp>& __z);
+__device__
+_Tp abs(const complex<_Tp>& __z);
 
 template <class _Tp>
-_Tp __device__ arg(const complex<_Tp>& __z);
+__device__
+_Tp arg(const complex<_Tp>& __z);
 
 template <class _Tp>
-inline _Tp __device__ norm(const complex<_Tp>& __z)
+__device__
+inline _Tp norm(const complex<_Tp>& __z)
 { return __z._M_re * __z._M_re + __z._M_im * __z._M_im; }
 
 template <class _Tp>
-inline complex<_Tp> __device__ conj(const complex<_Tp>& __z)
+__device__
+inline complex<_Tp> conj(const complex<_Tp>& __z)
 { return complex<_Tp>(__z._M_re, -__z._M_im); }
 
 template <class _Tp>
-complex<_Tp> __device__ polar(const _Tp& __rho)
+__device__
+complex<_Tp> polar(const _Tp& __rho)
 { return complex<_Tp>(__rho, 0); }
 
 template <class _Tp>
-complex<_Tp> __device__ polar(const _Tp& __rho, const _Tp& __phi);
+__device__
+complex<_Tp> polar(const _Tp& __rho, const _Tp& __phi);
 
 _STLP_TEMPLATE_NULL
-_STLP_DECLSPEC float __device__ abs(const complex<float>&);
+__device__ float abs(const complex<float>&);
 _STLP_TEMPLATE_NULL
-_STLP_DECLSPEC double __device__ abs(const complex<double>&);
+__device__ double abs(const complex<double>&);
 _STLP_TEMPLATE_NULL
-_STLP_DECLSPEC float __device__ arg(const complex<float>&);
+__device__ float arg(const complex<float>&);
 _STLP_TEMPLATE_NULL
-_STLP_DECLSPEC double __device__ arg(const complex<double>&);
+__device__ double arg(const complex<double>&);
 _STLP_TEMPLATE_NULL
-_STLP_DECLSPEC complex<float> __device__ polar(const float& __rho, const float& __phi);
+__device__ complex<float> polar(const float& __rho, const float& __phi);
 _STLP_TEMPLATE_NULL
-_STLP_DECLSPEC complex<double> __device__ polar(const double& __rho, const double& __phi);
+__device__ complex<double> polar(const double& __rho, const double& __phi);
 
 template <class _Tp>
-_Tp __device__ abs(const complex<_Tp>& __z)
+__device__
+_Tp abs(const complex<_Tp>& __z)
 { return _Tp(abs(complex<double>(double(__z.real()), double(__z.imag())))); }
 
 template <class _Tp>
-_Tp __device__ arg(const complex<_Tp>& __z)
+__device__
+_Tp arg(const complex<_Tp>& __z)
 { return _Tp(arg(complex<double>(double(__z.real()), double(__z.imag())))); }
 
 template <class _Tp>
-complex<_Tp> __device__ polar(const _Tp& __rho, const _Tp& __phi) {
+__device__
+complex<_Tp> polar(const _Tp& __rho, const _Tp& __phi) {
   complex<double> __tmp = polar(double(__rho), double(__phi));
   return complex<_Tp>(_Tp(__tmp.real()), _Tp(__tmp.imag()));
 }
-
-#if !defined (_STLP_USE_NO_IOSTREAMS)
-
-_STLP_END_NAMESPACE
-
-#  ifndef _STLP_INTERNAL_IOSFWD
-#    include <stl/_iosfwd.h>
-#  endif
-
-_STLP_BEGIN_NAMESPACE
-
-// Complex output, in the form (re,im).  We use a two-step process
-// involving stringstream so that we get the padding right.
-template <class _Tp, class _CharT, class _Traits>
-basic_ostream<_CharT, _Traits>&  __device__
-operator<<(basic_ostream<_CharT, _Traits>& __os, const complex<_Tp>& __z);
-
-template <class _Tp, class _CharT, class _Traits>
-basic_istream<_CharT, _Traits>& __device__
-operator>>(basic_istream<_CharT, _Traits>& __is, complex<_Tp>& __z);
-
-// Specializations for narrow characters; lets us avoid widen.
-
-_STLP_OPERATOR_TEMPLATE
-_STLP_DECLSPEC basic_istream<char, char_traits<char> >& __device__
-operator>>(basic_istream<char, char_traits<char> >& __is, complex<float>& __z);
-
-_STLP_OPERATOR_TEMPLATE
-_STLP_DECLSPEC basic_istream<char, char_traits<char> >& __device__
-operator>>(basic_istream<char, char_traits<char> >& __is, complex<double>& __z);
-
-_STLP_OPERATOR_TEMPLATE
-_STLP_DECLSPEC basic_ostream<char, char_traits<char> >& __device__
-operator<<(basic_ostream<char, char_traits<char> >& __is, const complex<float>& __z);
-
-_STLP_OPERATOR_TEMPLATE
-_STLP_DECLSPEC basic_ostream<char, char_traits<char> >& __device__
-operator<<(basic_ostream<char, char_traits<char> >& __is, const complex<double>& __z);
-
-#  if defined (_STLP_USE_TEMPLATE_EXPORT) && ! defined (_STLP_NO_WCHAR_T)
-
-_STLP_EXPORT_TEMPLATE basic_istream<wchar_t, char_traits<wchar_t> >& __device__
-operator>>(basic_istream<wchar_t, char_traits<wchar_t> >&, complex<double>&);
-_STLP_EXPORT_TEMPLATE basic_ostream<wchar_t, char_traits<wchar_t> >& __device__
-operator<<(basic_ostream<wchar_t, char_traits<wchar_t> >&, const complex<double>&);
-_STLP_EXPORT_TEMPLATE basic_istream<wchar_t, char_traits<wchar_t> >& __device__
-operator>>(basic_istream<wchar_t, char_traits<wchar_t> >&, complex<float>&);
-_STLP_EXPORT_TEMPLATE basic_ostream<wchar_t, char_traits<wchar_t> >& __device__
-operator<<(basic_ostream<wchar_t, char_traits<wchar_t> >&, const complex<float>&);
-
-#  endif
-#endif
 
 
 // Transcendental functions.  These are defined only for float,
 //  double, and long double.  (Sqrt isn't transcendental, of course,
 //  but it's included in this section anyway.)
 
-_STLP_DECLSPEC complex<float> __device__ sqrt(const complex<float>&);
+__device__ complex<float> sqrt(const complex<float>&);
 
-_STLP_DECLSPEC complex<float> __device__ exp(const complex<float>&);
-_STLP_DECLSPEC complex<float> __device__  log(const complex<float>&);
-_STLP_DECLSPEC complex<float> __device__ log10(const complex<float>&);
+__device__ complex<float> exp(const complex<float>&);
+__device__ complex<float>  log(const complex<float>&);
+__device__ complex<float> log10(const complex<float>&);
 
-_STLP_DECLSPEC complex<float> __device__ pow(const complex<float>&, int);
-_STLP_DECLSPEC complex<float> __device__ pow(const complex<float>&, const float&);
-_STLP_DECLSPEC complex<float> __device__ pow(const float&, const complex<float>&);
-_STLP_DECLSPEC complex<float> __device__ pow(const complex<float>&, const complex<float>&);
+__device__ complex<float> pow(const complex<float>&, int);
+__device__ complex<float> pow(const complex<float>&, const float&);
+__device__ complex<float> pow(const float&, const complex<float>&);
+__device__ complex<float> pow(const complex<float>&, const complex<float>&);
 
-_STLP_DECLSPEC complex<float> __device__ sin(const complex<float>&);
-_STLP_DECLSPEC complex<float> __device__ cos(const complex<float>&);
-_STLP_DECLSPEC complex<float> __device__ tan(const complex<float>&);
+__device__ complex<float> sin(const complex<float>&);
+__device__ complex<float> cos(const complex<float>&);
+__device__ complex<float> tan(const complex<float>&);
 
-_STLP_DECLSPEC complex<float> __device__ sinh(const complex<float>&);
-_STLP_DECLSPEC complex<float> __device__ cosh(const complex<float>&);
-_STLP_DECLSPEC complex<float> __device__ tanh(const complex<float>&);
+__device__ complex<float> sinh(const complex<float>&);
+__device__ complex<float> cosh(const complex<float>&);
+__device__ complex<float> tanh(const complex<float>&);
 
-_STLP_DECLSPEC complex<double> __device__ sqrt(const complex<double>&);
+__device__ complex<double> sqrt(const complex<double>&);
 
-_STLP_DECLSPEC complex<double> __device__ exp(const complex<double>&);
-_STLP_DECLSPEC complex<double> __device__ log(const complex<double>&);
-_STLP_DECLSPEC complex<double> __device__ log10(const complex<double>&);
+__device__ complex<double> exp(const complex<double>&);
+__device__ complex<double> log(const complex<double>&);
+__device__ complex<double> log10(const complex<double>&);
 
-_STLP_DECLSPEC complex<double> __device__ pow(const complex<double>&, int);
-_STLP_DECLSPEC complex<double> __device__ pow(const complex<double>&, const double&);
-_STLP_DECLSPEC complex<double> __device__ pow(const double&, const complex<double>&);
-_STLP_DECLSPEC complex<double> __device__ pow(const complex<double>&, const complex<double>&);
+__device__ complex<double> pow(const complex<double>&, int);
+__device__ complex<double> pow(const complex<double>&, const double&);
+__device__ complex<double> pow(const double&, const complex<double>&);
+__device__ complex<double> pow(const complex<double>&, const complex<double>&);
 
-_STLP_DECLSPEC complex<double> __device__ sin(const complex<double>&);
-_STLP_DECLSPEC complex<double> __device__ cos(const complex<double>&);
-_STLP_DECLSPEC complex<double> __device__ tan(const complex<double>&);
+__device__ complex<double> sin(const complex<double>&);
+__device__ complex<double> cos(const complex<double>&);
+__device__ complex<double> tan(const complex<double>&);
 
-_STLP_DECLSPEC complex<double> __device__ sinh(const complex<double>&);
-_STLP_DECLSPEC complex<double> __device__ cosh(const complex<double>&);
-_STLP_DECLSPEC complex<double> __device__ tanh(const complex<double>&);
+__device__ complex<double> sinh(const complex<double>&);
+__device__ complex<double> cosh(const complex<double>&);
+__device__ complex<double> tanh(const complex<double>&);
 
 }
 }
