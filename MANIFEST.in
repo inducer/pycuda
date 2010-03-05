@@ -5,6 +5,7 @@ include src/wrapper/*.hpp
 include src/wrapper/*.cpp
 include test/*.py
 include examples/*.py
+include examples/MORE*
 include doc/source/*.rst
 include doc/Makefile
 include doc/source/conf.py
