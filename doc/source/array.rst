@@ -115,6 +115,24 @@ The :class:`GPUArray` Array Class
 
         Return *self*, cast to *dtype*.
 
+    .. attribute :: real
+
+        Return the real part of *self*, or *self* if it is real.
+
+        .. versionadded:: 0.94
+
+    .. attribute :: imag
+
+        Return the imaginary part of *self*, or *zeros_like(self)* if it is real.
+
+        .. versionadded: 0.94
+
+    .. method :: conj()
+
+        Return the complex conjugate of *self*, or *self* if it is real.
+
+        .. versionadded: 0.94
+
     .. method:: bind_to_texref(texref, allow_offset=False)
 
         Bind *self* to the :class:`pycuda.driver.TextureReference` *texref*.
@@ -142,7 +160,7 @@ The :class:`GPUArray` Array Class
         offset in units of *self*'s data type.  If *allow_offset* is ``False``, a
         nonzero value of this offset will cause an exception to be raised.
 
-        (Added in version 0.93.)
+        .. versionadded:: 0.93
 
         .. highlight:: c
 
