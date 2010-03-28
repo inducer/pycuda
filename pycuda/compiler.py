@@ -50,7 +50,7 @@ def compile_plain(source, options, keep, nvcc, cache_dir):
         cache_path = join(cache_dir, cache_file + ".cubin")
 
         try:
-            return open(cache_path, "r").read()
+            return open(cache_path, "rb").read()
         except:
             pass
 
@@ -89,7 +89,7 @@ def compile_plain(source, options, keep, nvcc, cache_dir):
         result, stdout, stderr = call_capture_output(cmdline, cwd=file_dir)
 
     try:
-        cubin_f = open(join(file_dir, file_root + ".cubin"), "r")
+        cubin_f = open(join(file_dir, file_root + ".cubin"), "rb")
     except IOError:
         no_output = True
     else:
@@ -113,7 +113,7 @@ def compile_plain(source, options, keep, nvcc, cache_dir):
     cubin_f.close()
 
     if cache_dir:
-        outf = open(cache_path, "w")
+        outf = open(cache_path, "wb")
         outf.write(cubin)
         outf.close()
 
