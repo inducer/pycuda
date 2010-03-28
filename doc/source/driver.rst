@@ -197,6 +197,24 @@ Constants
 
         .. versionadded:: 0.94
 
+    .. attribute:: SURFACE_ALIGNMENT
+
+        CUDA 3.0 (post-beta) and above
+
+        .. versionadded:: 0.94
+
+    .. attribute:: CONCURRENT_KERNELS
+
+        CUDA 3.0 (post-beta) and above
+
+        .. versionadded:: 0.94
+
+    .. attribute:: ECC_ENABLED
+
+        CUDA 3.0 (post-beta) and above
+
+        .. versionadded:: 0.94
+
 .. class:: function_attribute
 
     Flags for :meth:`Function.get_attribute`. CUDA 2.2 and newer.
@@ -206,7 +224,29 @@ Constants
     .. attribute:: CONST_SIZE_BYTES
     .. attribute:: LOCAL_SIZE_BYTES
     .. attribute:: NUM_REGS
+    .. attribute:: PTX_VERSION
+
+        CUDA 3.0 (post-beta) and above
+
+        .. versionadded:: 0.94
+
+    .. attribute:: BINARY_VERSION
+
+        CUDA 3.0 (post-beta) and above
+
+        .. versionadded:: 0.94
+
     .. attribute:: MAX
+
+.. class:: func_cache
+
+    See :meth:`Function.set_cache_config`. CUDA 3.0 (post-beta) and above
+
+    .. versionadded:: 0.94
+
+    .. attribute:: PREFER_NONE
+    .. attribute:: PREFER_SHARED
+    .. attribute:: PREFER_L1
 
 .. class:: array_format
 
@@ -1080,11 +1120,19 @@ Code on the Device: Modules and Functions
         Return one of the attributes given by the
         :class:`function_attribute` value *attr*.
 
-        Available in PyCUDA 0.93 and CUDA 2.2 and newer.
-
         All :class:`function_attribute` values may also be directly read
         as (lower-case) attributes on the :class:`Function` object itself,
         e.g. `func.num_regs`.
+
+        CUDA 2.2 and newer.
+
+        .. versionadded:: 0.93
+
+    .. attribute:: set_cache_config(fc)
+
+        CUDA 3.0 (post-beta) and newer.
+
+        .. versionadded:: 0.94
 
     .. attribute:: local_size_bytes
 

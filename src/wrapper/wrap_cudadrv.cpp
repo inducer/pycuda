@@ -51,6 +51,9 @@ namespace
         || err.code() == CUDA_ERROR_NO_BINARY_FOR_GPU
         || err.code() == CUDA_ERROR_FILE_NOT_FOUND
         || err.code() == CUDA_ERROR_NOT_READY
+#if CUDA_VERSION >= 3000 && defined(CUDAPP_POST_30_BETA)
+        || err.code() == CUDA_ERROR_ECC_UNCORRECTABLE
+#endif
         )
       PyErr_SetString(CudaRuntimeError.get(), err.what());
     else if (err.code() == CUDA_ERROR_UNKNOWN)
@@ -516,8 +519,21 @@ BOOST_PYTHON_MODULE(_driver)
     .value("MAXIMUM_TEXTURE2D_ARRAY_WIDTH", CU_DEVICE_ATTRIBUTE_MAXIMUM_TEXTURE2D_ARRAY_WIDTH)
     .value("MAXIMUM_TEXTURE2D_ARRAY_HEIGHT", CU_DEVICE_ATTRIBUTE_MAXIMUM_TEXTURE2D_ARRAY_HEIGHT)
     .value("MAXIMUM_TEXTURE2D_ARRAY_NUMSLICES", CU_DEVICE_ATTRIBUTE_MAXIMUM_TEXTURE2D_ARRAY_NUMSLICES)
+#ifdef CUDAPP_POST_30_BETA
+    .value("SURFACE_ALIGNMENT", CU_DEVICE_ATTRIBUTE_SURFACE_ALIGNMENT)
+    .value("CONCURRENT_KERNELS", CU_DEVICE_ATTRIBUTE_CONCURRENT_KERNELS)
+    .value("ECC_ENABLED", CU_DEVICE_ATTRIBUTE_ECC_ENABLED)
+#endif
 #endif
     ;
+
+#if CUDA_VERSION >= 3000 && defined(CUDAPP_POST_30_BETA)
+  py::enum_<CUfunc_cache_enum>("func_cache")
+    .value("PREFER_NONE", CU_FUNC_CACHE_PREFER_NONE)
+    .value("PREFER_SHARED", CU_FUNC_CACHE_PREFER_SHARED)
+    .value("PREFER_L1", CU_FUNC_CACHE_PREFER_L1)
+    ;
+#endif
 
 #if CUDA_VERSION >= 2020
   py::enum_<CUfunction_attribute>("function_attribute")
@@ -526,6 +542,10 @@ BOOST_PYTHON_MODULE(_driver)
     .value("CONST_SIZE_BYTES", CU_FUNC_ATTRIBUTE_CONST_SIZE_BYTES)
     .value("LOCAL_SIZE_BYTES", CU_FUNC_ATTRIBUTE_LOCAL_SIZE_BYTES)
     .value("NUM_REGS", CU_FUNC_ATTRIBUTE_NUM_REGS)
+#if CUDA_VERSION >= 3000 && defined(CUDAPP_POST_30_BETA)
+    .value("PTX_VERSION", CU_FUNC_ATTRIBUTE_PTX_VERSION)
+    .value("BINARY_VERSION", CU_FUNC_ATTRIBUTE_BINARY_VERSION)
+#endif
     .value("MAX", CU_FUNC_ATTRIBUTE_MAX)
     ;
 #endif
@@ -699,6 +719,9 @@ BOOST_PYTHON_MODULE(_driver)
 
 #if CUDA_VERSION >= 2020
       .DEF_SIMPLE_METHOD(get_attribute)
+#endif
+#if CUDA_VERSION >= 3000 && defined(CUDAPP_POST_30_BETA)
+      .DEF_SIMPLE_METHOD(set_cache_config)
 #endif
       ;
   }

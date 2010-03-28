@@ -28,10 +28,26 @@
 #warning *****************************************************************
 #endif
 
+#if (CUDA_VERSION == 3000)
+#warning *****************************************************************
+#warning **** CUDA 3.0 detected. 
+#warning **** (Don't worry, that's not in itself bad.)
+#warning *****************************************************************
+#warning **** PyCUDA assumes that you are using the release (non-beta)
+#warning **** version. 3.0 beta will result in compile errors.
+#warning **** I apologize, but I have no way of checking whether I am
+#warning **** compiling against the beta--Nvidia cleverly changed the
+#warning **** API without bumping the version number.
+#warning **** You may try undefining CUDAPP_POST_30_BETA in 
+#warning **** src/cpp/cuda.hpp to get this to work.
+#warning *****************************************************************
+#endif
+
 
 
 
 // #define CUDAPP_TRACE_CUDA
+#define CUDAPP_POST_30_BETA
 
 
 
@@ -182,6 +198,9 @@ namespace cuda
 #if CUDA_VERSION >= 3000
           case CUDA_ERROR_NOT_MAPPED_AS_ARRAY: return "not mapped as array";
           case CUDA_ERROR_NOT_MAPPED_AS_POINTER: return "not mapped as pointer";
+#ifdef CUDAPP_POST_30_BETA
+          case CUDA_ERROR_ECC_UNCORRECTABLE: return "ECC uncorrectable";
+#endif
 #endif
 
           case CUDA_ERROR_INVALID_SOURCE: return "invalid source";
@@ -1039,6 +1058,14 @@ namespace cuda
         CUDAPP_CALL_GUARDED_WITH_TRACE_INFO(
             cuFuncGetAttribute, (&result, attr, m_function), m_symbol);
         return result;
+      }
+#endif
+
+#if CUDA_VERSION >= 3000 && defined(CUDAPP_POST_30_BETA)
+      void set_cache_config(CUfunc_cache fc)
+      {
+        CUDAPP_CALL_GUARDED_WITH_TRACE_INFO(
+            cuFuncSetCacheConfig, (m_function, fc), m_symbol);
       }
 #endif
   };

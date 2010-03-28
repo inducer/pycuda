@@ -8,7 +8,8 @@ Version 0.94
     Version 0.94 is the current development version. You can get it from
     PyCUDA's version control repository.
 
-* Support for CUDA 3.0 beta.
+* Support for CUDA 3.0. (but not CUDA 3.0 beta!)
+  Search for "CUDA 3.0" in :ref:`reference-doc` to see what's new.
 * Add sparse matrix-vector multiplication and linear system solving code,
   in :mod:`pycuda.sparse`.
 * Add :func:`pycuda.gpuarray.if_positive`, :func:`pycuda.gpuarray.maximum`,
@@ -36,6 +37,10 @@ Version 0.94
   (requested by Dan Lepage)
 * Add preliminary support for complex numbers.
   (initial discussion with Daniel Fan)
+* Add 
+  :attr:`pycuda.gpuarray.GPUArray.real`,
+  :attr:`pycuda.gpuarray.GPUArray.imag`,
+  :meth:`pycuda.gpuarray.GPUArray.conj`.
 
 Version 0.93
 ------------
