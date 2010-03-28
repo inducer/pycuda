@@ -373,7 +373,7 @@ def dtype_to_ctype(dtype, with_fp_tex_hack=False):
             return "double"
     elif dtype == numpy.complex64:
         return "pycuda::complex<float>"
-    elif dtype == numpy.float64:
+    elif dtype == numpy.complex128:
         return "pycuda::complex<double>"
     else:
         raise ValueError, "unable to map dtype '%s'" % dtype

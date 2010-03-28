@@ -478,17 +478,56 @@ class GPUArray(object):
     # complex-valued business -------------------------------------------------
     @property
     def real(self):
-        # FIXME
-        return self
+        dtype = self.dtype
+        if issubclass(dtype.type, numpy.complexfloating):
+            from pytools import match_precision
+            real_dtype = match_precision(numpy.dtype(numpy.float64), dtype)
+
+            result = self._new_like_me(dtype=real_dtype)
+
+            func = elementwise.get_real_kernel(dtype, real_dtype)
+            func.set_block_shape(*self._block)
+            func.prepared_async_call(self._grid, None,
+                    self.gpudata, result.gpudata,
+                    self.mem_size)
+
+            return result
+        else:
+            return self
 
     @property
     def imag(self):
-        # FIXME
-        return zeros_like(self)
+        dtype = self.dtype
+        if issubclass(self.dtype.type, numpy.complexfloating):
+            from pytools import match_precision
+            real_dtype = match_precision(numpy.dtype(numpy.float64), dtype)
+
+            result = self._new_like_me(dtype=real_dtype)
+
+            func = elementwise.get_imag_kernel(dtype, real_dtype)
+            func.set_block_shape(*self._block)
+            func.prepared_async_call(self._grid, None,
+                    self.gpudata, result.gpudata,
+                    self.mem_size)
+
+            return result
+        else:
+            return zeros_like(self)
 
     def conj(self):
-        # FIXME
-        return self
+        dtype = self.dtype
+        if issubclass(self.dtype.type, numpy.complexfloating):
+            result = self._new_like_me()
+
+            func = elementwise.get_conj_kernel(dtype)
+            func.set_block_shape(*self._block)
+            func.prepared_async_call(self._grid, None,
+                    self.gpudata, result.gpudata,
+                    self.mem_size)
+
+            return result
+        else:
+            return self
 
     # rich comparisons (or rather, lack thereof) ------------------------------
     def __eq__(self, other):

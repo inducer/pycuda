@@ -446,6 +446,23 @@ class TestGPUArray:
         assert a2.dtype == numpy.float32
         assert la.norm(a - a2)/la.norm(a) < 1e-7
 
+    @mark_cuda_test
+    def test_complex_bits(self):
+        from pycuda.curandom import rand as curand
+
+        n = 20
+        for tp in [numpy.complex64, numpy.complex128]:
+            dtype = numpy.dtype(tp)
+            from pytools import match_precision
+            real_dtype = match_precision(numpy.dtype(numpy.float64), dtype)
+
+            z = (curand((n,), real_dtype).astype(dtype)
+                    + 1j*curand((n,), real_dtype).astype(dtype))
+
+            assert la.norm(z.get().real - z.real.get()) == 0
+            assert la.norm(z.get().imag - z.imag.get()) == 0
+            assert la.norm(z.get().conj() - z.conj().get()) == 0
+
 
 
 

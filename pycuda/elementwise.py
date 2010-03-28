@@ -372,6 +372,35 @@ def get_reverse_kernel(dtype):
             "reverse")
 
 @context_dependent_memoize
+def get_real_kernel(dtype, real_dtype):
+    return get_elwise_kernel(
+            "%(tp)s *y, %(real_tp)s *z" % {
+                "tp": dtype_to_ctype(dtype),
+                "real_tp": dtype_to_ctype(real_dtype),
+                },
+            "z[i] = real(y[i])",
+            "real")
+
+@context_dependent_memoize
+def get_imag_kernel(dtype, real_dtype):
+    return get_elwise_kernel(
+            "%(tp)s *y, %(real_tp)s *z" % {
+                "tp": dtype_to_ctype(dtype),
+                "real_tp": dtype_to_ctype(real_dtype),
+                },
+            "z[i] = imag(y[i])",
+            "imag")
+
+@context_dependent_memoize
+def get_conj_kernel(dtype):
+    return get_elwise_kernel(
+            "%(tp)s *y, %(tp)s *z" % {
+                "tp": dtype_to_ctype(dtype),
+                },
+            "z[i] = pycuda::conj(y[i])",
+            "conj")
+
+@context_dependent_memoize
 def get_arange_kernel(dtype):
     return get_elwise_kernel(
             "%(tp)s *z, %(tp)s start, %(tp)s step" % {
