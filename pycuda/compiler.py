@@ -146,32 +146,28 @@ def _find_pycuda_include_path():
     from imp import find_module
     file, pathname, descr = find_module("pycuda")
 
+    # Who knew Python installation is so uniform and predictable?
     from os.path import join, exists
-    installed_path = join(pathname, "..", "include", "pycuda")
-    development_path = join(pathname, "..", "src", "cuda")
-    development_path2 = join(pathname, "..", "..", "..", "src", "cuda")
+    possible_include_paths = [
+            join(pathname, "..", "include", "pycuda"),
+            join(pathname, "..", "src", "cuda"),
+            join(pathname, "..", "..", "..", "src", "cuda"),
+            join(pathname, "..", "..", "..", "..", "include", "pycuda")
+            ]
 
     import sys
-    usr_path = "/usr/include/pycuda"
-    usr_local_path = "/usr/local/include/pycuda"
-    prefix_path = join(sys.prefix, "include" , "pycuda")
+    if sys.platform == "linux2":
+        possible_include_paths.extend([
+            join(sys.prefix, "include" , "pycuda"),
+            "/usr/include/pycuda",
+            "/usr/local/include/pycuda"
+            ])
 
-    if exists(installed_path):
-        return installed_path
-    elif exists(development_path):
-        return development_path
-    elif exists(development_path2):
-        return development_path2
-    else:
-        if sys.platform == "linux2":
-            if exists(prefix_path):
-                return prefix_path
-            elif exists(usr_path):
-                return usr_path
-            elif exists(usr_local_path):
-                return usr_local_path
+    for inc_path in possible_include_paths:
+        if exists(inc_path):
+            return inc_path
 
-        raise RuntimeError("could not find path to PyCUDA's C header files")
+    raise RuntimeError("could not find path to PyCUDA's C header files")
 
 
 
