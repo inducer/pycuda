@@ -86,7 +86,9 @@ def compile_plain(source, options, keep, nvcc, cache_dir):
         stderr = None
 
     else:
-        result, stdout, stderr = call_capture_output(cmdline, cwd=file_dir)
+        result, stdout, stderr = call_capture_output(
+                cmdline, cwd=file_dir,
+                error_on_nonzero=False)
 
     try:
         cubin_f = open(join(file_dir, file_root + ".cubin"), "rb")
