@@ -451,6 +451,6 @@ Here's a usage example::
 Fast Fourier Transforms
 -----------------------
 
-Bogdan Opanchuk's `pycudafft <http://pypi.python.org/pypi/pycudafft>`_ offers a
+Bogdan Opanchuk's `pyfft <http://pypi.python.org/pypi/pyfft>`_ offers a
 variety of GPU-based FFT implementations designed to work with
 :class:`pycuda.gpuarray.GPUArray` objects.
