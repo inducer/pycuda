@@ -210,7 +210,6 @@ __device__ complex<float> log(const complex<float>& z)
 __device__ complex<double> log(const complex<double>& z)
 { return logT(z); }
 
-#if 0
 //----------------------------------------------------------------------
 // pow
 template <class _Tp>
@@ -223,6 +222,7 @@ static complex<_Tp> powT(const _Tp& a, const complex<_Tp>& b) {
   return complex<_Tp>(x * ::cos(y), x * ::sin(y));
 }
 
+#if 0
 template <class _Tp>
 __device__
 static complex<_Tp> powT(const complex<_Tp>& z_in, int n) {
@@ -233,6 +233,7 @@ static complex<_Tp> powT(const complex<_Tp>& z_in, int n) {
   else
     return z;
 }
+#endif
 
 template <class _Tp>
 __device__
@@ -259,8 +260,10 @@ static complex<_Tp> powT(const complex<_Tp>& a, const complex<_Tp>& b) {
 __device__ complex<float> pow(const float& a, const complex<float>& b)
 { return powT(a, b); }
 
+/*
 __device__ complex<float> pow(const complex<float>& z_in, int n)
 { return powT(z_in, n); }
+*/
 
 __device__ complex<float> pow(const complex<float>& a, const float& b)
 { return powT(a, b); }
@@ -271,8 +274,10 @@ __device__ complex<float> pow(const complex<float>& a, const complex<float>& b)
 __device__ complex<double> pow(const double& a, const complex<double>& b)
 { return powT(a, b); }
 
+/*
 __device__ complex<double> pow(const complex<double>& z_in, int n)
 { return powT(z_in, n); }
+*/
 
 __device__ complex<double> pow(const complex<double>& a, const double& b)
 { return powT(a, b); }
@@ -280,7 +285,120 @@ __device__ complex<double> pow(const complex<double>& a, const double& b)
 __device__ complex<double> pow(const complex<double>& a, const complex<double>& b)
 { return powT(a, b); }
 
+// ----------------------------------------------------------------------------
+// trig helpers
+
+#ifndef FLT_MAX
+#define FLT_MAX 3.402823466E+38F
 #endif
+
+#ifndef DBL_MAX
+#define DBL_MAX 179769313486231570814527423731704356798070567525844996598917476803157260780028538760589558632766878171540458953514382464234321326889464182768467546703537516986049910576551282076245490090389328944075868508455133942304583236903222948165808559332123348274797826204144723168738177180919299881250404026184124858368.0
+#endif
+
+#define float_limit ::log(FLT_MAX)
+#define double_limit ::log(DBL_MAX)
+
+//----------------------------------------------------------------------
+// sin
+template <class _Tp>
+__device__ complex<_Tp> sinT(const complex<_Tp>& z) {
+  return complex<_Tp>(::sin(z._M_re) * ::cosh(z._M_im),
+                      ::cos(z._M_re) * ::sinh(z._M_im));
+}
+
+__device__ complex<float> sin(const complex<float>& z)
+{ return sinT(z); }
+
+__device__ complex<double> sin(const complex<double>& z)
+{ return sinT(z); }
+
+//----------------------------------------------------------------------
+// cos
+template <class _Tp>
+__device__ complex<_Tp> cosT(const complex<_Tp>& z) {
+  return complex<_Tp>(::cos(z._M_re) * ::cosh(z._M_im),
+                     -::sin(z._M_re) * ::sinh(z._M_im));
+}
+
+__device__ complex<float> cos(const complex<float>& z)
+{ return cosT(z); }
+
+__device__ complex<double> cos(const complex<double>& z)
+{ return cosT(z); }
+
+
+//----------------------------------------------------------------------
+// tan
+template <class _Tp>
+__device__ complex<_Tp> tanT(const complex<_Tp>& z, const _Tp& Tp_limit) {
+  _Tp re2 = 2.f * z._M_re;
+  _Tp im2 = 2.f * z._M_im;
+
+  if (::abs(im2) > Tp_limit)
+    return complex<_Tp>(0.f, (im2 > 0 ? 1.f : -1.f));
+  else {
+    _Tp den = ::cos(re2) + ::cosh(im2);
+    return complex<_Tp>(::sin(re2) / den, ::sinh(im2) / den);
+  }
+}
+
+__device__ complex<float> tan(const complex<float>& z)
+{ return tanT(z, float_limit); }
+
+__device__ complex<double> tan(const complex<double>& z)
+{ return tanT(z, double_limit); }
+
+
+//----------------------------------------------------------------------
+// sinh
+template <class _Tp>
+__device__ complex<_Tp> sinhT(const complex<_Tp>& z) {
+  return complex<_Tp>(::sinh(z._M_re) * ::cos(z._M_im),
+                      ::cosh(z._M_re) * ::sin(z._M_im));
+}
+
+__device__ complex<float> sinh(const complex<float>& z)
+{ return sinhT(z); }
+
+__device__ complex<double> sinh(const complex<double>& z)
+{ return sinhT(z); }
+
+
+//----------------------------------------------------------------------
+// cosh
+template <class _Tp>
+__device__ complex<_Tp> coshT(const complex<_Tp>& z) {
+  return complex<_Tp>(::cosh(z._M_re) * ::cos(z._M_im),
+                      ::sinh(z._M_re) * ::sin(z._M_im));
+}
+
+__device__ complex<float> cosh(const complex<float>& z)
+{ return coshT(z); }
+
+__device__ complex<double> cosh(const complex<double>& z)
+{ return coshT(z); }
+
+
+//----------------------------------------------------------------------
+// tanh
+template <class _Tp>
+__device__ complex<_Tp> tanhT(const complex<_Tp>& z, const _Tp& Tp_limit) {
+  _Tp re2 = 2.f * z._M_re;
+  _Tp im2 = 2.f * z._M_im;
+  if (::abs(re2) > Tp_limit)
+    return complex<_Tp>((re2 > 0 ? 1.f : -1.f), 0.f);
+  else {
+    _Tp den = ::cosh(re2) + ::cos(im2);
+    return complex<_Tp>(::sinh(re2) / den, ::sin(im2) / den);
+  }
+}
+
+__device__ complex<float> tanh(const complex<float>& z)
+{ return tanhT(z, float_limit); }
+
+__device__ complex<double> tanh(const complex<double>& z)
+{ return tanhT(z, double_limit); }
 
 }
 }
