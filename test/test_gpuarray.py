@@ -14,11 +14,17 @@ def have_pycuda():
     except:
         return False
 
-
 if have_pycuda():
     import pycuda.gpuarray as gpuarray
     import pycuda.driver as drv
     from pycuda.compiler import SourceModule
+
+
+
+
+def has_double_support():
+    from pycuda.driver import Context
+    return Context.get_device().compute_capability >= (1,3)
 
 
 
@@ -211,7 +217,13 @@ class TestGPUArray:
     @mark_cuda_test
     def test_random(self):
         from pycuda.curandom import rand as curand
-        for dtype in [numpy.float32, numpy.float64]:
+
+        if has_double_support():
+            dtypes = [numpy.float32, numpy.float64]
+        else:
+            dtypes = [numpy.float32]
+
+        for dtype in dtypes:
             a = curand((10, 100), dtype=dtype).get()
 
             assert (0 <= a).all()
@@ -317,8 +329,13 @@ class TestGPUArray:
     def test_minmax(self):
         from pycuda.curandom import rand as curand
 
+        if has_double_support():
+            dtypes = [numpy.float64, numpy.float32, numpy.int32]
+        else:
+            dtypes = [numpy.float32, numpy.int32]
+
         for what in ["min", "max"]:
-            for dtype in [numpy.float64, numpy.float32, numpy.int32]:
+            for dtype in dtypes:
                 a_gpu = curand((200000,), dtype)
                 a = a_gpu.get()
 
@@ -335,7 +352,12 @@ class TestGPUArray:
         gran = 5
         l_m = l_a - l_a // gran + 1
 
-        for dtype in [numpy.float64, numpy.float32, numpy.int32]:
+        if has_double_support():
+            dtypes = [numpy.float64, numpy.float32, numpy.int32]
+        else:
+            dtypes = [numpy.float32, numpy.int32]
+
+        for dtype in dtypes:
             a_gpu = curand((l_a,), dtype)
             a = a_gpu.get()
 
@@ -430,6 +452,9 @@ class TestGPUArray:
     def test_astype(self):
         from pycuda.curandom import rand as curand
 
+        if not has_double_support():
+            return
+
         a_gpu = curand((2000,), dtype=numpy.float32)
 
         a = a_gpu.get().astype(numpy.float64)
@@ -450,8 +475,13 @@ class TestGPUArray:
     def test_complex_bits(self):
         from pycuda.curandom import rand as curand
 
+        if has_double_support():
+            dtypes = [numpy.complex64, numpy.complex128]
+        else:
+            dtypes = [numpy.complex64]
+
         n = 20
-        for tp in [numpy.complex64, numpy.complex128]:
+        for tp in dtypes:
             dtype = numpy.dtype(tp)
             from pytools import match_precision
             real_dtype = match_precision(numpy.dtype(numpy.float64), dtype)
@@ -462,8 +492,6 @@ class TestGPUArray:
             assert la.norm(z.get().real - z.real.get()) == 0
             assert la.norm(z.get().imag - z.imag.get()) == 0
             assert la.norm(z.get().conj() - z.conj().get()) == 0
-
-
 
 
 if __name__ == "__main__":
