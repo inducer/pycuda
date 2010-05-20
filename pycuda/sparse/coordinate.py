@@ -166,16 +166,17 @@ class CoordinateSpMV:
         max_blocks = 4*max_threads // self.block_size
         warps_per_block = self.block_size // dev.warp_size
 
-        def divide_into(x, y):
-            return (x+y-1)//y
+        if self.nnz:
+            def divide_into(x, y):
+                return (x+y-1)//y
 
-        num_units  = self.nnz // dev.warp_size
-        num_warps  = min(num_units, warps_per_block * max_blocks)
-        self.num_blocks = divide_into(num_warps, warps_per_block)
-        num_iters  = divide_into(num_units, num_warps)
+            num_units  = self.nnz // dev.warp_size
+            num_warps  = min(num_units, warps_per_block * max_blocks)
+            self.num_blocks = divide_into(num_warps, warps_per_block)
+            num_iters  = divide_into(num_units, num_warps)
 
-        self.interval_size = dev.warp_size * num_iters
-        self.tail = num_units * dev.warp_size
+            self.interval_size = dev.warp_size * num_iters
+            self.tail = num_units * dev.warp_size
 
 
     @memoize_method
