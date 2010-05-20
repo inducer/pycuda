@@ -65,6 +65,33 @@ class CGStateContainer:
 
         return out
 
+    @memoize_method
+    def guarded_div_kernel(self, dtype_x, dtype_y, dtype_z):
+        from pycuda.elementwise import get_elwise_kernel
+        from pycuda.tools import dtype_to_ctype
+        return get_elwise_kernel(
+                "%(tp_x)s *x, %(tp_y)s *y, %(tp_z)s *z" % {
+                    "tp_x": dtype_to_ctype(dtype_x),
+                    "tp_y": dtype_to_ctype(dtype_y),
+                    "tp_z": dtype_to_ctype(dtype_z),
+                    },
+                "z[i] = y[i] == 0 ? 0 : (x[i] / y[i])",
+                "divide")
+
+    def guarded_div(self, a, b):
+        from pycuda.gpuarray import _get_common_dtype
+        result = a._new_like_me(_get_common_dtype(a, b))
+
+        assert a.shape == b.shape
+
+        func = self.guarded_div_kernel(a.dtype, b.dtype, result.dtype)
+        func.set_block_shape(*a._block)
+        func.prepared_async_call(a._grid, None,
+                a.gpudata, b.gpudata,
+                result.gpudata, a.mem_size)
+
+        return result
+
     def reset(self, rhs, x=None):
         self.rhs = rhs
 
@@ -90,7 +117,7 @@ class CGStateContainer:
 
         q = self.operator(self.d)
         myip = gpuarray.dot(self.d, q)
-        alpha = self.delta / myip
+        alpha = self.guarded_div(self.delta, myip)
 
         self.lc2(1, self.x, alpha, self.d, out=self.x)
 
@@ -105,7 +132,7 @@ class CGStateContainer:
         delta = AsyncInnerProduct(self.residual, s,
                 self.pagelocked_allocator)
         self.delta = delta.gpu_result
-        beta = self.delta / delta_old;
+        beta = self.guarded_div(self.delta, delta_old)
 
         self.lc2(1, s, beta, self.d, out=self.d)
 
