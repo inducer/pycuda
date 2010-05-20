@@ -463,7 +463,13 @@ BOOST_PYTHON_MODULE(_driver)
 #if CUDA_VERSION >= 3000
   {
     py::class_<array3d_flags> cls("array3d_flags", py::no_init);
+    // deprecated
     cls.attr("ARRAY3D_2DARRAY") = CUDA_ARRAY3D_2DARRAY;
+
+    cls.attr("2DARRAY") = CUDA_ARRAY3D_2DARRAY;
+#if CUDA_VERSION >= 3010
+    cls.attr("SURFACE_LDST") = CUDA_ARRAY3D_SURFACE_LDST;
+#endif
   }
 #endif
 
@@ -604,6 +610,14 @@ BOOST_PYTHON_MODULE(_driver)
   }
 #endif
 
+#if CUDA_VERSION >= 3010
+  py::enum_<CUlimit>("limit")
+    .value("STACK_SIZE", CU_LIMIT_STACK_SIZE)
+    .value("PRINTF_FIFO_SIZE", CU_LIMIT_PRINTF_FIFO_SIZE)
+    ;
+#endif
+
+
   // graphics enums -----------------------------------------------------------
 #if CUDA_VERSION >= 3000
   py::enum_<CUgraphicsRegisterFlags>("graphics_register_flags")
@@ -625,7 +639,6 @@ BOOST_PYTHON_MODULE(_driver)
     .value("NEGATIVE_Z", CU_CUBEMAP_FACE_NEGATIVE_Z)
     ;
 #endif
-
 
   py::def("init", init,
       py::arg("flags")=0);
@@ -670,6 +683,13 @@ BOOST_PYTHON_MODULE(_driver)
 
       .def("get_current", (boost::shared_ptr<cl> (*)()) &cl::current_context)
       .staticmethod("get_current")
+
+#if CUDA_VERSION >= 3010
+      .DEF_SIMPLE_METHOD(set_limit)
+      .staticmethod("set_limit")
+      .DEF_SIMPLE_METHOD(get_limit)
+      .staticmethod("get_limit")
+#endif
       ;
   }
 
@@ -691,6 +711,11 @@ BOOST_PYTHON_MODULE(_driver)
       .def("get_texref", module_get_texref, 
           (py::args("self", "name")),
           py::return_value_policy<py::manage_new_object>())
+#if CUDA_VERSION >= 3010
+      .def("get_surfref", module_get_surfref, 
+          (py::args("self", "name")),
+          py::return_value_policy<py::manage_new_object>())
+#endif
       ;
   }
 
@@ -942,6 +967,17 @@ BOOST_PYTHON_MODULE(_driver)
       .DEF_SIMPLE_METHOD(get_flags)
       ;
   }
+
+#if CUDA_VERSION >= 3010
+  {
+    typedef surface_reference cl;
+    py::class_<cl, boost::noncopyable>("SurfaceReference", py::no_init)
+      .DEF_SIMPLE_METHOD(set_array)
+      .def("get_array", &cl::get_array,
+          py::return_value_policy<py::manage_new_object>())
+      ;
+  }
+#endif
 
   py::scope().attr("TRSA_OVERRIDE_FORMAT") = CU_TRSA_OVERRIDE_FORMAT;
   py::scope().attr("TRSF_READ_AS_INTEGER") = CU_TRSF_READ_AS_INTEGER;

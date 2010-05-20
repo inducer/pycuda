@@ -11,7 +11,7 @@ Version Queries
 
 .. data:: VERSION
 
-    Gives the numeric version of PyCUDA as a variable-length tuple 
+    Gives the numeric version of PyCUDA as a variable-length tuple
     of integers. Enables easy version checks such as
     *VERSION >= (0, 93)*.
 
@@ -261,9 +261,15 @@ Constants
 
 .. class:: array3d_flags
 
-    .. attribute ARRAY3D_2DARRAY
+    .. attribute 2DARRAY
 
         CUDA 3.0 and above
+
+        .. versionadded:: 0.94
+
+    .. attribute SURFACE_LDST
+
+        CUDA 3.1 and above
 
         .. versionadded:: 0.94
 
@@ -336,6 +342,17 @@ Constants
     .. attribute:: PORTABLE
     .. attribute:: DEVICEMAP
     .. attribute:: WRITECOMBINED
+
+.. class:: limit
+
+    Limit values for :meth:`Context.get_limit` and :meth:`Context.set_limit`.
+
+    CUDA 3.1 and newer.
+
+    .. versionadded:: 0.94
+
+    .. attribute:: STACK_SIZE
+    .. attribute:: PRINTF_FIFO_SIZE
 
 Devices and Contexts
 --------------------
@@ -431,6 +448,22 @@ Devices and Contexts
     .. staticmethod:: synchronize()
 
         Wait for all activity in the current context to cease, then return.
+
+    .. staticmethod:: set_limit(limit, value)
+
+        See :class:`limit` for possible values of *limit*.
+
+        CUDA 3.1 and above.
+
+        .. versionadded:: 0.94
+
+    .. staticmethod:: get_limit(limit)
+
+        See :class:`limit` for possible values of *limit*.
+
+        CUDA 3.1 and above.
+
+        .. versionadded:: 0.94
 
 Concurrency and Streams
 -----------------------
@@ -656,6 +689,33 @@ Arrays and Textures
         Return a :class:`ArrayDescriptor3D` object for this 3D array,
         like the one that was used to create it.  CUDA 2.0 and above only.
 
+.. class:: SurfaceReference()
+
+    .. note::
+
+        Instances of this class can only be constructed through
+        :meth:`Module.get_surfref`.
+
+    CUDA 3.1 and above.
+
+    .. versionadded:: 0.94
+
+    .. method:: set_array(array)
+
+        Bind *self* to the :class:`Array` *array*.
+
+        As long as *array* remains bound to this texture reference, it will not be
+        freed--the texture reference keeps a reference to the array.
+
+    .. method:: get_array()
+
+        Get back the :class:`Array` to which *self* is bound.
+
+        .. note::
+
+            This will be a different object than the one passed to
+            :meth:`set_array`, but it will compare equal.
+
 .. class:: TextureReference()
 
     A handle to a binding of either linear memory or an :class:`Array` to
@@ -705,6 +765,11 @@ Arrays and Textures
     .. method:: get_array()
 
         Get back the :class:`Array` to which *self* is bound.
+
+        .. note::
+
+            This will be a different object than the one passed to
+            :meth:`set_array`, but it will compare equal.
 
     .. method:: get_address_mode(dim)
     .. method:: get_filter_mode()
@@ -946,6 +1011,14 @@ Code on the Device: Modules and Functions
     .. method:: get_texref(name)
 
         Return the :class:`TextureReference` *name* from this module.
+
+    .. method:: get_surfref(name)
+
+        Return the :class:`SurfaceReference` *name* from this module.
+
+        CUDA 3.1 and above.
+
+        .. versionadded:: 0.94
 
 .. function:: module_from_file(filename)
 
@@ -1211,7 +1284,7 @@ Just-in-time Compilation
         no_extern_c=False, arch=None, code=None, cache_dir=None,
         include_dirs=[])
 
-    Perform the same compilation as the corresponding 
+    Perform the same compilation as the corresponding
     :class:`SourceModule` constructor, but only return
     resulting *cubin* file as a string. In particular,
     do not upload the code to the GPU.

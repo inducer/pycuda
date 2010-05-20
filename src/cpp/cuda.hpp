@@ -202,9 +202,18 @@ namespace cuda
           case CUDA_ERROR_ECC_UNCORRECTABLE: return "ECC uncorrectable";
 #endif
 #endif
+#if CUDA_VERSION >= 3010
+          case CUDA_ERROR_UNSUPPORTED_LIMIT: return "unsupported limit";
+#endif
 
           case CUDA_ERROR_INVALID_SOURCE: return "invalid source";
           case CUDA_ERROR_FILE_NOT_FOUND: return "file not found";
+#if CUDA_VERSION >= 3010
+          case CUDA_ERROR_SHARED_OBJECT_SYMBOL_NOT_FOUND: 
+            return "shared object symbol not found";
+          case CUDA_ERROR_SHARED_OBJECT_INIT_FAILED:
+            return "shared object init failed";
+#endif
 
           case CUDA_ERROR_INVALID_HANDLE: return "invalid handle";
 
@@ -218,8 +227,10 @@ namespace cuda
           case CUDA_ERROR_LAUNCH_INCOMPATIBLE_TEXTURING: return "launch incompatible texturing";
 
 #if CUDA_VERSION >= 3000
-          case CUDA_ERROR_POINTER_IS_64BIT: return "pointer is 64-bit";
-          case CUDA_ERROR_SIZE_IS_64BIT: return "size is 64-bit";
+          case CUDA_ERROR_POINTER_IS_64BIT: 
+             return "attempted to retrieve 64-bit pointer via 32-bit api function";
+          case CUDA_ERROR_SIZE_IS_64BIT: 
+             return "attempted to retrieve 64-bit size via 32-bit api function";
 #endif
 
           case CUDA_ERROR_UNKNOWN: return "unknown";
@@ -557,6 +568,20 @@ namespace cuda
           context_stack::get().pop();
         }
       }
+
+#if CUDA_VERSION >= 3010
+      static void set_limit(CUlimit limit, size_t value)
+      {
+        CUDAPP_CALL_GUARDED(cuCtxSetLimit, (limit, value));
+      }
+
+      static size_t get_limit(CUlimit limit)
+      {
+        size_t value;
+        CUDAPP_CALL_GUARDED(cuCtxGetLimit, (&value, limit));
+        return value;
+      }
+#endif
 
       friend class device;
       friend void context_push(boost::shared_ptr<context> ctx);
@@ -927,6 +952,48 @@ namespace cuda
 
 
 
+#if CUDA_VERSION >= 3010
+  // surface reference --------------------------------------------------------
+  class module;
+
+  class surface_reference : public  boost::noncopyable
+  {
+    private:
+      CUsurfref m_surfref;
+
+      // life support for array and module
+      boost::shared_ptr<array> m_array;
+      boost::shared_ptr<module> m_module;
+
+    public:
+      surface_reference(CUsurfref sr)
+        : m_surfref(sr)
+      { }
+
+      void set_module(boost::shared_ptr<module> mod)
+      { m_module = mod; }
+
+      CUsurfref handle() const
+      { return m_surfref; }
+
+      void set_array(boost::shared_ptr<array> ary, unsigned int flags)
+      { 
+        CUDAPP_CALL_GUARDED(cuSurfRefSetArray, (m_surfref, ary->handle(), flags)); 
+        m_array = ary;
+      }
+
+      array *get_array()
+      {
+        CUarray result;
+        CUDAPP_CALL_GUARDED(cuSurfRefGetArray, (&result, m_surfref));
+        return new array(result, false);
+      }
+  };
+#endif
+
+
+
+
   // module -------------------------------------------------------------------
   class function;
 
@@ -972,7 +1039,8 @@ namespace cuda
   }
 
   inline
-  texture_reference *module_get_texref(boost::shared_ptr<module> mod, const char *name)
+  texture_reference *module_get_texref(
+      boost::shared_ptr<module> mod, const char *name)
   {
     CUtexref tr;
     CUDAPP_CALL_GUARDED(cuModuleGetTexRef, (&tr, mod->handle(), name));
@@ -981,6 +1049,20 @@ namespace cuda
     result->set_module(mod);
     return result.release();
   }
+
+#if CUDA_VERSION >= 3010
+  inline
+  surface_reference *module_get_surfref(
+      boost::shared_ptr<module> mod, const char *name)
+  {
+    CUsurfref sr;
+    CUDAPP_CALL_GUARDED(cuModuleGetSurfRef, (&sr, mod->handle(), name));
+    std::auto_ptr<surface_reference> result(
+        new surface_reference(sr));
+    result->set_module(mod);
+    return result.release();
+  }
+#endif
 
 
 
