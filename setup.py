@@ -297,7 +297,8 @@ def main():
 
             install_requires=[
                 "pytools>=8",
-                "py>=1.0.0b7"
+                "py>=1.0.0b7",
+                "decorator>=3.2.0"
                 ],
 
             ext_package="pycuda",

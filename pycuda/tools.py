@@ -28,7 +28,8 @@ OTHER DEALINGS IN THE SOFTWARE.
 """
 
 import pycuda.driver as cuda
-from pytools import memoize, decorator
+from pytools import memoize
+from decorator import decorator
 import pycuda._driver as _drv
 import numpy
 
