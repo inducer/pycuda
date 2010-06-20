@@ -576,6 +576,18 @@ Global Device Memory
         becomes unreachable. Any further use of the object is an error
         and will lead to undefined behavior.
 
+.. class:: PointerHolderBase
+
+    A base class that facilitates casting to pointers within PyCUDA.
+    This allows the user to construct custom pointer types that may
+    have been allocated by facilities outside of PyCUDA proper, but 
+    still need to be objects to facilitate RAII. The user needs to
+    supply one method to facilitate the pointer cast:
+
+    .. method:: get_pointer()
+
+        Return the pointer encapsulated by *self*.
+
 .. _pagelocked_memory :
 
 Pagelocked Host Memory

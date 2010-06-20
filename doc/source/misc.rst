@@ -44,6 +44,7 @@ Version 0.94
   :attr:`pycuda.gpuarray.GPUArray.real`,
   :attr:`pycuda.gpuarray.GPUArray.imag`,
   :meth:`pycuda.gpuarray.GPUArray.conj`.
+* Add :class:`pycuda.driver.PointerHolderBase`.
 
 Version 0.93
 ------------

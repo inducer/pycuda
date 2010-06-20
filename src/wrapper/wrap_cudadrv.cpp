@@ -384,6 +384,35 @@ namespace
     CUDAPP_CALL_GUARDED(cuMemcpyAtoH, (buf, ary.handle(), index, len));
   }
 
+
+
+
+  // A class the user can override to make device_allocation-
+  // workalikes.
+
+  class pointer_holder_base
+  {
+    public:
+      virtual ~pointer_holder_base() { }
+      virtual CUdeviceptr get_pointer() = 0;
+      operator CUdeviceptr()
+      { return get_pointer(); }
+  };
+
+  class pointer_holder_base_wrap 
+    : public pointer_holder_base, 
+    public py::wrapper<pointer_holder_base>
+  {
+    public:
+      CUdeviceptr get_pointer()
+      {
+        return this->get_override("get_pointer")();
+      }
+  };
+
+
+
+
   bool have_gl_ext()
   {
 #ifdef HAVE_GL
@@ -760,6 +789,16 @@ BOOST_PYTHON_MODULE(_driver)
       ;
 
     py::implicitly_convertible<device_allocation, CUdeviceptr>();
+  }
+
+  {
+    typedef pointer_holder_base cl;
+    py::class_<pointer_holder_base_wrap, boost::noncopyable>(
+        "PointerHolderBase")
+      .def("get_pointer", py::pure_virtual(&cl::get_pointer))
+      ;
+
+    py::implicitly_convertible<pointer_holder_base, CUdeviceptr>();
   }
 
   {
