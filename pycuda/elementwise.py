@@ -519,3 +519,72 @@ def get_if_positive_kernel(crit_dtype, dtype):
             ],
             "result[i] = crit[i] > 0 ? then_[i] : else_[i]",
             "if_positive")
+
+
+
+@context_dependent_memoize
+def get_eq_kernel(dtype_x, dtype_y, dtype_z):
+    return get_elwise_kernel(
+            "%(tp_x)s *x, %(tp_y)s *y, %(tp_z)s *z" % {
+                "tp_x": dtype_to_ctype(dtype_x),
+                "tp_y": dtype_to_ctype(dtype_y),
+                "tp_z": dtype_to_ctype(dtype_z),
+                },
+            "z[i] = x[i] == y[i]",
+            "eq")        
+
+
+@context_dependent_memoize
+def get_ne_kernel(dtype_x, dtype_y, dtype_z):
+    return get_elwise_kernel(
+            "%(tp_x)s *x, %(tp_y)s *y, %(tp_z)s *z" % {
+                "tp_x": dtype_to_ctype(dtype_x),
+                "tp_y": dtype_to_ctype(dtype_y),
+                "tp_z": dtype_to_ctype(dtype_z),
+                },
+            "z[i] = x[i] != y[i]",
+            "ne")      
+
+@context_dependent_memoize
+def get_le_kernel(dtype_x, dtype_y, dtype_z):
+    return get_elwise_kernel(
+            "%(tp_x)s *x, %(tp_y)s *y, %(tp_z)s *z" % {
+                "tp_x": dtype_to_ctype(dtype_x),
+                "tp_y": dtype_to_ctype(dtype_y),
+                "tp_z": dtype_to_ctype(dtype_z),
+                },
+            "z[i] = x[i] <= y[i]",
+            "lt")          
+
+@context_dependent_memoize
+def get_ge_kernel(dtype_x, dtype_y, dtype_z):
+    return get_elwise_kernel(
+            "%(tp_x)s *x, %(tp_y)s *y, %(tp_z)s *z" % {
+                "tp_x": dtype_to_ctype(dtype_x),
+                "tp_y": dtype_to_ctype(dtype_y),
+                "tp_z": dtype_to_ctype(dtype_z),
+                },
+            "z[i] = x[i] >= y[i]",
+            "lt") 
+
+@context_dependent_memoize
+def get_lt_kernel(dtype_x, dtype_y, dtype_z):
+    return get_elwise_kernel(
+            "%(tp_x)s *x, %(tp_y)s *y, %(tp_z)s *z" % {
+                "tp_x": dtype_to_ctype(dtype_x),
+                "tp_y": dtype_to_ctype(dtype_y),
+                "tp_z": dtype_to_ctype(dtype_z),
+                },
+            "z[i] = x[i] < y[i]",
+            "lt")           
+
+@context_dependent_memoize
+def get_gt_kernel(dtype_x, dtype_y, dtype_z):
+    return get_elwise_kernel(
+            "%(tp_x)s *x, %(tp_y)s *y, %(tp_z)s *z" % {
+                "tp_x": dtype_to_ctype(dtype_x),
+                "tp_y": dtype_to_ctype(dtype_y),
+                "tp_z": dtype_to_ctype(dtype_z),
+                },
+            "z[i] = x[i] > y[i]",
+            "gt")       

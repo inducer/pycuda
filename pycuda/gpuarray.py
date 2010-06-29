@@ -529,24 +529,84 @@ class GPUArray(object):
         else:
             return self
 
-    # rich comparisons (or rather, lack thereof) ------------------------------
+    # rich comparisons 
     def __eq__(self, other):
-        raise NotImplementedError
+        """Return self == other"""
+
+        result = self._new_like_me()
+
+        func = elementwise.get_eq_kernel(self.dtype, other.dtype, result.dtype)
+        func.set_block_shape(*self._block)
+        func.prepared_async_call(self._grid, None,
+                self.gpudata, other.gpudata, result.gpudata,
+                self.mem_size)
+
+        return result        
 
     def __ne__(self, other):
-        raise NotImplementedError
+        """Return self != other"""
+
+        result = self._new_like_me()
+
+        func = elementwise.get_ne_kernel(self.dtype, other.dtype, result.dtype)
+        func.set_block_shape(*self._block)
+        func.prepared_async_call(self._grid, None,
+                self.gpudata, other.gpudata, result.gpudata,
+                self.mem_size)
+
+        return result     
 
     def __le__(self, other):
-        raise NotImplementedError
+        """Return self <= other"""
+
+        result = self._new_like_me()
+
+        func = elementwise.get_le_kernel(self.dtype, other.dtype, result.dtype)
+        func.set_block_shape(*self._block)
+        func.prepared_async_call(self._grid, None,
+                self.gpudata, other.gpudata, result.gpudata,
+                self.mem_size)
+
+        return result
 
     def __ge__(self, other):
-        raise NotImplementedError
+        """Return self >= other"""
 
+        result = self._new_like_me()
+
+        func = elementwise.get_ge_kernel(self.dtype, other.dtype, result.dtype)
+        func.set_block_shape(*self._block)
+        func.prepared_async_call(self._grid, None,
+                self.gpudata, other.gpudata, result.gpudata,
+                self.mem_size)
+
+        return result
+    
     def __lt__(self, other):
-        raise NotImplementedError
+        """Return self < other"""
+
+        result = self._new_like_me()
+
+        func = elementwise.get_lt_kernel(self.dtype, other.dtype, result.dtype)
+        func.set_block_shape(*self._block)
+        func.prepared_async_call(self._grid, None,
+                self.gpudata, other.gpudata, result.gpudata,
+                self.mem_size)
+
+        return result
 
     def __gt__(self, other):
-        raise NotImplementedError
+        """Return self > other"""
+
+        result = self._new_like_me()
+
+        func = elementwise.get_gt_kernel(self.dtype, other.dtype, result.dtype)
+        func.set_block_shape(*self._block)
+        func.prepared_async_call(self._grid, None,
+                self.gpudata, other.gpudata, result.gpudata,
+                self.mem_size)
+
+        return result
 
 
 

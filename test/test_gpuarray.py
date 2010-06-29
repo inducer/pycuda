@@ -230,6 +230,85 @@ class TestGPUArray:
             assert (a < 1).all()
 
 
+    @mark_cuda_test
+    def test_array_gt(self):
+        """Test whether array contents are > the other array's
+        contents"""
+
+        a = numpy.array([5,10]).astype(numpy.float32)
+        a_gpu = gpuarray.to_gpu(a)
+        b = numpy.array([2,10]).astype(numpy.float32)
+        b_gpu = gpuarray.to_gpu(b)
+        result = (a_gpu > b_gpu).get()
+        assert result[0] == True
+        assert result[1] == False
+
+    @mark_cuda_test
+    def test_array_lt(self):
+        """Test whether array contents are < the other array's
+        contents"""
+
+        a = numpy.array([5,10]).astype(numpy.float32)
+        a_gpu = gpuarray.to_gpu(a)
+        b = numpy.array([2,10]).astype(numpy.float32)
+        b_gpu = gpuarray.to_gpu(b)
+        result = (b_gpu < a_gpu).get()
+        assert result[0] == True
+        assert result[1] == False
+
+    @mark_cuda_test
+    def test_array_le(self):
+        """Test whether array contents are <= the other array's
+        contents"""
+
+        a = numpy.array([5,10, 1]).astype(numpy.float32)
+        a_gpu = gpuarray.to_gpu(a)
+        b = numpy.array([2,10, 2]).astype(numpy.float32)
+        b_gpu = gpuarray.to_gpu(b)
+        result = (b_gpu <= a_gpu).get()
+        assert result[0] == True
+        assert result[1] == True
+        assert result[2] == False
+
+    @mark_cuda_test
+    def test_array_ge(self):
+        """Test whether array contents are >= the other array's
+        contents"""
+
+        a = numpy.array([5,10,1]).astype(numpy.float32)
+        a_gpu = gpuarray.to_gpu(a)
+        b = numpy.array([2,10,2]).astype(numpy.float32)
+        b_gpu = gpuarray.to_gpu(b)
+        result = (a_gpu >= b_gpu).get()
+        assert result[0] == True
+        assert result[1] == True
+        assert result[2] == False
+
+    @mark_cuda_test
+    def test_array_eq(self):
+        """Test whether array contents are == the other array's
+        contents"""
+
+        a = numpy.array([5,10]).astype(numpy.float32)
+        a_gpu = gpuarray.to_gpu(a)
+        b = numpy.array([2,10]).astype(numpy.float32)
+        b_gpu = gpuarray.to_gpu(b)
+        result = (a_gpu == b_gpu).get()
+        assert result[0] == False
+        assert result[1] == True
+
+    @mark_cuda_test
+    def test_array_ne(self):
+        """Test whether array contents are != the other array's
+        contents"""
+
+        a = numpy.array([5,10]).astype(numpy.float32)
+        a_gpu = gpuarray.to_gpu(a)
+        b = numpy.array([2,10]).astype(numpy.float32)
+        b_gpu = gpuarray.to_gpu(b)
+        result = (a_gpu != b_gpu).get()
+        assert result[0] == True
+        assert result[1] == False
 
 
     @mark_cuda_test
