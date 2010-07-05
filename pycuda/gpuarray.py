@@ -881,18 +881,26 @@ def if_positive(criterion, then_, else_, out=None, stream=None):
 
 
 
-def maximum(a, b, out=None, stream=None):
-    # silly, but functional
-    return if_positive(a.mul_add(1, b, -1, stream=stream), a, b, 
-            stream=stream, out=out)
+def _make_binary_minmax_func(which):
+    def f(a, b, out=None, stream=None):
+        if out is None:
+            out = empty_like(a)
+
+        func = elementwise.get_binary_minmax_kernel(which,
+                a.dtype, b.dtype, out.dtype)
+
+        func.set_block_shape(*a._block)
+        func.prepared_async_call(a._grid, stream,
+                a.gpudata, b.gpudata, out.gpudata, a.size)
+
+        return out
+    return f
 
 
 
 
-def minimum(a, b, out=None, stream=None):
-    # silly, but functional
-    return if_positive(a.mul_add(1, b, -1, stream=stream), b, a, 
-            stream=stream, out=out)
+minimum = _make_binary_minmax_func("min")
+maximum = _make_binary_minmax_func("max")
 
 
 

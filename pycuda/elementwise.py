@@ -354,6 +354,27 @@ def get_rdivide_elwise_kernel(dtype):
             "divide_r")
 
 @context_dependent_memoize
+def get_binary_func_kernel(func, dtype_x, dtype_y, dtype_z):
+    return get_elwise_kernel(
+            "%(tp_x)s *x, %(tp_y)s *y, %(tp_z)s *z" % {
+                "tp_x": dtype_to_ctype(dtype_x),
+                "tp_y": dtype_to_ctype(dtype_y),
+                "tp_z": dtype_to_ctype(dtype_z),
+                },
+            "z[i] = %s(x[i], y[i])" % func,
+            func+"_kernel")
+
+def get_binary_minmax_kernel(func, dtype_x, dtype_y, dtype_z):
+    if not numpy.float64 in [dtype_x, dtype_y]:
+        func = func +"f"
+
+    from pytools import any
+    if any(dt.kind == "f" for dt in [dtype_x, dtype_y, dtype_z]):
+        func = "f"+func
+
+    return get_binary_func_kernel(func, dtype_x, dtype_y, dtype_z)
+
+@context_dependent_memoize
 def get_fill_kernel(dtype):
     return get_elwise_kernel(
             "%(tp)s a, %(tp)s *z" % {
