@@ -28,21 +28,6 @@
 #warning *****************************************************************
 #endif
 
-#if (CUDA_VERSION == 3000)
-#warning *****************************************************************
-#warning **** CUDA 3.0 detected.
-#warning **** (Don't worry, that's not in itself bad.)
-#warning *****************************************************************
-#warning **** PyCUDA assumes that you are using the release (non-beta)
-#warning **** version. 3.0 beta will result in compile errors.
-#warning **** I apologize, but I have no way of checking whether I am
-#warning **** compiling against the beta--Nvidia cleverly changed the
-#warning **** API without bumping the version number.
-#warning **** You may try undefining CUDAPP_POST_30_BETA in
-#warning **** src/cpp/cuda.hpp to get this to work.
-#warning *****************************************************************
-#endif
-
 
 
 
