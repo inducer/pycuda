@@ -1,0 +1,3 @@
+[submodule "bpl-subset"]
+	path = bpl-subset
+	url = http://git.tiker.net/trees/bpl-subset.git

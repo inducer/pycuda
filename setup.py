@@ -9,6 +9,8 @@ def get_config_schema():
             Switch, StringListOption, make_boost_base_options
 
     return ConfigSchema(make_boost_base_options() + [
+        Switch("USE_SHIPPED_BOOST", True, "Use included Boost library"),
+
         BoostLibraries("python"),
         BoostLibraries("thread"),
 
@@ -175,11 +177,12 @@ def verify_siteconfig(sc_vars):
 # main functionality ----------------------------------------------------------
 def main():
     import glob
-    from aksetup_helper import hack_distutils, get_config, setup, \
-            NumpyExtension, Extension
+    from aksetup_helper import (hack_distutils, get_config, setup, \
+            NumpyExtension, Extension, set_up_shipped_boost_if_requested)
 
     hack_distutils()
     conf = get_config(get_config_schema())
+    EXTRA_SOURCES, EXTRA_DEFINES = set_up_shipped_boost_if_requested(conf)
 
     LIBRARY_DIRS = conf["BOOST_LIB_DIR"]
     LIBRARIES = conf["BOOST_PYTHON_LIBNAME"] + conf["BOOST_THREAD_LIBNAME"]
@@ -202,7 +205,6 @@ def main():
 
     verify_siteconfig(conf)
 
-    EXTRA_DEFINES = { }
     EXTRA_INCLUDE_DIRS = []
     EXTRA_LIBRARY_DIRS = []
     EXTRA_LIBRARIES = []
@@ -226,9 +228,8 @@ def main():
 
     ext_kwargs = dict()
 
-    extra_sources = []
     if conf["CUDA_ENABLE_GL"]:
-        extra_sources.append("src/wrapper/wrap_cudagl.cpp")
+        EXTRA_SOURCES.append("src/wrapper/wrap_cudagl.cpp")
         EXTRA_DEFINES["HAVE_GL"] = 1
 
     ver_dic = {}
@@ -309,7 +310,7 @@ def main():
                         "src/cpp/bitlog.cpp",
                         "src/wrapper/wrap_cudadrv.cpp",
                         "src/wrapper/mempool.cpp",
-                        ]+extra_sources,
+                        ]+EXTRA_SOURCES,
                     include_dirs=INCLUDE_DIRS + EXTRA_INCLUDE_DIRS,
                     library_dirs=LIBRARY_DIRS + conf["CUDADRV_LIB_DIR"],
                     libraries=LIBRARIES + conf["CUDADRV_LIBNAME"],
