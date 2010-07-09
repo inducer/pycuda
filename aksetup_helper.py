@@ -103,12 +103,13 @@ def humanize(sym_str):
 
 
 # siteconf handling -----------------------------------------------------------
-def get_config(schema=None):
+def get_config(schema=None, warn_about_no_config=True):
     if schema is None:
         from setup import get_config_schema
         schema = get_config_schema()
 
-    if not schema.have_config() and not schema.have_global_config():
+    if (not schema.have_config() and not schema.have_global_config()
+            and warn_about_no_config):
         print "*************************************************************"
         print "*** I have detected that you have not run configure.py."
         print "*************************************************************"
@@ -478,6 +479,74 @@ class BoostLibraries(Libraries):
                 ["boost_%s-${BOOST_COMPILER}-mt" % lib_base_name],
                 help="Library names for Boost C++ %s library (without lib or .so)" 
                     % humanize(lib_base_name))
+
+def set_up_shipped_boost_if_requested(conf):
+    """Set up the package to use a shipped version of Boost.
+
+    Return a tuple of a list of extra C files to build and extra
+    defines to be used.
+    """
+    from os.path import exists
+    import sys
+
+    if conf["USE_SHIPPED_BOOST"]:
+        if not exists("bpl-subset/bpl_subset/boost/version.hpp"):
+            print >>sys.stderr, "------------------------------------------------------------------------"
+            print >>sys.stderr, "The shipped Boost library was not found, but USE_SHIPPED_BOOST is True."
+            print >>sys.stderr, "(The files should be under bpl-subset/.)"
+            print >>sys.stderr, "------------------------------------------------------------------------"
+            print >>sys.stderr, "If you got this package from git, you probably want to do"
+            print >>sys.stderr, ""
+            print >>sys.stderr, " $ git submodule init"
+            print >>sys.stderr, " $ git submodule update"
+            print >>sys.stderr, ""
+            print >>sys.stderr, "to fetch what you are presently missing. If you got this from"
+            print >>sys.stderr, "a distributed package on the net, that package is broken and"
+            print >>sys.stderr, "should be fixed. For now, I will turn off 'USE_SHIPPED_BOOST'"
+            print >>sys.stderr, "to try and see if the build succeeds that way, but in the long"
+            print >>sys.stderr, "run you might want to either get the missing bits or turn"
+            print >>sys.stderr, "'USE_SHIPPED_BOOST' off."
+            print >>sys.stderr, "------------------------------------------------------------------------"
+            conf["USE_SHIPPED_BOOST"] = False
+
+            delay = 10
+
+            from time import sleep
+            import sys
+            while delay:
+                sys.stdout.write("Continuing in %d seconds...   \r" % delay)
+                sys.stdout.flush()
+                delay -= 1
+                sleep(1)
+
+    if conf["USE_SHIPPED_BOOST"]:
+        conf["BOOST_INC_DIR"] = ["bpl-subset/bpl_subset"]
+        conf["BOOST_LIB_DIR"] = []
+        conf["BOOST_PYTHON_LIBNAME"] = []
+        conf["BOOST_THREAD_LIBNAME"] = []
+
+        from glob import glob
+        source_files = (glob("bpl-subset/bpl_subset/libs/*/*/*/*.cpp")
+                + glob("bpl-subset/bpl_subset/libs/*/*/*.cpp")
+                + glob("bpl-subset/bpl_subset/libs/*/*.cpp"))
+
+        source_files = [f for f in source_files
+                if not f.startswith("bpl-subset/bpl_subset/libs/thread/src")]
+
+        import sys
+        if sys.platform == "nt":
+            source_files += glob(
+                    "bpl-subset/bpl_subset/libs/thread/src/win32/*.cpp")
+        else:
+            source_files += glob(
+                    "bpl-subset/bpl_subset/libs/thread/src/pthread/*.cpp")
+
+        return (source_files, 
+                {"BOOST_MULTI_INDEX_DISABLE_SERIALIZATION": 1}
+                )
+    else:
+        return [], {}
+
 
 def make_boost_base_options():
     return [
