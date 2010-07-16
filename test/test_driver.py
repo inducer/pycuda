@@ -77,13 +77,14 @@ class TestDriver:
                 block=(400,1,1))
         assert la.norm(dest-a*b) == 0
 
+        drv.Context.synchronize()
         # now try with offsets
         dest = numpy.zeros_like(a)
         multiply_them(
-                drv.Out(dest), numpy.intp(a_gpu)+1, b_gpu,
+                drv.Out(dest), numpy.intp(a_gpu)+a.itemsize, b_gpu,
                 block=(399,1,1))
 
-        assert la.norm(dest-a*b) == 0
+        assert la.norm((dest[:-1]-a[1:]*b[:-1])) == 0
 
     @mark_cuda_test
     def test_streamed_kernel(self):
