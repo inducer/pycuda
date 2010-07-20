@@ -158,7 +158,7 @@ def _find_pycuda_include_path():
             ]
 
     import sys
-    if sys.platform == "linux2":
+    if sys.platform in ("linux2", "darwin"):
         possible_include_paths.extend([
             join(sys.prefix, "include" , "pycuda"),
             "/usr/include/pycuda",
@@ -169,7 +169,10 @@ def _find_pycuda_include_path():
         if exists(inc_path):
             return inc_path
 
-    raise RuntimeError("could not find path to PyCUDA's C header files")
+    raise RuntimeError("could not find path to PyCUDA's C" 
+            " header files, searched in : %s" 
+            % '\n'.join(possible_include_paths))
+
 
 
 
