@@ -2,7 +2,33 @@
 import distribute_setup
 distribute_setup.use_setuptools()
 
+import setuptools
 from setuptools import Extension
+
+if 'distribute' not in setuptools.__file__:
+    print "-------------------------------------------------------------------------"
+    print "Setuptools conflict detected."
+    print "-------------------------------------------------------------------------"
+    print "When I imported setuptools, I did not get the distribute version of"
+    print "setuptools, which is troubling--this package really wants to be used"
+    print "with distribute rather than the old setuptools package. More than likely,"
+    print "you have both distribute and setuptools installed, which is bad."
+    print
+    print "See this page for more information:"
+    print "http://wiki.tiker.net/DistributeVsSetuptools"
+    print "-------------------------------------------------------------------------"
+    print "I will continue after a short while, fingers crossed."
+    print "-------------------------------------------------------------------------"
+
+    delay = 10
+
+    from time import sleep
+    import sys
+    while delay:
+        sys.stdout.write("Continuing in %d seconds...   \r" % delay)
+        sys.stdout.flush()
+        delay -= 1
+        sleep(1)
 
 def setup(*args, **kwargs):
     from setuptools import setup
