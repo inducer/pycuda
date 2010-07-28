@@ -52,3 +52,5 @@ for page in all_pages:
 
     except Exception, e:
         print "Error when processing %s: %s" % (page, e)
+        from traceback import print_exc
+        print_exc()
