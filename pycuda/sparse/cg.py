@@ -6,10 +6,15 @@ import pycuda.gpuarray as gpuarray
 
 
 
+class ConvergenceError(RuntimeError):
+    pass
+
+
+
 class CGStateContainer:
     def __init__(self, operator, precon=None, pagelocked_allocator=None):
         if precon is None:
-            from hedge.iterative import IdentityOperator
+            from pycuda.sparse.operator import IdentityOperator
             precon = IdentityOperator(operator.dtype, operator.shape[0])
 
         self.operator = operator
@@ -191,7 +196,6 @@ class CGStateContainer:
 
             iterations += 1
 
-        from hedge.iterative import ConvergenceError
         raise ConvergenceError("cg failed to converge")
 
 
