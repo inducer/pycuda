@@ -26,6 +26,8 @@ using boost::shared_ptr;
 
 namespace
 {
+  // {{{ error handling
+
   py::handle<> 
     CudaError, 
     CudaMemoryError, 
@@ -62,8 +64,7 @@ namespace
       PyErr_SetString(CudaLogicError.get(), err.what());
   }
 
-
-
+  // }}}
 
   py::tuple cuda_version()
   {
@@ -79,6 +80,8 @@ namespace
   class array3d_flags { };
 
 
+
+  // {{{ "python-aware" wrappers
 
   py::object device_get_attribute(device const &dev, CUdevice_attribute attr)
   {
@@ -97,6 +100,17 @@ namespace
     return new device_allocation(pycuda::mem_alloc_gc(bytes));
   }
 
+  class pointer_holder_base_wrap 
+    : public pointer_holder_base, 
+    public py::wrapper<pointer_holder_base>
+  {
+    public:
+      CUdeviceptr get_pointer()
+      {
+        return this->get_override("get_pointer")();
+      }
+  };
+
   py::tuple mem_alloc_pitch_wrap(
       unsigned int width, unsigned int height, unsigned int access_size)
   {
@@ -107,8 +121,7 @@ namespace
         handle_from_new_ptr(da.release()), pitch);
   }
 
-
-
+  // {{{ memory set
 
   void  py_memset_d8(CUdeviceptr dst, unsigned char uc, unsigned int n ) 
   { CUDAPP_CALL_GUARDED_THREADED(cuMemsetD8, (dst, uc, n )); }
@@ -129,167 +142,9 @@ namespace
       unsigned int ui, unsigned int width, unsigned int height )
   { CUDAPP_CALL_GUARDED_THREADED(cuMemsetD2D32, (dst, dst_pitch, ui, width, height)); }
 
-  void  py_memcpy_dtod(CUdeviceptr dst, CUdeviceptr src, 
-      unsigned int byte_count)
-  { CUDAPP_CALL_GUARDED_THREADED(cuMemcpyDtoD, (dst, src, byte_count)); }
+  // }}}
 
-
-
-
-#if CUDA_VERSION >= 3000
-  void  py_memcpy_dtod_async(CUdeviceptr dst, CUdeviceptr src, 
-      unsigned int byte_count, py::object stream_py)
-  {
-    CUstream s_handle;
-    if (stream_py.ptr() != Py_None)
-    {
-      const stream &s = py::extract<const stream &>(stream_py);
-      s_handle = s.handle();
-    }
-    else
-      s_handle = 0;
-
-    CUDAPP_CALL_GUARDED_THREADED(cuMemcpyDtoDAsync, 
-        (dst, src, byte_count, s_handle)); 
-  }
-#endif
-
-
-
-
-  void function_param_setv(function &f, int offset, py::object buffer)
-  { 
-    const void *buf;
-    PYCUDA_BUFFER_SIZE_T len;
-    if (PyObject_AsReadBuffer(buffer.ptr(), &buf, &len))
-      throw py::error_already_set();
-    f.param_setv(offset, const_cast<void *>(buf), len);
-  }
-
-
-
-
-  module *module_from_buffer(py::object buffer, py::object py_options, 
-      py::object message_handler)
-  {
-    const char *mod_buf;
-    PYCUDA_BUFFER_SIZE_T len;
-    if (PyObject_AsCharBuffer(buffer.ptr(), &mod_buf, &len))
-      throw py::error_already_set();
-    CUmodule mod;
-
-#if CUDA_VERSION >= 2010
-    const unsigned buf_size = 32768;
-    char info_buf[buf_size], error_buf[buf_size];
-
-    std::vector<CUjit_option> options;
-    std::vector<void *> option_values;
-
-#define ADD_OPTION_PTR(KEY, PTR) \
-    { \
-      options.push_back(KEY); \
-      option_values.push_back(PTR); \
-    }
-
-    ADD_OPTION_PTR(CU_JIT_INFO_LOG_BUFFER, info_buf);
-    ADD_OPTION_PTR(CU_JIT_INFO_LOG_BUFFER_SIZE_BYTES, (void *) buf_size);
-    ADD_OPTION_PTR(CU_JIT_ERROR_LOG_BUFFER, error_buf);
-    ADD_OPTION_PTR(CU_JIT_ERROR_LOG_BUFFER_SIZE_BYTES, (void *) buf_size);
-
-    PYTHON_FOREACH(key_value, py_options)
-      ADD_OPTION_PTR(
-          py::extract<CUjit_option>(key_value[0]), 
-          (void *) py::extract<int>(key_value[1])());
-#undef ADD_OPTION
-    
-    CUDAPP_PRINT_CALL_TRACE("cuModuleLoadDataEx");
-    CUresult cu_status_code; \
-    cu_status_code = cuModuleLoadDataEx(&mod, mod_buf, options.size(), 
-         const_cast<CUjit_option *>(&*options.begin()),
-         const_cast<void **>(&*option_values.begin()));
-
-    size_t info_buf_size = size_t(option_values[1]);
-    size_t error_buf_size = size_t(option_values[3]);
-
-    if (message_handler != py::object())
-      message_handler(cu_status_code == CUDA_SUCCESS,
-          std::string(info_buf, info_buf_size),
-          std::string(error_buf, error_buf_size));
-
-    if (cu_status_code != CUDA_SUCCESS)
-      throw cuda::error("cuModuleLoadDataEx", cu_status_code, 
-          std::string(error_buf, error_buf_size).c_str());
-#else
-    if (py::len(py_options))
-      throw cuda::error("module_from_buffer", CUDA_ERROR_INVALID_VALUE,
-          "non-empty options argument only supported on CUDA 2.1 and newer");
-
-    CUDAPP_CALL_GUARDED(cuModuleLoadData, (&mod, mod_buf));
-#endif
-
-    return new module(mod);
-  }
-
-
-
-
-  PyObject *device_allocation_to_long(device_allocation const &da)
-  {
-    return PyLong_FromUnsignedLong((CUdeviceptr) da);
-  }
-
-
-
-
-  py::handle<> pagelocked_empty(py::object shape, py::object dtype, 
-      py::object order_py, unsigned mem_flags)
-  {
-    PyArray_Descr *tp_descr;
-    if (PyArray_DescrConverter(dtype.ptr(), &tp_descr) != NPY_SUCCEED)
-      throw py::error_already_set();
-
-    py::extract<npy_intp> shape_as_int(shape);
-    std::vector<npy_intp> dims;
-
-    if (shape_as_int.check())
-      dims.push_back(shape_as_int());
-    else
-      std::copy(
-          py::stl_input_iterator<npy_intp>(shape),
-          py::stl_input_iterator<npy_intp>(),
-          back_inserter(dims));
-
-    std::auto_ptr<host_allocation> alloc(
-        new host_allocation(
-          tp_descr->elsize*pycuda::size_from_dims(dims.size(), &dims.front()),
-          mem_flags)
-        );
-
-    NPY_ORDER order = PyArray_CORDER;
-    PyArray_OrderConverter(order_py.ptr(), &order);
-
-    int ary_flags = 0;
-    if (order == PyArray_FORTRANORDER)
-      ary_flags |= NPY_FARRAY;
-    else if (order == PyArray_CORDER)
-      ary_flags |= NPY_CARRAY;
-    else
-      throw std::runtime_error("unrecognized order specifier");
-
-    py::handle<> result = py::handle<>(PyArray_NewFromDescr(
-        &PyArray_Type, tp_descr,
-        dims.size(), &dims.front(), /*strides*/ NULL,
-        alloc->data(), ary_flags, /*obj*/NULL));
-
-    py::handle<> alloc_py(handle_from_new_ptr(alloc.release()));
-    PyArray_BASE(result.get()) = alloc_py.get();
-    Py_INCREF(alloc_py.get());
-
-    return result;
-  }
-
-
-
+  // {{{ memory copies
 
   void py_memcpy_htod(CUdeviceptr dst, py::object src)
   {
@@ -387,28 +242,167 @@ namespace
 
 
 
-  // A class the user can override to make device_allocation-
-  // workalikes.
+  void  py_memcpy_dtod(CUdeviceptr dst, CUdeviceptr src, 
+      unsigned int byte_count)
+  { CUDAPP_CALL_GUARDED_THREADED(cuMemcpyDtoD, (dst, src, byte_count)); }
 
-  class pointer_holder_base
-  {
-    public:
-      virtual ~pointer_holder_base() { }
-      virtual CUdeviceptr get_pointer() = 0;
-      operator CUdeviceptr()
-      { return get_pointer(); }
-  };
 
-  class pointer_holder_base_wrap 
-    : public pointer_holder_base, 
-    public py::wrapper<pointer_holder_base>
+
+
+#if CUDA_VERSION >= 3000
+  void  py_memcpy_dtod_async(CUdeviceptr dst, CUdeviceptr src, 
+      unsigned int byte_count, py::object stream_py)
   {
-    public:
-      CUdeviceptr get_pointer()
-      {
-        return this->get_override("get_pointer")();
-      }
-  };
+    CUstream s_handle;
+    if (stream_py.ptr() != Py_None)
+    {
+      const stream &s = py::extract<const stream &>(stream_py);
+      s_handle = s.handle();
+    }
+    else
+      s_handle = 0;
+
+    CUDAPP_CALL_GUARDED_THREADED(cuMemcpyDtoDAsync, 
+        (dst, src, byte_count, s_handle)); 
+  }
+#endif
+
+  // }}}
+
+  void function_param_setv(function &f, int offset, py::object buffer)
+  { 
+    const void *buf;
+    PYCUDA_BUFFER_SIZE_T len;
+    if (PyObject_AsReadBuffer(buffer.ptr(), &buf, &len))
+      throw py::error_already_set();
+    f.param_setv(offset, const_cast<void *>(buf), len);
+  }
+
+
+
+
+  // {{{ module_from_buffer
+
+  module *module_from_buffer(py::object buffer, py::object py_options, 
+      py::object message_handler)
+  {
+    const char *mod_buf;
+    PYCUDA_BUFFER_SIZE_T len;
+    if (PyObject_AsCharBuffer(buffer.ptr(), &mod_buf, &len))
+      throw py::error_already_set();
+    CUmodule mod;
+
+#if CUDA_VERSION >= 2010
+    const unsigned buf_size = 32768;
+    char info_buf[buf_size], error_buf[buf_size];
+
+    std::vector<CUjit_option> options;
+    std::vector<void *> option_values;
+
+#define ADD_OPTION_PTR(KEY, PTR) \
+    { \
+      options.push_back(KEY); \
+      option_values.push_back(PTR); \
+    }
+
+    ADD_OPTION_PTR(CU_JIT_INFO_LOG_BUFFER, info_buf);
+    ADD_OPTION_PTR(CU_JIT_INFO_LOG_BUFFER_SIZE_BYTES, (void *) buf_size);
+    ADD_OPTION_PTR(CU_JIT_ERROR_LOG_BUFFER, error_buf);
+    ADD_OPTION_PTR(CU_JIT_ERROR_LOG_BUFFER_SIZE_BYTES, (void *) buf_size);
+
+    PYTHON_FOREACH(key_value, py_options)
+      ADD_OPTION_PTR(
+          py::extract<CUjit_option>(key_value[0]), 
+          (void *) py::extract<int>(key_value[1])());
+#undef ADD_OPTION
+    
+    CUDAPP_PRINT_CALL_TRACE("cuModuleLoadDataEx");
+    CUresult cu_status_code; \
+    cu_status_code = cuModuleLoadDataEx(&mod, mod_buf, options.size(), 
+         const_cast<CUjit_option *>(&*options.begin()),
+         const_cast<void **>(&*option_values.begin()));
+
+    size_t info_buf_size = size_t(option_values[1]);
+    size_t error_buf_size = size_t(option_values[3]);
+
+    if (message_handler != py::object())
+      message_handler(cu_status_code == CUDA_SUCCESS,
+          std::string(info_buf, info_buf_size),
+          std::string(error_buf, error_buf_size));
+
+    if (cu_status_code != CUDA_SUCCESS)
+      throw cuda::error("cuModuleLoadDataEx", cu_status_code, 
+          std::string(error_buf, error_buf_size).c_str());
+#else
+    if (py::len(py_options))
+      throw cuda::error("module_from_buffer", CUDA_ERROR_INVALID_VALUE,
+          "non-empty options argument only supported on CUDA 2.1 and newer");
+
+    CUDAPP_CALL_GUARDED(cuModuleLoadData, (&mod, mod_buf));
+#endif
+
+    return new module(mod);
+  }
+
+  // }}}
+
+  PyObject *device_allocation_to_long(device_allocation const &da)
+  {
+    return PyLong_FromUnsignedLong((CUdeviceptr) da);
+  }
+
+  // {{{ pagelocked memory <-> numpy
+
+  py::handle<> pagelocked_empty(py::object shape, py::object dtype, 
+      py::object order_py, unsigned mem_flags)
+  {
+    PyArray_Descr *tp_descr;
+    if (PyArray_DescrConverter(dtype.ptr(), &tp_descr) != NPY_SUCCEED)
+      throw py::error_already_set();
+
+    py::extract<npy_intp> shape_as_int(shape);
+    std::vector<npy_intp> dims;
+
+    if (shape_as_int.check())
+      dims.push_back(shape_as_int());
+    else
+      std::copy(
+          py::stl_input_iterator<npy_intp>(shape),
+          py::stl_input_iterator<npy_intp>(),
+          back_inserter(dims));
+
+    std::auto_ptr<host_allocation> alloc(
+        new host_allocation(
+          tp_descr->elsize*pycuda::size_from_dims(dims.size(), &dims.front()),
+          mem_flags)
+        );
+
+    NPY_ORDER order = PyArray_CORDER;
+    PyArray_OrderConverter(order_py.ptr(), &order);
+
+    int ary_flags = 0;
+    if (order == PyArray_FORTRANORDER)
+      ary_flags |= NPY_FARRAY;
+    else if (order == PyArray_CORDER)
+      ary_flags |= NPY_CARRAY;
+    else
+      throw std::runtime_error("unrecognized order specifier");
+
+    py::handle<> result = py::handle<>(PyArray_NewFromDescr(
+        &PyArray_Type, tp_descr,
+        dims.size(), &dims.front(), /*strides*/ NULL,
+        alloc->data(), ary_flags, /*obj*/NULL));
+
+    py::handle<> alloc_py(handle_from_new_ptr(alloc.release()));
+    PyArray_BASE(result.get()) = alloc_py.get();
+    Py_INCREF(alloc_py.get());
+
+    return result;
+  }
+
+  // }}}
+
+  // }}}
 
 
 
@@ -439,6 +433,8 @@ BOOST_PYTHON_MODULE(_driver)
   py::def("get_driver_version", cuda::get_driver_version);
 #endif
 
+  // {{{ exceptions
+
 #define DECLARE_EXC(NAME, BASE) \
   Cuda##NAME = py::handle<>(PyErr_NewException("pycuda._driver." #NAME, BASE, NULL)); \
   py::scope().attr(#NAME) = Cuda##NAME;
@@ -456,6 +452,9 @@ BOOST_PYTHON_MODULE(_driver)
     py::register_exception_translator<cuda::error>(translate_cuda_error);
   }
 
+  // }}}
+
+  // {{{ constants
 #if CUDA_VERSION >= 2000
   py::enum_<CUctx_flags>("ctx_flags")
     .value("SCHED_AUTO", CU_CTX_SCHED_AUTO)
@@ -669,9 +668,12 @@ BOOST_PYTHON_MODULE(_driver)
     ;
 #endif
 
+  // }}}
+
   py::def("init", init,
       py::arg("flags")=0);
 
+  // {{{ device
   {
     typedef device cl;
     py::class_<cl>("Device", py::no_init)
@@ -689,7 +691,9 @@ BOOST_PYTHON_MODULE(_driver)
           (py::args("self"), py::args("flags")=0))
       ;
   }
+  // }}}
 
+  // {{{ context
   {
     typedef context cl;
     py::class_<cl, shared_ptr<cl>, boost::noncopyable >("Context", py::no_init)
@@ -721,7 +725,9 @@ BOOST_PYTHON_MODULE(_driver)
 #endif
       ;
   }
+  // }}}
 
+  // {{{ stream
   {
     typedef stream cl;
     py::class_<cl, boost::noncopyable>
@@ -730,7 +736,9 @@ BOOST_PYTHON_MODULE(_driver)
       .DEF_SIMPLE_METHOD(is_done)
       ;
   }
+  // }}}
 
+  // {{{ module
   {
     typedef module cl;
     py::class_<cl, boost::noncopyable, shared_ptr<cl> >("Module", py::no_init)
@@ -756,6 +764,9 @@ BOOST_PYTHON_MODULE(_driver)
        py::arg("message_handler")=py::object()),
       py::return_value_policy<py::manage_new_object>());
 
+  // }}}
+
+  // {{{ function
   {
     typedef function cl;
     py::class_<cl>("Function", py::no_init)
@@ -780,6 +791,10 @@ BOOST_PYTHON_MODULE(_driver)
       ;
   }
 
+  // }}}
+
+  // {{{ pointer holder
+
   {
     typedef device_allocation cl;
     py::class_<cl, boost::noncopyable>("DeviceAllocation", py::no_init)
@@ -790,6 +805,8 @@ BOOST_PYTHON_MODULE(_driver)
 
     py::implicitly_convertible<device_allocation, CUdeviceptr>();
   }
+
+  // }}}
 
   {
     typedef pointer_holder_base cl;
@@ -1030,3 +1047,5 @@ BOOST_PYTHON_MODULE(_driver)
   pycuda_expose_gl();
 #endif
 }
+
+// vim: foldmethod=marker

@@ -37,6 +37,8 @@
 
 
 
+// {{{ tracing and error guards
+
 #ifdef CUDAPP_TRACE_CUDA
   #define CUDAPP_PRINT_CALL_TRACE(NAME) \
     std::cerr << NAME << std::endl;
@@ -110,6 +112,8 @@
   // therefore its context has already been deleted. No need to harp
   // on the fact that we still thought there was cleanup to do.
 
+// }}}
+
 
 
 
@@ -120,6 +124,7 @@ namespace cuda
 
 
 
+  // {{{ error reporting
   class error : public std::runtime_error
   {
     private:
@@ -239,9 +244,9 @@ namespace cuda
     { }
   };
 
+  // }}}
 
-
-  // version query ------------------------------------------------------------
+  // {{{ version query ------------------------------------------------------------
 #if CUDA_VERSION >= 2020
   inline int get_driver_version()
   {
@@ -250,11 +255,9 @@ namespace cuda
     return result;
   }
 #endif
+  // }}}
 
-
-
-
-  // device -------------------------------------------------------------------
+  // {{{ device
   class context;
 
   class device
@@ -338,10 +341,9 @@ namespace cuda
     return new device(result);
   }
 
+  // }}}
 
-
-
-  // context ------------------------------------------------------------------
+  // {{{ context
   /* A word on context management: We don't let CUDA's context stack get more
    * than one deep. CUDA only supports pushing floating contexts. We may wish
    * to push contexts that are already active at a deeper stack level, so we
@@ -704,7 +706,9 @@ namespace cuda
 
   };
 
-  // streams ------------------------------------------------------------------
+  // }}}
+
+  // {{{ stream
   class stream : public boost::noncopyable, public context_dependent
   {
     private:
@@ -748,10 +752,9 @@ namespace cuda
       }
   };
 
+  // }}}
 
-
-
-  // arrays -------------------------------------------------------------------
+  // {{{ array
   class array : public boost::noncopyable, public context_dependent
   {
     private:
@@ -812,10 +815,9 @@ namespace cuda
       { return m_array; }
   };
 
+  // }}}
 
-
-
-  // texture reference --------------------------------------------------------
+  // {{{ texture reference
   class module;
 
   class texture_reference : public  boost::noncopyable
@@ -934,11 +936,10 @@ namespace cuda
       }
   };
 
+  // }}}
 
-
-
+  // {{{ surface reference
 #if CUDA_VERSION >= 3010
-  // surface reference --------------------------------------------------------
   class module;
 
   class surface_reference : public  boost::noncopyable
@@ -976,10 +977,9 @@ namespace cuda
   };
 #endif
 
+  // }}}
 
-
-
-  // module -------------------------------------------------------------------
+  // {{{ module
   class function;
 
   class module : public boost::noncopyable, public context_dependent
@@ -1049,10 +1049,9 @@ namespace cuda
   }
 #endif
 
+  // }}}
 
-
-
-  // function -----------------------------------------------------------------
+  // {{{ function
   class function
   {
     private:
@@ -1145,10 +1144,9 @@ namespace cuda
     return function(func, name);
   }
 
+  // }}}
 
-
-
-  // device memory ------------------------------------------------------------
+  // {{{ device memory
   inline
   py::tuple mem_get_info()
   {
@@ -1170,6 +1168,18 @@ namespace cuda
   {
     CUDAPP_CALL_GUARDED_CLEANUP(cuMemFree, (devptr));
   }
+
+  // A class the user can override to make device_allocation-
+  // workalikes.
+
+  class pointer_holder_base
+  {
+    public:
+      virtual ~pointer_holder_base() { }
+      virtual CUdeviceptr get_pointer() = 0;
+      operator CUdeviceptr()
+      { return get_pointer(); }
+  };
 
   class device_allocation : public boost::noncopyable, public context_dependent
   {
@@ -1249,10 +1259,9 @@ namespace cuda
       unsigned int len)
   { CUDAPP_CALL_GUARDED_THREADED(cuMemcpyAtoA, (dst.handle(), dst_index, src.handle(), src_index, len)); }
 
+  // }}}
 
-
-
-  // structured memcpy --------------------------------------------------------
+  // {{{ structured memcpy
 #if PY_VERSION_HEX >= 0x02050000
   typedef Py_ssize_t PYCUDA_BUFFER_SIZE_T;
 #else
@@ -1360,8 +1369,9 @@ namespace cuda
   };
 #endif
 
+  // }}}
 
-  // host memory --------------------------------------------------------------
+  // {{{ host memory
   inline void *mem_alloc_host(unsigned int size, unsigned flags=0)
   {
     void *m_data;
@@ -1433,10 +1443,9 @@ namespace cuda
 
   };
 
+  // }}}
 
-
-
-  // events -------------------------------------------------------------------
+  // {{{ event
   class event : public boost::noncopyable, public context_dependent
   {
     private:
@@ -1508,9 +1517,12 @@ namespace cuda
         return result;
       }
   };
+
+  // }}}
 }
 
 
 
 
 #endif
+// vim: foldmethod=marker
