@@ -44,9 +44,13 @@
     std::cerr << NAME << std::endl;
   #define CUDAPP_PRINT_CALL_TRACE_INFO(NAME, EXTRA_INFO) \
     std::cerr << NAME << " (" << EXTRA_INFO << ')' << std::endl;
+  #define CUDAPP_PRINT_ERROR_TRACE(NAME, CODE) \
+    if (CODE != CUDA_SUCCESS) \
+      std::cerr << NAME << " failed with code " << CODE << std::endl;
 #else
   #define CUDAPP_PRINT_CALL_TRACE(NAME) /*nothing*/
   #define CUDAPP_PRINT_CALL_TRACE_INFO(NAME, EXTRA_INFO) /*nothing*/
+  #define CUDAPP_PRINT_ERROR_TRACE(NAME, CODE) /*nothing*/
 #endif
 
 #define CUDAPP_CALL_GUARDED_THREADED_WITH_TRACE_INFO(NAME, ARGLIST, TRACE_INFO) \
@@ -65,6 +69,7 @@
     CUDAPP_PRINT_CALL_TRACE_INFO(#NAME, TRACE_INFO); \
     CUresult cu_status_code; \
     cu_status_code = NAME ARGLIST; \
+    CUDAPP_PRINT_ERROR_TRACE(#NAME, cu_status_code); \
     if (cu_status_code != CUDA_SUCCESS) \
       throw cuda::error(#NAME, cu_status_code);\
   }
@@ -76,6 +81,7 @@
     Py_BEGIN_ALLOW_THREADS \
       cu_status_code = NAME ARGLIST; \
     Py_END_ALLOW_THREADS \
+    CUDAPP_PRINT_ERROR_TRACE(#NAME, cu_status_code); \
     if (cu_status_code != CUDA_SUCCESS) \
       throw cuda::error(#NAME, cu_status_code);\
   }
@@ -85,6 +91,7 @@
     CUDAPP_PRINT_CALL_TRACE(#NAME); \
     CUresult cu_status_code; \
     cu_status_code = NAME ARGLIST; \
+    CUDAPP_PRINT_ERROR_TRACE(#NAME, cu_status_code); \
     if (cu_status_code != CUDA_SUCCESS) \
       throw cuda::error(#NAME, cu_status_code);\
   }
@@ -93,6 +100,7 @@
     CUDAPP_PRINT_CALL_TRACE(#NAME); \
     CUresult cu_status_code; \
     cu_status_code = NAME ARGLIST; \
+    CUDAPP_PRINT_ERROR_TRACE(#NAME, cu_status_code); \
     if (cu_status_code != CUDA_SUCCESS) \
       std::cerr \
         << "PyCUDA WARNING: a clean-up operation failed (dead context maybe?)" \
@@ -736,9 +744,7 @@ namespace cuda
 
       bool is_done() const
       {
-#ifdef TRACE_CUDA
-        std::cerr << "cuStreamQuery" << std::endl;
-#endif
+        CUDAPP_PRINT_CALL_TRACE("cuStreamQuery");
         CUresult result = cuStreamQuery(m_stream);
         switch (result)
         {
@@ -747,6 +753,7 @@ namespace cuda
           case CUDA_ERROR_NOT_READY:
             return false;
           default:
+            CUDAPP_PRINT_ERROR_TRACE("cuStreamQuery", result);
             throw error("cuStreamQuery", result);
         }
       }
@@ -1488,9 +1495,8 @@ namespace cuda
 
       bool query() const
       {
-#ifdef TRACE_CUDA
-        std::cerr << "cuEventQuery" << std::endl;
-#endif
+        CUDAPP_PRINT_CALL_TRACE("cuEventQuery");
+
         CUresult result = cuEventQuery(m_event);
         switch (result)
         {
@@ -1499,6 +1505,7 @@ namespace cuda
           case CUDA_ERROR_NOT_READY:
             return false;
           default:
+            CUDAPP_PRINT_ERROR_TRACE("cuEventQuery", result);
             throw error("cuEventQuery", result);
         }
       }
