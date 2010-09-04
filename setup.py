@@ -294,7 +294,7 @@ def main():
               ],
 
             # build info
-            packages=["pycuda", "pycuda.gl"],
+            packages=["pycuda", "pycuda.gl", "pycuda.sparse"],
 
             install_requires=[
                 "pytools>=8",
