@@ -18,7 +18,7 @@ static PyTypeObject PyStructType;
 
 /* compatibility macros */
 #if (PY_VERSION_HEX < 0x02050000)
-typedef int Py_ssize_t;
+typedef long int Py_ssize_t;
 #endif
 
 /* If PY_STRUCT_FLOAT_COERCE is defined, the struct module will allow float
@@ -42,6 +42,13 @@ typedef int Py_ssize_t;
           PyObject_HEAD_INIT(type) size,
 #endif
 
+#ifndef SIZEOF_SIZE_T
+#define SIZEOF_SIZE_T sizeof(size_t)
+#endif
+
+#ifndef PY_SSIZE_T_MAX
+#define PY_SSIZE_T_MAX LONG_MAX
+#endif
 
 /* The translation function for each format character is table driven */
 typedef struct _formatdef {
