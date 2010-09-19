@@ -12,6 +12,8 @@ Version 0.94
   Search for "CUDA 3.0" in :ref:`reference-doc` to see what's new.
 * Support for CUDA 3.1 beta.
   Search for "CUDA 3.1" in :ref:`reference-doc` to see what's new.
+* Support for CUDA 3.2 RC.
+  Search for "CUDA 3.2" in :ref:`reference-doc` to see what's new.
 * Add sparse matrix-vector multiplication and linear system solving code,
   in :mod:`pycuda.sparse`.
 * Add :func:`pycuda.gpuarray.if_positive`, :func:`pycuda.gpuarray.maximum`,

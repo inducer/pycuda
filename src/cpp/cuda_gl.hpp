@@ -127,7 +127,7 @@ namespace cuda { namespace gl {
       boost::shared_ptr<buffer_object> bobj)
   {
     CUdeviceptr devptr;
-    unsigned int size;
+    pycuda_size_t size;
     CUDAPP_CALL_GUARDED(cuGLMapBufferObject, (&devptr, &size, bobj->handle()));
 
     return new buffer_object_mapping(bobj, devptr, size);
