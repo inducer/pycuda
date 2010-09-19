@@ -473,6 +473,9 @@ BOOST_PYTHON_MODULE(_driver)
   py::enum_<CUevent_flags>("event_flags")
     .value("DEFAULT", CU_EVENT_DEFAULT)
     .value("BLOCKING_SYNC", CU_EVENT_BLOCKING_SYNC)
+#if CUDA_VERSION >= 3020
+    .value("DISABLE_TIMING", CU_EVENT_DISABLE_TIMING)
+#endif
     ;
 #endif
 
@@ -505,6 +508,9 @@ BOOST_PYTHON_MODULE(_driver)
     .value("WRAP", CU_TR_ADDRESS_MODE_WRAP)
     .value("CLAMP", CU_TR_ADDRESS_MODE_CLAMP)
     .value("MIRROR", CU_TR_ADDRESS_MODE_MIRROR)
+#if CUDA_VERSION >= 3020
+    .value("BORDER", CU_TR_ADDRESS_MODE_BORDER)
+#endif
     ;
 
   py::enum_<CUfilter_mode>("filter_mode")
@@ -558,6 +564,11 @@ BOOST_PYTHON_MODULE(_driver)
     .value("CONCURRENT_KERNELS", CU_DEVICE_ATTRIBUTE_CONCURRENT_KERNELS)
     .value("ECC_ENABLED", CU_DEVICE_ATTRIBUTE_ECC_ENABLED)
 #endif
+#endif
+#if CUDA_VERSION >= 3020
+    .value("PCI_BUS_ID", CU_DEVICE_ATTRIBUTE_PCI_BUS_ID)
+    .value("PCI_DEVICE_ID", CU_DEVICE_ATTRIBUTE_PCI_DEVICE_ID)
+    .value("TCC_DRIVER", CU_DEVICE_ATTRIBUTE_TCC_DRIVER)
 #endif
     ;
 
@@ -621,6 +632,9 @@ BOOST_PYTHON_MODULE(_driver)
 #if CUDA_VERSION >= 3000
     .value("COMPUTE_20", CU_TARGET_COMPUTE_20)
 #endif
+#if CUDA_VERSION >= 3020
+    .value("COMPUTE_21", CU_TARGET_COMPUTE_21)
+#endif
     ;
 
   py::enum_<CUjit_fallback>("jit_fallback")
@@ -642,6 +656,9 @@ BOOST_PYTHON_MODULE(_driver)
   py::enum_<CUlimit>("limit")
     .value("STACK_SIZE", CU_LIMIT_STACK_SIZE)
     .value("PRINTF_FIFO_SIZE", CU_LIMIT_PRINTF_FIFO_SIZE)
+#if CUDA_VERSION >= 3020
+    .value("MALLOC_HEAP_SIZE", CU_LIMIT_MALLOC_HEAP_SIZE)
+#endif
     ;
 #endif
 
@@ -722,6 +739,13 @@ BOOST_PYTHON_MODULE(_driver)
       .staticmethod("set_limit")
       .DEF_SIMPLE_METHOD(get_limit)
       .staticmethod("get_limit")
+#endif
+#if CUDA_VERSION >= 3020
+      .DEF_SIMPLE_METHOD(get_cache_config)
+      .staticmethod("get_cache_config")
+      .DEF_SIMPLE_METHOD(set_cache_config)
+      .staticmethod("set_cache_config")
+      .DEF_SIMPLE_METHOD(get_api_version)
 #endif
       ;
   }
@@ -824,6 +848,9 @@ BOOST_PYTHON_MODULE(_driver)
       .DEF_SIMPLE_METHOD(free)
 #if CUDA_VERSION >= 2020
       .DEF_SIMPLE_METHOD(get_device_pointer)
+#endif
+#if CUDA_VERSION >= 3020
+      .DEF_SIMPLE_METHOD(get_flags)
 #endif
       ;
   }

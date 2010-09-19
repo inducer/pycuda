@@ -586,6 +586,27 @@ namespace cuda
       }
 #endif
 
+#if CUDA_VERSION >= 3020
+      static CUfunc_cache get_cache_config()
+      {
+        CUfunc_cache value;
+        CUDAPP_CALL_GUARDED(cuCtxGetCacheConfig, (&value));
+        return value;
+      }
+
+      static void set_cache_config(CUfunc_cache cc)
+      {
+        CUDAPP_CALL_GUARDED(cuCtxSetCacheConfig, (cc));
+      }
+
+      unsigned int get_api_version()
+      {
+        unsigned int value;
+        CUDAPP_CALL_GUARDED(cuCtxGetApiVersion, (m_context, &value));
+        return value;
+      }
+#endif
+
       friend class device;
       friend void context_push(boost::shared_ptr<context> ctx);
       friend boost::shared_ptr<context>
@@ -1453,6 +1474,15 @@ namespace cuda
         CUdeviceptr result;
         CUDAPP_CALL_GUARDED(cuMemHostGetDevicePointer, (&result, m_data, 0));
         return result;
+      }
+#endif
+
+#if CUDA_VERSION >= 3020
+      unsigned int get_flags()
+      {
+        unsigned int flags;
+        CUDAPP_CALL_GUARDED(cuMemHostGetFlags, (&flags, m_data));
+        return flags;
       }
 #endif
 

@@ -131,6 +131,11 @@ Constants
 
     .. attribute:: DEFAULT
     .. attribute:: BLOCKING_SYNC
+    .. attribute:: DISABLE_TIMING
+
+        CUDA 3.2 and newer.
+
+        .. versionadded:: 0.94
 
 .. class:: device_attribute
 
@@ -215,6 +220,24 @@ Constants
 
         .. versionadded:: 0.94
 
+    .. attribute:: PCI_BUS_ID
+
+        CUDA 3.2 and above.
+
+        .. versionadded:: 0.94
+
+    .. attribute:: PCI_DEVICE_ID
+
+        CUDA 3.2 and above.
+
+        .. versionadded:: 0.94
+
+    .. attribute:: TCC_DRIVER
+
+        CUDA 3.2 and above.
+
+        .. versionadded:: 0.94
+
 .. class:: function_attribute
 
     Flags for :meth:`Function.get_attribute`. CUDA 2.2 and newer.
@@ -269,7 +292,7 @@ Constants
 
     .. attribute SURFACE_LDST
 
-        CUDA 3.1 and above
+        CUDA 3.1 and above.
 
         .. versionadded:: 0.94
 
@@ -278,6 +301,11 @@ Constants
     .. attribute:: WRAP
     .. attribute:: CLAMP
     .. attribute:: MIRROR
+    .. attribute:: BORDER
+
+        CUDA 3.2 and above.
+
+        .. versionadded:: 0.94
 
 .. class:: filter_mode
 
@@ -328,6 +356,12 @@ Constants
 
         .. versionadded:: 0.94
 
+    .. attribute:: COMPUTE_21
+
+        CUDA 3.2 and above
+
+        .. versionadded:: 0.94
+
 .. class:: jit_fallback
 
     CUDA 2.1 and newer.
@@ -353,6 +387,9 @@ Constants
 
     .. attribute:: STACK_SIZE
     .. attribute:: PRINTF_FIFO_SIZE
+    .. attribute:: MALLOC_HEAP_SIE
+
+        CUDA 3.2 and above
 
 Devices and Contexts
 --------------------
@@ -462,6 +499,30 @@ Devices and Contexts
         See :class:`limit` for possible values of *limit*.
 
         CUDA 3.1 and above.
+
+        .. versionadded:: 0.94
+
+    .. staticmethod:: set_cache_config(cc)
+
+        See :class:`func_cache` for possible values of *cc*.
+
+        CUDA 3.2 and above.
+
+        .. versionadded:: 0.94
+
+    .. staticmethod:: get_cache_config()
+
+        Return a value from :class:`func_cache`.
+
+        CUDA 3.2 and above.
+
+        .. versionadded:: 0.94
+
+    .. method:: get_api_version()
+
+        Return an integer API version number.
+
+        CUDA 3.2 and above.
 
         .. versionadded:: 0.94
 
@@ -652,6 +713,14 @@ have an attribute *base* that references an object of type
         this memory is mapped into the device's address space.
 
         Only available on CUDA 2.2 and newer.
+
+    .. method:: get_flags()
+
+        Return a bit field of values from :class:`host_alloc_flags`.
+
+        Only available on CUDA 3.2 and newer.
+
+        .. versionadded:: 0.94
 
 Arrays and Textures
 ^^^^^^^^^^^^^^^^^^^
@@ -1214,6 +1283,8 @@ Code on the Device: Modules and Functions
         .. versionadded:: 0.93
 
     .. attribute:: set_cache_config(fc)
+
+        See :class:`func_cache` for possible values of *fc*.
 
         CUDA 3.0 (post-beta) and newer.
 
