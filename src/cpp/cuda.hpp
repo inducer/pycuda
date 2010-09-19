@@ -129,6 +129,13 @@ namespace cuda
 {
   namespace py = boost::python;
 
+  typedef
+#if CUDA_VERSION >= 3020
+        size_t
+#else
+        unsigned int 
+#endif
+        pycuda_size_t;
 
 
 
@@ -224,7 +231,7 @@ namespace cuda
           case CUDA_ERROR_LAUNCH_TIMEOUT: return "launch timeout";
           case CUDA_ERROR_LAUNCH_INCOMPATIBLE_TEXTURING: return "launch incompatible texturing";
 
-#if CUDA_VERSION >= 3000
+#if (CUDA_VERSION >= 3000) && (CUDA_VERSION < 3020)
           case CUDA_ERROR_POINTER_IS_64BIT:
              return "attempted to retrieve 64-bit pointer via 32-bit api function";
           case CUDA_ERROR_SIZE_IS_64BIT:
@@ -299,9 +306,10 @@ namespace cuda
         return py::make_tuple(major, minor);
       }
 
-      unsigned int total_memory()
+      pycuda_size_t total_memory()
       {
-        unsigned int bytes;
+        pycuda_size_t bytes;
+
         CUDAPP_CALL_GUARDED(cuDeviceTotalMem, (&bytes, m_device));
         return bytes;
       }
@@ -867,9 +875,9 @@ namespace cuda
         m_array = ary;
       }
 
-      unsigned int set_address(CUdeviceptr dptr, unsigned int bytes, bool allow_offset=false)
+      pycuda_size_t set_address(CUdeviceptr dptr, unsigned int bytes, bool allow_offset=false)
       {
-        unsigned int byte_offset;
+        pycuda_size_t byte_offset;
         CUDAPP_CALL_GUARDED(cuTexRefSetAddress, (&byte_offset,
               m_texref, dptr, bytes));
 
@@ -1016,7 +1024,7 @@ namespace cuda
       py::tuple get_global(const char *name)
       {
         CUdeviceptr devptr;
-        unsigned int bytes;
+        pycuda_size_t bytes;
         CUDAPP_CALL_GUARDED(cuModuleGetGlobal, (&devptr, &bytes, m_module, name));
         return py::make_tuple(devptr, bytes);
       }
@@ -1157,7 +1165,7 @@ namespace cuda
   inline
   py::tuple mem_get_info()
   {
-    unsigned int free, total;
+    pycuda_size_t free, total;
     CUDAPP_CALL_GUARDED(cuMemGetInfo, (&free, &total));
     return py::make_tuple(free, total);
   }
@@ -1234,7 +1242,7 @@ namespace cuda
         unsigned int width, unsigned int height, unsigned int access_size)
   {
     CUdeviceptr devptr;
-    unsigned int pitch;
+    pycuda_size_t pitch;
     CUDAPP_CALL_GUARDED(cuMemAllocPitch, (&devptr, &pitch, width, height, access_size));
     da = std::auto_ptr<device_allocation>(new device_allocation(devptr));
     return pitch;
@@ -1244,7 +1252,7 @@ namespace cuda
   py::tuple mem_get_address_range(CUdeviceptr ptr)
   {
     CUdeviceptr base;
-    unsigned int size;
+    pycuda_size_t size;
     CUDAPP_CALL_GUARDED(cuMemGetAddressRange, (&base, &size, ptr));
     return py::make_tuple(base, size);
   }
