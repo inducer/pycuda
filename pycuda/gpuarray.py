@@ -257,10 +257,16 @@ class GPUArray(object):
         return self._axpbz(-1, other, result)
 
     def __iadd__(self, other):
-        return self._axpbyz(1, other, 1, self)
+        if isinstance(other, GPUArray):
+            return self._axpbyz(1, other, 1, self)
+        else:
+            return self._axpbz(1, other, self)
 
     def __isub__(self, other):
-        return self._axpbyz(1, other, -1, self)
+        if isinstance(other, GPUArray):
+            return self._axpbyz(1, other, -1, self)
+        else:
+            return self._axpbz(1, -other, self)
 
     def __neg__(self):
         result = self._new_like_me()
