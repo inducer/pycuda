@@ -1,6 +1,6 @@
 from pytools import memoize
 # don't import pycuda.driver here--you'll create an import loop
-
+import sys
 
 
 
@@ -211,6 +211,9 @@ def compile(source, nvcc="nvcc", options=[], keep=False,
     if code is not None:
         options.extend(["-code", code])
 
+    if 'darwin' in sys.platform and sys.maxint == 9223372036854775807:
+        options.append('-m64')
+    
     include_dirs = include_dirs + [_find_pycuda_include_path()]
 
     for i in include_dirs:

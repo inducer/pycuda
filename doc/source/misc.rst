@@ -194,6 +194,8 @@ Acknowledgments
 * Nicolas Pinto refactored :mod:`pycuda.autoinit` for automatic device
   finding.
 * Ian Ozsvald and Fabrizio Milo provided patches.
+* Min Ragan-Kelley solved the long-standing puzzle of why PyCUDA
+  did not work on 64-bit CUDA on OS X (and provided a patch).
 
 Licensing
 =========
