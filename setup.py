@@ -220,9 +220,9 @@ def main():
     if 'darwin' in sys.platform and sys.maxint == 2147483647:
         # The Python interpreter is running in 32 bit mode on OS X
         if "-arch" not in conf["CXXFLAGS"]:
-      conf["CXXFLAGS"].extend(['-arch', 'i386', '-m32'])
+            conf["CXXFLAGS"].extend(['-arch', 'i386', '-m32'])
         if "-arch" not in conf["LDFLAGS"]:
-      conf["LDFLAGS"].extend(['-arch', 'i386', '-m32'])
+            conf["LDFLAGS"].extend(['-arch', 'i386', '-m32'])
 
     ext_kwargs = dict()
 
