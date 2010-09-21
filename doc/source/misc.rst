@@ -1,12 +1,16 @@
 User-visible Changes
 ====================
 
-Version 0.94
+Version 0.95
 ------------
+
 .. note::
 
-    Version 0.94 is the current development version. You can get it from
+    This version is the current development version. You can get it from
     PyCUDA's version control repository.
+
+Version 0.94
+------------
 
 * Support for CUDA 3.0. (but not CUDA 3.0 beta!)
   Search for "CUDA 3.0" in :ref:`reference-doc` to see what's new.
