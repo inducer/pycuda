@@ -1,4 +1,16 @@
-from _driver import *
+from pycuda._driver import *
+
+
+
+
+CUDA_DEBUGGING = False
+
+
+
+
+def set_debugging(flag=True):
+    global CUDA_DEBUGGING
+    CUDA_DEBUGGING = flag
 
 
 

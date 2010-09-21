@@ -9,6 +9,12 @@ Version 0.95
     This version is the current development version. You can get it from
     PyCUDA's version control repository.
 
+Version 0.94.1
+--------------
+
+* Support for CUDA debugging.
+  (see `FAQ <http://wiki.tiker.net/PyCuda/FrequentlyAskedQuestions>`_ for details.)
+
 Version 0.94
 ------------
 

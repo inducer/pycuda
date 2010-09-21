@@ -191,6 +191,12 @@ def compile(source, nvcc="nvcc", options=[], keep=False,
         except RuntimeError:
             pass
 
+    from pycuda.driver import CUDA_DEBUGGING
+    if CUDA_DEBUGGING:
+        cache_dir = False
+        keep = True
+        options.extend(["-g", "-G"])
+
     if cache_dir is None:
         from os.path import join
         from tempfile import gettempdir
@@ -213,7 +219,7 @@ def compile(source, nvcc="nvcc", options=[], keep=False,
 
     if 'darwin' in sys.platform and sys.maxint == 9223372036854775807:
         options.append('-m64')
-    
+
     include_dirs = include_dirs + [_find_pycuda_include_path()]
 
     for i in include_dirs:
