@@ -128,12 +128,38 @@ class TestGPUArray:
 
 
     @mark_cuda_test
+    def test_iaddition_array(self):
+        """Test the inplace addition of two arrays."""
+
+        a = numpy.array([1,2,3,4,5,6,7,8,9,10]).astype(numpy.float32)
+        a_gpu = gpuarray.to_gpu(a)
+        a_gpu += a_gpu
+        a_added = a_gpu.get()
+
+        assert (a+a == a_added).all()
+
+
+
+    @mark_cuda_test
     def test_addition_scalar(self):
         """Test the addition of an array and a scalar."""
 
         a = numpy.array([1,2,3,4,5,6,7,8,9,10]).astype(numpy.float32)
         a_gpu = gpuarray.to_gpu(a)
         a_added = (7+a_gpu).get()
+
+        assert (7+a == a_added).all()
+
+
+
+    @mark_cuda_test
+    def test_iaddition_scalar(self):
+        """Test the inplace addition of an array and a scalar."""
+
+        a = numpy.array([1,2,3,4,5,6,7,8,9,10]).astype(numpy.float32)
+        a_gpu = gpuarray.to_gpu(a)
+        a_gpu += 7
+        a_added = a_gpu.get()
 
         assert (7+a == a_added).all()
 
