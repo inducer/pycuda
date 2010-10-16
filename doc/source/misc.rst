@@ -9,6 +9,11 @@ Version 0.95
     This version is the current development version. You can get it from
     PyCUDA's version control repository.
 
+Version 0.94.2
+--------------
+
+* Fix the pesky Fermi reduction bug. (thanks to Tomasz Rybak)
+
 Version 0.94.1
 --------------
 
@@ -206,6 +211,8 @@ Acknowledgments
 * Ian Ozsvald and Fabrizio Milo provided patches.
 * Min Ragan-Kelley solved the long-standing puzzle of why PyCUDA
   did not work on 64-bit CUDA on OS X (and provided a patch).
+* Tomasz Rybak solved another long-standing puzzle of why reduction
+  failed to work on some Fermi chips.
 
 Licensing
 =========

@@ -82,7 +82,7 @@ def get_reduction_module(out_type, block_size,
 
         %(preamble)s
 
-        __global__ void %(name)s(out_type *out, %(arguments)s, 
+        __global__ void %(name)s(out_type *out, %(arguments)s,
           unsigned int seq_count, unsigned int n)
         {
           __shared__ out_type sdata[BLOCK_SIZE];
@@ -93,41 +93,43 @@ def get_reduction_module(out_type, block_size,
 
           out_type acc = %(neutral)s;
           for (unsigned s = 0; s < seq_count; ++s)
-          { 
+          {
             if (i >= n)
               break;
-            acc = REDUCE(acc, READ_AND_MAP(i)); 
+            acc = REDUCE(acc, READ_AND_MAP(i));
 
-            i += BLOCK_SIZE; 
+            i += BLOCK_SIZE;
           }
 
           sdata[tid] = acc;
 
           __syncthreads();
 
-          #if (BLOCK_SIZE >= 512) 
+          #if (BLOCK_SIZE >= 512)
             if (tid < 256) { sdata[tid] = REDUCE(sdata[tid], sdata[tid + 256]); }
             __syncthreads();
           #endif
 
-          #if (BLOCK_SIZE >= 256) 
-            if (tid < 128) { sdata[tid] = REDUCE(sdata[tid], sdata[tid + 128]); } 
-            __syncthreads(); 
+          #if (BLOCK_SIZE >= 256)
+            if (tid < 128) { sdata[tid] = REDUCE(sdata[tid], sdata[tid + 128]); }
+            __syncthreads();
           #endif
 
-          #if (BLOCK_SIZE >= 128) 
-            if (tid < 64) { sdata[tid] = REDUCE(sdata[tid], sdata[tid + 64]); } 
-            __syncthreads(); 
+          #if (BLOCK_SIZE >= 128)
+            if (tid < 64) { sdata[tid] = REDUCE(sdata[tid], sdata[tid + 64]); }
+            __syncthreads();
           #endif
 
-          if (tid < 32) 
+          if (tid < 32)
           {
-            if (BLOCK_SIZE >= 64) sdata[tid] = REDUCE(sdata[tid], sdata[tid + 32]);
-            if (BLOCK_SIZE >= 32) sdata[tid] = REDUCE(sdata[tid], sdata[tid + 16]);
-            if (BLOCK_SIZE >= 16) sdata[tid] = REDUCE(sdata[tid], sdata[tid + 8]);
-            if (BLOCK_SIZE >= 8)  sdata[tid] = REDUCE(sdata[tid], sdata[tid + 4]);
-            if (BLOCK_SIZE >= 4)  sdata[tid] = REDUCE(sdata[tid], sdata[tid + 2]);
-            if (BLOCK_SIZE >= 2)  sdata[tid] = REDUCE(sdata[tid], sdata[tid + 1]);
+            // 'volatile' required according to Fermi compatibility guide 1.2.2
+            volatile out_type * smem = sdata;
+            if (BLOCK_SIZE >= 64) smem[tid] = REDUCE(smem[tid], smem[tid + 32]);
+            if (BLOCK_SIZE >= 32) smem[tid] = REDUCE(smem[tid], smem[tid + 16]);
+            if (BLOCK_SIZE >= 16) smem[tid] = REDUCE(smem[tid], smem[tid + 8]);
+            if (BLOCK_SIZE >= 8)  smem[tid] = REDUCE(smem[tid], smem[tid + 4]);
+            if (BLOCK_SIZE >= 4)  smem[tid] = REDUCE(smem[tid], smem[tid + 2]);
+            if (BLOCK_SIZE >= 2)  smem[tid] = REDUCE(smem[tid], smem[tid + 1]);
           }
 
           if (tid == 0) out[blockIdx.x] = sdata[0];
@@ -171,7 +173,7 @@ def get_reduction_kernel_and_types(out_type, block_size,
 
 
 class ReductionKernel:
-    def __init__(self, dtype_out, 
+    def __init__(self, dtype_out,
             neutral, reduce_expr, map_expr=None, arguments=None,
             name="reduce_kernel", keep=False, options=[], preamble=""):
 
@@ -180,18 +182,18 @@ class ReductionKernel:
         self.block_size = 512
 
         s1_func, self.stage1_arg_types = get_reduction_kernel_and_types(
-                dtype_to_ctype(dtype_out), self.block_size, 
+                dtype_to_ctype(dtype_out), self.block_size,
                 neutral, reduce_expr, map_expr,
-                arguments, name=name+"_stage1", keep=keep, options=options, 
-		preamble=preamble)
+                arguments, name=name+"_stage1", keep=keep, options=options,
+                preamble=preamble)
         self.stage1_func = s1_func.prepared_async_call
 
         # stage 2 has only one input and no map expression
         s2_func, self.stage2_arg_types = get_reduction_kernel_and_types(
-                dtype_to_ctype(dtype_out), self.block_size, 
+                dtype_to_ctype(dtype_out), self.block_size,
                 neutral, reduce_expr,
-                name=name+"_stage2", keep=keep, options=options, 
-		preamble=preamble)
+                name=name+"_stage2", keep=keep, options=options,
+                preamble=preamble)
         self.stage2_func = s2_func.prepared_async_call
 
         assert [i for i, arg_tp in enumerate(self.stage1_arg_types) if arg_tp == "P"], \
@@ -285,13 +287,13 @@ def get_dot_kernel(dtype_out, dtype_a=None, dtype_b=None):
     if dtype_a is None:
         dtype_a = dtype_out
 
-    return ReductionKernel(dtype_out, neutral="0", 
-            reduce_expr="a+b", map_expr="a[i]*b[i]", 
-            arguments="const %(tp_a)s *a, const %(tp_b)s *b" % { 
+    return ReductionKernel(dtype_out, neutral="0",
+            reduce_expr="a+b", map_expr="a[i]*b[i]",
+            arguments="const %(tp_a)s *a, const %(tp_b)s *b" % {
                 "tp_a": dtype_to_ctype(dtype_a),
-                "tp_b": dtype_to_ctype(dtype_b), 
+                "tp_b": dtype_to_ctype(dtype_b),
                 }, keep=True)
-            
+
 
 
 
@@ -310,12 +312,12 @@ def get_subset_dot_kernel(dtype_out, dtype_a=None, dtype_b=None):
         dtype_a = dtype_out
 
     # important: lookup_tbl must be first--it controls the length
-    return ReductionKernel(dtype_out, neutral="0", 
-            reduce_expr="a+b", map_expr="a[lookup_tbl[i]]*b[lookup_tbl[i]]", 
+    return ReductionKernel(dtype_out, neutral="0",
+            reduce_expr="a+b", map_expr="a[lookup_tbl[i]]*b[lookup_tbl[i]]",
             arguments="const unsigned int *lookup_tbl, "
             "const %(tp_a)s *a, const %(tp_b)s *b" % {
             "tp_a": dtype_to_ctype(dtype_a),
-            "tp_b": dtype_to_ctype(dtype_b), 
+            "tp_b": dtype_to_ctype(dtype_b),
             })
 
 
@@ -352,13 +354,13 @@ def get_minmax_kernel(what, dtype):
     else:
         raise TypeError("unsupported dtype specified")
 
-    return ReductionKernel(dtype, 
-            neutral=get_minmax_neutral(what, dtype), 
-            reduce_expr="%(reduce_expr)s" % {"reduce_expr": reduce_expr}, 
-            arguments="const %(tp)s *in" % { 
+    return ReductionKernel(dtype,
+            neutral=get_minmax_neutral(what, dtype),
+            reduce_expr="%(reduce_expr)s" % {"reduce_expr": reduce_expr},
+            arguments="const %(tp)s *in" % {
                 "tp": dtype_to_ctype(dtype),
                 }, preamble="#define MY_INFINITY (1./0)")
- 
+
 
 
 
@@ -373,11 +375,11 @@ def get_subset_minmax_kernel(what, dtype):
     else:
         raise TypeError("unsupported dtype specified")
 
-    return ReductionKernel(dtype, 
-            neutral=get_minmax_neutral(what, dtype), 
-            reduce_expr="%(reduce_expr)s" % {"reduce_expr": reduce_expr}, 
-	    map_expr="in[lookup_tbl[i]]", 
+    return ReductionKernel(dtype,
+            neutral=get_minmax_neutral(what, dtype),
+            reduce_expr="%(reduce_expr)s" % {"reduce_expr": reduce_expr},
+            map_expr="in[lookup_tbl[i]]",
             arguments="const unsigned int *lookup_tbl, "
-	    "const %(tp)s *in"  % {
+            "const %(tp)s *in"  % {
             "tp": dtype_to_ctype(dtype),
             }, preamble="#define MY_INFINITY (1./0)")
