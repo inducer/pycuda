@@ -926,6 +926,8 @@ Unstructured Memory Transfers
     optionally serialized via *stream*. The size of
     the copy is determined by the size of the buffer.
 
+    *src* must be page-locked memory, see, e.g. :func:`pagelocked_empty`.
+
     New in 0.93.
 
 .. function:: memcpy_dtoh(dest, src)
@@ -943,6 +945,10 @@ Unstructured Memory Transfers
     :class:`DeviceAllocation`) to the Python buffer *dest* asynchronously,
     optionally serialized via *stream*. The size of the copy
     is determined by the size of the buffer.
+
+    *dest* must be page-locked memory, see, e.g. :func:`pagelocked_empty`.
+
+    New in 0.93.
 
 .. function:: memcpy_dtod(dest, src, size)
 .. function:: memcpy_dtod_async(dest, src, size, stream=None)
