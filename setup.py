@@ -66,23 +66,23 @@ def verify_path(description, paths, names, extensions, subpaths=['/'],
                 for prefix in prefixes:
                     for name in names:
                         for extension in extensions:
-                            print path, subpath, prefix, name, extension
+                            print(path, subpath, prefix, name, extension)
                             filename = path + subpath + prefix + name + extension
 
                             looked_where.append(filename)
 
                             if exists(filename):
                                 return
-        print "*** Cannot find %s. Checked locations:" % description
+        print("*** Cannot find %s. Checked locations:" % description)
         for path in looked_where:
-            print "   %s" % path
+            print("   %s" % path)
 
         if maybe_ok:
-            print "*** Note that this may not be a problem as this " \
-                    "component is often installed system-wide."
+            print("*** Note that this may not be a problem as this "
+                    "component is often installed system-wide.")
     except:
-        print "*** Error occurred in plausibility checking for path of %s." \
-                % description
+        print("*** Error occurred in plausibility checking for path of %s."
+                % description)
 
 
 
@@ -103,11 +103,14 @@ def verify_siteconfig(sc_vars):
             extensions=['.hpp']
             );
     else:
-        print warn_prefix + 'BOOST_INC_DIR is not set, should be something like "/path/to/boost/include/boost-1_39".'
+        print(warn_prefix + 'BOOST_INC_DIR is not set, should be something like '
+                '"/path/to/boost/include/boost-1_39".')
 
     # BOOST_LIB_DIR/(lib)?BOOST_PYTHON_LIBNAME(.so|.dylib|?Windows?)
     if 'BOOST_LIB_DIR' not in sc_vars:
-        print warn_prefix + 'BOOST_LIB_DIR is not set, should be like BOOST_INC_DIR but with "/lib" instead of "/include/boost-1_39".'
+        print(warn_prefix + 'BOOST_LIB_DIR is not set, should be '
+                'like BOOST_INC_DIR but with "/lib" instead of '
+                '"/include/boost-1_39".')
 
     if 'BOOST_PYTHON_LIBNAME' in sc_vars:
         verify_path (
@@ -118,7 +121,8 @@ def verify_siteconfig(sc_vars):
             prefixes=LIB_PREFIXES
             )
     else:
-        print warn_prefix + 'BOOST_PYTHON_LIBNAME is not set, should be something like "boost_python-*-mt".'
+        print(warn_prefix + 'BOOST_PYTHON_LIBNAME is not set, '
+                'should be something like "boost_python-*-mt".')
 
     # BOOST_LIB_DIR/(lib)?BOOST_THREAD_LIBNAME(.so|.dylib|?Windows?)
     if 'BOOST_THREAD_LIBNAME' in sc_vars:
@@ -130,7 +134,8 @@ def verify_siteconfig(sc_vars):
             prefixes=LIB_PREFIXES
             )
     else:
-        print warn_prefix + 'BOOST_THREAD_LIBNAME is not set, should be something like "boost_thread-*-mt".'
+        print(warn_prefix + 'BOOST_THREAD_LIBNAME is not set, '
+                'should be something like "boost_thread-*-mt".')
 
     # CUDA_ROOT/bin/nvcc(.exe)?
     if 'CUDA_ROOT' in sc_vars:
@@ -142,10 +147,11 @@ def verify_siteconfig(sc_vars):
             extensions=APP_EXTS,
             )
     else:
-        print warn_prefix + 'CUDA_ROOT is not set, should point to the nVidia CUDA Toolkit.'
+        print(warn_prefix + 'CUDA_ROOT is not set, '
+                'should point to the nVidia CUDA Toolkit.')
 
     # CUDA_INC_DIR/cuda.h
-    if sc_vars.has_key('CUDA_INC_DIR'):
+    if 'CUDA_INC_DIR' in sc_vars:
         verify_path (
             description="CUDA include directory",
             paths=sc_vars['CUDA_INC_DIR'],
@@ -153,11 +159,13 @@ def verify_siteconfig(sc_vars):
             extensions=['.h'],
             )
     else:
-        print warn_prefix + 'CUDA_INC_DIR is not set, should be something like CUDA_ROOT + "/include".'
+        print(warn_prefix + 'CUDA_INC_DIR is not set, '
+                'should be something like CUDA_ROOT + "/include".')
 
     # CUDADRV_LIB_DIR=(lib)?CUDADRV_LIBNAME(.so|.dylib|?Windows?)
-    if not sc_vars.has_key('CUDADRV_LIB_DIR'):
-        print warn_prefix + 'CUDADRV_LIB_DIR is not set, should be something like CUDA_ROOT + "/lib".'
+    if not 'CUDADRV_LIB_DIR' in sc_vars:
+        print(warn_prefix + 'CUDADRV_LIB_DIR is not set, should '
+                'be something like CUDA_ROOT + "/lib".')
 
     if 'CUDADRV_LIBNAME' in sc_vars:
         verify_path (
@@ -169,7 +177,7 @@ def verify_siteconfig(sc_vars):
             maybe_ok=True,
             )
     else:
-        print warn_prefix + 'CUDADRV_LIBNAME is not set, should most likely be "cuda".'
+        print(warn_prefix + 'CUDADRV_LIBNAME is not set, should most likely be "cuda".')
 
 
 
@@ -192,7 +200,7 @@ def main():
     if conf["CUDA_ROOT"] is None:
         nvcc_path = search_on_path(["nvcc", "nvcc.exe"])
         if nvcc_path is None:
-            print "*** CUDA_ROOT not set, and nvcc not in path. Giving up."
+            print("*** CUDA_ROOT not set, and nvcc not in path. Giving up.")
             import sys
             sys.exit(1)
 
@@ -217,7 +225,7 @@ def main():
 
     import sys
 
-    if 'darwin' in sys.platform and sys.maxint == 2147483647:
+    if 'darwin' in sys.platform and sys.maxsize == 2147483647:
         # The Python interpreter is running in 32 bit mode on OS X
         if "-arch" not in conf["CXXFLAGS"]:
             conf["CXXFLAGS"].extend(['-arch', 'i386', '-m32'])
@@ -231,7 +239,13 @@ def main():
         EXTRA_DEFINES["HAVE_GL"] = 1
 
     ver_dic = {}
-    execfile("pycuda/__init__.py", ver_dic)
+    exec(compile(open("pycuda/__init__.py").read(), "pycuda/__init__.py", 'exec'), ver_dic)
+
+    try:
+        from distutils.command.build_py import build_py_2to3 as build_py
+    except ImportError:
+        # 2.x
+        from distutils.command.build_py import build_py
 
     setup(name="pycuda",
             # metadata
@@ -271,7 +285,7 @@ def main():
             Relatedly, like-minded computing goodness for `OpenCL <http://khronos.org>`_
             is provided by PyCUDA's sister project `PyOpenCL <http://pypi.python.org/pypi/pyopencl>`_.
             """,
-            author=u"Andreas Kloeckner",
+            author="Andreas Kloeckner",
             author_email="inform@tiker.net",
             license = "MIT",
             url="http://mathema.tician.de/software/pycuda",
@@ -312,7 +326,7 @@ def main():
                     include_dirs=INCLUDE_DIRS + EXTRA_INCLUDE_DIRS,
                     library_dirs=LIBRARY_DIRS + conf["CUDADRV_LIB_DIR"],
                     libraries=LIBRARIES + conf["CUDADRV_LIBNAME"],
-                    define_macros=list(EXTRA_DEFINES.iteritems()),
+                    define_macros=list(EXTRA_DEFINES.items()),
                     extra_compile_args=conf["CXXFLAGS"],
                     extra_link_args=conf["LDFLAGS"],
                     ),
@@ -323,7 +337,9 @@ def main():
             data_files=[
                 ("include/pycuda", glob.glob("src/cuda/*.hpp"))
                 ],
-            )
+
+            # 2to3 invocation
+            cmdclass={'build_py': build_py})
 
 
 
