@@ -170,11 +170,6 @@ def get_default_device(default=0):
 def make_default_context():
     ndevices = cuda.Device.count()
     if ndevices == 0:
-        errmsg = "No CUDA enabled device found. Please check your installation."
-        raise RuntimeError, errmsg
-
-    ndevices = cuda.Device.count()
-    if ndevices == 0:
         raise RuntimeError("No CUDA enabled device found. "
                 "Please check your installation.")
 
