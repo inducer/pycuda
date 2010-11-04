@@ -64,9 +64,14 @@ class NumpyExtension(Extension):
         from os.path import join
         return join(pathname, "core", "include")
 
-    @property
-    def include_dirs(self):
+    def get_include_dirs(self):
         return self._include_dirs + [self.get_numpy_incpath()]
+    def set_include_dirs(self, value):
+        self._include_dirs = value
+    def del_include_dirs(self):
+        pass
+
+    include_dirs = property(get_include_dirs, set_include_dirs, del_include_dirs)
 
 
 
