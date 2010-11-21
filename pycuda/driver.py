@@ -1,4 +1,12 @@
-from pycuda._driver import *
+try:
+    from pycuda._driver import *
+except ImportError, e:
+    if "_v2" in str(e):
+        from warnings import warn
+        warn("Failed to import the CUDA driver interface, with an error "
+                "message indicating that the version of your CUDA header "
+                "does not match the version of your CUDA driver.")
+    raise
 
 
 
