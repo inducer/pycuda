@@ -19,6 +19,9 @@ static PyTypeObject PyStructType;
 /* compatibility macros */
 #if (PY_VERSION_HEX < 0x02050000)
 typedef long int Py_ssize_t;
+
+#define PyInt_FromSsize_t(x) PyInt_FromLong(x)
+#define PyInt_AsSsize_t(x) PyInt_AsLong(x)
 #endif
 
 /* If PY_STRUCT_FLOAT_COERCE is defined, the struct module will allow float
