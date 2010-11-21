@@ -11,7 +11,7 @@
 
 
 
-#if CUDA_VERSION < 1010
+#if CUDAPP_CUDA_VERSION < 1010
 #error PyCuda only works with CUDA 1.1 or newer.
 #endif
 
@@ -53,7 +53,7 @@ namespace
         || err.code() == CUDA_ERROR_NO_BINARY_FOR_GPU
         || err.code() == CUDA_ERROR_FILE_NOT_FOUND
         || err.code() == CUDA_ERROR_NOT_READY
-#if CUDA_VERSION >= 3000 && defined(CUDAPP_POST_30_BETA)
+#if CUDAPP_CUDA_VERSION >= 3000 && defined(CUDAPP_POST_30_BETA)
         || err.code() == CUDA_ERROR_ECC_UNCORRECTABLE
 #endif
         )
@@ -69,9 +69,9 @@ namespace
   py::tuple cuda_version()
   {
     return py::make_tuple(
-        CUDA_VERSION / 1000, 
-        (CUDA_VERSION % 1000)/10, 
-        CUDA_VERSION % 10);
+        CUDAPP_CUDA_VERSION / 1000, 
+        (CUDAPP_CUDA_VERSION % 1000)/10, 
+        CUDAPP_CUDA_VERSION % 10);
   }
 
 
@@ -85,7 +85,7 @@ namespace
 
   py::object device_get_attribute(device const &dev, CUdevice_attribute attr)
   {
-#if CUDA_VERSION >= 2020
+#if CUDAPP_CUDA_VERSION >= 2020
     if (attr == CU_DEVICE_ATTRIBUTE_COMPUTE_MODE)
       return py::object(CUcomputemode(dev.get_attribute(attr)));
     else
@@ -249,7 +249,7 @@ namespace
 
 
 
-#if CUDA_VERSION >= 3000
+#if CUDAPP_CUDA_VERSION >= 3000
   void  py_memcpy_dtod_async(CUdeviceptr dst, CUdeviceptr src, 
       unsigned int byte_count, py::object stream_py)
   {
@@ -292,7 +292,7 @@ namespace
       throw py::error_already_set();
     CUmodule mod;
 
-#if CUDA_VERSION >= 2010
+#if CUDAPP_CUDA_VERSION >= 2010
     const unsigned buf_size = 32768;
     char info_buf[buf_size], error_buf[buf_size];
 
@@ -429,7 +429,7 @@ void pycuda_expose_gl();
 BOOST_PYTHON_MODULE(_driver)
 {
   py::def("get_version", cuda_version);
-#if CUDA_VERSION >= 2020
+#if CUDAPP_CUDA_VERSION >= 2020
   py::def("get_driver_version", cuda::get_driver_version);
 #endif
 
@@ -455,13 +455,13 @@ BOOST_PYTHON_MODULE(_driver)
   // }}}
 
   // {{{ constants
-#if CUDA_VERSION >= 2000
+#if CUDAPP_CUDA_VERSION >= 2000
   py::enum_<CUctx_flags>("ctx_flags")
     .value("SCHED_AUTO", CU_CTX_SCHED_AUTO)
     .value("SCHED_SPIN", CU_CTX_SCHED_SPIN)
     .value("SCHED_YIELD", CU_CTX_SCHED_YIELD)
     .value("SCHED_MASK", CU_CTX_SCHED_MASK)
-#if CUDA_VERSION >= 2020
+#if CUDAPP_CUDA_VERSION >= 2020
     .value("BLOCKING_SYNC", CU_CTX_BLOCKING_SYNC)
     .value("MAP_HOST", CU_CTX_MAP_HOST)
 #endif
@@ -469,11 +469,11 @@ BOOST_PYTHON_MODULE(_driver)
     ;
 #endif
 
-#if CUDA_VERSION >= 2020
+#if CUDAPP_CUDA_VERSION >= 2020
   py::enum_<CUevent_flags>("event_flags")
     .value("DEFAULT", CU_EVENT_DEFAULT)
     .value("BLOCKING_SYNC", CU_EVENT_BLOCKING_SYNC)
-#if CUDA_VERSION >= 3020
+#if CUDAPP_CUDA_VERSION >= 3020
     .value("DISABLE_TIMING", CU_EVENT_DISABLE_TIMING)
 #endif
     ;
@@ -491,14 +491,14 @@ BOOST_PYTHON_MODULE(_driver)
     .value("FLOAT"         , CU_AD_FORMAT_FLOAT)
     ;
 
-#if CUDA_VERSION >= 3000
+#if CUDAPP_CUDA_VERSION >= 3000
   {
     py::class_<array3d_flags> cls("array3d_flags", py::no_init);
     // deprecated
     cls.attr("ARRAY3D_2DARRAY") = CUDA_ARRAY3D_2DARRAY;
 
     cls.attr("2DARRAY") = CUDA_ARRAY3D_2DARRAY;
-#if CUDA_VERSION >= 3010
+#if CUDAPP_CUDA_VERSION >= 3010
     cls.attr("SURFACE_LDST") = CUDA_ARRAY3D_SURFACE_LDST;
 #endif
   }
@@ -508,7 +508,7 @@ BOOST_PYTHON_MODULE(_driver)
     .value("WRAP", CU_TR_ADDRESS_MODE_WRAP)
     .value("CLAMP", CU_TR_ADDRESS_MODE_CLAMP)
     .value("MIRROR", CU_TR_ADDRESS_MODE_MIRROR)
-#if CUDA_VERSION >= 3020
+#if CUDAPP_CUDA_VERSION >= 3020
     .value("BORDER", CU_TR_ADDRESS_MODE_BORDER)
 #endif
     ;
@@ -525,14 +525,14 @@ BOOST_PYTHON_MODULE(_driver)
     .value("MAX_GRID_DIM_X", CU_DEVICE_ATTRIBUTE_MAX_GRID_DIM_X)
     .value("MAX_GRID_DIM_Y", CU_DEVICE_ATTRIBUTE_MAX_GRID_DIM_Y)
     .value("MAX_GRID_DIM_Z", CU_DEVICE_ATTRIBUTE_MAX_GRID_DIM_Z)
-#if CUDA_VERSION >= 2000
+#if CUDAPP_CUDA_VERSION >= 2000
     .value("MAX_SHARED_MEMORY_PER_BLOCK", CU_DEVICE_ATTRIBUTE_MAX_SHARED_MEMORY_PER_BLOCK)
 #endif
     .value("SHARED_MEMORY_PER_BLOCK", CU_DEVICE_ATTRIBUTE_SHARED_MEMORY_PER_BLOCK)
     .value("TOTAL_CONSTANT_MEMORY", CU_DEVICE_ATTRIBUTE_TOTAL_CONSTANT_MEMORY)
     .value("WARP_SIZE", CU_DEVICE_ATTRIBUTE_WARP_SIZE)
     .value("MAX_PITCH", CU_DEVICE_ATTRIBUTE_MAX_PITCH)
-#if CUDA_VERSION >= 2000
+#if CUDAPP_CUDA_VERSION >= 2000
     .value("MAX_REGISTERS_PER_BLOCK", CU_DEVICE_ATTRIBUTE_MAX_REGISTERS_PER_BLOCK)
 #endif
     .value("REGISTERS_PER_BLOCK", CU_DEVICE_ATTRIBUTE_REGISTERS_PER_BLOCK)
@@ -540,16 +540,16 @@ BOOST_PYTHON_MODULE(_driver)
     .value("TEXTURE_ALIGNMENT", CU_DEVICE_ATTRIBUTE_TEXTURE_ALIGNMENT)
 
     .value("GPU_OVERLAP", CU_DEVICE_ATTRIBUTE_GPU_OVERLAP)
-#if CUDA_VERSION >= 2000
+#if CUDAPP_CUDA_VERSION >= 2000
     .value("MULTIPROCESSOR_COUNT", CU_DEVICE_ATTRIBUTE_MULTIPROCESSOR_COUNT)
 #endif
-#if CUDA_VERSION >= 2020
+#if CUDAPP_CUDA_VERSION >= 2020
     .value("KERNEL_EXEC_TIMEOUT", CU_DEVICE_ATTRIBUTE_KERNEL_EXEC_TIMEOUT)
     .value("INTEGRATED", CU_DEVICE_ATTRIBUTE_INTEGRATED)
     .value("CAN_MAP_HOST_MEMORY", CU_DEVICE_ATTRIBUTE_CAN_MAP_HOST_MEMORY)
     .value("COMPUTE_MODE", CU_DEVICE_ATTRIBUTE_COMPUTE_MODE)
 #endif
-#if CUDA_VERSION >= 3000
+#if CUDAPP_CUDA_VERSION >= 3000
     .value("MAXIMUM_TEXTURE1D_WIDTH", CU_DEVICE_ATTRIBUTE_MAXIMUM_TEXTURE1D_WIDTH)
     .value("MAXIMUM_TEXTURE2D_WIDTH", CU_DEVICE_ATTRIBUTE_MAXIMUM_TEXTURE2D_WIDTH)
     .value("MAXIMUM_TEXTURE2D_HEIGHT", CU_DEVICE_ATTRIBUTE_MAXIMUM_TEXTURE2D_HEIGHT)
@@ -565,14 +565,14 @@ BOOST_PYTHON_MODULE(_driver)
     .value("ECC_ENABLED", CU_DEVICE_ATTRIBUTE_ECC_ENABLED)
 #endif
 #endif
-#if CUDA_VERSION >= 3020
+#if CUDAPP_CUDA_VERSION >= 3020
     .value("PCI_BUS_ID", CU_DEVICE_ATTRIBUTE_PCI_BUS_ID)
     .value("PCI_DEVICE_ID", CU_DEVICE_ATTRIBUTE_PCI_DEVICE_ID)
     .value("TCC_DRIVER", CU_DEVICE_ATTRIBUTE_TCC_DRIVER)
 #endif
     ;
 
-#if CUDA_VERSION >= 3000 && defined(CUDAPP_POST_30_BETA)
+#if CUDAPP_CUDA_VERSION >= 3000 && defined(CUDAPP_POST_30_BETA)
   py::enum_<CUfunc_cache_enum>("func_cache")
     .value("PREFER_NONE", CU_FUNC_CACHE_PREFER_NONE)
     .value("PREFER_SHARED", CU_FUNC_CACHE_PREFER_SHARED)
@@ -580,14 +580,14 @@ BOOST_PYTHON_MODULE(_driver)
     ;
 #endif
 
-#if CUDA_VERSION >= 2020
+#if CUDAPP_CUDA_VERSION >= 2020
   py::enum_<CUfunction_attribute>("function_attribute")
     .value("MAX_THREADS_PER_BLOCK", CU_FUNC_ATTRIBUTE_MAX_THREADS_PER_BLOCK)
     .value("SHARED_SIZE_BYTES", CU_FUNC_ATTRIBUTE_SHARED_SIZE_BYTES)
     .value("CONST_SIZE_BYTES", CU_FUNC_ATTRIBUTE_CONST_SIZE_BYTES)
     .value("LOCAL_SIZE_BYTES", CU_FUNC_ATTRIBUTE_LOCAL_SIZE_BYTES)
     .value("NUM_REGS", CU_FUNC_ATTRIBUTE_NUM_REGS)
-#if CUDA_VERSION >= 3000 && defined(CUDAPP_POST_30_BETA)
+#if CUDAPP_CUDA_VERSION >= 3000 && defined(CUDAPP_POST_30_BETA)
     .value("PTX_VERSION", CU_FUNC_ATTRIBUTE_PTX_VERSION)
     .value("BINARY_VERSION", CU_FUNC_ATTRIBUTE_BINARY_VERSION)
 #endif
@@ -601,7 +601,7 @@ BOOST_PYTHON_MODULE(_driver)
     .value("ARRAY", CU_MEMORYTYPE_ARRAY)
     ;
 
-#if CUDA_VERSION >= 2020
+#if CUDAPP_CUDA_VERSION >= 2020
   py::enum_<CUcomputemode>("compute_mode")
     .value("DEFAULT", CU_COMPUTEMODE_DEFAULT)
     .value("EXCLUSIVE", CU_COMPUTEMODE_EXCLUSIVE)
@@ -609,7 +609,7 @@ BOOST_PYTHON_MODULE(_driver)
     ;
 #endif
 
-#if CUDA_VERSION >= 2010
+#if CUDAPP_CUDA_VERSION >= 2010
   py::enum_<CUjit_option>("jit_option")
     .value("MAX_REGISTERS", CU_JIT_MAX_REGISTERS)
     .value("THREADS_PER_BLOCK", CU_JIT_THREADS_PER_BLOCK)
@@ -629,10 +629,10 @@ BOOST_PYTHON_MODULE(_driver)
     .value("COMPUTE_11", CU_TARGET_COMPUTE_11)
     .value("COMPUTE_12", CU_TARGET_COMPUTE_12)
     .value("COMPUTE_13", CU_TARGET_COMPUTE_13)
-#if CUDA_VERSION >= 3000
+#if CUDAPP_CUDA_VERSION >= 3000
     .value("COMPUTE_20", CU_TARGET_COMPUTE_20)
 #endif
-#if CUDA_VERSION >= 3020
+#if CUDAPP_CUDA_VERSION >= 3020
     .value("COMPUTE_21", CU_TARGET_COMPUTE_21)
 #endif
     ;
@@ -643,7 +643,7 @@ BOOST_PYTHON_MODULE(_driver)
     ;
 #endif
 
-#if CUDA_VERSION >= 2020
+#if CUDAPP_CUDA_VERSION >= 2020
   {
     py::class_<host_alloc_flags> cls("host_alloc_flags", py::no_init);
     cls.attr("PORTABLE") = CU_MEMHOSTALLOC_PORTABLE;
@@ -652,11 +652,11 @@ BOOST_PYTHON_MODULE(_driver)
   }
 #endif
 
-#if CUDA_VERSION >= 3010
+#if CUDAPP_CUDA_VERSION >= 3010
   py::enum_<CUlimit>("limit")
     .value("STACK_SIZE", CU_LIMIT_STACK_SIZE)
     .value("PRINTF_FIFO_SIZE", CU_LIMIT_PRINTF_FIFO_SIZE)
-#if CUDA_VERSION >= 3020
+#if CUDAPP_CUDA_VERSION >= 3020
     .value("MALLOC_HEAP_SIZE", CU_LIMIT_MALLOC_HEAP_SIZE)
 #endif
     ;
@@ -664,7 +664,7 @@ BOOST_PYTHON_MODULE(_driver)
 
 
   // graphics enums -----------------------------------------------------------
-#if CUDA_VERSION >= 3000
+#if CUDAPP_CUDA_VERSION >= 3000
   py::enum_<CUgraphicsRegisterFlags>("graphics_register_flags")
     .value("NONE", CU_GRAPHICS_REGISTER_FLAGS_NONE)
     ;
@@ -720,7 +720,7 @@ BOOST_PYTHON_MODULE(_driver)
 
       .DEF_SIMPLE_METHOD(detach)
 
-#if CUDA_VERSION >= 2000
+#if CUDAPP_CUDA_VERSION >= 2000
       .def("push", context_push)
       .DEF_SIMPLE_METHOD(pop)
       .staticmethod("pop")
@@ -734,13 +734,13 @@ BOOST_PYTHON_MODULE(_driver)
       .def("get_current", (boost::shared_ptr<cl> (*)()) &cl::current_context)
       .staticmethod("get_current")
 
-#if CUDA_VERSION >= 3010
+#if CUDAPP_CUDA_VERSION >= 3010
       .DEF_SIMPLE_METHOD(set_limit)
       .staticmethod("set_limit")
       .DEF_SIMPLE_METHOD(get_limit)
       .staticmethod("get_limit")
 #endif
-#if CUDA_VERSION >= 3020
+#if CUDAPP_CUDA_VERSION >= 3020
       .DEF_SIMPLE_METHOD(get_cache_config)
       .staticmethod("get_cache_config")
       .DEF_SIMPLE_METHOD(set_cache_config)
@@ -772,7 +772,7 @@ BOOST_PYTHON_MODULE(_driver)
       .def("get_texref", module_get_texref, 
           (py::args("self", "name")),
           py::return_value_policy<py::manage_new_object>())
-#if CUDA_VERSION >= 3010
+#if CUDAPP_CUDA_VERSION >= 3010
       .def("get_surfref", module_get_surfref, 
           (py::args("self", "name")),
           py::return_value_policy<py::manage_new_object>())
@@ -806,10 +806,10 @@ BOOST_PYTHON_MODULE(_driver)
       .DEF_SIMPLE_METHOD(launch_grid)
       .DEF_SIMPLE_METHOD(launch_grid_async)
 
-#if CUDA_VERSION >= 2020
+#if CUDAPP_CUDA_VERSION >= 2020
       .DEF_SIMPLE_METHOD(get_attribute)
 #endif
-#if CUDA_VERSION >= 3000 && defined(CUDAPP_POST_30_BETA)
+#if CUDAPP_CUDA_VERSION >= 3000 && defined(CUDAPP_POST_30_BETA)
       .DEF_SIMPLE_METHOD(set_cache_config)
 #endif
       ;
@@ -846,10 +846,10 @@ BOOST_PYTHON_MODULE(_driver)
     typedef host_allocation cl;
     py::class_<cl, boost::noncopyable>("HostAllocation", py::no_init)
       .DEF_SIMPLE_METHOD(free)
-#if CUDA_VERSION >= 2020
+#if CUDAPP_CUDA_VERSION >= 2020
       .DEF_SIMPLE_METHOD(get_device_pointer)
 #endif
-#if CUDA_VERSION >= 3020
+#if CUDAPP_CUDA_VERSION >= 3020
       .DEF_SIMPLE_METHOD(get_flags)
 #endif
       ;
@@ -883,7 +883,7 @@ BOOST_PYTHON_MODULE(_driver)
       (py::args("dest"), py::arg("src"), py::arg("stream")=py::object()));
 
   py::def("memcpy_dtod", py_memcpy_dtod, py::args("dest", "src", "size"));
-#if CUDA_VERSION >= 3000
+#if CUDAPP_CUDA_VERSION >= 3000
   py::def("memcpy_dtod_async", py_memcpy_dtod_async, 
       (py::args("dest", "src", "size"), py::arg("stream")=py::object()));
 #endif
@@ -931,7 +931,7 @@ BOOST_PYTHON_MODULE(_driver)
       ;
   }
 
-#if CUDA_VERSION >= 2000
+#if CUDAPP_CUDA_VERSION >= 2000
   {
     typedef memcpy_3d cl;
     py::class_<cl>("Memcpy3D")
@@ -998,7 +998,7 @@ BOOST_PYTHON_MODULE(_driver)
       ;
   }
 
-#if CUDA_VERSION >= 2000
+#if CUDAPP_CUDA_VERSION >= 2000
   {
     typedef CUDA_ARRAY3D_DESCRIPTOR cl;
     py::class_<cl>("ArrayDescriptor3D")
@@ -1017,7 +1017,7 @@ BOOST_PYTHON_MODULE(_driver)
       ("Array", py::init<const CUDA_ARRAY_DESCRIPTOR &>())
       .DEF_SIMPLE_METHOD(free)
       .DEF_SIMPLE_METHOD(get_descriptor)
-#if CUDA_VERSION >= 2000
+#if CUDAPP_CUDA_VERSION >= 2000
       .def(py::init<const CUDA_ARRAY3D_DESCRIPTOR &>())
       .DEF_SIMPLE_METHOD(get_descriptor_3d)
 #endif
@@ -1030,7 +1030,7 @@ BOOST_PYTHON_MODULE(_driver)
       .DEF_SIMPLE_METHOD(set_array)
       .def("set_address", &cl::set_address, 
           (py::arg("devptr"), py::arg("bytes"), py::arg("allow_offset")=false))
-#if CUDA_VERSION >= 2020
+#if CUDAPP_CUDA_VERSION >= 2020
       .DEF_SIMPLE_METHOD_WITH_ARGS(set_address_2d, ("devptr", "descr", "pitch"))
 #endif
       .DEF_SIMPLE_METHOD_WITH_ARGS(set_format, ("format", "num_components"))
@@ -1043,7 +1043,7 @@ BOOST_PYTHON_MODULE(_driver)
       .DEF_SIMPLE_METHOD(get_address_mode)
       .DEF_SIMPLE_METHOD(get_filter_mode)
 
-#if CUDA_VERSION >= 2000
+#if CUDAPP_CUDA_VERSION >= 2000
       .DEF_SIMPLE_METHOD(get_format)
 #endif
 
@@ -1051,7 +1051,7 @@ BOOST_PYTHON_MODULE(_driver)
       ;
   }
 
-#if CUDA_VERSION >= 3010
+#if CUDAPP_CUDA_VERSION >= 3010
   {
     typedef surface_reference cl;
     py::class_<cl, boost::noncopyable>("SurfaceReference", py::no_init)

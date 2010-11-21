@@ -34,6 +34,12 @@
 // #define CUDAPP_TRACE_CUDA
 #define CUDAPP_POST_30_BETA
 
+#ifdef CUDAPP_PRETEND_CUDA_VERSION
+#define CUDAPP_CUDA_VERSION CUDAPP_PRETEND_CUDA_VERSION
+#else
+#define CUDAPP_CUDA_VERSION CUDA_VERSION
+#endif
+
 
 
 
@@ -130,7 +136,7 @@ namespace cuda
   namespace py = boost::python;
 
   typedef
-#if CUDA_VERSION >= 3020
+#if CUDAPP_CUDA_VERSION >= 3020
         size_t
 #else
         unsigned int 
@@ -183,7 +189,7 @@ namespace cuda
           case CUDA_ERROR_INVALID_VALUE: return "invalid value";
           case CUDA_ERROR_OUT_OF_MEMORY: return "out of memory";
           case CUDA_ERROR_NOT_INITIALIZED: return "not initialized";
-#if CUDA_VERSION >= 2000
+#if CUDAPP_CUDA_VERSION >= 2000
           case CUDA_ERROR_DEINITIALIZED: return "deinitialized";
 #endif
 
@@ -200,20 +206,20 @@ namespace cuda
           case CUDA_ERROR_NO_BINARY_FOR_GPU: return "no binary for gpu";
           case CUDA_ERROR_ALREADY_ACQUIRED: return "already acquired";
           case CUDA_ERROR_NOT_MAPPED: return "not mapped";
-#if CUDA_VERSION >= 3000
+#if CUDAPP_CUDA_VERSION >= 3000
           case CUDA_ERROR_NOT_MAPPED_AS_ARRAY: return "not mapped as array";
           case CUDA_ERROR_NOT_MAPPED_AS_POINTER: return "not mapped as pointer";
 #ifdef CUDAPP_POST_30_BETA
           case CUDA_ERROR_ECC_UNCORRECTABLE: return "ECC uncorrectable";
 #endif
 #endif
-#if CUDA_VERSION >= 3010
+#if CUDAPP_CUDA_VERSION >= 3010
           case CUDA_ERROR_UNSUPPORTED_LIMIT: return "unsupported limit";
 #endif
 
           case CUDA_ERROR_INVALID_SOURCE: return "invalid source";
           case CUDA_ERROR_FILE_NOT_FOUND: return "file not found";
-#if CUDA_VERSION >= 3010
+#if CUDAPP_CUDA_VERSION >= 3010
           case CUDA_ERROR_SHARED_OBJECT_SYMBOL_NOT_FOUND:
             return "shared object symbol not found";
           case CUDA_ERROR_SHARED_OBJECT_INIT_FAILED:
@@ -231,7 +237,7 @@ namespace cuda
           case CUDA_ERROR_LAUNCH_TIMEOUT: return "launch timeout";
           case CUDA_ERROR_LAUNCH_INCOMPATIBLE_TEXTURING: return "launch incompatible texturing";
 
-#if (CUDA_VERSION >= 3000) && (CUDA_VERSION < 3020)
+#if (CUDAPP_CUDA_VERSION >= 3000) && (CUDAPP_CUDA_VERSION < 3020)
           case CUDA_ERROR_POINTER_IS_64BIT:
              return "attempted to retrieve 64-bit pointer via 32-bit api function";
           case CUDA_ERROR_SIZE_IS_64BIT:
@@ -262,7 +268,7 @@ namespace cuda
   // }}}
 
   // {{{ version query ------------------------------------------------------------
-#if CUDA_VERSION >= 2020
+#if CUDAPP_CUDA_VERSION >= 2020
   inline int get_driver_version()
   {
     int result;
@@ -513,7 +519,7 @@ namespace cuda
         return device(dev);
       }
 
-#if CUDA_VERSION >= 2000
+#if CUDAPP_CUDA_VERSION >= 2000
 
       static void prepare_context_switch()
       {
@@ -572,7 +578,7 @@ namespace cuda
         }
       }
 
-#if CUDA_VERSION >= 3010
+#if CUDAPP_CUDA_VERSION >= 3010
       static void set_limit(CUlimit limit, size_t value)
       {
         CUDAPP_CALL_GUARDED(cuCtxSetLimit, (limit, value));
@@ -586,7 +592,7 @@ namespace cuda
       }
 #endif
 
-#if CUDA_VERSION >= 3020
+#if CUDAPP_CUDA_VERSION >= 3020
       static CUfunc_cache get_cache_config()
       {
         CUfunc_cache value;
@@ -631,7 +637,7 @@ namespace cuda
 
 
 
-#if CUDA_VERSION >= 2000
+#if CUDAPP_CUDA_VERSION >= 2000
   inline
   void context_push(boost::shared_ptr<context> ctx)
   {
@@ -724,7 +730,7 @@ namespace cuda
           if (boost::this_thread::get_id() != m_context->thread_id())
             throw cuda::cannot_activate_out_of_thread_context(
                 "cannot activate out-of-thread context");
-#if CUDA_VERSION >= 2000
+#if CUDAPP_CUDA_VERSION >= 2000
           context_push(m_context);
 #else
           throw cuda::error("scoped_context_activation", CUDA_ERROR_INVALID_CONTEXT,
@@ -735,7 +741,7 @@ namespace cuda
 
       ~scoped_context_activation()
       {
-#if CUDA_VERSION >= 2000
+#if CUDAPP_CUDA_VERSION >= 2000
         if (m_did_switch)
           m_context->pop();
 #endif
@@ -802,7 +808,7 @@ namespace cuda
         : m_managed(true)
       { CUDAPP_CALL_GUARDED(cuArrayCreate, (&m_array, &descr)); }
 
-#if CUDA_VERSION >= 2000
+#if CUDAPP_CUDA_VERSION >= 2000
       array(const CUDA_ARRAY3D_DESCRIPTOR &descr)
         : m_managed(true)
       { CUDAPP_CALL_GUARDED(cuArray3DCreate, (&m_array, &descr)); }
@@ -838,7 +844,7 @@ namespace cuda
         return result;
       }
 
-#if CUDA_VERSION >= 2000
+#if CUDAPP_CUDA_VERSION >= 2000
       CUDA_ARRAY3D_DESCRIPTOR get_descriptor_3d()
       {
         CUDA_ARRAY3D_DESCRIPTOR result;
@@ -910,7 +916,7 @@ namespace cuda
         return byte_offset;
       }
 
-#if CUDA_VERSION >= 2020
+#if CUDAPP_CUDA_VERSION >= 2020
       void set_address_2d(CUdeviceptr dptr,
           const CUDA_ARRAY_DESCRIPTOR &descr, unsigned int pitch)
       {
@@ -954,7 +960,7 @@ namespace cuda
         return result;
       }
 
-#if CUDA_VERSION >= 2000
+#if CUDAPP_CUDA_VERSION >= 2000
       py::tuple get_format()
       {
         CUarray_format fmt;
@@ -975,7 +981,7 @@ namespace cuda
   // }}}
 
   // {{{ surface reference
-#if CUDA_VERSION >= 3010
+#if CUDAPP_CUDA_VERSION >= 3010
   class module;
 
   class surface_reference : public  boost::noncopyable
@@ -1071,7 +1077,7 @@ namespace cuda
     return result.release();
   }
 
-#if CUDA_VERSION >= 3010
+#if CUDAPP_CUDA_VERSION >= 3010
   inline
   surface_reference *module_get_surfref(
       boost::shared_ptr<module> mod, const char *name)
@@ -1153,7 +1159,7 @@ namespace cuda
             m_symbol);
       }
 
-#if CUDA_VERSION >= 2020
+#if CUDAPP_CUDA_VERSION >= 2020
       int get_attribute(CUfunction_attribute attr) const
       {
         int result;
@@ -1163,7 +1169,7 @@ namespace cuda
       }
 #endif
 
-#if CUDA_VERSION >= 3000 && defined(CUDAPP_POST_30_BETA)
+#if CUDAPP_CUDA_VERSION >= 3000 && defined(CUDAPP_POST_30_BETA)
       void set_cache_config(CUfunc_cache fc)
       {
         CUDAPP_CALL_GUARDED_WITH_TRACE_INFO(
@@ -1374,7 +1380,7 @@ namespace cuda
     { CUDAPP_CALL_GUARDED_THREADED(cuMemcpy2DAsync, (this, s.handle())); }
   };
 
-#if CUDA_VERSION >= 2000
+#if CUDAPP_CUDA_VERSION >= 2000
   struct memcpy_3d : public CUDA_MEMCPY3D
   {
     memcpy_3d()
@@ -1411,7 +1417,7 @@ namespace cuda
   inline void *mem_alloc_host(unsigned int size, unsigned flags=0)
   {
     void *m_data;
-#if CUDA_VERSION >= 2020
+#if CUDAPP_CUDA_VERSION >= 2020
     CUDAPP_CALL_GUARDED(cuMemHostAlloc, (&m_data, size, flags));
 #else
     if (flags != 0)
@@ -1468,7 +1474,7 @@ namespace cuda
       void *data()
       { return m_data; }
 
-#if CUDA_VERSION >= 2020
+#if CUDAPP_CUDA_VERSION >= 2020
       CUdeviceptr get_device_pointer()
       {
         CUdeviceptr result;
@@ -1477,7 +1483,7 @@ namespace cuda
       }
 #endif
 
-#if CUDA_VERSION >= 3020
+#if CUDAPP_CUDA_VERSION >= 3020
       unsigned int get_flags()
       {
         unsigned int flags;

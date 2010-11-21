@@ -16,6 +16,7 @@ def get_config_schema():
 
         Switch("CUDA_TRACE", False, "Enable CUDA API tracing"),
         Option("CUDA_ROOT", help="Path to the CUDA toolkit"),
+        Option("CUDA_PRETEND_VERSION", help="Assumed CUDA version, in the form 3010 for 3.1."),
         IncludeDir("CUDA", None),
 
         Switch("CUDA_ENABLE_GL", False, "Enable CUDA GL interoperability"),
@@ -219,6 +220,9 @@ def main():
 
     if conf["CUDA_TRACE"]:
         EXTRA_DEFINES["CUDAPP_TRACE_CUDA"] = 1
+
+    if conf["CUDA_PRETEND_VERSION"]:
+        EXTRA_DEFINES["CUDAPP_PRETEND_CUDA_VERSION"] = conf["CUDA_PRETEND_VERSION"]
 
     INCLUDE_DIRS = ['src/cpp'] + conf["BOOST_INC_DIR"] + conf["CUDA_INC_DIR"]
     conf["USE_CUDA"] = True
