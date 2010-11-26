@@ -5,7 +5,8 @@ import pycuda.tools
 cuda.init()
 assert cuda.Device.count() >= 1
 
-device = pycuda.tools.get_default_device()
+# TODO: get default device
+device = cuda.Device(0)
 context = cudagl.make_context(device)
 
 import atexit

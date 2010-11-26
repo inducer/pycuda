@@ -19,6 +19,8 @@ GL Interoperability
 
     .. warning ::
 
+        This function is deprecated since CUDA 3.0 and PyCUDA 0.95.
+
         This will fail with a rather unhelpful error message if you don't already 
         have a GL context created and active.
 
@@ -33,13 +35,72 @@ GL Interoperability
         This will fail with a rather unhelpful error message if you don't already 
         have a GL context created and active.
 
+.. class :: map_flags
+
+    Usage of OpenGL object from CUDA.
+
+    .. attribute :: CU_GRAPHICS_MAP_RESOURCE_FLAGS_NONE
+
+        Read and write access to mapped OpenGL object from CUDA code.
+
+    .. attribute :: CU_GRAPHICS_MAP_RESOURCE_FLAGS_READ_ONLY
+
+        Read only access to mapped OpenGL object from CUDA code.
+
+    .. attribute :: CU_GRAPHICS_MAP_RESOURCE_FLAGS_WRITE_DISCARD
+
+        Write only access to mapped OpenGL object from CUDA code. Reading
+        is prohibited.
+
+.. class :: map_targets
+
+    Type of OpenGL Image object that is mapped to CUDA.
+
+    .. attribute :: GL_TEXTURE_2D
+    .. attribute :: GL_TEXTURE_RECTANGLE
+    .. attribute :: GL_TEXTURE_CUBE_MAP
+    .. attribute :: GL_TEXTURE_3D
+    .. attribute :: GL_TEXTURE_2D_ARRAY
+    .. attribute :: GL_RENDERBUFFER
+
 .. class :: BufferObject(bufobj)
 
     .. method :: unregister()
     .. method :: handle()
     .. method :: map()
+
+    .. warning ::
+
+        This class is deprecated since CUDA 3.0 and PyCUDA 0.95.
     
 .. class :: BufferObjectMapping
+
+    .. method :: unmap()
+    .. method :: device_ptr()
+    .. method :: size()
+
+    .. warning ::
+
+        This class is deprecated since CUDA 3.0 and PyCUDA 0.95.
+
+.. class :: RegisteredBuffer(bufobj, flags = CU_GRAPHICS_MAP_RESOURCE_FLAGS_NONE)
+
+  Object managing mapping of OpenGL buffers to CUDA. Cannot be used to
+  map images.
+
+    .. method :: unregister()
+    .. method :: handle()
+    .. method :: map()
+    
+.. class :: RegisteredImage(bufobj, target, flags = CU_GRAPHICS_MAP_RESOURCE_FLAGS_NONE)
+
+  Object managing mapping of OpenGL textures and render buffers to CUDA.
+
+    .. method :: unregister()
+    .. method :: handle()
+    .. method :: map()
+    
+.. class :: RegisteredMapping
 
     .. method :: unmap()
     .. method :: device_ptr()
