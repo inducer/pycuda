@@ -19,24 +19,57 @@ void pycuda_expose_gl()
   using py::arg;
   using py::args;
 
-  DEF_SIMPLE_FUNCTION(gl_init);
 
   py::def("make_gl_context", make_gl_context, (arg("dev"), arg("flags")=0));
 
-  py::enum_<CUgraphicsMapResourceFlags>("map_flags")
-    .value("CU_GRAPHICS_MAP_RESOURCE_FLAGS_NONE", CU_GRAPHICS_MAP_RESOURCE_FLAGS_NONE)
-    .value("CU_GRAPHICS_MAP_RESOURCE_FLAGS_READ_ONLY", CU_GRAPHICS_MAP_RESOURCE_FLAGS_READ_ONLY)
-    .value("CU_GRAPHICS_MAP_RESOURCE_FLAGS_WRITE_DISCARD", CU_GRAPHICS_MAP_RESOURCE_FLAGS_WRITE_DISCARD)
+  // {{{ new-style
+
+  py::enum_<CUgraphicsMapResourceFlags>("graphics_map_flags")
+    .value("NONE", CU_GRAPHICS_MAP_RESOURCE_FLAGS_NONE)
+    .value("READ_ONLY", CU_GRAPHICS_MAP_RESOURCE_FLAGS_READ_ONLY)
+    .value("WRITE_DISCARD", CU_GRAPHICS_MAP_RESOURCE_FLAGS_WRITE_DISCARD)
   ;
 
-  py::enum_<GLenum>("target_flags")
-    .value("GL_TEXTURE_2D", GL_TEXTURE_2D)
-    .value("GL_TEXTURE_RECTANGLE", GL_TEXTURE_RECTANGLE)
-    .value("GL_TEXTURE_CUBE_MAP", GL_TEXTURE_CUBE_MAP)
-    .value("GL_TEXTURE_3D", GL_TEXTURE_3D)
-    .value("GL_TEXTURE_2D_ARRAY", GL_TEXTURE_2D_ARRAY)
-    .value("GL_RENDERBUFFER", GL_RENDERBUFFER)
-  ;
+  {
+    typedef registered_object cl;
+    py::class_<cl, shared_ptr<cl> >("RegisteredObject", py::no_init)
+      .DEF_SIMPLE_METHOD(gl_handle)
+      .DEF_SIMPLE_METHOD(unregister)
+      .def("map", map_buffer_object,
+          py::return_value_policy<py::manage_new_object>())
+      ;
+  }
+
+  {
+    typedef registered_buffer cl;
+    py::class_<cl, shared_ptr<cl>, py::bases<registered_object> >(
+        "RegisteredBuffer",
+        py::init<GLuint, py::optional<CUgraphicsMapResourceFlags> >())
+      ;
+  }
+
+  {
+    typedef registered_image cl;
+    py::class_<cl, shared_ptr<cl>, py::bases<registered_object> >(
+        "RegisteredImage", 
+        py::init<GLuint, GLenum, py::optional<CUgraphicsMapResourceFlags> >())
+      ;
+  }
+
+  {
+    typedef registered_mapping cl;
+    py::class_<cl>("RegisteredMapping", py::no_init)
+      .def("unmap", &cl::unmap_no_strm)
+      .def("unmap", &cl::unmap)
+      .DEF_SIMPLE_METHOD(device_ptr_and_size)
+      ;
+  }
+
+  // }}}
+
+  // {{{ old-style
+
+  DEF_SIMPLE_FUNCTION(gl_init);
 
   {
     typedef buffer_object cl;
@@ -57,32 +90,8 @@ void pycuda_expose_gl()
       ;
   }
 
-  {
-    typedef registered_buffer cl;
-    py::class_<cl, shared_ptr<cl> >("RegisteredBuffer", py::init<GLuint, py::optional<CUgraphicsMapResourceFlags> >())
-      .DEF_SIMPLE_METHOD(handle)
-      .DEF_SIMPLE_METHOD(unregister)
-      .def("map", map_registered_object,
-          py::return_value_policy<py::manage_new_object>())
-      ;
-  }
+  // }}}
 
-  {
-    typedef registered_image cl;
-    py::class_<cl, shared_ptr<cl> >("RegisteredImage", py::init<GLuint, GLenum, py::optional<CUgraphicsMapResourceFlags> >())
-      .DEF_SIMPLE_METHOD(handle)
-      .DEF_SIMPLE_METHOD(unregister)
-      .def("map", map_registered_object,
-          py::return_value_policy<py::manage_new_object>())
-      ;
-  }
-
-  {
-    typedef registered_mapping cl;
-    py::class_<cl>("RegisteredMapping", py::no_init)
-      .DEF_SIMPLE_METHOD(unmap)
-      .DEF_SIMPLE_METHOD(device_ptr)
-      .DEF_SIMPLE_METHOD(size)
-      ;
-  }
 }
+
+// vim: foldmethod=marker

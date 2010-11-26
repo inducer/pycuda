@@ -14,12 +14,17 @@
 
 
 namespace cuda { namespace gl {
+
+  // {{{ pre-3.0-style API
+
   inline
   void gl_init()
   {
     CUDAPP_CALL_GUARDED(cuGLInit, ());
-// Maybe use PyErr_WarnEx?
-    std::cerr << "gl_init has been deprecated since CUDA 3.0 and PyCUDA 0.95" << std::endl;
+    PyErr_Warn(
+        PyExc_DeprecationWarning,
+        "gl_init() has been deprecated since CUDA 3.0 "
+        "and PyCUDA 2011.1.");
   }
 
 
@@ -49,7 +54,10 @@ namespace cuda { namespace gl {
         : m_handle(handle), m_valid(true)
       {
         CUDAPP_CALL_GUARDED(cuGLRegisterBufferObject, (handle));
-        std::cerr << "buffer_object has been deprecated since CUDA 3.0 and PyCUDA 0.95" << std::endl;
+        PyErr_Warn(
+            PyExc_DeprecationWarning,
+            "buffer_object has been deprecated since CUDA 3.0 "
+            "and PyCUDA 2011.1.");
       }
 
       ~buffer_object()
@@ -95,7 +103,10 @@ namespace cuda { namespace gl {
           unsigned int size)
         : m_buffer_object(bobj), m_devptr(devptr), m_size(size), m_valid(true)
       { 
-        std::cerr << "buffer_object_mapping has been deprecated since CUDA 3.0 and PyCUDA 0.95" << std::endl;
+        PyErr_Warn(
+            PyExc_DeprecationWarning,
+            "buffer_object_mapping has been deprecated since CUDA 3.0 "
+            "and PyCUDA 2011.1.");
       }
 
       ~buffer_object_mapping()
@@ -136,31 +147,42 @@ namespace cuda { namespace gl {
     CUdeviceptr devptr;
     pycuda_size_t size;
     CUDAPP_CALL_GUARDED(cuGLMapBufferObject, (&devptr, &size, bobj->handle()));
-    std::cerr << "map_buffer_object has been deprecated since CUDA 3.0 and PyCUDA 0.95" << std::endl;
+    PyErr_Warn(
+        PyExc_DeprecationWarning,
+        "map_buffer_object has been deprecated since CUDA 3.0 "
+        "and PyCUDA 2011.1.");
 
     return new buffer_object_mapping(bobj, devptr, size);
   }
 
+  // }}}
+
+  // {{{ new-style (3.0+) API
 
   class registered_object : public context_dependent
   {
     protected:
-      GLuint m_handle;
+      GLuint m_gl_handle;
       bool m_valid;
       CUgraphicsResource m_resource;
 
     public:
+      registered_object(GLuint gl_handle)
+        : m_gl_handle(gl_handle), m_valid(true)
+      {
+      }
+
       ~registered_object()
       {
         if (m_valid)
           unregister();
       }
 
-      GLuint handle()
-      { return m_handle; }
+      GLuint gl_handle()
+      { return m_gl_handle; }
 
-      CUgraphicsResource * resource()
-      { return &m_resource; }
+      CUgraphicsResource resource()
+      { return m_resource; }
 
       void unregister()
       {
@@ -169,35 +191,39 @@ namespace cuda { namespace gl {
           try
           {
             scoped_context_activation ca(get_context());
-            CUDAPP_CALL_GUARDED_CLEANUP(cuGraphicsUnregisterResource, (m_resource));
+            CUDAPP_CALL_GUARDED_CLEANUP(
+                cuGraphicsUnregisterResource, (m_resource));
             m_valid = false;
           }
           CUDAPP_CATCH_CLEANUP_ON_DEAD_CONTEXT(registered_object);
         }
         else
-          throw cuda::error("registered_object::unregister", CUDA_ERROR_INVALID_HANDLE);
+          throw cuda::error("registered_object::unregister", 
+              CUDA_ERROR_INVALID_HANDLE);
       }
   };
 
   class registered_buffer : public registered_object
   {
     public:
-      registered_buffer(GLuint handle, CUgraphicsMapResourceFlags flags = CU_GRAPHICS_MAP_RESOURCE_FLAGS_NONE)
+      registered_buffer(GLuint gl_handle, 
+          CUgraphicsMapResourceFlags flags=CU_GRAPHICS_MAP_RESOURCE_FLAGS_NONE)
+        : registered_object(gl_handle)
       {
-        m_handle = handle;
-        m_valid = true;
-        CUDAPP_CALL_GUARDED(cuGraphicsGLRegisterBuffer, (&m_resource, handle, flags));
+        CUDAPP_CALL_GUARDED(cuGraphicsGLRegisterBuffer, 
+            (&m_resource, gl_handle, flags));
       }
   };
 
   class registered_image : public registered_object
   {
     public:
-      registered_image(GLuint handle, GLenum target, CUgraphicsMapResourceFlags flags = CU_GRAPHICS_MAP_RESOURCE_FLAGS_NONE)
+      registered_image(GLuint gl_handle, GLenum target, 
+          CUgraphicsMapResourceFlags flags=CU_GRAPHICS_MAP_RESOURCE_FLAGS_NONE)
+        : registered_object(gl_handle)
       {
-        m_handle = handle;
-        m_valid = true;
-        CUDAPP_CALL_GUARDED(cuGraphicsGLRegisterImage, (&m_resource, handle, target, flags));
+        CUDAPP_CALL_GUARDED(cuGraphicsGLRegisterImage, 
+            (&m_resource, gl_handle, target, flags));
       }
   };
 
@@ -207,34 +233,43 @@ namespace cuda { namespace gl {
   {
     private:
       boost::shared_ptr<registered_object> m_object;
-      CUdeviceptr m_devptr;
-      unsigned int m_size;
+      boost::shared_ptr<stream> m_stream;
       bool m_valid;
 
     public:
       registered_mapping(
           boost::shared_ptr<registered_object> robj,
-          CUdeviceptr devptr,
-          unsigned int size)
-        : m_object(robj), m_devptr(devptr), m_size(size), m_valid(true)
+          boost::shared_ptr<stream> strm)
+        : m_object(robj), m_stream(strm), m_valid(true)
       { }
 
       ~registered_mapping()
       {
         if (m_valid)
-          unmap();
+          unmap_no_strm();
       }
 
-      void unmap()
+      void unmap_no_strm()
       {
+        unmap(m_stream);
+      }
+
+      void unmap(boost::shared_ptr<stream> const &strm)
+      {
+        CUstream s_handle;
+        if (!strm.get())
+          s_handle = 0;
+        else
+          s_handle = strm->handle();
+
         if (m_valid)
         {
           try
           {
             scoped_context_activation ca(get_context());
-// TODO: Stream as third parameter
-// Is that a problem, or all main tasks are done in stream 0 in PyCUDA?
-            CUDAPP_CALL_GUARDED_CLEANUP(cuGraphicsUnmapResources, (1, m_object->resource(), NULL));
+            CUgraphicsResource res = m_object->resource();
+            CUDAPP_CALL_GUARDED_CLEANUP(cuGraphicsUnmapResources,
+                (1, &res, s_handle));
             m_valid = false;
           }
           CUDAPP_CATCH_CLEANUP_ON_DEAD_CONTEXT(registered_mapping)
@@ -243,31 +278,43 @@ namespace cuda { namespace gl {
           throw cuda::error("registered_mapping::unmap", CUDA_ERROR_INVALID_HANDLE);
       }
 
-      CUdeviceptr device_ptr() const
-      { return m_devptr; }
-
-      unsigned int size() const
-      { return m_size; }
+      py::tuple device_ptr_and_size() const
+      {
+        CUdeviceptr devptr;
+        pycuda_size_t size;
+        CUDAPP_CALL_GUARDED(cuGraphicsResourceGetMappedPointer, 
+            (&devptr, &size, m_object->resource()));
+        return py::make_tuple(devptr, size);
+      }
   };
 
 
 
 
   inline registered_mapping *map_registered_object(
-      boost::shared_ptr<registered_object> robj)
+      boost::shared_ptr<registered_object> const &robj,
+      boost::shared_ptr<stream> const &strm)
   {
-    CUdeviceptr devptr;
-    pycuda_size_t size;
-// TODO: Stream as third parameter
-// Is that a problem, or all main tasks are done in stream 0 in PyCUDA?
-    CUDAPP_CALL_GUARDED_CLEANUP(cuGraphicsMapResources, (1, robj->resource(), NULL));
-    CUDAPP_CALL_GUARDED(cuGraphicsResourceGetMappedPointer, (&devptr, &size, *(robj->resource())));
+    CUstream s_handle;
+    if (!strm.get())
+      s_handle = 0;
+    else
+      s_handle = strm->handle();
 
-    return new registered_mapping(robj, devptr, size);
+    CUgraphicsResource res = robj->resource();
+    CUDAPP_CALL_GUARDED(cuGraphicsMapResources,
+        (1, &res, s_handle));
+
+    return new registered_mapping(robj, strm);
   }
+
+  // }}}
+
 } }
 
 
 
 
 #endif
+
+// vim: foldmethod=marker

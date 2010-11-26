@@ -1,13 +1,12 @@
 import pycuda.driver as cuda
 import pycuda.gl as cudagl
-import pycuda.tools
 
 cuda.init()
 assert cuda.Device.count() >= 1
 
-# TODO: get default device
-device = cuda.Device(0)
-context = cudagl.make_context(device)
+from pycuda.tools import make_default_context
+context = make_default_context(lambda dev: cudagl.make_context(dev))
+device = context.get_device()
 
 import atexit
 atexit.register(context.pop)

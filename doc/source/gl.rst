@@ -3,117 +3,77 @@
 GL Interoperability
 ===================
 
-.. note::
-
-    This functionality is scheduled for release 0.93 and only available in
-    source-built versions of PyCuda's git tree.
-
 .. module:: pycuda.gl
-
-.. function :: init()
-    
-    Enable GL interoperability for the already-created (so far non-GL)
-    and currently active :class:`pycuda.driver.Context`.
-
-    According to the forum post referenced in the note below, this will succeed 
-    on Windows XP and Linux, but it will not work on Windows Vista. There you 
-    *have* to create the GL-enabled context using :func:`make_context`.
-
-    .. warning ::
-
-        This function is deprecated since CUDA 3.0 and PyCUDA 0.95.
-
-        This will fail with a rather unhelpful error message if you don't already 
-        have a GL context created and active.
 
 .. function :: make_context(dev, flags=0)
 
     Create and return a :class:`pycuda.driver.Context` that has GL interoperability
-    enabled. Note that this is an *alternative* to calling :func:`init` on an 
-    already-active context.
+    enabled.
 
     .. warning ::
 
         This will fail with a rather unhelpful error message if you don't already 
         have a GL context created and active.
 
-.. class :: map_flags
+.. class :: graphics_map_flags
 
     Usage of OpenGL object from CUDA.
 
-    .. attribute :: CU_GRAPHICS_MAP_RESOURCE_FLAGS_NONE
+    .. attribute :: NONE
 
         Read and write access to mapped OpenGL object from CUDA code.
 
-    .. attribute :: CU_GRAPHICS_MAP_RESOURCE_FLAGS_READ_ONLY
+    .. attribute :: READ_ONLY
 
         Read only access to mapped OpenGL object from CUDA code.
 
-    .. attribute :: CU_GRAPHICS_MAP_RESOURCE_FLAGS_WRITE_DISCARD
+    .. attribute :: WRITE_DISCARD
 
         Write only access to mapped OpenGL object from CUDA code. Reading
         is prohibited.
 
-.. class :: map_targets
-
-    Type of OpenGL Image object that is mapped to CUDA.
-
-    .. attribute :: GL_TEXTURE_2D
-    .. attribute :: GL_TEXTURE_RECTANGLE
-    .. attribute :: GL_TEXTURE_CUBE_MAP
-    .. attribute :: GL_TEXTURE_3D
-    .. attribute :: GL_TEXTURE_2D_ARRAY
-    .. attribute :: GL_RENDERBUFFER
-
-.. class :: BufferObject(bufobj)
-
-    .. method :: unregister()
-    .. method :: handle()
-    .. method :: map()
-
-    .. warning ::
-
-        This class is deprecated since CUDA 3.0 and PyCUDA 0.95.
-    
-.. class :: BufferObjectMapping
-
-    .. method :: unmap()
-    .. method :: device_ptr()
-    .. method :: size()
-
-    .. warning ::
-
-        This class is deprecated since CUDA 3.0 and PyCUDA 0.95.
-
 .. class :: RegisteredBuffer(bufobj, flags = CU_GRAPHICS_MAP_RESOURCE_FLAGS_NONE)
 
-  Object managing mapping of OpenGL buffers to CUDA. Cannot be used to
-  map images.
+    Object managing mapping of OpenGL buffers to CUDA. Cannot be used to
+    map images.
 
+    .. method :: gl_handle()
     .. method :: unregister()
-    .. method :: handle()
-    .. method :: map()
-    
+    .. method :: map(stream=None)
+
+        Return a :class:`RegisteredMapping`.
+
 .. class :: RegisteredImage(bufobj, target, flags = CU_GRAPHICS_MAP_RESOURCE_FLAGS_NONE)
 
-  Object managing mapping of OpenGL textures and render buffers to CUDA.
+    Object managing mapping of OpenGL textures and render buffers to CUDA.
 
+    *target* must be be one of:
+
+     * `GL_TEXTURE_2D`
+     * `GL_TEXTURE_RECTANGLE`
+     * `GL_TEXTURE_CUBE_MAP`
+     * `GL_TEXTURE_3D`
+     * `GL_TEXTURE_2D_ARRAY`
+     * `GL_RENDERBUFFER`
+
+    (see PyOpenGL docs)
+
+    .. method :: gl_handle()
     .. method :: unregister()
-    .. method :: handle()
-    .. method :: map()
-    
+    .. method :: map(stream=None)
+
+        Return a :class:`RegisteredMapping`.
+
 .. class :: RegisteredMapping
 
-    .. method :: unmap()
-    .. method :: device_ptr()
-    .. method :: size()
+    .. method :: unmap(stream=None)
 
-.. note ::
+        If no stream is specified, the unmap will use the same stream as the original
+        mapping.
 
-    See this `post <http://forums.nvidia.com/index.php?showtopic=88152>`_ on the
-    Nvidia forums for a discussion of problems and solutions with the GL interop
-    interface.
+    .. method :: device_ptr_and_size()
 
+        Return a tuple *(dev_pointer, size)*.
 
 Automatic Initialization
 ------------------------
@@ -127,3 +87,52 @@ Automatic Initialization
 
 .. data:: device
 .. data:: context
+
+Old-style (pre-CUDA 3.0) API
+----------------------------
+
+.. function :: init()
+
+    Enable GL interoperability for the already-created (so far non-GL)
+    and currently active :class:`pycuda.driver.Context`.
+
+    According to the forum post referenced in the note below, this will succeed 
+    on Windows XP and Linux, but it will not work on Windows Vista. There you 
+    *have* to create the GL-enabled context using :func:`make_context`.
+
+    .. warning ::
+
+        This function is deprecated since CUDA 3.0 and PyCUDA 2011.1.
+
+    .. warning ::
+
+        This will fail with a rather unhelpful error message if you don't already 
+        have a GL context created and active.
+
+.. note ::
+
+    See this `post <http://forums.nvidia.com/index.php?showtopic=88152>`_ on the
+    Nvidia forums for a discussion of problems and solutions with the GL interop
+    interface.
+
+.. class :: BufferObject(bufobj)
+
+    .. warning ::
+
+        This class is deprecated since CUDA 3.0 and PyCUDA 2011.1.
+
+    .. method :: unregister()
+    .. attribute :: handle()
+    .. method :: map()
+
+.. class :: BufferObjectMapping
+
+    .. warning ::
+
+        This class is deprecated since CUDA 3.0 and PyCUDA 2011.1.
+        It will be removed in PyCUDA 0.96.
+
+    .. method :: unmap()
+    .. method :: device_ptr()
+    .. method :: size()
+

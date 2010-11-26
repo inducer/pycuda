@@ -1,15 +1,15 @@
 User-visible Changes
 ====================
 
-Version 0.95
-------------
+Version 2011.1
+--------------
 
 .. note::
 
     This version is the current development version. You can get it from
     PyCUDA's version control repository.
 
-* Add support for CUDA 3.0-style OpenGL interop.
+* Add support for CUDA 3.0-style OpenGL interop. (thanks to Tomasz Rybak)
 
 Version 0.94.2
 --------------

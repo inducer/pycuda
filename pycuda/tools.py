@@ -167,7 +167,11 @@ def get_default_device(default=0):
 
 
 
-def make_default_context():
+def make_default_context(ctx_maker=None):
+    if ctx_maker is None:
+        def ctx_maker(dev):
+            return dev.make_context()
+
     ndevices = cuda.Device.count()
     if ndevices == 0:
         raise RuntimeError("No CUDA enabled device found. "
@@ -196,7 +200,7 @@ def make_default_context():
                     " must be an integer")
 
         dev = cuda.Device(devn)
-        return dev.make_context()
+        return ctx_maker(dev)
 
     # Otherwise, try to use any available device
     else:
@@ -204,7 +208,7 @@ def make_default_context():
         for devn in xrange(ndevices):
             dev = cuda.Device(devn)
             try:
-                return dev.make_context()
+                return ctx_maker(dev)
             except cuda.Error:
                 pass
 

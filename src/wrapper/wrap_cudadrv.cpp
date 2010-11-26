@@ -754,7 +754,7 @@ BOOST_PYTHON_MODULE(_driver)
   // {{{ stream
   {
     typedef stream cl;
-    py::class_<cl, boost::noncopyable>
+    py::class_<cl, boost::noncopyable, shared_ptr<cl> >
       ("Stream", py::init<unsigned int>(py::arg("flags")=0))
       .DEF_SIMPLE_METHOD(synchronize)
       .DEF_SIMPLE_METHOD(is_done)
