@@ -9,6 +9,8 @@ Version 0.95
     This version is the current development version. You can get it from
     PyCUDA's version control repository.
 
+* Add support for CUDA 3.0-style OpenGL interop.
+
 Version 0.94.2
 --------------
 
@@ -212,14 +214,16 @@ Acknowledgments
 * Min Ragan-Kelley solved the long-standing puzzle of why PyCUDA
   did not work on 64-bit CUDA on OS X (and provided a patch).
 * Tomasz Rybak solved another long-standing puzzle of why reduction
-  failed to work on some Fermi chips.
+  failed to work on some Fermi chips. In addition, he provided
+  a patch that updated PyCUDA's :ref:`gl-interop` to the state of
+  CUDA 3.0.
 
 Licensing
 =========
 
 PyCUDA is licensed to you under the MIT/X Consortium license:
 
-Copyright (c) 2009 Andreas Klöckner and Contributors.
+Copyright (c) 2009,10 Andreas Klöckner and Contributors.
 
 Permission is hereby granted, free of charge, to any person
 obtaining a copy of this software and associated documentation

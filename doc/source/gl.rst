@@ -1,3 +1,5 @@
+.. _gl-interop:
+
 GL Interoperability
 ===================
 
