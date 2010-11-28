@@ -5,8 +5,7 @@ if not _drv.have_gl_ext():
 
 init = _drv.gl_init
 make_context = _drv.make_gl_context
-map_flags = _drv.map_flags
-target_flags = _drv.target_flags
+graphics_map_flags = _drv.graphics_map_flags
 BufferObject = _drv.BufferObject
 BufferObjectMapping = _drv.BufferObjectMapping
 RegisteredBuffer = _drv.RegisteredBuffer

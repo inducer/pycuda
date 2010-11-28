@@ -159,6 +159,7 @@ namespace cuda { namespace gl {
 
   // {{{ new-style (3.0+) API
 
+#if CUDAPP_CUDA_VERSION >= 3000
   class registered_object : public context_dependent
   {
     protected:
@@ -293,20 +294,28 @@ namespace cuda { namespace gl {
 
   inline registered_mapping *map_registered_object(
       boost::shared_ptr<registered_object> const &robj,
-      boost::shared_ptr<stream> const &strm)
+      py::object strm_py)
   {
     CUstream s_handle;
-    if (!strm.get())
+    boost::shared_ptr<stream> strm_sptr;
+
+    if (strm_py.ptr() == Py_None)
+    {
       s_handle = 0;
+    }
     else
-      s_handle = strm->handle();
+    {
+      strm_sptr = py::extract<boost::shared_ptr<stream> >(strm_py);
+      s_handle = strm_sptr->handle();
+    }
 
     CUgraphicsResource res = robj->resource();
     CUDAPP_CALL_GUARDED(cuGraphicsMapResources,
         (1, &res, s_handle));
 
-    return new registered_mapping(robj, strm);
+    return new registered_mapping(robj, strm_sptr);
   }
+#endif
 
   // }}}
 

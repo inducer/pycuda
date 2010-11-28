@@ -669,12 +669,6 @@ BOOST_PYTHON_MODULE(_driver)
     .value("NONE", CU_GRAPHICS_REGISTER_FLAGS_NONE)
     ;
 
-  py::enum_<CUgraphicsMapResourceFlags>("graphics_map_resource_flags")
-    .value("NONE", CU_GRAPHICS_MAP_RESOURCE_FLAGS_NONE)
-    .value("READ_ONLY", CU_GRAPHICS_MAP_RESOURCE_FLAGS_READ_ONLY)
-    .value("WRITE_DISCARD", CU_GRAPHICS_MAP_RESOURCE_FLAGS_WRITE_DISCARD)
-    ;
-
   py::enum_<CUarray_cubemap_face_enum>("array_cubemap_face")
     .value("POSITIVE_X", CU_CUBEMAP_FACE_POSITIVE_X)
     .value("NEGATIVE_X", CU_CUBEMAP_FACE_NEGATIVE_X)

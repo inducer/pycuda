@@ -24,6 +24,7 @@ void pycuda_expose_gl()
 
   // {{{ new-style
 
+#if CUDAPP_CUDA_VERSION >= 3000
   py::enum_<CUgraphicsMapResourceFlags>("graphics_map_flags")
     .value("NONE", CU_GRAPHICS_MAP_RESOURCE_FLAGS_NONE)
     .value("READ_ONLY", CU_GRAPHICS_MAP_RESOURCE_FLAGS_READ_ONLY)
@@ -35,7 +36,8 @@ void pycuda_expose_gl()
     py::class_<cl, shared_ptr<cl> >("RegisteredObject", py::no_init)
       .DEF_SIMPLE_METHOD(gl_handle)
       .DEF_SIMPLE_METHOD(unregister)
-      .def("map", map_buffer_object,
+      .def("map", map_registered_object,
+          (arg("robj"), arg("stream")=py::object()),
           py::return_value_policy<py::manage_new_object>())
       ;
   }
@@ -64,6 +66,7 @@ void pycuda_expose_gl()
       .DEF_SIMPLE_METHOD(device_ptr_and_size)
       ;
   }
+#endif
 
   // }}}
 
