@@ -74,6 +74,8 @@ def get_reduction_module(out_type, block_size,
 
     from pycuda.compiler import SourceModule
     src = """
+        #include <pycuda-complex.hpp>
+
         #define BLOCK_SIZE %(block_size)d
         #define READ_AND_MAP(i) (%(map_expr)s)
         #define REDUCE(a, b) (%(reduce_expr)s)
