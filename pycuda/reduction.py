@@ -125,7 +125,7 @@ def get_reduction_module(out_type, block_size,
           if (tid < 32)
           {
             // 'volatile' required according to Fermi compatibility guide 1.2.2
-            volatile out_type * smem = sdata;
+            volatile out_type *smem = sdata;
             if (BLOCK_SIZE >= 64) smem[tid] = REDUCE(smem[tid], smem[tid + 32]);
             if (BLOCK_SIZE >= 32) smem[tid] = REDUCE(smem[tid], smem[tid + 16]);
             if (BLOCK_SIZE >= 16) smem[tid] = REDUCE(smem[tid], smem[tid + 8]);

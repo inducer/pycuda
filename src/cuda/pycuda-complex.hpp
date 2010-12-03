@@ -54,6 +54,13 @@ struct complex {
     _M_im = __z._M_im;
     return *this;
   }
+  __device__
+  volatile _Self& operator=(const _Self& __z) volatile {
+    _M_re = __z._M_re;
+    _M_im = __z._M_im;
+    return *this;
+  }
+
 
   template <class _Tp2>
   __device__
@@ -63,6 +70,13 @@ struct complex {
   template <class _Tp2>
   __device__
   _Self& operator=(const complex<_Tp2>& __z) {
+    _M_re = __z._M_re;
+    _M_im = __z._M_im;
+    return *this;
+  }
+  template <class _Tp2>
+  __device__
+  volatile _Self& operator=(const complex<_Tp2>& __z) volatile {
     _M_re = __z._M_re;
     _M_im = __z._M_im;
     return *this;
@@ -78,6 +92,12 @@ struct complex {
 
   __device__
   _Self& operator= (const value_type& __x) {
+    _M_re = __x;
+    _M_im = 0;
+    return *this;
+  }
+  __device__
+  volatile _Self& operator= (const value_type& __x) volatile {
     _M_re = __x;
     _M_im = 0;
     return *this;
@@ -211,6 +231,11 @@ struct _STLP_CLASS_DECLSPEC complex<float> {
     _M_im = 0.0f;
     return *this;
   }
+  volatile __device__ _Self& operator= (value_type __x) volatile {
+    _M_re = __x;
+    _M_im = 0.0f;
+    return *this;
+  }
   __device__ _Self& operator+= (value_type __x) {
     _M_re += __x;
     return *this;
@@ -247,6 +272,15 @@ struct _STLP_CLASS_DECLSPEC complex<float> {
     _M_im = __z._M_im;
     return *this;
   }
+
+  template <class _Tp2>
+  __device__ 
+  volatile complex<float>& operator=(const complex<_Tp2>& __z) volatile {
+    _M_re = __z._M_re;
+    _M_im = __z._M_im;
+    return *this;
+  }
+
 
   template <class _Tp2>
   __device__ 
@@ -291,6 +325,14 @@ struct _STLP_CLASS_DECLSPEC complex<float> {
     _M_im = __z._M_im;
     return *this;
   }
+
+  __device__ 
+  volatile _Self& operator=(const _Self& __z) volatile {
+    _M_re = __z._M_re;
+    _M_im = __z._M_im;
+    return *this;
+  }
+
 
   __device__ 
   _Self& operator+= (const _Self& __z) {
@@ -361,6 +403,12 @@ struct _STLP_CLASS_DECLSPEC complex<double> {
     return *this;
   }
   __device__
+  volatile _Self& operator= (value_type __x) volatile {
+    _M_re = __x;
+    _M_im = 0.0;
+    return *this;
+  }
+  __device__
   _Self& operator+= (value_type __x) {
     _M_re += __x;
     return *this;
@@ -396,6 +444,14 @@ struct _STLP_CLASS_DECLSPEC complex<double> {
   template <class _Tp2>
   __device__
   complex<double>& operator=(const complex<_Tp2>& __z) {
+    _M_re = __z._M_re;
+    _M_im = __z._M_im;
+    return *this;
+  }
+
+  template <class _Tp2>
+  __device__
+  volatile complex<double>& operator=(const volatile complex<_Tp2>& __z) {
     _M_re = __z._M_re;
     _M_im = __z._M_im;
     return *this;
@@ -441,6 +497,13 @@ struct _STLP_CLASS_DECLSPEC complex<double> {
 #endif /* _STLP_FUNCTION_TMPL_PARTIAL_ORDER */
   __device__ 
   _Self& operator=(const _Self& __z) {
+    _M_re = __z._M_re;
+    _M_im = __z._M_im;
+    return *this;
+  }
+
+  __device__ 
+  volatile _Self& operator=(const _Self& __z) volatile {
     _M_re = __z._M_re;
     _M_im = __z._M_im;
     return *this;
@@ -559,6 +622,13 @@ operator+(const complex<_Tp>& __z1, const complex<_Tp>& __z2)
 
 template <class _Tp>
 __device__
+inline complex<_Tp>
+operator+(const volatile complex<_Tp>& __z1, const volatile complex<_Tp>& __z2)
+{ return complex<_Tp>(__z1._M_re + __z2._M_re, __z1._M_im + __z2._M_im); }
+
+
+template <class _Tp>
+__device__
 inline complex<_Tp> __device__
 operator-(const complex<_Tp>& __z1, const complex<_Tp>& __z2)
 { return complex<_Tp>(__z1._M_re - __z2._M_re, __z1._M_im - __z2._M_im); }
@@ -567,6 +637,14 @@ template <class _Tp>
 __device__
 inline complex<_Tp> __device__
 operator*(const complex<_Tp>& __z1, const complex<_Tp>& __z2) {
+  return complex<_Tp>(__z1._M_re * __z2._M_re - __z1._M_im * __z2._M_im,
+                      __z1._M_re * __z2._M_im + __z1._M_im * __z2._M_re);
+}
+
+template <class _Tp>
+__device__
+inline complex<_Tp> __device__
+operator*(const volatile complex<_Tp>& __z1, const volatile complex<_Tp>& __z2) {
   return complex<_Tp>(__z1._M_re * __z2._M_re - __z1._M_im * __z2._M_im,
                       __z1._M_re * __z2._M_im + __z1._M_im * __z2._M_re);
 }
