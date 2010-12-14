@@ -752,6 +752,8 @@ namespace cuda
   // }}}
 
   // {{{ stream
+  class event;
+
   class stream : public boost::noncopyable, public context_dependent
   {
     private:
@@ -776,6 +778,10 @@ namespace cuda
 
       CUstream handle() const
       { return m_stream; }
+
+#if CUDAPP_CUDA_VERSION >= 3020
+      void wait_for_event(const event &evt);
+#endif
 
       bool is_done() const
       {
@@ -1531,6 +1537,9 @@ namespace cuda
         return this;
       }
 
+      CUevent handle() const
+      { return m_event; }
+
       event *synchronize()
       {
         CUDAPP_CALL_GUARDED_THREADED(cuEventSynchronize, (m_event));
@@ -1568,6 +1577,13 @@ namespace cuda
         return result;
       }
   };
+
+#if CUDAPP_CUDA_VERSION >= 3020
+  inline void stream::wait_for_event(const event &evt)
+  {
+    CUDAPP_CALL_GUARDED(cuStreamWaitEvent, (m_stream, evt.handle(), 0));
+  }
+#endif
 
   // }}}
 }

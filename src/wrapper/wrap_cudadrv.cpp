@@ -752,6 +752,9 @@ BOOST_PYTHON_MODULE(_driver)
       ("Stream", py::init<unsigned int>(py::arg("flags")=0))
       .DEF_SIMPLE_METHOD(synchronize)
       .DEF_SIMPLE_METHOD(is_done)
+#if CUDAPP_CUDA_VERSION >= 3020
+      .DEF_SIMPLE_METHOD(wait_for_event)
+#endif
       ;
   }
   // }}}

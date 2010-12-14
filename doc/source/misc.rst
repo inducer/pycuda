@@ -10,6 +10,7 @@ Version 2011.1
     PyCUDA's version control repository.
 
 * Add support for CUDA 3.0-style OpenGL interop. (thanks to Tomasz Rybak)
+* Add :meth:`pycuda.driver.Stream.wait_for_event`.
 
 Version 0.94.2
 --------------

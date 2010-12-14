@@ -541,6 +541,14 @@ Concurrency and Streams
 
         Return *True* iff all queued operations have completed.
 
+    .. method:: wait_for_event(evt)
+
+        Enqueues a wait for the given :class:`Event` instance.
+
+        CUDA 3.2 and above.
+
+        .. versionadded:: 2011.1
+
 .. class:: Event(flags=0)
 
     An event is a temporal 'marker' in a :class:`Stream` that allows taking the time
