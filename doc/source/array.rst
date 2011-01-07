@@ -443,8 +443,8 @@ Here's a usage example::
     b = gpuarray.arange(400, dtype=numpy.float32)
 
     krnl = ReductionKernel(numpy.float32, neutral="0",
-            reduce_expr="a+b", map_expr="a[i]*b[i]",
-            arguments="float *a, float *b")
+            reduce_expr="a+b", map_expr="x[i]*y[i]",
+            arguments="float *x, float *y")
 
     my_dot_prod = krnl(a, b).get()
 
