@@ -3,8 +3,8 @@
 
 
 
-#ifndef _AFJDFJSDFSD_PYCUDA_HEADER_SEEN_MEMPOOL_HPP
-#define _AFJDFJSDFSD_PYCUDA_HEADER_SEEN_MEMPOOL_HPP
+#ifndef _AFJDFJSDFSD_PYGPU_HEADER_SEEN_MEMPOOL_HPP
+#define _AFJDFJSDFSD_PYGPU_HEADER_SEEN_MEMPOOL_HPP
 
 
 
@@ -12,12 +12,12 @@
 #include <boost/ptr_container/ptr_map.hpp>
 #include <boost/foreach.hpp>
 #include <boost/format.hpp>
-#include <bitlog.hpp>
+#include "bitlog.hpp"
 
 
 
 
-namespace pycuda
+namespace PYGPU_PACKAGE
 {
   template <class T>
   inline T signed_left_shift(T x, signed shift_amount)
@@ -74,7 +74,7 @@ namespace pycuda
         : m_allocator(alloc), m_held_blocks(0), m_active_blocks(0), m_stop_holding(false)
       {
       }
-      
+
       ~memory_pool()
       { free_held(); }
 
@@ -96,13 +96,13 @@ namespace pycuda
         bin_nr_t exponent = bin >> mantissa_bits;
         bin_nr_t mantissa = bin & mantissa_mask;
 
-        size_type ones = signed_left_shift(1, 
+        size_type ones = signed_left_shift(1,
             signed(exponent)-signed(mantissa_bits)
             );
         if (ones) ones -= 1;
 
         size_type head = signed_left_shift(
-           (1<<mantissa_bits) | mantissa, 
+           (1<<mantissa_bits) | mantissa,
             signed(exponent)-signed(mantissa_bits));
         if (ones & head)
           throw std::runtime_error("memory_pool::alloc_size: bit-counting fault");
@@ -148,7 +148,7 @@ namespace pycuda
       {
         bin_nr_t bin_nr = bin_number(size);
         bin_t &bin = get_bin(bin_nr);
-        
+
         if (bin.size())
           return pop_block_from_bin(bin, size);
 
@@ -157,10 +157,9 @@ namespace pycuda
         assert(bin_number(alloc_sz) == bin_nr);
 
         try { return get_from_allocator(alloc_sz); }
-        catch (cuda::error &e)
+        catch (PYGPU_PACKAGE::error &e)
         {
-          // Not OOM? Propagate.
-          if (e.code() != CUDA_ERROR_OUT_OF_MEMORY)
+          if (!e.is_out_of_memory())
             throw;
         }
 
@@ -171,18 +170,21 @@ namespace pycuda
         while (try_to_free_memory())
         {
           try { return get_from_allocator(alloc_sz); }
-          catch (cuda::error &e)
+          catch (PYGPU_PACKAGE::error &e)
           {
-            // Not OOM? Propagate.
-            if (e.code() != CUDA_ERROR_OUT_OF_MEMORY)
+            if (!e.is_out_of_memory())
               throw;
           }
-
         }
 
-        throw cuda::error(
+        throw PYGPU_PACKAGE::error(
             "memory_pool::allocate",
+#ifdef PYGPU_PYCUDA
             CUDA_ERROR_OUT_OF_MEMORY,
+#endif
+#ifdef PYGPU_PYOPENCL
+            CL_MEM_OBJECT_ALLOCATION_FAILURE,
+#endif
             "failed to free memory for allocation");
       }
 
@@ -209,7 +211,7 @@ namespace pycuda
           {
             m_allocator.free(bin.back());
             bin.pop_back();
-            
+
             dec_held_blocks();
           }
         }
@@ -231,7 +233,7 @@ namespace pycuda
 
       bool try_to_free_memory()
       {
-        BOOST_FOREACH(bin_pair_t bin_pair, 
+        BOOST_FOREACH(bin_pair_t bin_pair,
             // free largest stuff first
             std::make_pair(m_container.rbegin(), m_container.rend()))
         {
@@ -297,9 +299,9 @@ namespace pycuda
       { }
 
       ~pooled_allocation()
-      { 
+      {
         if (m_valid)
-          free(); 
+          free();
       }
 
       void free()
@@ -310,7 +312,15 @@ namespace pycuda
           m_valid = false;
         }
         else
-          throw cuda::error("pooled_device_allocation::free", CUDA_ERROR_INVALID_HANDLE);
+          throw PYGPU_PACKAGE::error(
+              "pooled_device_allocation::free", 
+#ifdef PYGPU_PYCUDA
+              CUDA_ERROR_INVALID_HANDLE
+#endif
+#ifdef PYGPU_PYOPENCL
+              CL_INVALID_VALUE
+#endif
+              );
       }
 
       pointer_type ptr() const

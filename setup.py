@@ -193,6 +193,9 @@ def main():
     conf = get_config(get_config_schema())
     EXTRA_SOURCES, EXTRA_DEFINES = set_up_shipped_boost_if_requested(conf)
 
+    EXTRA_DEFINES["PYGPU_PACKAGE"] = "pycuda"
+    EXTRA_DEFINES["PYGPU_PYCUDA"] = "1"
+
     LIBRARY_DIRS = conf["BOOST_LIB_DIR"]
     LIBRARIES = conf["BOOST_PYTHON_LIBNAME"] + conf["BOOST_THREAD_LIBNAME"]
 

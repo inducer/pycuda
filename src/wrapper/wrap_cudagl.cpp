@@ -7,8 +7,8 @@
 
 
 
-using namespace cuda;
-using namespace cuda::gl;
+using namespace pycuda;
+using namespace pycuda::gl;
 using boost::shared_ptr;
 
 

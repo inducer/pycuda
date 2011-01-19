@@ -15,7 +15,7 @@ namespace py = boost::python;
 
 namespace
 {
-  class device_allocator : public cuda::context_dependent
+  class device_allocator : public pycuda::context_dependent
   {
     public:
       typedef CUdeviceptr pointer_type;
@@ -23,16 +23,16 @@ namespace
 
       pointer_type allocate(size_type s)
       {
-        cuda::scoped_context_activation ca(get_context());
-        return cuda::mem_alloc(s);
+        pycuda::scoped_context_activation ca(get_context());
+        return pycuda::mem_alloc(s);
       }
 
       void free(pointer_type p)
       {
         try
         {
-          cuda::scoped_context_activation ca(get_context());
-          cuda::mem_free(p);
+          pycuda::scoped_context_activation ca(get_context());
+          pycuda::mem_free(p);
         }
         CUDAPP_CATCH_CLEANUP_ON_DEAD_CONTEXT(pooled_device_allocation);
       }
@@ -61,12 +61,12 @@ namespace
 
       pointer_type allocate(size_type s)
       {
-        return cuda::mem_alloc_host(s, m_flags);
+        return pycuda::mem_alloc_host(s, m_flags);
       }
 
       void free(pointer_type p)
       {
-        cuda::mem_free_host(p);
+        pycuda::mem_free_host(p);
       }
 
       void try_release_blocks()
@@ -81,7 +81,7 @@ namespace
   template<class Allocator>
   class context_dependent_memory_pool : 
     public pycuda::memory_pool<Allocator>,
-    public cuda::explicit_context_dependent
+    public pycuda::explicit_context_dependent
   {
     protected:
       void start_holding_blocks()
@@ -95,7 +95,7 @@ namespace
 
 
   class pooled_device_allocation 
-    : public cuda::context_dependent, 
+    : public pycuda::context_dependent, 
     public pycuda::pooled_allocation<context_dependent_memory_pool<device_allocator> >
   { 
     private:

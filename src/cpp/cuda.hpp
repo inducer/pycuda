@@ -67,7 +67,7 @@
       cu_status_code = NAME ARGLIST; \
     Py_END_ALLOW_THREADS \
     if (cu_status_code != CUDA_SUCCESS) \
-      throw cuda::error(#NAME, cu_status_code);\
+      throw pycuda::error(#NAME, cu_status_code);\
   }
 
 #define CUDAPP_CALL_GUARDED_WITH_TRACE_INFO(NAME, ARGLIST, TRACE_INFO) \
@@ -77,7 +77,7 @@
     cu_status_code = NAME ARGLIST; \
     CUDAPP_PRINT_ERROR_TRACE(#NAME, cu_status_code); \
     if (cu_status_code != CUDA_SUCCESS) \
-      throw cuda::error(#NAME, cu_status_code);\
+      throw pycuda::error(#NAME, cu_status_code);\
   }
 
 #define CUDAPP_CALL_GUARDED_THREADED(NAME, ARGLIST) \
@@ -89,7 +89,7 @@
     Py_END_ALLOW_THREADS \
     CUDAPP_PRINT_ERROR_TRACE(#NAME, cu_status_code); \
     if (cu_status_code != CUDA_SUCCESS) \
-      throw cuda::error(#NAME, cu_status_code);\
+      throw pycuda::error(#NAME, cu_status_code);\
   }
 
 #define CUDAPP_CALL_GUARDED(NAME, ARGLIST) \
@@ -99,7 +99,7 @@
     cu_status_code = NAME ARGLIST; \
     CUDAPP_PRINT_ERROR_TRACE(#NAME, cu_status_code); \
     if (cu_status_code != CUDA_SUCCESS) \
-      throw cuda::error(#NAME, cu_status_code);\
+      throw pycuda::error(#NAME, cu_status_code);\
   }
 #define CUDAPP_CALL_GUARDED_CLEANUP(NAME, ARGLIST) \
   { \
@@ -111,13 +111,13 @@
       std::cerr \
         << "PyCUDA WARNING: a clean-up operation failed (dead context maybe?)" \
         << std::endl \
-        << cuda::error::make_message(#NAME, cu_status_code) \
+        << pycuda::error::make_message(#NAME, cu_status_code) \
         << std::endl; \
   }
 #define CUDAPP_CATCH_CLEANUP_ON_DEAD_CONTEXT(TYPE) \
-  catch (cuda::cannot_activate_out_of_thread_context) \
+  catch (pycuda::cannot_activate_out_of_thread_context) \
   { } \
-  catch (cuda::cannot_activate_dead_context) \
+  catch (pycuda::cannot_activate_dead_context) \
   { \
     /* PyErr_Warn( \
         PyExc_UserWarning, #TYPE " in dead context was implicitly cleaned up");*/ \
@@ -131,7 +131,7 @@
 
 
 
-namespace cuda
+namespace pycuda
 {
   namespace py = boost::python;
 
@@ -179,6 +179,11 @@ namespace cuda
       CUresult code() const
       {
         return m_code;
+      }
+
+      bool is_out_of_memory() const
+      {
+        return code() == CUDA_ERROR_OUT_OF_MEMORY;
       }
 
       static const char *curesult_to_str(CUresult e)
@@ -721,19 +726,19 @@ namespace cuda
         : m_context(ctx)
       {
         if (!m_context->is_valid())
-          throw cuda::cannot_activate_dead_context(
+          throw pycuda::cannot_activate_dead_context(
               "cannot activate dead context");
 
         m_did_switch = context::current_context() != m_context;
         if (m_did_switch)
         {
           if (boost::this_thread::get_id() != m_context->thread_id())
-            throw cuda::cannot_activate_out_of_thread_context(
+            throw pycuda::cannot_activate_out_of_thread_context(
                 "cannot activate out-of-thread context");
 #if CUDAPP_CUDA_VERSION >= 2000
           context_push(m_context);
 #else
-          throw cuda::error("scoped_context_activation", CUDA_ERROR_INVALID_CONTEXT,
+          throw pycuda::error("scoped_context_activation", CUDA_ERROR_INVALID_CONTEXT,
               "not available in CUDA < 2.0");
 #endif
         }
@@ -915,7 +920,7 @@ namespace cuda
               m_texref, dptr, bytes));
 
         if (!allow_offset && byte_offset != 0)
-          throw cuda::error("texture_reference::set_address", CUDA_ERROR_INVALID_VALUE,
+          throw pycuda::error("texture_reference::set_address", CUDA_ERROR_INVALID_VALUE,
               "texture binding resulted in offset, but allow_offset was false");
 
         m_array.reset();
@@ -1257,7 +1262,7 @@ namespace cuda
           m_valid = false;
         }
         else
-          throw cuda::error("device_allocation::free", CUDA_ERROR_INVALID_HANDLE);
+          throw pycuda::error("device_allocation::free", CUDA_ERROR_INVALID_HANDLE);
       }
 
       ~device_allocation()
@@ -1427,7 +1432,7 @@ namespace cuda
     CUDAPP_CALL_GUARDED(cuMemHostAlloc, (&m_data, size, flags));
 #else
     if (flags != 0)
-      throw cuda::error("mem_alloc_host", CUDA_ERROR_INVALID_VALUE,
+      throw pycuda::error("mem_alloc_host", CUDA_ERROR_INVALID_VALUE,
           "nonzero flags in mem_alloc_host not allowed in CUDA 2.1 and older");
     CUDAPP_CALL_GUARDED(cuMemAllocHost, (&m_data, size));
 #endif
@@ -1474,7 +1479,7 @@ namespace cuda
           m_valid = false;
         }
         else
-          throw cuda::error("host_allocation::free", CUDA_ERROR_INVALID_HANDLE);
+          throw pycuda::error("host_allocation::free", CUDA_ERROR_INVALID_HANDLE);
       }
 
       void *data()

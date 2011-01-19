@@ -1,3 +1,3 @@
 #include "cuda.hpp"
 
-boost::thread_specific_ptr<cuda::context_stack> cuda::context_stack_ptr;
+boost::thread_specific_ptr<pycuda::context_stack> pycuda::context_stack_ptr;

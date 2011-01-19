@@ -18,7 +18,7 @@
 
 
 
-using namespace cuda;
+using namespace pycuda;
 using boost::shared_ptr;
 
 
@@ -38,7 +38,7 @@ namespace
 
 
 
-  void translate_cuda_error(const cuda::error &err)
+  void translate_cuda_error(const pycuda::error &err)
   {
     if (err.code() == CUDA_ERROR_LAUNCH_FAILED
         || err.code() == CUDA_ERROR_LAUNCH_OUT_OF_RESOURCES
@@ -331,11 +331,11 @@ namespace
           std::string(error_buf, error_buf_size));
 
     if (cu_status_code != CUDA_SUCCESS)
-      throw cuda::error("cuModuleLoadDataEx", cu_status_code, 
+      throw pycuda::error("cuModuleLoadDataEx", cu_status_code, 
           std::string(error_buf, error_buf_size).c_str());
 #else
     if (py::len(py_options))
-      throw cuda::error("module_from_buffer", CUDA_ERROR_INVALID_VALUE,
+      throw pycuda::error("module_from_buffer", CUDA_ERROR_INVALID_VALUE,
           "non-empty options argument only supported on CUDA 2.1 and newer");
 
     CUDAPP_CALL_GUARDED(cuModuleLoadData, (&mod, mod_buf));
@@ -430,7 +430,7 @@ BOOST_PYTHON_MODULE(_driver)
 {
   py::def("get_version", cuda_version);
 #if CUDAPP_CUDA_VERSION >= 2020
-  py::def("get_driver_version", cuda::get_driver_version);
+  py::def("get_driver_version", pycuda::get_driver_version);
 #endif
 
   // {{{ exceptions
@@ -449,7 +449,7 @@ BOOST_PYTHON_MODULE(_driver)
     DECLARE_EXC(LaunchError, CudaError.get());
     DECLARE_EXC(RuntimeError, CudaError.get());
 
-    py::register_exception_translator<cuda::error>(translate_cuda_error);
+    py::register_exception_translator<pycuda::error>(translate_cuda_error);
   }
 
   // }}}

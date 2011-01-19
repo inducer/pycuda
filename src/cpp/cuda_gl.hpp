@@ -13,7 +13,7 @@
 #include <cudaGL.h>
 
 
-namespace cuda { namespace gl {
+namespace pycuda { namespace gl {
 
   // {{{ pre-3.0-style API
 
@@ -82,7 +82,7 @@ namespace cuda { namespace gl {
           CUDAPP_CATCH_CLEANUP_ON_DEAD_CONTEXT(buffer_object);
         }
         else
-          throw cuda::error("buffer_object::unregister", CUDA_ERROR_INVALID_HANDLE);
+          throw pycuda::error("buffer_object::unregister", CUDA_ERROR_INVALID_HANDLE);
       }
   };
 
@@ -128,7 +128,7 @@ namespace cuda { namespace gl {
           CUDAPP_CATCH_CLEANUP_ON_DEAD_CONTEXT(buffer_object_mapping)
         }
         else
-          throw cuda::error("buffer_object_mapping::unmap", CUDA_ERROR_INVALID_HANDLE);
+          throw pycuda::error("buffer_object_mapping::unmap", CUDA_ERROR_INVALID_HANDLE);
       }
 
       CUdeviceptr device_ptr() const
@@ -199,7 +199,7 @@ namespace cuda { namespace gl {
           CUDAPP_CATCH_CLEANUP_ON_DEAD_CONTEXT(registered_object);
         }
         else
-          throw cuda::error("registered_object::unregister", 
+          throw pycuda::error("registered_object::unregister", 
               CUDA_ERROR_INVALID_HANDLE);
       }
   };
@@ -276,7 +276,7 @@ namespace cuda { namespace gl {
           CUDAPP_CATCH_CLEANUP_ON_DEAD_CONTEXT(registered_mapping)
         }
         else
-          throw cuda::error("registered_mapping::unmap", CUDA_ERROR_INVALID_HANDLE);
+          throw pycuda::error("registered_mapping::unmap", CUDA_ERROR_INVALID_HANDLE);
       }
 
       py::tuple device_ptr_and_size() const

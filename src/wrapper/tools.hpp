@@ -43,9 +43,9 @@ namespace pycuda
   {
     try
     {
-      return cuda::mem_alloc(bytes);
+      return pycuda::mem_alloc(bytes);
     }
-    catch (cuda::error &e)
+    catch (pycuda::error &e)
     { 
       if (e.code() != CUDA_ERROR_OUT_OF_MEMORY)
         throw;
@@ -58,7 +58,7 @@ namespace pycuda
 
     // Now retry the allocation. If it fails again,
     // let it fail.
-    return cuda::mem_alloc(bytes);
+    return pycuda::mem_alloc(bytes);
   }
 }
 
