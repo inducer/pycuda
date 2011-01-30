@@ -777,7 +777,8 @@ __device__ complex<float> exp(const complex<float>&);
 __device__ complex<float>  log(const complex<float>&);
 __device__ complex<float> log10(const complex<float>&);
 
-__device__ complex<float> pow(const complex<float>&, int);
+// uses some stlport-private power thing
+// __device__ complex<float> pow(const complex<float>&, int);
 __device__ complex<float> pow(const complex<float>&, const float&);
 __device__ complex<float> pow(const float&, const complex<float>&);
 __device__ complex<float> pow(const complex<float>&, const complex<float>&);
@@ -796,7 +797,8 @@ __device__ complex<double> exp(const complex<double>&);
 __device__ complex<double> log(const complex<double>&);
 __device__ complex<double> log10(const complex<double>&);
 
-__device__ complex<double> pow(const complex<double>&, int);
+// uses some stlport-private power thing
+// __device__ complex<double> pow(const complex<double>&, int);
 __device__ complex<double> pow(const complex<double>&, const double&);
 __device__ complex<double> pow(const double&, const complex<double>&);
 __device__ complex<double> pow(const complex<double>&, const complex<double>&);
