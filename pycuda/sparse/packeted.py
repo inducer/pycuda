@@ -120,7 +120,7 @@ class PacketedSpMV:
             adj_mat = csr_mat
 
         while True:
-            cut_count, dof_to_packet_nr = part_graph(self.block_count, 
+            cut_count, dof_to_packet_nr = part_graph(int(self.block_count),
                     xadj=adj_mat.indptr, adjncy=adj_mat.indices)
 
             # build packet_nr_to_dofs
