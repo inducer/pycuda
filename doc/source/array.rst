@@ -362,7 +362,7 @@ intermediate result. The functionality in the module :mod:`pycuda.elementwise`
 contains tools to help generate kernels that evaluate multi-stage expressions
 on one or several operands in a single pass.
 
-.. class:: ElementwiseKernel(arguments, operation, name="kernel", keep=False, options=[])
+.. class:: ElementwiseKernel(arguments, operation, name="kernel", keep=False, options=[], preamble="")
 
     Generate a kernel that takes a number of scalar or vector *arguments*
     and performs the scalar *operation* on each entry of its arguments, if that
@@ -375,10 +375,22 @@ on one or several operands in a single pass.
     *name* specifies the name as which the kernel is compiled, *keep*
     and *options* are passed unmodified to :class:`pycuda.compiler.SourceModule`.
 
-    .. method:: __call__(*args)
+    *preamble* specifies some source code that is included before the
+    elementwise kernel specification. You may use this to include other
+    files and/or define functions that are used by *operation*.
+
+    .. method:: __call__(*args, range=None, slice=None)
 
         Invoke the generated scalar kernel. The arguments may either be scalars or
         :class:`GPUArray` instances.
+
+        If *range* is given, it must be a :class:`slice` object and specifies
+        the range of indices *i* for which the *operation* is carried out.
+
+        If *slice* is given, it must be a :class:`slice` object and specifies
+        the range of indices *i* for which the *operation* is carried out, 
+        truncated to the container. Also, *slice* may contain negative indices
+        to index relative to the end of the array.
 
 Here's a usage example::
 
