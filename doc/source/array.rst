@@ -348,12 +348,6 @@ Generating Arrays of Random Numbers
 Single-pass Custom Expression Evaluation
 ----------------------------------------
 
-.. warning::
-
-    The following functionality is included in this documentation in the
-    hope that it may be useful, but its interface may change in future
-    revisions. Feedback is welcome.
-
 .. module:: pycuda.elementwise
 
 Evaluating involved expressions on :class:`GPUArray` instances can be
