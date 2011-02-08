@@ -11,6 +11,9 @@ Version 2011.1
 
 * Add support for CUDA 3.0-style OpenGL interop. (thanks to Tomasz Rybak)
 * Add :meth:`pycuda.driver.Stream.wait_for_event`.
+* Add *range* and *slice* keyword argument to :meth:`pycuda.gpuarray.ElementwiseKernel.__call__`.
+* Document *preamble* constructor keyword argument to 
+  :class:`pycuda.gpuarray.ElementwiseKernel`.
 
 Version 0.94.2
 --------------

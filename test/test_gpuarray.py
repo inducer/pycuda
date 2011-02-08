@@ -387,6 +387,33 @@ class TestGPUArray:
 
 
     @mark_cuda_test
+    def test_ranged_elwise_kernel(self):
+        from pycuda.elementwise import ElementwiseKernel
+        set_to_seven = ElementwiseKernel(
+                "float *z",
+                "z[i] = 7",
+                "set_to_seven")
+
+        for i, slc in enumerate([
+                slice(5, 20000),
+                slice(5, 20000, 17),
+                slice(3000, 5, -1),
+                slice(1000, -1),
+                ]):
+
+            a_gpu = gpuarray.zeros((50000,), dtype=numpy.float32)
+            a_cpu = numpy.zeros(a_gpu.shape, a_gpu.dtype)
+
+            a_cpu[slc] = 7
+            set_to_seven(a_gpu, slice=slc)
+            drv.Context.synchronize()
+
+            assert la.norm(a_cpu - a_gpu.get()) == 0, i
+
+
+
+
+    @mark_cuda_test
     def test_take(self):
         idx = gpuarray.arange(0, 200000, 2, dtype=numpy.uint32)
         a = gpuarray.arange(0, 600000, 3, dtype=numpy.float32)

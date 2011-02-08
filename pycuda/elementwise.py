@@ -33,6 +33,7 @@ OTHER DEALINGS IN THE SOFTWARE.
 from pycuda.tools import context_dependent_memoize
 import numpy
 from pycuda.tools import dtype_to_ctype, VectorArg, ScalarArg
+from pytools import memoize_method
 
 
 
@@ -73,15 +74,80 @@ def get_elwise_module(arguments, operation,
             },
         options=options, keep=keep)
 
+
+
+
+def get_elwise_range_module(arguments, operation,
+        name="kernel", keep=False, options=[],
+        preamble="", loop_prep="", after_loop=""):
+    from pycuda.compiler import SourceModule
+    return SourceModule("""
+        #include <pycuda-complex.hpp>
+
+        %(preamble)s
+
+        __global__ void %(name)s(%(arguments)s)
+        {
+          unsigned tid = threadIdx.x;
+          unsigned total_threads = gridDim.x*blockDim.x;
+          unsigned cta_start = blockDim.x*blockIdx.x;
+          long i;
+
+          %(loop_prep)s;
+
+          if (step < 0)
+          {
+            for (i = start + (cta_start + tid)*step;
+              i > stop; i += total_threads*step)
+            {
+              %(operation)s;
+            }
+          }
+          else
+          {
+            for (i = start + (cta_start + tid)*step; 
+              i < stop; i += total_threads*step)
+            {
+              %(operation)s;
+            }
+          }
+
+          %(after_loop)s;
+        }
+        """ % {
+            "arguments": ", ".join(arg.declarator() for arg in arguments),
+            "operation": operation,
+            "name": name,
+            "preamble": preamble,
+            "loop_prep": loop_prep,
+            "after_loop": after_loop,
+            },
+        options=options, keep=keep)
+
+
+
+
 def get_elwise_kernel_and_types(arguments, operation,
-        name="kernel", keep=False, options=[], **kwargs):
+        name="kernel", keep=False, options=[], use_range=False, **kwargs):
     if isinstance(arguments, str):
         from pycuda.tools import parse_c_arg
         arguments = [parse_c_arg(arg) for arg in arguments.split(",")]
 
-    arguments.append(ScalarArg(numpy.uintp, "n"))
+    if use_range:
+        arguments.extend([
+            ScalarArg(numpy.intp, "start"),
+            ScalarArg(numpy.intp, "stop"),
+            ScalarArg(numpy.intp, "step"),
+            ])
+    else:
+        arguments.append(ScalarArg(numpy.uintp, "n"))
 
-    mod = get_elwise_module(arguments, operation, name,
+    if use_range:
+        module_builder = get_elwise_range_module
+    else:
+        module_builder = get_elwise_module
+
+    mod = module_builder(arguments, operation, name,
             keep, options, **kwargs)
 
     from pycuda.tools import get_arg_type
@@ -106,19 +172,38 @@ def get_elwise_kernel(arguments, operation,
 class ElementwiseKernel:
     def __init__(self, arguments, operation,
             name="kernel", keep=False, options=[], **kwargs):
-        self.func, self.arguments = get_elwise_kernel_and_types(
-            arguments, operation, name, keep, options, **kwargs)
 
-        assert [i for i, arg in enumerate(self.arguments)
+        self.gen_kwargs = kwargs.copy()
+        self.gen_kwargs.update(dict(keep=keep, options=options, name=name,
+            operation=operation, arguments=arguments))
+
+    @memoize_method
+    def generate_stride_kernel_and_types(self, use_range):
+        knl, arguments = get_elwise_kernel_and_types(use_range=use_range, 
+                **self.gen_kwargs)
+
+        assert [i for i, arg in enumerate(arguments)
                 if isinstance(arg, VectorArg)], \
                 "ElementwiseKernel can only be used with functions that have at least one " \
                 "vector argument"
 
-    def __call__(self, *args):
+        return knl, arguments
+
+    def __call__(self, *args, **kwargs):
         vectors = []
 
+        range_ = kwargs.pop("range", None)
+        slice_ = kwargs.pop("slice", None)
+
+        if kwargs:
+            raise TypeError("invalid keyword arguments specified: "
+                    + ", ".join(kwargs.iterkeys()))
+
         invocation_args = []
-        for arg, arg_descr in zip(args, self.arguments):
+        func, arguments = self.generate_stride_kernel_and_types(
+                range_ is not None or slice_ is not None)
+
+        for arg, arg_descr in zip(args, arguments):
             if isinstance(arg_descr, VectorArg):
                 vectors.append(arg)
                 invocation_args.append(arg.gpudata)
@@ -126,9 +211,26 @@ class ElementwiseKernel:
                 invocation_args.append(arg)
 
         repr_vec = vectors[0]
-        invocation_args.append(repr_vec.mem_size)
-        self.func.set_block_shape(*repr_vec._block)
-        self.func.prepared_call(repr_vec._grid, *invocation_args)
+
+        if slice_ is not None:
+            if range_ is not None:
+                raise TypeError("may not specify both range and slice "
+                        "keyword arguments")
+
+            range_ = slice(*slice_.indices(repr_vec.size))
+
+        if range_ is not None:
+            invocation_args.append(range_.start)
+            invocation_args.append(range_.stop)
+            if range_.step is None:
+                invocation_args.append(1)
+            else:
+                invocation_args.append(range_.step)
+        else:
+            invocation_args.append(repr_vec.mem_size)
+
+        func.set_block_shape(*repr_vec._block)
+        func.prepared_call(repr_vec._grid, *invocation_args)
 
 
 
