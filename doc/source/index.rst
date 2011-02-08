@@ -51,7 +51,7 @@ Here's an example, to given you an impression::
   dest = numpy.zeros_like(a)
   multiply_them(
           drv.Out(dest), drv.In(a), drv.In(b),
-          block=(400,1,1))
+          block=(400,1,1), grid=(1,1))
 
   print dest-a*b
 
