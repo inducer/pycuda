@@ -164,7 +164,7 @@ The :class:`GPUArray` Array Class
 
         .. highlight:: c
 
-        As of this writing, CUDA textures do not natively support double-precision 
+        As of this writing, CUDA textures do not natively support double-precision
         floating point data. To remedy this deficiency, PyCUDA contains a workaround,
         which can be enabled by passing *True* for allow_double_hack. In this case,
         use the following code for texture access in your kernel code::
@@ -370,57 +370,57 @@ Generating Arrays of Random Numbers
     .. method fill_uniform_int(data, input_size, stream=None)
 
         Fills in array of input_size integer values pointed by data
-	with pseudo-random integers with uniform distribution.
+        with pseudo-random integers with uniform distribution.
 
     .. method fill_uniform_float(data, input_size, stream=None)
 
         Fills in array of input_size float values pointed by data
-	with pseudo-random floats with uniform distribution.
+        with pseudo-random floats with uniform distribution.
 
     .. method fill_uniform_double(data, input_size, stream=None)
 
         Fills in array of input_size double values pointed by data
-	with pseudo-random floats with uniform distribution.
+        with pseudo-random floats with uniform distribution.
 
     .. method fill_normal_float(data, input_size, stream=None)
 
         Fills in array of input_size float values pointed by data
-	with pseudo-random floats with normal distribution.
+        with pseudo-random floats with normal distribution.
 
     .. method fill_normal_double(data, input_size, stream=None)
 
         Fills in array of input_size double values pointed by data
-	with pseudo-random double with normal distribution.
+        with pseudo-random double with normal distribution.
 
     .. method fill_normal_float2(data, input_size, stream=None)
 
         Fills in array of input_size float pairs pointed by data
-	with pseudo-random floats with normal distribution.
+        with pseudo-random floats with normal distribution.
 
     .. method fill_normal_double2(data, input_size, stream=None)
 
         Fills in array of input_size double pairs pointed by data
-	with pseudo-random double with normal distribution.
+        with pseudo-random double with normal distribution.
 
     .. method fill_uniform(data, stream=None)
 
         Fills in GPUArray with pseudo-random values with uniform distribution.
-	Detects type of items in GPUArray and calls appropriate method.
+        Detects type of items in GPUArray and calls appropriate method.
 
     .. method fill_normal(data, stream=None)
 
         Fills in GPUArray with pseudo-random values with normal distribution.
-	Detects type of items in GPUArray and calls appropriate method.
+        Detects type of items in GPUArray and calls appropriate method.
 
     .. method call_skip_ahead(i, stream=None)
 
         Forces all generators to skip i values. Is equivalent to generating
-	i values and discarding results, but is much faster.
+        i values and discarding results, but is much faster.
 
     .. method call_skip_ahead_array(i, stream=None)
 
         Accepts array i of integer values, telling each generator how many
-	values to skip.
+        values to skip.
 
     .. method __call__(shape, dtype=numpy.float32, stream=None)
 
@@ -439,57 +439,57 @@ Generating Arrays of Random Numbers
     .. method fill_uniform_int(data, input_size, stream=None)
 
         Fills in array of input_size integer values pointed by data
-	with quasi-random integers with uniform distribution.
+        with quasi-random integers with uniform distribution.
 
     .. method fill_uniform_float(data, input_size, stream=None)
 
         Fills in array of input_size float values pointed by data
-	with quasi-random floats with uniform distribution.
+        with quasi-random floats with uniform distribution.
 
     .. method fill_uniform_double(data, input_size, stream=None)
 
         Fills in array of input_size double values pointed by data
-	with quasi-random floats with uniform distribution.
+        with quasi-random floats with uniform distribution.
 
     .. method fill_normal_float(data, input_size, stream=None)
 
         Fills in array of input_size float values pointed by data
-	with quasi-random floats with normal distribution.
+        with quasi-random floats with normal distribution.
 
     .. method fill_normal_double(data, input_size, stream=None)
 
         Fills in array of input_size double values pointed by data
-	with quasi-random double with normal distribution.
+        with quasi-random double with normal distribution.
 
     .. method fill_normal_float2(data, input_size, stream=None)
 
         Fills in array of input_size float pairs pointed by data
-	with quasi-random floats with normal distribution.
+        with quasi-random floats with normal distribution.
 
     .. method fill_normal_double2(data, input_size, stream=None)
 
         Fills in array of input_size double pairs pointed by data
-	with quasi-random double with normal distribution.
+        with quasi-random double with normal distribution.
 
     .. method fill_uniform(data, stream=None)
 
         Fills in GPUArray with quasi-random values with uniform distribution.
-	Detects type of items in GPUArray and calls appropriate method.
+        Detects type of items in GPUArray and calls appropriate method.
 
     .. method fill_normal(data, stream=None)
 
         Fills in GPUArray with quasi-random values with normal distribution.
-	Detects type of items in GPUArray and calls appropriate method.
+        Detects type of items in GPUArray and calls appropriate method.
 
     .. method call_skip_ahead(i, stream=None)
 
         Forces all generators to skip i values. Is equivalent to generating
-	i values and discarding results, but is much faster.
+        i values and discarding results, but is much faster.
 
     .. method call_skip_ahead_array(i, stream=None)
 
         Accepts array i of integer values, telling each generator how many
-	values to skip.
+        values to skip.
 
     .. method __call__(shape, dtype=numpy.float32, stream=None)
 
@@ -533,7 +533,7 @@ on one or several operands in a single pass.
         the range of indices *i* for which the *operation* is carried out.
 
         If *slice* is given, it must be a :class:`slice` object and specifies
-        the range of indices *i* for which the *operation* is carried out, 
+        the range of indices *i* for which the *operation* is carried out,
         truncated to the container. Also, *slice* may contain negative indices
         to index relative to the end of the array.
 
