@@ -226,11 +226,16 @@ class ElementwiseKernel:
                 invocation_args.append(1)
             else:
                 invocation_args.append(range_.step)
+
+            from pycuda.gpuarray import splay
+            grid, block = splay(abs(range_.stop - range_.start)//range_.step)
         else:
+            block = repr_vec._block
+            grid = repr_vec._grid
             invocation_args.append(repr_vec.mem_size)
 
-        func.set_block_shape(*repr_vec._block)
-        func.prepared_call(repr_vec._grid, *invocation_args)
+        func.set_block_shape(*block)
+        func.prepared_call(grid, *invocation_args)
 
 
 
