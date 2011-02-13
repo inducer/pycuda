@@ -12,10 +12,18 @@ def get_nvcc_version(nvcc):
             from pytools.prefork import call_capture_output
         except ImportError:
             from pytools.prefork import call_capture_stdout
-            return call_capture_stdout(cmdline)
+            result = call_capture_stdout(cmdline)
         else:
             retcode, stdout, stderr = call_capture_output(cmdline)
-            return stdout
+            result = stdout
+
+        if result is None:
+            from warnings import warn
+            warn("NVCC version could not be determined.")
+            result = "nvcc unknown version"
+
+        return result
+
     except OSError, e:
         raise OSError("%s was not found (is it on the PATH?) [%s]" 
                 % (nvcc, str(e)))
