@@ -14,6 +14,7 @@ Version 2011.1
 * Add *range* and *slice* keyword argument to :meth:`pycuda.gpuarray.ElementwiseKernel.__call__`.
 * Document *preamble* constructor keyword argument to 
   :class:`pycuda.gpuarray.ElementwiseKernel`.
+* Add CURAND wrapper. (initial version by Tomasz Rybak)
 
 Version 0.94.2
 --------------
