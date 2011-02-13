@@ -345,6 +345,157 @@ Generating Arrays of Random Numbers
     Return an array of `shape` filled with random values of `dtype`
     in the range [0,1).
 
+.. warning::
+
+    The following classes are using random number generators that run on GPU.
+    Each thread uses own generator. Creation of those generators requires more
+    resources than subsequent generation of random numbers. After experiments
+    it looks like maximum number of active generators on Tesla devices
+    (with compute capabilities 1.x) is 256. Fermi devices allow for creating
+    1024 generators without any problems. If there are troubles with creating
+    objects of class PseudoRandomNumberGenerator or QuasiRandomNumberGenerator
+    decrease number of created generators
+    (and therefore number of active threads).
+
+.. class:: PseudoRandomNumberGenerator(offset, seed=None)
+
+    Class surrounding CURAND kernels from CUDA 3.2.
+    It allows for generating pseudo-random numbers with uniform and normal
+    probability function of type int, float, double, float2, double2.
+    Uses curandState to store random generator state and generates
+    sequences with period at least 2^190.
+
+    CUDA 3.2 and above.
+
+    .. method fill_uniform_int(data, input_size, stream=None)
+
+        Fills in array of input_size integer values pointed by data
+	with pseudo-random integers with uniform distribution.
+
+    .. method fill_uniform_float(data, input_size, stream=None)
+
+        Fills in array of input_size float values pointed by data
+	with pseudo-random floats with uniform distribution.
+
+    .. method fill_uniform_double(data, input_size, stream=None)
+
+        Fills in array of input_size double values pointed by data
+	with pseudo-random floats with uniform distribution.
+
+    .. method fill_normal_float(data, input_size, stream=None)
+
+        Fills in array of input_size float values pointed by data
+	with pseudo-random floats with normal distribution.
+
+    .. method fill_normal_double(data, input_size, stream=None)
+
+        Fills in array of input_size double values pointed by data
+	with pseudo-random double with normal distribution.
+
+    .. method fill_normal_float2(data, input_size, stream=None)
+
+        Fills in array of input_size float pairs pointed by data
+	with pseudo-random floats with normal distribution.
+
+    .. method fill_normal_double2(data, input_size, stream=None)
+
+        Fills in array of input_size double pairs pointed by data
+	with pseudo-random double with normal distribution.
+
+    .. method fill_uniform(data, stream=None)
+
+        Fills in GPUArray with pseudo-random values with uniform distribution.
+	Detects type of items in GPUArray and calls appropriate method.
+
+    .. method fill_normal(data, stream=None)
+
+        Fills in GPUArray with pseudo-random values with normal distribution.
+	Detects type of items in GPUArray and calls appropriate method.
+
+    .. method call_skip_ahead(i, stream=None)
+
+        Forces all generators to skip i values. Is equivalent to generating
+	i values and discarding results, but is much faster.
+
+    .. method call_skip_ahead_array(i, stream=None)
+
+        Accepts array i of integer values, telling each generator how many
+	values to skip.
+
+    .. method __call__(shape, dtype=numpy.float32, stream=None)
+
+        Creates GPUArray, fills it with pseudo-random values and returns it.
+
+.. class:: QuasiRandomNumberGenerator(vector, offset)
+
+    Class surrounding CURAND kernels from CUDA 3.2.
+    It allows for generating quasi-random numbers with uniform and normal
+    probability function of type int, float, double, float2, double2.
+    Uses curandStateSobol32 to store random generator state and generates
+    sequences with period of 2^32.
+
+    CUDA 3.2 and above.
+
+    .. method fill_uniform_int(data, input_size, stream=None)
+
+        Fills in array of input_size integer values pointed by data
+	with quasi-random integers with uniform distribution.
+
+    .. method fill_uniform_float(data, input_size, stream=None)
+
+        Fills in array of input_size float values pointed by data
+	with quasi-random floats with uniform distribution.
+
+    .. method fill_uniform_double(data, input_size, stream=None)
+
+        Fills in array of input_size double values pointed by data
+	with quasi-random floats with uniform distribution.
+
+    .. method fill_normal_float(data, input_size, stream=None)
+
+        Fills in array of input_size float values pointed by data
+	with quasi-random floats with normal distribution.
+
+    .. method fill_normal_double(data, input_size, stream=None)
+
+        Fills in array of input_size double values pointed by data
+	with quasi-random double with normal distribution.
+
+    .. method fill_normal_float2(data, input_size, stream=None)
+
+        Fills in array of input_size float pairs pointed by data
+	with quasi-random floats with normal distribution.
+
+    .. method fill_normal_double2(data, input_size, stream=None)
+
+        Fills in array of input_size double pairs pointed by data
+	with quasi-random double with normal distribution.
+
+    .. method fill_uniform(data, stream=None)
+
+        Fills in GPUArray with quasi-random values with uniform distribution.
+	Detects type of items in GPUArray and calls appropriate method.
+
+    .. method fill_normal(data, stream=None)
+
+        Fills in GPUArray with quasi-random values with normal distribution.
+	Detects type of items in GPUArray and calls appropriate method.
+
+    .. method call_skip_ahead(i, stream=None)
+
+        Forces all generators to skip i values. Is equivalent to generating
+	i values and discarding results, but is much faster.
+
+    .. method call_skip_ahead_array(i, stream=None)
+
+        Accepts array i of integer values, telling each generator how many
+	values to skip.
+
+    .. method __call__(shape, dtype=numpy.float32, stream=None)
+
+        Creates GPUArray, fills it with quasi-random values and returns it.
+
+
 Single-pass Custom Expression Evaluation
 ----------------------------------------
 
