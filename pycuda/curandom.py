@@ -1,4 +1,14 @@
+from __future__ import division
 
+import numpy as np
+import pycuda.compiler
+import pycuda.driver as drv
+import pycuda.gpuarray as array
+
+
+
+
+# {{{ MD5-based random number generation
 
 md5_code = """
 /*
@@ -29,7 +39,7 @@ md5_code = """
 #define F(x, y, z) (((x) & (y)) | ((~x) & (z)))
 #define G(x, y, z) (((x) & (z)) | ((y) & (~z)))
 #define H(x, y, z) ((x) ^ (y) ^ (z))
-#define I(x, y, z) ((y) ^ ((x) | (~z))) 
+#define I(x, y, z) ((y) ^ ((x) | (~z)))
 
 /* ROTATE_LEFT rotates x left n bits */
 #define ROTATE_LEFT(x, n) (((x) << (n)) | ((x) >> (32-(n))))
@@ -78,7 +88,7 @@ md5_code = """
   unsigned int b = 0xefcdab89;
   unsigned int c = 0x98badcfe;
   unsigned int d = 0x10325476;
-   
+
   /* Round 1 */
 #define S11 7
 #define S12 12
@@ -173,17 +183,15 @@ md5_code = """
   d += 0x10325476;
 """
 
-import numpy
-
-def rand(shape, dtype=numpy.float32, stream=None):
+def rand(shape, dtype=np.float32, stream=None):
     from pycuda.gpuarray import GPUArray
     from pycuda.elementwise import get_elwise_kernel
 
     result = GPUArray(shape, dtype)
-    
-    if dtype == numpy.float32:
+
+    if dtype == np.float32:
         func = get_elwise_kernel(
-            "float *dest, unsigned int seed", 
+            "float *dest, unsigned int seed",
             md5_code + """
             #define POW_2_M32 (1/4294967296.0f)
             dest[i] = a*POW_2_M32;
@@ -195,9 +203,9 @@ def rand(shape, dtype=numpy.float32, stream=None):
                 dest[i] = d*POW_2_M32;
             """,
             "md5_rng_float")
-    elif dtype == numpy.float64:
+    elif dtype == np.float64:
         func = get_elwise_kernel(
-            "double *dest, unsigned int seed", 
+            "double *dest, unsigned int seed",
             md5_code + """
             #define POW_2_M32 (1/4294967296.0)
             #define POW_2_M64 (1/18446744073709551616.)
@@ -210,9 +218,9 @@ def rand(shape, dtype=numpy.float32, stream=None):
             }
             """,
             "md5_rng_float")
-    elif dtype in [numpy.int32, numpy.uint32]:
+    elif dtype in [np.int32, np.uint32]:
         func = get_elwise_kernel(
-            "unsigned int *dest, unsigned int seed", 
+            "unsigned int *dest, unsigned int seed",
             md5_code + """
             dest[i] = a;
             if ((i += total_threads) < n)
@@ -228,311 +236,306 @@ def rand(shape, dtype=numpy.float32, stream=None):
 
     func.set_block_shape(*result._block)
     func.prepared_async_call(result._grid, stream,
-            result.gpudata, numpy.random.randint(2**31-1), result.size)
-    
+            result.gpudata, np.random.randint(2**31-1), result.size)
+
     return result
 
+# }}}
 
-# Need to allocate memory for curandState - there in not enough memory
-# (neither shared nor private) on the chip for one for each thread ;-)
-# sizeof(curandState))
-curand_state_size = 40
-# sizeof(curandStateSobol32))
-curand_state_sobol_size = 136
+# {{{ CURAND wrapper
+
+# {{{ Base class
+
+gen_template = """
+__global__ void %(name)s(%(state_type)s *s, %(out_type)s *d, const int n) 
+{
+  const int tidx = threadIdx.x;
+  for (int idx = tidx; idx < n; idx += blockDim.x)
+    d[idx] = curand%(suffix)s(&s[tidx]);
+}
+"""
 
 random_source = """
 // Uses C++ features (templates); do not surround with extern C
 #include <curand_kernel.h>
 
-extern "C" {
-__global__ void uniform_int(%(data_type)s *s, int *d, const int n) {
-    const int tidx = threadIdx.x;
-    for (int idx = tidx; idx < n; idx += blockDim.x) {
-        d[idx] = curand(&s[tidx]);
-    }
+extern "C" 
+{
+
+%(generators)s
+
+__global__ void skip_ahead(%(state_type)s *s, const int n, const int skip) 
+{
+  const int idx = threadIdx.x;
+  if (idx < n)
+    skipahead(skip, &s[idx]);
 }
 
-__global__ void uniform_float(%(data_type)s *s, float *d, const int n) {
-    const int tidx = threadIdx.x;
-    for (int idx = tidx; idx < n; idx += blockDim.x) {
-        d[idx] = curand_uniform(&s[tidx]);
-    }
-}
-
-__global__ void uniform_double(%(data_type)s *s, double *d, const int n) {
-    const int tidx = threadIdx.x;
-    for (int idx = tidx; idx < n; idx += blockDim.x) {
-        d[idx] = curand_uniform_double(&s[tidx]);
-    }
-}
-
-__global__ void normal_float(%(data_type)s *s, float *d, const int n) {
-    const int tidx = threadIdx.x;
-    for (int idx = tidx; idx < n; idx += blockDim.x) {
-        d[idx] = curand_normal(&s[tidx]);
-    }
-}
-
-__global__ void normal_double(%(data_type)s *s, double *d, const int n) {
-    const int tidx = threadIdx.x;
-    for (int idx = tidx; idx < n; idx += blockDim.x) {
-        d[idx] = curand_normal_double(&s[tidx]);
-    }
-}
-
-
-__global__ void skip_ahead(%(data_type)s *s, const int n, const int skip) {
-    const int idx = threadIdx.x;
-    if (idx < n) {
-        skipahead(skip, &s[idx]);
-    }
-}
-
-__global__ void skip_ahead_array(%(data_type)s *s, const int n, const int *skip) {
-    const int idx = threadIdx.x;
-    if (idx < n) {
-        skipahead(skip[idx], &s[idx]);
-    }
+__global__ void skip_ahead_array(%(state_type)s *s, const int n, const int *skip) 
+{
+  const int idx = threadIdx.x;
+  if (idx < n)
+      skipahead(skip[idx], &s[idx]);
 }
 }
 """
 
-class RandomNumberGenerator(object):
+
+
+
+class _RandomNumberGeneratorBase(object):
     """
     Class surrounding CURAND kernels from CUDA 3.2.
     It allows for generating random numbers with uniform
     and normal probability function of various types.
     """
-    def __init__(self, data_type, data_type_size, additional_source):
-        import pycuda.compiler
-        import pycuda.driver
-        if pycuda.driver.get_version() < (3, 2, 0):
+
+    gen_info = [
+        ("uniform_int", "int", ""),
+        ("uniform_float", "float", "_uniform"),
+        ("uniform_double", "double", "_uniform_double"),
+        ("normal_float", "float", "_normal"),
+        ("normal_double", "double", "_normal_double"),
+        ("normal_float2", "float2", "normal_float2"),
+        ("normal_double2", "double2", "normal_double2"),
+        ]
+
+    def __init__(self, state_type, additional_source):
+        if drv.get_version() < (3, 2, 0):
             raise EnvironmentError("Need at least CUDA 3.2")
-# Max 256 threads on ION during preparing
-# Need to limit number of threads. If not there is failed execution:
-# pycuda._driver.LaunchError: cuLaunchGrid failed: launch out of resources
-        dev = pycuda.driver.Context.get_device()
+
+        # Max 256 threads on ION during preparing
+        # Need to limit number of threads. If not there is failed execution:
+        # pycuda._driver.LaunchError: cuLaunchGrid failed: launch out of resources
+
+        dev = drv.Context.get_device()
         if dev.compute_capability() >= (2, 0):
-            block_size = dev.get_attribute(pycuda.driver.device_attribute.MAX_THREADS_PER_BLOCK)
-            block_dimension =  dev.get_attribute(pycuda.driver.device_attribute.MAX_BLOCK_DIM_X)
+            block_size = dev.get_attribute(
+                drv.device_attribute.MAX_THREADS_PER_BLOCK)
+            block_dimension =  dev.get_attribute(
+                drv.device_attribute.MAX_BLOCK_DIM_X)
             self.generator_count = min(block_size, block_dimension)
-	else:
+        else:
             self.generator_count = 256
-# TODO: cudaThreadSetLimit(cudaLimitStackSize, 16k) on Fermi
-        self.state = pycuda.driver.mem_alloc(self.generator_count *
-            data_type_size)
-        source = str(random_source + additional_source) % {
-            'data_type': data_type,
-            }
-        self.module = pycuda.compiler.SourceModule(source, no_extern_c=True,
-            keep=True)
-        self.uniform_int = self.module.get_function("uniform_int")
-        self.uniform_int.prepare("PPi", block=(self.generator_count, 1, 1))
-        self.uniform_float = self.module.get_function("uniform_float")
-        self.uniform_float.prepare("PPi", block=(self.generator_count, 1, 1))
-        self.uniform_double = self.module.get_function("uniform_double")
-        self.uniform_double.prepare("PPi", block=(self.generator_count, 1, 1))
-        self.normal_float = self.module.get_function("normal_float")
-        self.normal_float.prepare("PPi", block=(self.generator_count, 1, 1))
-        self.normal_double = self.module.get_function("normal_double")
-        self.normal_double.prepare("PPi", block=(self.generator_count, 1, 1))
-        self.skip_ahead = self.module.get_function("skip_ahead")
+
+        from pycuda.characterize import sizeof
+        data_type_size = sizeof(state_type, "#include <curand_kernel.h>")
+
+        self.state = drv.mem_alloc(
+            self.generator_count * data_type_size)
+
+        from pycuda.characterize import has_double_support
+
+        def do_generate(out_type):
+            result = True
+            if "double" in out_type:
+                result = result and has_double_support()
+            if "2" in out_type:
+                result = result and self.has_box_muller
+            return result
+
+        my_generators = [
+                (name, out_type, suffix)
+                for name, out_type, suffix in self.gen_info
+                if do_generate(out_type)]
+
+        generator_sources = [
+                gen_template % { 
+                    "name":name, "out_type":out_type, "suffix": suffix, 
+                    "state_type": state_type, }
+                for name, out_type, suffix in my_generators]
+
+        source = (random_source + additional_source) % {
+            "state_type": state_type,
+            "generators": "\n".join(generator_sources)}
+
+        # store in instance to let subclass constructors get to it.
+        self.module = module = pycuda.compiler.SourceModule(source, no_extern_c=True)
+
+        self.generators = {}
+        for name, out_type, suffix  in my_generators:
+            gen_func = module.get_function(name)
+            gen_func.prepare("PPi", block=(self.generator_count, 1, 1))
+            self.generators[name] = gen_func
+
+        self.skip_ahead = module.get_function("skip_ahead")
         self.skip_ahead.prepare("Pii", block=(self.generator_count, 1, 1))
-        self.skip_ahead_array = self.module.get_function("skip_ahead_array")
+        self.skip_ahead_array = module.get_function("skip_ahead_array")
         self.skip_ahead_array.prepare("PiP", block=(self.generator_count, 1, 1))
-    def __del__(self):
-        self.state.free()
-    def fill_uniform_int(self, data, input_size, stream = None):
-        self.uniform_int.prepared_async_call((1, 1), stream, self.state,
-            data, input_size)
-    def fill_uniform_float(self, data, input_size, stream = None):
-        self.uniform_float.prepared_async_call((1, 1), stream, self.state,
-            data, input_size)
-    def fill_uniform_double(self, data, input_size, stream = None):
-        self.uniform_double.prepared_async_call((1, 1), stream, self.state,
-            data, input_size)
-    def fill_normal_float(self, data, input_size, stream = None):
-        self.normal_float.prepared_async_call((1, 1), stream, self.state,
-            data, input_size)
-    def fill_normal_double(self, data, input_size, stream = None):
-        self.normal_double.prepared_async_call((1, 1), stream, self.state,
-            data, input_size)
-    def fill_uniform(self, data, stream = None):
-        if data.dtype == numpy.float32:
-            self.fill_uniform_float(data.gpudata, data.size, stream)
-        elif data.dtype == numpy.float64:
-            self.fill_uniform_double(data.gpudata, data.size, stream)
-        elif data.dtype in [numpy.int, numpy.int32, numpy.uint32]:
-            self.fill_uniform_int(data.gpudata, data.size, stream)
+
+    def fill_uniform(self, data, stream=None):
+        if data.dtype == np.float32:
+            func = self.generators["uniform_float"]
+        elif data.dtype == np.float64:
+            func = self.generators["uniform_double"]
+        elif data.dtype in [np.int, np.int32, np.uint32]:
+            func = self.generators["uniform_int"]
         else:
             raise NotImplementedError
-    def fill_normal(self, data, stream = None):
-        if isinstance(data.dtype, numpy.float32):
-            self.fill_normal_float(data.gpudata, data.size, stream)
-        elif isinstance(data.dtype, numpy.float64):
-            self.fill_normal_double(data.gpudata, data.size, stream)
+
+        func.prepared_async_call((1, 1), stream, self.state,
+            data.gpudata, data.size)
+
+    def fill_normal(self, data, stream=None):
+        if data.dtype == np.float32:
+            func_name = "normal_float"
+        elif data.dtype == np.float64:
+            func_name = "normal_double"
         else:
             raise NotImplementedError
-    def call_skip_ahead(self, i, stream = None):
-        self.skip_ahead.prepared_async_call((1, 1), stream, self.state,
-            self.generator_count, i)
-    def call_skip_ahead_array(self, i, stream = None):
-        self.skip_ahead_array.prepared_async_call((1, 1), stream, self.state,
-            self.generator_count, i.gpudata)
-    def __call__(self, shape, dtype = numpy.float32, stream = None):
-        import pycuda.gpuarray
-        result = pycuda.gpuarray.GPUArray(shape, dtype)
+
+        data_size = data.size
+        if self.has_box_muller and data_size % 2 == 0:
+            func_name += "2"
+            data_size /= 2
+
+        func = self.generators[func_name]
+
+        func.prepared_async_call((1, 1), stream, self.state,
+            data.gpudata, data_size)
+
+    def gen_uniform(self, shape, dtype, stream=None):
+        result = array.empty(shape, dtype)
         self.fill_uniform(result, stream)
         return result
 
-pseudo_random_source = """
+    def gen_normal(self, shape, dtype, stream=None):
+        result = array.empty(shape, dtype)
+        self.fill_normal(result, stream)
+        return result
+
+    def call_skip_ahead(self, i, stream=None):
+        self.skip_ahead.prepared_async_call((1, 1), stream, self.state,
+            self.generator_count, i)
+
+    def call_skip_ahead_array(self, i, stream=None):
+        self.skip_ahead_array.prepared_async_call((1, 1), stream, self.state,
+            self.generator_count, i.gpudata)
+
+# }}}
+
+# {{{ XORWOW RNG
+
+xorwow_random_source = """
 extern "C" {
-__global__ void prepare_with_seed(curandState *s, const int n, const int seed, const int offset) {
-    if (threadIdx.x < n) {
-        curand_init(seed, threadIdx.x, offset, &s[threadIdx.x]);
-    }
+__global__ void prepare_with_seeds(curandState *s, const int n,
+  const int *seed, const int offset) 
+{
+  if (threadIdx.x < n)
+    curand_init(seed[threadIdx.x], threadIdx.x, offset, &s[threadIdx.x]);
 }
 
-__global__ void prepare_with_seeds(curandState *s, const int n, const int *seed, const int offset) {
-    if (threadIdx.x < n) {
-        curand_init(seed[threadIdx.x], threadIdx.x, offset,
-            &s[threadIdx.x]);
-    }
-}
-
-__global__ void normal_float2(curandState *s, float2 *d, const int n) {
-    const int tidx = threadIdx.x;
-    for (int idx = tidx; idx < n; idx += blockDim.x) {
-        d[idx] = curand_normal2(&s[tidx]);
-    }
-}
-
-__global__ void normal_double2(curandState *s, double2 *d, const int n) {
-    const int tidx = threadIdx.x;
-    for (int idx = tidx; idx < n; idx += blockDim.x) {
-        d[idx] = curand_normal2_double(&s[tidx]);
-    }
-}
 }
 """
 
-class PseudoRandomNumberGenerator(RandomNumberGenerator):
-    """
-    Class surrounding CURAND kernels from CUDA 3.2.
-    It allows for generating pseudo-random numbers with uniform
-    and normal probability function of type int, float, double,
-    float2, double2.
-    """
-    def __init__(self, offset, seed = None):
-        import pycuda._driver
-        import pycuda.gpuarray
-        super(PseudoRandomNumberGenerator, self).__init__('curandState',
-            curand_state_size, pseudo_random_source)
-        self.normal_float2 = self.module.get_function("normal_float2")
-        self.normal_float2.prepare("PPi", block=(self.generator_count, 1, 1))
-        self.normal_double2 = self.module.get_function("normal_double2")
-        self.normal_double2.prepare("PPi", block=(self.generator_count, 1, 1))
-# Initialise
-        if seed is None:
-            import random
-            import sys
-            seed = random.randint(0, ((1 << 31) - 1))
-        if isinstance(seed, int):
-            p = self.module.get_function("prepare_with_seed")
-            p.prepare("Piii", block=(self.generator_count, 1, 1))
-            try:
-                p.prepared_call((1, 1), self.state, self.generator_count, seed,
-                    offset)
-            except pycuda._driver.LaunchError:
-                raise ValueError("Initialisation failed. Decrease number of threads.")
+class XORWOWRandomNumberGenerator(_RandomNumberGeneratorBase):
+    has_box_muller = False
+
+    def __init__(self, seed_getter=None, offset=0):
+        """
+        :arg seed_getter: a function that, given an integer count, will yield an `int32` 
+          :class:`GPUArray` of seeds.
+        """
+
+        super(XORWOWRandomNumberGenerator, self).__init__(
+            'curandStateXORWOW', xorwow_random_source)
+
+        if seed_getter is None:
+            seed = array.to_gpu(
+                    np.asarray(
+                        np.random.random_integers(
+                            0, (1 << 31) - 1, self.generator_count), 
+                        dtype=np.int32))
         else:
-            if isinstance(seed, list) or isinstance(seed, tuple):
-                seed = numpy.array(seed, dtype=numpy.int32)
-            if isinstance(seed, numpy.ndarray):
-                seed = pycuda.gpuarray.to_gpu(seed).astype(numpy.int32)
-            if (isinstance(seed, pycuda.gpuarray.GPUArray) and
-                seed.dtype == numpy.int32):
-                p = self.module.get_function("prepare_with_seeds")
-                p.prepare("PiPi", block=(self.generator_count, 1, 1))
-                try:
-                    p.prepared_call((1, 1), self.state, self.generator_count,
-                        seed.gpudata, offset)
-                except pycuda._driver.LaunchError:
-                    raise ValueError("Initialisation failed. Decrease number of threads.")
-            else:
-                raise ValueError("Need GPUArray of integers")
-    def fill_normal_float2(self, data, input_size, stream = None):
-        self.normal_float2.prepared_async_call((1, 1), stream, self.state,
-            data, input_size)
-    def fill_normal_double2(self, data, input_size, stream = None):
-        self.normal_double2.prepared_async_call((1, 1), stream, self.state,
-            data, input_size)
+            seed = seed_getter(self.generator_count)
 
-quasi_random_source = """
-// Uses C++ features (templates); do not surround with extern C
-#include <curand_kernel.h>
+        if not (isinstance(seed, pycuda.gpuarray.GPUArray)
+                and seed.dtype == np.int32
+                and seed.size == self.generator_count):
+            raise TypeError("seed must be GPUArray of integers of right length")
 
+        p = self.module.get_function("prepare_with_seeds")
+        p.prepare("PiPi", block=(self.generator_count, 1, 1))
+
+        from pycuda.characterize import has_stack
+        has_stack = has_stack()
+
+        if has_stack:
+            prev_stack_size = drv.Context.get_limit(drv.limit.STACK_SIZE)
+
+        try:
+            if has_stack:
+                drv.Context.set_limit(drv.limit.STACK_SIZE, 1<<14) # 16k
+            try:
+                p.prepared_call((1, 1), self.state, self.generator_count,
+                    seed.gpudata, offset)
+            except drv.LaunchError:
+                raise ValueError("Initialisation failed. Decrease number of threads.")
+
+        finally:
+            if has_stack:
+                drv.Context.set_limit(drv.limit.STACK_SIZE, prev_stack_size)
+
+
+
+# }}}
+
+# {{{ Sobol32 RNG
+
+sobol32_random_source = """
 extern "C" {
 __global__ void prepare(curandStateSobol32 *s, const int n, unsigned int *v,
-    const unsigned int o) {
-    if (threadIdx.x < n) {
-        curand_init(v, o, &s[threadIdx.x]);
-    }
+    const unsigned int o) 
+{
+  if (threadIdx.x < n)
+    curand_init(v, o, &s[threadIdx.x]);
 }
 }
 """
 
-class QuasiRandomNumberGenerator(RandomNumberGenerator):
+class Sobol32RandomNumberGenerator(_RandomNumberGeneratorBase):
     """
     Class surrounding CURAND kernels from CUDA 3.2.
     It allows for generating quasi-random numbers with uniform
     and normal probability function of type int, float, and double.
     """
-    def __init__(self, vector, offset):
-        import pycuda._driver
-        super(QuasiRandomNumberGenerator, self).__init__('curandStateSobol32',
-            curand_state_sobol_size, quasi_random_source)
+
+    has_box_muller = True
+
+    def __init__(self, dir_vector, offset):
+        super(Sobol32RandomNumberGenerator, self).__init__('curandStateSobol32',
+            sobol32_random_source)
+
+        raise NotImplementedError("not working yet")
+
         p = self.module.get_function("prepare")
         p.prepare("PiPi", block=(self.generator_count, 1, 1))
+
+        from pycuda.characterize import has_stack
+        has_stack = has_stack()
+
+        if has_stack:
+            prev_stack_size = drv.Context.get_limit(drv.limit.STACK_SIZE)
+
         try:
-            p.prepared_call((1, 1), self.state, self.generator_count, vector,
-                offset)
-        except pycuda._driver.LaunchError:
-            raise ValueError("Initialisation failed. Decrease number of threads.")
+            if has_stack:
+                drv.Context.set_limit(drv.limit.STACK_SIZE, 1<<14) # 16k
+            try:
+                p.prepared_call((1, 1), self.state, self.generator_count, vector,
+                    offset)
+            except drv.LaunchError:
+                raise ValueError("Initialisation failed. Decrease number of threads.")
+
+        finally:
+            if has_stack:
+                drv.Context.set_limit(drv.limit.STACK_SIZE, prev_stack_size)
+
+# }}}
+
+# }}}
 
 
-if __name__ == "__main__":
-    import sys, pycuda.autoinit
 
-    if "generate" in sys.argv[1:]:
-        N = 256
-        print N, "MB"
-        r = rand((N*2**18,), numpy.uint32)
-        print "generated"
-        r.get().tofile("random.dat")
-        print "written"
 
-    else: 
-        from pylab import plot, show, subplot
-        N = 250
-        r1 = rand((N,), numpy.uint32)
-        r2 = rand((N,), numpy.int32)
-        r3 = rand((N,), numpy.float32)
-    
-        subplot(131); plot( r1.get(),"x-")
-        subplot(132); plot( r2.get(),"x-")
-        subplot(133); plot( r3.get(),"x-")
-        show()
 
-        import pycuda.gpuarray
-        rr = PseudoRandomNumberGenerator(0, numpy.random.random(256).astype(numpy.int32))
-        data = pycuda.gpuarray.zeros([10000], numpy.float32)
-        print data[0:200]
-        rr.fill_uniform_float(data.gpudata, 512)
-        print data[0:200]
-        data = rr((100, ), numpy.uint32)
-        del rr
-        print data[0:200]
-
-        data = pycuda.gpuarray.zeros([256], numpy.int)
-        rr = QuasiRandomNumberGenerator(data.gpudata, 1)
+# vim: foldmethod=marker

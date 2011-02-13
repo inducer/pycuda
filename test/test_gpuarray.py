@@ -3,6 +3,7 @@ import numpy
 import numpy.linalg as la
 import sys
 from pycuda.tools import mark_cuda_test
+from pycuda.characterize import has_double_support
 
 
 
@@ -18,13 +19,6 @@ if have_pycuda():
     import pycuda.gpuarray as gpuarray
     import pycuda.driver as drv
     from pycuda.compiler import SourceModule
-
-
-
-
-def has_double_support():
-    from pycuda.driver import Context
-    return Context.get_device().compute_capability >= (1,3)
 
 
 
@@ -254,6 +248,39 @@ class TestGPUArray:
 
             assert (0 <= a).all()
             assert (a < 1).all()
+
+
+
+
+    @mark_cuda_test
+    def test_curand_wrappers(self):
+        from pycuda.curandom import (
+                XORWOWRandomNumberGenerator,
+                Sobol32RandomNumberGenerator)
+
+        if has_double_support():
+            dtypes = [numpy.float32, numpy.float64]
+        else:
+            dtypes = [numpy.float32]
+
+        for gen_type in [
+                XORWOWRandomNumberGenerator,
+                #Sobol32RandomNumberGenerator
+                ]:
+            gen = gen_type()
+
+            for dtype in dtypes:
+                gen.gen_normal(10000, dtype)
+                # test non-Box-Muller version, if available
+                gen.gen_normal(10001, dtype)
+
+                x = gen.gen_uniform(10000, dtype)
+                x_host = x.get()
+                assert (-1 <= x_host).all()
+                assert (x_host <= 1).all()
+
+            gen.gen_uniform(10000, numpy.uint32)
+
 
 
     @mark_cuda_test
