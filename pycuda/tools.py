@@ -466,6 +466,11 @@ def get_arg_type(c_arg):
 
 
 
+context_dependent_memoized_functions = []
+
+
+
+
 @decorator
 def context_dependent_memoize(func, *args):
     try:
@@ -480,10 +485,23 @@ def context_dependent_memoize(func, *args):
     try:
         return ctx_dict[cur_ctx][args]
     except KeyError:
+        context_dependent_memoized_functions.append(func)
         arg_dict = ctx_dict.setdefault(cur_ctx, {})
         result = func(*args)
         arg_dict[args] = result
         return result
+
+
+
+def clear_context_caches():
+    for func in context_dependent_memoized_functions:
+        try:
+            ctx_dict = func._pycuda_ctx_dep_memoize_dic
+        except AttributeError:
+            pass
+        else:
+            ctx_dict.clear()
+
 
 
 
