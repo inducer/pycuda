@@ -247,10 +247,11 @@ def rand(shape, dtype=np.float32, stream=None):
 # {{{ Base class
 
 gen_template = """
-__global__ void %(name)s(%(state_type)s *s, %(out_type)s *d, const int n) 
+__global__ void %(name)s(%(state_type)s *s, %(out_type)s *d, const int n)
 {
-  const int tidx = threadIdx.x;
-  for (int idx = tidx; idx < n; idx += blockDim.x)
+  const int tidx = blockIdx.x*blockDim.x+threadIdx.x;
+  const int delta = blockDim.x*gridDim.x;
+  for (int idx = tidx; idx < n; idx += delta)
     d[idx] = curand%(suffix)s(&s[tidx]);
 }
 """
@@ -266,14 +267,14 @@ extern "C"
 
 __global__ void skip_ahead(%(state_type)s *s, const int n, const int skip) 
 {
-  const int idx = threadIdx.x;
+  const int idx = blockIdx.x*blockDim.x+threadIdx.x;
   if (idx < n)
     skipahead(skip, &s[idx]);
 }
 
 __global__ void skip_ahead_array(%(state_type)s *s, const int n, const int *skip) 
 {
-  const int idx = threadIdx.x;
+  const int idx = blockIdx.x*blockDim.x+threadIdx.x;
   if (idx < n)
       skipahead(skip[idx], &s[idx]);
 }
@@ -296,8 +297,8 @@ class _RandomNumberGeneratorBase(object):
         ("uniform_double", "double", "_uniform_double"),
         ("normal_float", "float", "_normal"),
         ("normal_double", "double", "_normal_double"),
-        ("normal_float2", "float2", "normal_float2"),
-        ("normal_double2", "double2", "normal_double2"),
+        ("normal_float2", "float2", "_normal2"),
+        ("normal_double2", "double2", "_normal2_double"),
         ]
 
     def __init__(self, state_type, additional_source):
@@ -309,20 +310,19 @@ class _RandomNumberGeneratorBase(object):
         # pycuda._driver.LaunchError: cuLaunchGrid failed: launch out of resources
 
         dev = drv.Context.get_device()
-        if dev.compute_capability() >= (2, 0):
-            block_size = dev.get_attribute(
-                drv.device_attribute.MAX_THREADS_PER_BLOCK)
-            block_dimension =  dev.get_attribute(
-                drv.device_attribute.MAX_BLOCK_DIM_X)
-            self.generator_count = min(block_size, block_dimension)
-        else:
-            self.generator_count = 256
+        block_size = dev.get_attribute(
+            drv.device_attribute.MAX_THREADS_PER_BLOCK)
+        block_dimension =  dev.get_attribute(
+            drv.device_attribute.MAX_BLOCK_DIM_X)
+        self.generator_count = min(block_size, block_dimension)
+        self.block_count = dev.get_attribute(
+            pycuda.driver.device_attribute.MULTIPROCESSOR_COUNT)
 
         from pycuda.characterize import sizeof
         data_type_size = sizeof(state_type, "#include <curand_kernel.h>")
 
         self.state = drv.mem_alloc(
-            self.generator_count * data_type_size)
+            self.block_count * self.generator_count * data_type_size)
 
         from pycuda.characterize import has_double_support
 
@@ -373,8 +373,8 @@ class _RandomNumberGeneratorBase(object):
         else:
             raise NotImplementedError
 
-        func.prepared_async_call((1, 1), stream, self.state,
-            data.gpudata, data.size)
+        func.prepared_async_call((self.block_count, 1), stream,
+            self.state, data.gpudata, data.size)
 
     def fill_normal(self, data, stream=None):
         if data.dtype == np.float32:
@@ -391,8 +391,8 @@ class _RandomNumberGeneratorBase(object):
 
         func = self.generators[func_name]
 
-        func.prepared_async_call((1, 1), stream, self.state,
-            data.gpudata, data_size)
+        func.prepared_async_call((self.block_count, 1), stream,
+            self.state, data.gpudata, data_size)
 
     def gen_uniform(self, shape, dtype, stream=None):
         result = array.empty(shape, dtype)
@@ -405,12 +405,12 @@ class _RandomNumberGeneratorBase(object):
         return result
 
     def call_skip_ahead(self, i, stream=None):
-        self.skip_ahead.prepared_async_call((1, 1), stream, self.state,
-            self.generator_count, i)
+        self.skip_ahead.prepared_async_call((self.block_count, 1), stream,
+            self.state, self.generator_count, i)
 
     def call_skip_ahead_array(self, i, stream=None):
-        self.skip_ahead_array.prepared_async_call((1, 1), stream, self.state,
-            self.generator_count, i.gpudata)
+        self.skip_ahead_array.prepared_async_call((self.block_count, 1),
+            stream, self.state, self.generator_count, i.gpudata)
 
 # }}}
 
@@ -421,15 +421,16 @@ extern "C" {
 __global__ void prepare_with_seeds(curandState *s, const int n,
   const int *seed, const int offset) 
 {
-  if (threadIdx.x < n)
-    curand_init(seed[threadIdx.x], threadIdx.x, offset, &s[threadIdx.x]);
+  const int id = blockIdx.x*blockDim.x+threadIdx.x;
+  if (id < n)
+    curand_init(seed[id], threadIdx.x, offset, &s[id]);
 }
 
 }
 """
 
 class XORWOWRandomNumberGenerator(_RandomNumberGeneratorBase):
-    has_box_muller = False
+    has_box_muller = True
 
     def __init__(self, seed_getter=None, offset=0):
         """
@@ -467,16 +468,19 @@ class XORWOWRandomNumberGenerator(_RandomNumberGeneratorBase):
             if has_stack:
                 drv.Context.set_limit(drv.limit.STACK_SIZE, 1<<14) # 16k
             try:
-                p.prepared_call((1, 1), self.state, self.generator_count,
-                    seed.gpudata, offset)
+                dev = drv.Context.get_device()
+                if dev.compute_capability() >= (2, 0):
+                    p.prepared_call((self.block_count, 1), self.state,
+                        self.block_count * self.generator_count, seed.gpudata, offset)
+                else:
+                    p.prepared_call((2 * self.block_count, 1), self.state,
+                        self.block_count * self.generator_count // 2, seed.gpudata, offset)
             except drv.LaunchError:
                 raise ValueError("Initialisation failed. Decrease number of threads.")
 
         finally:
             if has_stack:
                 drv.Context.set_limit(drv.limit.STACK_SIZE, prev_stack_size)
-
-
 
 # }}}
 
@@ -487,8 +491,9 @@ extern "C" {
 __global__ void prepare(curandStateSobol32 *s, const int n, unsigned int *v,
     const unsigned int o) 
 {
-  if (threadIdx.x < n)
-    curand_init(v, o, &s[threadIdx.x]);
+  const int id = blockIdx.x*blockDim.x+threadIdx.x;
+  if (id < n)
+    curand_init(v, o, &s[id]);
 }
 }
 """
@@ -500,7 +505,7 @@ class Sobol32RandomNumberGenerator(_RandomNumberGeneratorBase):
     and normal probability function of type int, float, and double.
     """
 
-    has_box_muller = True
+    has_box_muller = False
 
     def __init__(self, dir_vector, offset):
         super(Sobol32RandomNumberGenerator, self).__init__('curandStateSobol32',
@@ -521,8 +526,14 @@ class Sobol32RandomNumberGenerator(_RandomNumberGeneratorBase):
             if has_stack:
                 drv.Context.set_limit(drv.limit.STACK_SIZE, 1<<14) # 16k
             try:
-                p.prepared_call((1, 1), self.state, self.generator_count, vector,
-                    offset)
+
+                dev = drv.Context.get_device()
+                if dev.compute_capability() >= (2, 0):
+                    p.prepared_call((self.block_count, 1), self.state,
+                        self.block_count * self.generator_count, vector, offset)
+                else:
+                    p.prepared_call((2 * self.block_count, 1), self.state,
+                        self.block_count * self.generator_count // 2, vector, offset)
             except drv.LaunchError:
                 raise ValueError("Initialisation failed. Decrease number of threads.")
 
