@@ -311,10 +311,12 @@ class _RandomNumberGeneratorBase(object):
 
         dev = drv.Context.get_device()
 
+        block_size = dev.get_attribute(
+            drv.device_attribute.MAX_THREADS_PER_BLOCK)
         # On GT200, double2 normal kernel runs into register limits.
         # Try to stay clear of those by using half the number possible.
-        block_size = dev.get_attribute(
-            drv.device_attribute.MAX_THREADS_PER_BLOCK) // 2
+        if dev.compute_capability() < (2, 0):
+            block_size = block_size // 2
         block_dimension =  dev.get_attribute(
             drv.device_attribute.MAX_BLOCK_DIM_X)
         self.generators_per_block = min(block_size, block_dimension)
@@ -322,7 +324,7 @@ class _RandomNumberGeneratorBase(object):
         # generators_per_block is divided by 2 below
         assert self.generators_per_block % 2 == 0
 
-        self.block_count = 3*dev.get_attribute(
+        self.block_count = dev.get_attribute(
             pycuda.driver.device_attribute.MULTIPROCESSOR_COUNT)
 
         from pycuda.characterize import sizeof
