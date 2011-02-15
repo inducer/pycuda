@@ -131,7 +131,7 @@ def _add_functionality():
                 format += "s"
             else:
                 try:
-                    gpudata = arg.gpudata
+                    gpudata = numpy.intp(arg.gpudata)
                 except AttributeError:
                     raise TypeError("invalid type on parameter #%d (0-based)" % i)
                 else:

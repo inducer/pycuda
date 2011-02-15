@@ -625,6 +625,31 @@ class TestGPUArray:
             assert la.norm(z.get().imag - z.imag.get()) == 0
             assert la.norm(z.get().conj() - z.conj().get()) == 0
 
+    @mark_cuda_test
+    def test_pass_slice_to_kernel(self):
+        mod = SourceModule("""
+        __global__ void twice(float *a)
+        {
+          const int i = threadIdx.x + blockIdx.x * blockDim.x;
+          a[i] *= 2;
+        }
+        """)
+
+        multiply_them = mod.get_function("twice")
+
+        import numpy
+        a = numpy.ones(256**2, numpy.float32)
+        a_gpu = gpuarray.to_gpu(a)
+
+        multiply_them(a_gpu[256:-256], block=(256,1,1), grid=(254,1))
+
+        a = a_gpu.get()
+        assert (a[255:257]== numpy.array([1,2], numpy.float32)).all()
+        assert (a[255*256-1:255*256+1] == numpy.array([2,1], numpy.float32)).all()
+
+
+
+
 
 if __name__ == "__main__":
     # make sure that import failures get reported, instead of skipping the tests.
