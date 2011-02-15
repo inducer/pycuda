@@ -71,6 +71,13 @@ Kernel Caching
     subsequent occurs in the same :class:`pycuda.driver.Context`.
     This is useful for caching of kernels.
 
+.. function:: clear_context_caches()
+
+    Empties all context-dependent memoization caches. Also releases
+    all held reference contexts. If it is important to you that the
+    program detaches from its context, you might need to call this
+    function to free all remaining references to your context.
+
 Testing
 -------
 
