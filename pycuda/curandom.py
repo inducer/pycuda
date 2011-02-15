@@ -322,7 +322,7 @@ class _RandomNumberGeneratorBase(object):
         # generators_per_block is divided by 2 below
         assert self.generators_per_block % 2 == 0
 
-        self.block_count = dev.get_attribute(
+        self.block_count = 3*dev.get_attribute(
             pycuda.driver.device_attribute.MULTIPROCESSOR_COUNT)
 
         from pycuda.characterize import sizeof
