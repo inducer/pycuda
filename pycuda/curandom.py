@@ -310,11 +310,18 @@ class _RandomNumberGeneratorBase(object):
         # pycuda._driver.LaunchError: cuLaunchGrid failed: launch out of resources
 
         dev = drv.Context.get_device()
+
+        # On GT200, double2 normal kernel runs into register limits.
+        # Try to stay clear of those by using half the number possible.
         block_size = dev.get_attribute(
-            drv.device_attribute.MAX_THREADS_PER_BLOCK)
+            drv.device_attribute.MAX_THREADS_PER_BLOCK) // 2
         block_dimension =  dev.get_attribute(
             drv.device_attribute.MAX_BLOCK_DIM_X)
-        self.generator_count = min(block_size, block_dimension)
+        self.generators_per_block = min(block_size, block_dimension)
+
+        # generators_per_block is divided by 2 below
+        assert self.generators_per_block % 2 == 0
+
         self.block_count = dev.get_attribute(
             pycuda.driver.device_attribute.MULTIPROCESSOR_COUNT)
 
@@ -322,7 +329,7 @@ class _RandomNumberGeneratorBase(object):
         data_type_size = sizeof(state_type, "#include <curand_kernel.h>")
 
         self.state = drv.mem_alloc(
-            self.block_count * self.generator_count * data_type_size)
+            self.block_count * self.generators_per_block * data_type_size)
 
         from pycuda.characterize import has_double_support
 
@@ -355,13 +362,13 @@ class _RandomNumberGeneratorBase(object):
         self.generators = {}
         for name, out_type, suffix  in my_generators:
             gen_func = module.get_function(name)
-            gen_func.prepare("PPi", block=(self.generator_count, 1, 1))
+            gen_func.prepare("PPi", block=(self.generators_per_block, 1, 1))
             self.generators[name] = gen_func
 
         self.skip_ahead = module.get_function("skip_ahead")
-        self.skip_ahead.prepare("Pii", block=(self.generator_count, 1, 1))
+        self.skip_ahead.prepare("Pii", block=(self.generators_per_block, 1, 1))
         self.skip_ahead_array = module.get_function("skip_ahead_array")
-        self.skip_ahead_array.prepare("PiP", block=(self.generator_count, 1, 1))
+        self.skip_ahead_array.prepare("PiP", block=(self.generators_per_block, 1, 1))
 
     def fill_uniform(self, data, stream=None):
         if data.dtype == np.float32:
@@ -406,11 +413,11 @@ class _RandomNumberGeneratorBase(object):
 
     def call_skip_ahead(self, i, stream=None):
         self.skip_ahead.prepared_async_call((self.block_count, 1), stream,
-            self.state, self.generator_count, i)
+            self.state, self.generators_per_block, i)
 
     def call_skip_ahead_array(self, i, stream=None):
         self.skip_ahead_array.prepared_async_call((self.block_count, 1),
-            stream, self.state, self.generator_count, i.gpudata)
+            stream, self.state, self.generators_per_block, i.gpudata)
 
 # }}}
 
@@ -445,18 +452,18 @@ class XORWOWRandomNumberGenerator(_RandomNumberGeneratorBase):
             seed = array.to_gpu(
                     np.asarray(
                         np.random.random_integers(
-                            0, (1 << 31) - 1, self.generator_count), 
+                            0, (1 << 31) - 1, self.generators_per_block), 
                         dtype=np.int32))
         else:
-            seed = seed_getter(self.generator_count)
+            seed = seed_getter(self.generators_per_block)
 
         if not (isinstance(seed, pycuda.gpuarray.GPUArray)
                 and seed.dtype == np.int32
-                and seed.size == self.generator_count):
+                and seed.size == self.generators_per_block):
             raise TypeError("seed must be GPUArray of integers of right length")
 
         p = self.module.get_function("prepare_with_seeds")
-        p.prepare("PiPi", block=(self.generator_count, 1, 1))
+        p.prepare("PiPi", block=(self.generators_per_block, 1, 1))
 
         from pycuda.characterize import has_stack
         has_stack = has_stack()
@@ -471,10 +478,10 @@ class XORWOWRandomNumberGenerator(_RandomNumberGeneratorBase):
                 dev = drv.Context.get_device()
                 if dev.compute_capability() >= (2, 0):
                     p.prepared_call((self.block_count, 1), self.state,
-                        self.block_count * self.generator_count, seed.gpudata, offset)
+                        self.block_count * self.generators_per_block, seed.gpudata, offset)
                 else:
                     p.prepared_call((2 * self.block_count, 1), self.state,
-                        self.block_count * self.generator_count // 2, seed.gpudata, offset)
+                        self.block_count * self.generators_per_block // 2, seed.gpudata, offset)
             except drv.LaunchError:
                 raise ValueError("Initialisation failed. Decrease number of threads.")
 
@@ -514,7 +521,7 @@ class Sobol32RandomNumberGenerator(_RandomNumberGeneratorBase):
         raise NotImplementedError("not working yet")
 
         p = self.module.get_function("prepare")
-        p.prepare("PiPi", block=(self.generator_count, 1, 1))
+        p.prepare("PiPi", block=(self.generators_per_block, 1, 1))
 
         from pycuda.characterize import has_stack
         has_stack = has_stack()
@@ -530,10 +537,10 @@ class Sobol32RandomNumberGenerator(_RandomNumberGeneratorBase):
                 dev = drv.Context.get_device()
                 if dev.compute_capability() >= (2, 0):
                     p.prepared_call((self.block_count, 1), self.state,
-                        self.block_count * self.generator_count, vector, offset)
+                        self.block_count * self.generators_per_block, vector, offset)
                 else:
                     p.prepared_call((2 * self.block_count, 1), self.state,
-                        self.block_count * self.generator_count // 2, vector, offset)
+                        self.block_count * self.generators_per_block // 2, vector, offset)
             except drv.LaunchError:
                 raise ValueError("Initialisation failed. Decrease number of threads.")
 
