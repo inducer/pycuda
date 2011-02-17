@@ -53,6 +53,7 @@ def compile_plain(source, options, keep, nvcc, cache_dir):
         for option in options: 
             checksum.update(option)
         checksum.update(get_nvcc_version(nvcc))
+        checksum.update(str(sys.maxint))
 
         cache_file = checksum.hexdigest()
         cache_path = join(cache_dir, cache_file + ".cubin")
