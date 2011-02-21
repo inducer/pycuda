@@ -330,18 +330,12 @@ def allow_user_edit(s, filename, descr="the file"):
 
 
 # C code generation helpers ---------------------------------------------------
-@memoize
-def platform_bits():
-    return tuple.__itemsize__ * 8
-
-
-
-
 def dtype_to_ctype(dtype, with_fp_tex_hack=False):
+    from pycuda.characterize import platform_bits
+
     if dtype is None:
         raise ValueError("dtype may not be None")
 
-    import numpy
     dtype = numpy.dtype(dtype)
     if dtype == numpy.int64 and platform_bits() == 64:
         return "long"
