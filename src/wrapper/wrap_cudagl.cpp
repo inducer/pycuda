@@ -1,3 +1,6 @@
+#ifdef _WIN32
+#include <windows.h>
+#endif
 #include <cuda.hpp>
 #include <cuda_gl.hpp>
 
