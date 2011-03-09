@@ -67,6 +67,9 @@ void pycuda_expose_gl()
       .def("unmap", &cl::unmap_no_strm)
       .def("unmap", &cl::unmap)
       .DEF_SIMPLE_METHOD(device_ptr_and_size)
+      .def("array", &cl::array,
+          (py::args("self", "index", "level")),
+          py::return_value_policy<py::manage_new_object>())
       ;
   }
 #endif

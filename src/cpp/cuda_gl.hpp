@@ -287,6 +287,17 @@ namespace pycuda { namespace gl {
             (&devptr, &size, m_object->resource()));
         return py::make_tuple(devptr, size);
       }
+
+      inline
+      pycuda::array *array(unsigned int index, unsigned int level) const
+      {
+        CUarray devptr;
+        CUDAPP_CALL_GUARDED(cuGraphicsSubResourceGetMappedArray, 
+            (&devptr, m_object->resource(), index, level));
+        std::auto_ptr<pycuda::array> result(
+            new pycuda::array(devptr, false));
+        return result.release();
+      }
   };
 
 

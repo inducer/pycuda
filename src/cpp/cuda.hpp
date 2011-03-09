@@ -1295,8 +1295,6 @@ namespace pycuda
     return py::make_tuple(base, size);
   }
 
-  // missing: htoa, atoh, dtoh, htod
-
   inline
   void memcpy_dtoa(array const &ary, unsigned int index, CUdeviceptr src, unsigned int len)
   { CUDAPP_CALL_GUARDED_THREADED(cuMemcpyDtoA, (ary.handle(), index, src, len)); }
@@ -1379,7 +1377,7 @@ namespace pycuda
 
     MEMCPY_SETTERS;
 
-    void execute(bool aligned) const
+    void execute(bool aligned=false) const
     {
       if (aligned)
       { CUDAPP_CALL_GUARDED_THREADED(cuMemcpy2D, (this)); }

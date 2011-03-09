@@ -75,6 +75,12 @@ GL Interoperability
 
         Return a tuple *(dev_pointer, size)*.
 
+        .. versionadded: 2011.1
+
+    .. method :: array(index, level)
+
+        Return an array for mapped image object for given array index and MIP level.
+
 Automatic Initialization
 ------------------------
 
