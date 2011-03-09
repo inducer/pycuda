@@ -229,6 +229,11 @@ def compile(source, nvcc="nvcc", options=[], keep=False,
 
     if 'darwin' in sys.platform and sys.maxint == 9223372036854775807:
         options.append('-m64')
+    elif 'win32' in sys.platform and sys.maxsize == 9223372036854775807:
+        options.append('-m64')
+    elif 'win32' in sys.platform and sys.maxsize == 2147483647:
+        options.append('-m32')
+        
 
     include_dirs = include_dirs + [_find_pycuda_include_path()]
 
