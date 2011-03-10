@@ -45,6 +45,13 @@ The :class:`GPUArray` Array Class
         The size of the entire array in bytes. Computed as :attr:`size` times
         ``dtype.itemsize``.
 
+    .. attribute :: ptr
+
+        Return an :class:`int` reflecting the address in device memory where
+        this array resides.
+
+        .. versionadded: 2011.1
+
     .. method :: __len__()
 
         Returns the size of the leading dimension of *self*.
