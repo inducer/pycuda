@@ -13,6 +13,9 @@ class vec:
     pass
 
 def _create_vector_types():
+    name_to_dtype = {}
+    dtype_to_name = {}
+
     from pycuda.characterize import platform_bits
     if platform_bits() == 32:
         long_dtype = np.int32
@@ -43,6 +46,9 @@ def _create_vector_types():
                 (field_names[i], base_type)
                 for i in range(count)])
 
+            name_to_dtype[name] = dtype
+            dtype_to_name[dtype] = name
+
             setattr(vec, name, dtype)
 
             my_field_names = ",".join(field_names[:count])
@@ -51,6 +57,9 @@ def _create_vector_types():
                         "lambda %s: array((%s), dtype=my_dtype)"
                         % (my_field_names, my_field_names),
                         dict(array=np.array, my_dtype=dtype))))
+
+    vec._dtype_to_c_name = dtype_to_name
+    vec._c_name_to_dtype = name_to_dtype
 
 _create_vector_types()
 

@@ -370,7 +370,11 @@ def dtype_to_ctype(dtype, with_fp_tex_hack=False):
     elif dtype == np.complex128:
         return "pycuda::complex<double>"
     else:
-        raise ValueError, "unable to map dtype '%s'" % dtype
+        import pycuda.gpuarray as gpuarray
+        try:
+            return gpuarray.vec._dtype_to_c_name[dtype]
+        except KeyError:
+            raise ValueError, "unable to map dtype '%s'" % dtype
 
 
 
@@ -449,7 +453,12 @@ def parse_c_arg(c_arg):
     elif tp in ["char"]: dtype = np.int8
     elif tp in ["unsigned char"]: dtype = np.uint8
     elif tp in ["bool"]: dtype = np.bool
-    else: raise ValueError, "unknown type '%s'" % tp
+    else:
+        import pycuda.gpuarray as gpuarray
+        try:
+            return gpuarray.vec._c_name_to_dtype[tp]
+        except KeyError:
+            raise ValueError("unknown type '%s'" % tp)
 
     return arg_class(dtype, name)
 
@@ -524,3 +533,8 @@ def mark_cuda_test(inner_f):
         return f
 
     return mark_test.cuda(f)
+
+
+
+
+# vim: foldmethod=marker
