@@ -115,7 +115,7 @@ def _add_functionality():
         arg_data = []
         format = ""
         for i, arg in enumerate(args):
-            if np is not None and isinstance(arg, np.number):
+            if isinstance(arg, np.number):
                 arg_data.append(arg)
                 format += arg.dtype.char
             elif isinstance(arg, (DeviceAllocation, PooledDeviceAllocation)):
@@ -125,9 +125,10 @@ def _add_functionality():
                 handlers.append(arg)
                 arg_data.append(int(arg.get_device_alloc()))
                 format += "P"
-            elif isinstance(arg, buffer):
-                arg_data.append(arg)
-                format += "s"
+            elif isinstance(arg, np.ndarray):
+                s = str(buffer(arg))
+                arg_data.append(s)
+                format += "%ds" % len(s)
             else:
                 try:
                     gpudata = np.intp(arg.gpudata)

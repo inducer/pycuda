@@ -1,7 +1,23 @@
-The :class:`GPUArray` Array Class
-=================================
+Multi-dimensional arrays on the GPU
+===================================
 
 .. module:: pycuda.gpuarray
+
+Vector Types
+------------
+
+.. class :: vec
+
+    All of CUDA's supported vector types, such as `float3` and `long4` are
+    available as :mod:`numpy` data types within this class. These
+    :class:`numpy.dtype` instances have field names of `x`, `y`, `z`, and `w`
+    just like their CUDA counterparts. They will work both for parameter passing
+    to kernels as well as for passing data back and forth between kernels and
+    Python code. For each type, a `make_type` function is also provided (e.g.
+    `make_float3(x,y,z)`).
+
+The :class:`GPUArray` Array Class
+---------------------------------
 
 .. class:: GPUArray(shape, dtype, allocator=None)
 

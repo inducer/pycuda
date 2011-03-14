@@ -85,6 +85,23 @@ class TestDriver:
         assert la.norm((dest[:-1]-a[1:]*b[:-1])) == 0
 
     @mark_cuda_test
+    def test_vector_types(self):
+        mod = SourceModule("""
+        __global__ void set_them(float3 *dest, float3 x)
+        {
+          const int i = threadIdx.x;
+          dest[i] = x;
+        }
+        """)
+
+        set_them = mod.get_function("set_them")
+        a = gpuarray.vec.make_float3(1, 2, 3)
+        dest = np.empty((400), gpuarray.vec.float3)
+
+        set_them(drv.Out(dest), a, block=(400,1,1))
+        assert (dest == a).all()
+
+    @mark_cuda_test
     def test_streamed_kernel(self):
         # this differs from the "simple_kernel" case in that *all* computation
         # and data copying is asynchronous. Observe how this necessitates the
