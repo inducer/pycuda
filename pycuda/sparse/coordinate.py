@@ -3,7 +3,7 @@ from pytools import memoize_method
 import pycuda.driver as drv
 import pycuda.gpuarray as gpuarray
 from pycuda.compiler import SourceModule
-import numpy
+import numpy as np
 
 
 
@@ -22,7 +22,7 @@ texture<%(tex_value_type)s, 1, cudaReadModeElementType> tex_x;
 static __inline__ __device__ float atomicAdd(float *addr, float val)
 {
     float old=*addr, assumed;
-    
+
     do {
         assumed = old;
         old = int_as_float( atomicCAS((int*)addr,
@@ -37,7 +37,7 @@ static __inline__ __device__ float atomicAdd(float *addr, float val)
 static __attribute__ ((unused)) __inline__ __device__ double atomicAdd(double *addr, double val)
 {
     double old=*addr, assumed;
-    
+
     do {
         assumed = old;
         old = __longlong_as_double( atomicCAS((unsigned long long int*)addr,
@@ -52,9 +52,9 @@ static __attribute__ ((unused)) __inline__ __device__ double atomicAdd(double *a
 __global__ void
 spmv_coo_flat_kernel(const index_type num_nonzeros,
                      const index_type interval_size,
-                     const index_type *I, 
-                     const index_type *J, 
-                     const value_type *V, 
+                     const index_type *I,
+                     const index_type *J,
+                     const value_type *V,
                            value_type *y)
 {
   __shared__ index_type idx[BLOCK_SIZE];
@@ -76,14 +76,14 @@ spmv_coo_flat_kernel(const index_type num_nonzeros,
 
   if (thread_lane == 0)
   {
-    carry_idx[warp_lane] = first_idx; 
+    carry_idx[warp_lane] = first_idx;
     carry_val[warp_lane] = 0;
   }
-  
+
   for(index_type n = begin; n < end; n += WARP_SIZE)
   {
     idx[threadIdx.x] = I[n];                                             // row index
-    val[threadIdx.x] = V[n] * fp_tex1Dfetch(tex_x, J[n]);                // val = A[row,col] * x[col] 
+    val[threadIdx.x] = V[n] * fp_tex1Dfetch(tex_x, J[n]);                // val = A[row,col] * x[col]
 
     if (thread_lane == 0){
       if(idx[threadIdx.x] == carry_idx[warp_lane])
@@ -95,7 +95,7 @@ spmv_coo_flat_kernel(const index_type num_nonzeros,
     }
 
     // segmented reduction in shared memory
-    if( thread_lane >=  1 && idx[threadIdx.x] == idx[threadIdx.x - 1] ) { val[threadIdx.x] += val[threadIdx.x -  1]; } 
+    if( thread_lane >=  1 && idx[threadIdx.x] == idx[threadIdx.x - 1] ) { val[threadIdx.x] += val[threadIdx.x -  1]; }
     if( thread_lane >=  2 && idx[threadIdx.x] == idx[threadIdx.x - 2] ) { val[threadIdx.x] += val[threadIdx.x -  2]; }
     if( thread_lane >=  4 && idx[threadIdx.x] == idx[threadIdx.x - 4] ) { val[threadIdx.x] += val[threadIdx.x -  4]; }
     if( thread_lane >=  8 && idx[threadIdx.x] == idx[threadIdx.x - 8] ) { val[threadIdx.x] += val[threadIdx.x -  8]; }
@@ -115,7 +115,7 @@ spmv_coo_flat_kernel(const index_type num_nonzeros,
 
   // final carry
   if(thread_lane == 31){
-    atomicAdd(y + carry_idx[warp_lane], carry_val[warp_lane]); 
+    atomicAdd(y + carry_idx[warp_lane], carry_val[warp_lane]);
   }
 }
 """
@@ -128,10 +128,10 @@ typedef %(index_type)s index_type;
 
 __global__ void
 spmv_coo_serial_kernel(const index_type num_nonzeros,
-                       const index_type *I, 
-                       const index_type *J, 
-                       const value_type *V, 
-                       const value_type *x, 
+                       const index_type *I,
+                       const index_type *J,
+                       const value_type *V,
+                       const value_type *x,
                              value_type *y)
 {
   for (index_type n = 0; n < num_nonzeros; n++)
@@ -144,8 +144,8 @@ spmv_coo_serial_kernel(const index_type num_nonzeros,
 
 class CoordinateSpMV:
     def __init__(self, mat, dtype):
-        self.dtype = numpy.dtype(dtype)
-        self.index_dtype = numpy.dtype(numpy.int32)
+        self.dtype = np.dtype(dtype)
+        self.index_dtype = np.dtype(np.int32)
         self.shape = mat.shape
 
         self.block_size = 128
@@ -194,7 +194,7 @@ class CoordinateSpMV:
                     })
         func = mod.get_function("spmv_coo_flat_kernel")
         x_texref = mod.get_texref("tex_x")
-        func.prepare(self.index_dtype.char*2 + "PPPP", 
+        func.prepare(self.index_dtype.char*2 + "PPPP",
             (self.block_size, 1, 1), texrefs=[x_texref])
         return func, x_texref
 
@@ -222,16 +222,16 @@ class CoordinateSpMV:
         flat_func, x_texref = self.get_flat_kernel()
         x.bind_to_texref_ext(x_texref, allow_double_hack=True)
         flat_func.prepared_call((self.num_blocks, 1),
-                self.tail, self.interval_size, 
-                self.row_gpu.gpudata, 
-                self.col_gpu.gpudata, 
-                self.data_gpu.gpudata, 
+                self.tail, self.interval_size,
+                self.row_gpu.gpudata,
+                self.col_gpu.gpudata,
+                self.data_gpu.gpudata,
                 y.gpudata)
 
         self.get_serial_kernel().prepared_call(
                 (1, 1),
-                self.nnz - self.tail, 
-                self.row_gpu[self.tail:].gpudata, 
+                self.nnz - self.tail,
+                self.row_gpu[self.tail:].gpudata,
                 self.col_gpu[self.tail:].gpudata,
                 self.data_gpu[self.tail:].gpudata,
                 x.gpudata, y.gpudata)

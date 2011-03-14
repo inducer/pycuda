@@ -29,7 +29,7 @@ md5_code = """
 #define F(x, y, z) (((x) & (y)) | ((~x) & (z)))
 #define G(x, y, z) (((x) & (z)) | ((y) & (~z)))
 #define H(x, y, z) ((x) ^ (y) ^ (z))
-#define I(x, y, z) ((y) ^ ((x) | (~z))) 
+#define I(x, y, z) ((y) ^ ((x) | (~z)))
 
 /* ROTATE_LEFT rotates x left n bits */
 #define ROTATE_LEFT(x, n) (((x) << (n)) | ((x) >> (32-(n))))
@@ -78,7 +78,7 @@ md5_code = """
   unsigned int b = 0xefcdab89;
   unsigned int c = 0x98badcfe;
   unsigned int d = 0x10325476;
-   
+
   /* Round 1 */
 #define S11 7
 #define S12 12
@@ -173,17 +173,17 @@ md5_code = """
   d += 0x10325476;
 """
 
-import numpy
+import numpy as np
 
-def rand(shape, dtype=numpy.float32, stream=None):
+def rand(shape, dtype=np.float32, stream=None):
     from pycuda.gpuarray import GPUArray
     from pycuda.elementwise import get_elwise_kernel
 
     result = GPUArray(shape, dtype)
-    
-    if dtype == numpy.float32:
+
+    if dtype == np.float32:
         func = get_elwise_kernel(
-            "float *dest, unsigned int seed", 
+            "float *dest, unsigned int seed",
             md5_code + """
             #define POW_2_M32 (1/4294967296.0f)
             dest[i] = a*POW_2_M32;
@@ -195,9 +195,9 @@ def rand(shape, dtype=numpy.float32, stream=None):
                 dest[i] = d*POW_2_M32;
             """,
             "md5_rng_float")
-    elif dtype == numpy.float64:
+    elif dtype == np.float64:
         func = get_elwise_kernel(
-            "double *dest, unsigned int seed", 
+            "double *dest, unsigned int seed",
             md5_code + """
             #define POW_2_M32 (1/4294967296.0)
             #define POW_2_M64 (1/18446744073709551616.)
@@ -210,9 +210,9 @@ def rand(shape, dtype=numpy.float32, stream=None):
             }
             """,
             "md5_rng_float")
-    elif dtype in [numpy.int32, numpy.uint32]:
+    elif dtype in [np.int32, np.uint32]:
         func = get_elwise_kernel(
-            "unsigned int *dest, unsigned int seed", 
+            "unsigned int *dest, unsigned int seed",
             md5_code + """
             dest[i] = a;
             if ((i += total_threads) < n)
@@ -228,8 +228,8 @@ def rand(shape, dtype=numpy.float32, stream=None):
 
     func.set_block_shape(*result._block)
     func.prepared_async_call(result._grid, stream,
-            result.gpudata, numpy.random.randint(2**31-1), result.size)
-    
+            result.gpudata, np.random.randint(2**31-1), result.size)
+
     return result
 
 
@@ -239,18 +239,18 @@ if __name__ == "__main__":
     if "generate" in sys.argv[1:]:
         N = 256
         print N, "MB"
-        r = rand((N*2**18,), numpy.uint32)
+        r = rand((N*2**18,), np.uint32)
         print "generated"
         r.get().tofile("random.dat")
         print "written"
 
-    else: 
+    else:
         from pylab import plot, show, subplot
         N = 250
-        r1 = rand((N,), numpy.uint32)
-        r2 = rand((N,), numpy.int32)
-        r3 = rand((N,), numpy.float32)
-    
+        r1 = rand((N,), np.uint32)
+        r2 = rand((N,), np.int32)
+        r3 = rand((N,), np.float32)
+
         subplot(131); plot( r1.get(),"x-")
         subplot(132); plot( r2.get(),"x-")
         subplot(133); plot( r3.get(),"x-")

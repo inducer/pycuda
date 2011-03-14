@@ -31,7 +31,7 @@ import pycuda.driver as cuda
 from pytools import memoize
 from decorator import decorator
 import pycuda._driver as _drv
-import numpy
+import numpy as np
 
 
 
@@ -336,38 +336,38 @@ def dtype_to_ctype(dtype, with_fp_tex_hack=False):
     if dtype is None:
         raise ValueError("dtype may not be None")
 
-    dtype = numpy.dtype(dtype)
-    if dtype == numpy.int64 and platform_bits() == 64:
+    dtype = np.dtype(dtype)
+    if dtype == np.int64 and platform_bits() == 64:
         return "long"
-    elif dtype == numpy.uint64 and platform_bits() == 64:
+    elif dtype == np.uint64 and platform_bits() == 64:
         return "unsigned long"
-    elif dtype == numpy.int32:
+    elif dtype == np.int32:
         return "int"
-    elif dtype == numpy.uint32:
+    elif dtype == np.uint32:
         return "unsigned int"
-    elif dtype == numpy.int16:
+    elif dtype == np.int16:
         return "short int"
-    elif dtype == numpy.uint16:
+    elif dtype == np.uint16:
         return "short unsigned int"
-    elif dtype == numpy.int8:
+    elif dtype == np.int8:
         return "signed char"
-    elif dtype == numpy.uint8:
+    elif dtype == np.uint8:
         return "unsigned char"
-    elif dtype == numpy.bool:
+    elif dtype == np.bool:
         return "bool"
-    elif dtype == numpy.float32:
+    elif dtype == np.float32:
         if with_fp_tex_hack:
             return "fp_tex_float"
         else:
             return "float"
-    elif dtype == numpy.float64:
+    elif dtype == np.float64:
         if with_fp_tex_hack:
             return "fp_tex_double"
         else:
             return "double"
-    elif dtype == numpy.complex64:
+    elif dtype == np.complex64:
         return "pycuda::complex<float>"
-    elif dtype == numpy.complex128:
+    elif dtype == np.complex128:
         return "pycuda::complex<double>"
     else:
         raise ValueError, "unable to map dtype '%s'" % dtype
@@ -378,7 +378,7 @@ def dtype_to_ctype(dtype, with_fp_tex_hack=False):
 # C argument lists ------------------------------------------------------------
 class Argument:
     def __init__(self, dtype, name):
-        self.dtype = numpy.dtype(dtype)
+        self.dtype = np.dtype(dtype)
         self.name = name
 
     def __repr__(self):
@@ -426,27 +426,29 @@ def parse_c_arg(c_arg):
     tp = c_arg[:decl_match.start()]
     tp = " ".join(tp.split())
 
-    if tp == "float": dtype = numpy.float32
-    elif tp == "double": dtype = numpy.float64
-    elif tp == "pycuda::complex<float>": dtype = numpy.complex64
-    elif tp == "pycuda::complex<double>": dtype = numpy.complex128
-    elif tp in ["int", "signed int"]: dtype = numpy.int32
-    elif tp in ["unsigned", "unsigned int"]: dtype = numpy.uint32
+    from pycuda.characterize import platform_bits
+
+    if tp == "float": dtype = np.float32
+    elif tp == "double": dtype = np.float64
+    elif tp == "pycuda::complex<float>": dtype = np.complex64
+    elif tp == "pycuda::complex<double>": dtype = np.complex128
+    elif tp in ["int", "signed int"]: dtype = np.int32
+    elif tp in ["unsigned", "unsigned int"]: dtype = np.uint32
     elif tp in ["long", "long int"]:
         if platform_bits() == 64:
-            dtype = numpy.int64
+            dtype = np.int64
         else:
-            dtype = numpy.int32
+            dtype = np.int32
     elif tp in ["unsigned long", "unsigned long int"]:
         if platform_bits() == 64:
-            dtype = numpy.uint64
+            dtype = np.uint64
         else:
-            dtype = numpy.uint32
-    elif tp in ["short", "short int"]: dtype = numpy.int16
-    elif tp in ["unsigned short", "unsigned short int"]: dtype = numpy.uint16
-    elif tp in ["char"]: dtype = numpy.int8
-    elif tp in ["unsigned char"]: dtype = numpy.uint8
-    elif tp in ["bool"]: dtype = numpy.bool
+            dtype = np.uint32
+    elif tp in ["short", "short int"]: dtype = np.int16
+    elif tp in ["unsigned short", "unsigned short int"]: dtype = np.uint16
+    elif tp in ["char"]: dtype = np.int8
+    elif tp in ["unsigned char"]: dtype = np.uint8
+    elif tp in ["bool"]: dtype = np.bool
     else: raise ValueError, "unknown type '%s'" % tp
 
     return arg_class(dtype, name)

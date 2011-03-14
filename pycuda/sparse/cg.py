@@ -3,6 +3,8 @@ from pycuda.sparse.inner import AsyncInnerProduct
 from pytools import memoize_method
 import pycuda.gpuarray as gpuarray
 
+import numpy as np
+
 
 
 
@@ -101,7 +103,7 @@ class CGStateContainer:
         self.rhs = rhs
 
         if x is None:
-            x = numpy.zeros((self.operator.shape[0],))
+            x = np.zeros((self.operator.shape[0],))
         self.x = x
 
         self.residual = rhs - self.operator(x)

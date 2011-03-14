@@ -63,7 +63,7 @@ source code with only those rights set forth herein.
 
 from pycuda.tools import context_dependent_memoize
 from pycuda.tools import dtype_to_ctype
-import numpy
+import numpy as np
 
 
 
@@ -326,8 +326,8 @@ def get_subset_dot_kernel(dtype_out, dtype_a=None, dtype_b=None):
 
 
 def get_minmax_neutral(what, dtype):
-    dtype = numpy.dtype(dtype)
-    if issubclass(dtype.type, numpy.inexact):
+    dtype = np.dtype(dtype)
+    if issubclass(dtype.type, np.inexact):
         if what == "min":
             return "MY_INFINITY"
         elif what == "max":
@@ -336,9 +336,9 @@ def get_minmax_neutral(what, dtype):
             raise ValueError("what is not min or max.")
     else:
         if what == "min":
-            return str(numpy.iinfo(dtype).max)
+            return str(np.iinfo(dtype).max)
         elif what == "max":
-            return str(numpy.iinfo(dtype).min)
+            return str(np.iinfo(dtype).min)
         else:
             raise ValueError("what is not min or max.")
 
@@ -347,9 +347,9 @@ def get_minmax_neutral(what, dtype):
 
 @context_dependent_memoize
 def get_minmax_kernel(what, dtype):
-    if dtype == numpy.float64:
+    if dtype == np.float64:
         reduce_expr = "f%s(a,b)" % what
-    elif dtype == numpy.float32:
+    elif dtype == np.float32:
         reduce_expr = "f%sf(a,b)" % what
     elif dtype.kind in "iu":
         reduce_expr = "%s(a,b)" % what
@@ -368,9 +368,9 @@ def get_minmax_kernel(what, dtype):
 
 @context_dependent_memoize
 def get_subset_minmax_kernel(what, dtype):
-    if dtype == numpy.float64:
+    if dtype == np.float64:
         reduce_expr = "f%s(a,b)" % what
-    elif dtype == numpy.float32:
+    elif dtype == np.float32:
         reduce_expr = "f%sf(a,b)" % what
     elif dtype.kind in "iu":
         reduce_expr = "%s(a,b)" % what

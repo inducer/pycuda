@@ -1,5 +1,5 @@
 from __future__ import division
-import numpy
+import numpy as np
 import numpy.linalg as la
 from pycuda.tools import mark_cuda_test
 
@@ -27,7 +27,7 @@ class TestDriver:
 
     @mark_cuda_test
     def test_memory(self):
-        z = numpy.random.randn(400).astype(numpy.float32)
+        z = np.random.randn(400).astype(np.float32)
         new_z = drv.from_device_like(drv.to_device(z), z)
         assert la.norm(new_z-z) == 0
 
@@ -43,11 +43,10 @@ class TestDriver:
 
         multiply_them = mod.get_function("multiply_them")
 
-        import numpy
-        a = numpy.random.randn(400).astype(numpy.float32)
-        b = numpy.random.randn(400).astype(numpy.float32)
+        a = np.random.randn(400).astype(np.float32)
+        b = np.random.randn(400).astype(np.float32)
 
-        dest = numpy.zeros_like(a)
+        dest = np.zeros_like(a)
         multiply_them(
                 drv.Out(dest), drv.In(a), drv.In(b),
                 block=(400,1,1))
@@ -65,13 +64,12 @@ class TestDriver:
 
         multiply_them = mod.get_function("multiply_them")
 
-        import numpy
-        a = numpy.random.randn(400).astype(numpy.float32)
-        b = numpy.random.randn(400).astype(numpy.float32)
+        a = np.random.randn(400).astype(np.float32)
+        b = np.random.randn(400).astype(np.float32)
         a_gpu = drv.to_device(a)
         b_gpu = drv.to_device(b)
 
-        dest = numpy.zeros_like(a)
+        dest = np.zeros_like(a)
         multiply_them(
                 drv.Out(dest), a_gpu, b_gpu,
                 block=(400,1,1))
@@ -79,9 +77,9 @@ class TestDriver:
 
         drv.Context.synchronize()
         # now try with offsets
-        dest = numpy.zeros_like(a)
+        dest = np.zeros_like(a)
         multiply_them(
-                drv.Out(dest), numpy.intp(a_gpu)+a.itemsize, b_gpu,
+                drv.Out(dest), np.intp(a_gpu)+a.itemsize, b_gpu,
                 block=(399,1,1))
 
         assert la.norm((dest[:-1]-a[1:]*b[:-1])) == 0
@@ -102,12 +100,11 @@ class TestDriver:
 
         multiply_them = mod.get_function("multiply_them")
 
-        import numpy
         shape = (32,8)
-        a = drv.pagelocked_zeros(shape, dtype=numpy.float32)
-        b = drv.pagelocked_zeros(shape, dtype=numpy.float32)
-        a[:] = numpy.random.randn(*shape)
-        b[:] = numpy.random.randn(*shape)
+        a = drv.pagelocked_zeros(shape, dtype=np.float32)
+        b = drv.pagelocked_zeros(shape, dtype=np.float32)
+        a[:] = np.random.randn(*shape)
+        b[:] = np.random.randn(*shape)
 
         a_gpu = drv.mem_alloc(a.nbytes)
         b_gpu = drv.mem_alloc(b.nbytes)
@@ -131,8 +128,7 @@ class TestDriver:
 
     @mark_cuda_test
     def test_gpuarray(self):
-        import numpy
-        a = numpy.arange(200000, dtype=numpy.float32)
+        a = np.arange(200000, dtype=np.float32)
         b = a + 17
         import pycuda.gpuarray as gpuarray
         a_g = gpuarray.to_gpu(a)
@@ -150,8 +146,8 @@ class TestDriver:
         import pycuda.blas as blas
 
         shape = (10,)
-        a = blas.ones(shape, dtype=numpy.float32)
-        b = 33*blas.ones(shape, dtype=numpy.float32)
+        a = blas.ones(shape, dtype=np.float32)
+        b = 33*blas.ones(shape, dtype=np.float32)
         assert ((-a+b).from_gpu() == 32).all()
 
         test_streamed_kernel()
@@ -174,10 +170,10 @@ class TestDriver:
         mtx_tex = mod.get_texref("mtx_tex")
 
         shape = (3,4)
-        a = numpy.random.randn(*shape).astype(numpy.float32)
+        a = np.random.randn(*shape).astype(np.float32)
         drv.matrix_to_texref(a, mtx_tex, order="F")
 
-        dest = numpy.zeros(shape, dtype=numpy.float32)
+        dest = np.zeros(shape, dtype=np.float32)
         copy_texture(drv.Out(dest),
                 block=shape+(1,),
                 texrefs=[mtx_tex]
@@ -207,12 +203,12 @@ class TestDriver:
         mtx2_tex = mod.get_texref("mtx2_tex")
 
         shape = (3,4)
-        a = numpy.random.randn(*shape).astype(numpy.float32)
-        b = numpy.random.randn(*shape).astype(numpy.float32)
+        a = np.random.randn(*shape).astype(np.float32)
+        b = np.random.randn(*shape).astype(np.float32)
         drv.matrix_to_texref(a, mtx_tex, order="F")
         drv.matrix_to_texref(b, mtx2_tex, order="F")
 
-        dest = numpy.zeros(shape, dtype=numpy.float32)
+        dest = np.zeros(shape, dtype=np.float32)
         copy_texture(drv.Out(dest),
                 block=shape+(1,),
                 texrefs=[mtx_tex, mtx2_tex]
@@ -243,13 +239,13 @@ class TestDriver:
 
         shape = (5,6)
         channels = 4
-        a = numpy.asarray(
-                numpy.random.randn(*((channels,)+shape)),
-                dtype=numpy.float32, order="F")
+        a = np.asarray(
+                np.random.randn(*((channels,)+shape)),
+                dtype=np.float32, order="F")
         drv.bind_array_to_texref(
             drv.make_multichannel_2d_array(a, order="F"), mtx_tex)
 
-        dest = numpy.zeros(shape+(channels,), dtype=numpy.float32)
+        dest = np.zeros(shape+(channels,), dtype=np.float32)
         copy_texture(drv.Out(dest),
                 block=shape+(1,),
                 texrefs=[mtx_tex]
@@ -281,12 +277,12 @@ class TestDriver:
 
         shape = (16, 16)
         channels = 4
-        a = numpy.random.randn(*(shape+(channels,))).astype(numpy.float32)
+        a = np.random.randn(*(shape+(channels,))).astype(np.float32)
         a_gpu = drv.to_device(a)
         mtx_tex.set_address(a_gpu, a.nbytes)
         mtx_tex.set_format(drv.array_format.FLOAT, 4)
 
-        dest = numpy.zeros(shape+(channels,), dtype=numpy.float32)
+        dest = np.zeros(shape+(channels,), dtype=np.float32)
         copy_texture(drv.Out(dest),
                 block=shape+(1,),
                 texrefs=[mtx_tex]
@@ -312,7 +308,7 @@ class TestDriver:
         kernel = mod.get_function("kernel")
 
         import pycuda.gpuarray as gpuarray
-        arg = gpuarray.zeros((n,), dtype=numpy.float32)
+        arg = gpuarray.zeros((n,), dtype=np.float32)
 
         kernel(arg, block=(1,1,1,), )
 
@@ -382,9 +378,9 @@ class TestDriver:
         d = 8
         shape = (w, h, d)
 
-        a = numpy.asarray(
-                numpy.random.randn(*shape),
-                dtype=numpy.float32, order="F")
+        a = np.asarray(
+                np.random.randn(*shape),
+                dtype=np.float32, order="F")
 
         descr = drv.ArrayDescriptor3D()
         descr.width = w
@@ -426,13 +422,13 @@ class TestDriver:
 
         mtx_tex.set_array(ary)
 
-        dest = numpy.zeros(shape, dtype=numpy.float32, order="F")
+        dest = np.zeros(shape, dtype=np.float32, order="F")
         copy_texture(drv.Out(dest), block=shape, texrefs=[mtx_tex])
         assert la.norm(dest-a) == 0
 
     @mark_cuda_test
     def test_prepared_invocation(self):
-        a = numpy.random.randn(4,4).astype(numpy.float32)
+        a = np.random.randn(4,4).astype(np.float32)
         a_gpu = drv.mem_alloc(a.size * a.dtype.itemsize)
 
         drv.memcpy_htod(a_gpu, a)
@@ -448,13 +444,13 @@ class TestDriver:
         func = mod.get_function("doublify")
         func.prepare("P", (4,4,1))
         func.prepared_call((1, 1), a_gpu)
-        a_doubled = numpy.empty_like(a)
+        a_doubled = np.empty_like(a)
         drv.memcpy_dtoh(a_doubled, a_gpu)
         assert la.norm(a_doubled-2*a) == 0
 
         # now with offsets
         func.prepare("P", (15,1,1))
-        a_quadrupled = numpy.empty_like(a)
+        a_quadrupled = np.empty_like(a)
         func.prepared_call((1, 1), int(a_gpu)+a.dtype.itemsize)
         drv.memcpy_dtoh(a_quadrupled, a_gpu)
         assert la.norm(a_quadrupled[1:]-4*a[1:]) == 0
@@ -464,7 +460,7 @@ class TestDriver:
         if drv.Context.get_device().compute_capability() < (1, 3):
             return
 
-        for tp in [numpy.float32, numpy.float64]:
+        for tp in [np.float32, np.float64]:
             from pycuda.tools import dtype_to_ctype
 
             tp_cstr = dtype_to_ctype(tp)
@@ -486,11 +482,11 @@ class TestDriver:
             import pycuda.gpuarray as gpuarray
 
             shape = (384,)
-            a = numpy.random.randn(*shape).astype(tp)
+            a = np.random.randn(*shape).astype(tp)
             a_gpu = gpuarray.to_gpu(a)
             a_gpu.bind_to_texref_ext(my_tex, allow_double_hack=True)
 
-            dest = numpy.zeros(shape, dtype=tp)
+            dest = np.zeros(shape, dtype=tp)
             copy_texture(drv.Out(dest),
                     block=shape+(1,1,),
                     texrefs=[my_tex])
@@ -513,7 +509,7 @@ class TestDriver:
         copy_constant_into_global = module.get_function("copy_constant_into_global")
         const_array, _ = module.get_global('const_array')
 
-        host_array = numpy.random.randint(0,255,(32,)).astype(numpy.float32)
+        host_array = np.random.randint(0,255,(32,)).astype(np.float32)
 
         global_result_array = drv.mem_alloc_like(host_array)
         drv.memcpy_htod(const_array, host_array)
@@ -522,7 +518,7 @@ class TestDriver:
                 global_result_array,  
                 grid=(1, 1), block=(32, 1, 1))
 
-        host_result_array = numpy.zeros_like(host_array)
+        host_result_array = np.zeros_like(host_array)
         drv.memcpy_dtoh(host_result_array, global_result_array)
 
         assert (host_result_array == host_array).all

@@ -8,6 +8,8 @@ except ImportError, e:
                 "does not match the version of your CUDA driver.")
     raise
 
+import numpy as np
+
 
 
 
@@ -82,6 +84,7 @@ class InOut(In, Out):
 
 
 def _add_functionality():
+
     def device_get_attributes(dev):
         result = {}
 
@@ -106,17 +109,13 @@ def _add_functionality():
         return dev.get_attribute(getattr(device_attribute, name.upper()))
 
     def function_param_set(func, *args):
-        try:
-            import numpy
-        except ImportError:
-            numpy = None
 
         handlers = []
 
         arg_data = []
         format = ""
         for i, arg in enumerate(args):
-            if numpy is not None and isinstance(arg, numpy.number):
+            if np is not None and isinstance(arg, np.number):
                 arg_data.append(arg)
                 format += arg.dtype.char
             elif isinstance(arg, (DeviceAllocation, PooledDeviceAllocation)):
@@ -131,7 +130,7 @@ def _add_functionality():
                 format += "s"
             else:
                 try:
-                    gpudata = numpy.intp(arg.gpudata)
+                    gpudata = np.intp(arg.gpudata)
                 except AttributeError:
                     raise TypeError("invalid type on parameter #%d (0-based)" % i)
                 else:
@@ -212,21 +211,16 @@ def _add_functionality():
 
         func.texrefs = texrefs
 
-        try:
-            import numpy
-        except ImportError:
-            numpy = None
-
         func.arg_format = ""
         param_size = 0
 
         for i, arg_type in enumerate(arg_types):
-            if isinstance(arg_type, type) and numpy is not None and numpy.number in arg_type.__mro__:
-                func.arg_format += numpy.dtype(arg_type).char
+            if isinstance(arg_type, type) and np is not None and np.number in arg_type.__mro__:
+                func.arg_format += np.dtype(arg_type).char
             elif isinstance(arg_type, str):
                 func.arg_format += arg_type
             else:
-                func.arg_format += numpy.dtype(numpy.intp).char
+                func.arg_format += np.dtype(np.intp).char
 
         from pycuda._pvt_struct import calcsize
         func.param_set_size(calcsize(func.arg_format))
@@ -348,21 +342,19 @@ def to_device(bf_obj):
 
 
 def dtype_to_array_format(dtype):
-    import numpy
-
-    if dtype == numpy.uint8:
+    if dtype == np.uint8:
         return array_format.UNSIGNED_INT8
-    elif dtype == numpy.uint16:
+    elif dtype == np.uint16:
         return array_format.UNSIGNED_INT16
-    elif dtype == numpy.uint32:
+    elif dtype == np.uint32:
         return array_format.UNSIGNED_INT32
-    elif dtype == numpy.int8:
+    elif dtype == np.int8:
         return array_format.SIGNED_INT8
-    elif dtype == numpy.int16:
+    elif dtype == np.int16:
         return array_format.SIGNED_INT16
-    elif dtype == numpy.int32:
+    elif dtype == np.int32:
         return array_format.SIGNED_INT32
-    elif dtype == numpy.float32:
+    elif dtype == np.float32:
         return array_format.FLOAT
     else:
         raise TypeError(
@@ -373,8 +365,6 @@ def dtype_to_array_format(dtype):
 
 
 def matrix_to_array(matrix, order, allow_double_hack=False):
-    import numpy
-
     if order.upper() == "C":
         h, w = matrix.shape
         stride = 0
@@ -384,13 +374,13 @@ def matrix_to_array(matrix, order, allow_double_hack=False):
     else: 
         raise LogicError, "order must be either F or C"
 
-    matrix = numpy.asarray(matrix, order=order)
+    matrix = np.asarray(matrix, order=order)
     descr = ArrayDescriptor()
 
     descr.width = w
     descr.height = h
 
-    if matrix.dtype == numpy.float64 and allow_double_hack:
+    if matrix.dtype == np.float64 and allow_double_hack:
         descr.format = array_format.SIGNED_INT32
         descr.num_channels = 2
     else:
@@ -463,8 +453,7 @@ def matrix_to_texref(matrix, texref, order):
 
 
 def from_device(devptr, shape, dtype, order="C"):
-    import numpy
-    result = numpy.empty(shape, dtype, order)
+    result = np.empty(shape, dtype, order)
     memcpy_dtoh(result, devptr)
     return result
 
@@ -472,7 +461,6 @@ def from_device(devptr, shape, dtype, order="C"):
 
 
 def from_device_like(devptr, other_ary):
-    import numpy
-    result = numpy.empty_like(other_ary)
+    result = np.empty_like(other_ary)
     memcpy_dtoh(result, devptr)
     return result

@@ -3,7 +3,7 @@ from pytools import memoize_method
 import pycuda.driver as drv
 import pycuda.gpuarray as gpuarray
 from pycuda.compiler import SourceModule
-import numpy
+import numpy as np
 
 
 
@@ -93,9 +93,9 @@ class PacketedSpMV:
 
         # all row indices in the data structure generation code are
         # "unpermuted" unless otherwise specified
-        self.dtype = numpy.dtype(dtype)
-        self.index_dtype = numpy.int32
-        self.packed_index_dtype = numpy.uint32
+        self.dtype = np.dtype(dtype)
+        self.index_dtype = np.int32
+        self.packed_index_dtype = np.uint32
         self.threads_per_packet = devdata.max_threads
 
         h, w = self.shape = mat.shape
@@ -164,7 +164,7 @@ class PacketedSpMV:
         local_row_costs, remaining_coo = \
                 self.find_local_row_costs_and_remaining_coo(
                         csr_mat, dof_to_packet_nr, old2new_fetch_indices)
-        local_nnz = numpy.sum(local_row_costs)
+        local_nnz = np.sum(local_row_costs)
 
         assert remaining_coo.nnz == csr_mat.nnz - local_nnz
 
@@ -173,7 +173,7 @@ class PacketedSpMV:
         thread_assignments, thread_costs = self.find_thread_assignment(
                 packet_nr_to_dofs, local_row_costs, thread_count)
 
-        max_thread_costs = numpy.max(thread_costs)
+        max_thread_costs = np.max(thread_costs)
 
         # build data structure ------------------------------------------------
         from pkt_build import build_pkt_data_structure
@@ -192,12 +192,12 @@ class PacketedSpMV:
                 remaining_coo, dtype)
 
     def find_simple_index_stuff(self, packet_nr_to_dofs):
-        new2old_fetch_indices = numpy.zeros(
+        new2old_fetch_indices = np.zeros(
                 self.shape[0], dtype=self.index_dtype)
-        old2new_fetch_indices = numpy.zeros(
+        old2new_fetch_indices = np.zeros(
                 self.shape[0], dtype=self.index_dtype)
 
-        packet_base_rows = numpy.zeros(
+        packet_base_rows = np.zeros(
                 self.block_count+1, 
                 dtype=self.index_dtype)
 
@@ -206,11 +206,11 @@ class PacketedSpMV:
             packet_base_rows[packet_nr] = row_start
             row_end = row_start + len(packet)
 
-            pkt_indices = numpy.array(packet, dtype=self.index_dtype)
+            pkt_indices = np.array(packet, dtype=self.index_dtype)
             new2old_fetch_indices[row_start:row_end] = \
                     pkt_indices
             old2new_fetch_indices[pkt_indices] = \
-                    numpy.arange(row_start, row_end, dtype=self.index_dtype)
+                    np.arange(row_start, row_end, dtype=self.index_dtype)
 
             row_start += len(packet)
 
@@ -252,7 +252,7 @@ class PacketedSpMV:
     def find_thread_assignment(self, packet_nr_to_dofs, local_row_cost,
             thread_count):
         thread_assignments = [[] for i in range(thread_count)]
-        thread_costs = numpy.zeros(thread_count)
+        thread_costs = np.zeros(thread_count)
 
         for packet_nr, packet_dofs in enumerate(packet_nr_to_dofs):
             row_costs_and_numbers = sorted(

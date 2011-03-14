@@ -1,5 +1,5 @@
 from __future__ import division
-import numpy
+import numpy as np
 import pycuda.elementwise as elementwise
 from pytools import memoize
 import pycuda.driver as drv
@@ -74,7 +74,7 @@ class GPUArray(object):
             shape = (shape,)
 
         self.shape = shape
-        self.dtype = numpy.dtype(dtype)
+        self.dtype = np.dtype(dtype)
 
         self.mem_size = self.size = s
         self.nbytes = self.dtype.itemsize * self.size
@@ -111,7 +111,7 @@ class GPUArray(object):
             if pagelocked:
                 ary = drv.pagelocked_empty(self.shape, self.dtype)
             else:
-                ary = numpy.empty(self.shape, self.dtype)
+                ary = np.empty(self.shape, self.dtype)
         else:
             assert ary.size == self.size
             assert ary.dtype == self.dtype
@@ -188,7 +188,7 @@ class GPUArray(object):
            y = n / self
         """
 
-        assert self.dtype == numpy.float32
+        assert self.dtype == np.float32
 
         func = elementwise.get_rdivide_elwise_kernel(self.dtype)
         func.set_block_shape(*self._block)
@@ -354,7 +354,7 @@ class GPUArray(object):
 
     def bind_to_texref_ext(self, texref, channels=1, allow_double_hack=False,
             allow_offset=False):
-        if self.dtype == numpy.float64 and allow_double_hack:
+        if self.dtype == np.float64 and allow_double_hack:
             if channels != 1:
                 raise ValueError, "'fake' double precision textures can only have one channel"
 
@@ -363,7 +363,7 @@ class GPUArray(object):
             read_as_int = True
         else:
             fmt = drv.dtype_to_array_format(self.dtype)
-            read_as_int = numpy.integer in self.dtype.type.__mro__
+            read_as_int = np.integer in self.dtype.type.__mro__
 
         offset = texref.set_address(self.gpudata, self.nbytes, allow_offset=allow_offset)
         texref.set_format(fmt, channels)
@@ -387,9 +387,9 @@ class GPUArray(object):
 
         result = self._new_like_me()
 
-        if self.dtype == numpy.float32:
+        if self.dtype == np.float32:
             fname = "fabsf"
-        elif self.dtype == numpy.float64:
+        elif self.dtype == np.float64:
             fname = "fabs"
         else:
             fname = "abs"
@@ -493,9 +493,9 @@ class GPUArray(object):
     @property
     def real(self):
         dtype = self.dtype
-        if issubclass(dtype.type, numpy.complexfloating):
+        if issubclass(dtype.type, np.complexfloating):
             from pytools import match_precision
-            real_dtype = match_precision(numpy.dtype(numpy.float64), dtype)
+            real_dtype = match_precision(np.dtype(np.float64), dtype)
 
             result = self._new_like_me(dtype=real_dtype)
 
@@ -512,9 +512,9 @@ class GPUArray(object):
     @property
     def imag(self):
         dtype = self.dtype
-        if issubclass(self.dtype.type, numpy.complexfloating):
+        if issubclass(self.dtype.type, np.complexfloating):
             from pytools import match_precision
-            real_dtype = match_precision(numpy.dtype(numpy.float64), dtype)
+            real_dtype = match_precision(np.dtype(np.float64), dtype)
 
             result = self._new_like_me(dtype=real_dtype)
 
@@ -530,7 +530,7 @@ class GPUArray(object):
 
     def conj(self):
         dtype = self.dtype
-        if issubclass(self.dtype.type, numpy.complexfloating):
+        if issubclass(self.dtype.type, np.complexfloating):
             result = self._new_like_me()
 
             func = elementwise.get_conj_kernel(dtype)
@@ -683,7 +683,7 @@ def arange(*args, **kwargs):
     inf.step = None
     inf.dtype = None
 
-    if isinstance(args[-1], numpy.dtype):
+    if isinstance(args[-1], np.dtype):
         dtype = args[-1]
         args = args[:-1]
         explicit_dtype = True
@@ -720,15 +720,15 @@ def arange(*args, **kwargs):
     if inf.step is None:
         inf.step = 1
     if inf.dtype is None:
-        inf.dtype = numpy.array([inf.start, inf.stop, inf.step]).dtype
+        inf.dtype = np.array([inf.start, inf.stop, inf.step]).dtype
 
     # actual functionality ----------------------------------------------------
-    dtype = numpy.dtype(inf.dtype)
+    dtype = np.dtype(inf.dtype)
     start = dtype.type(inf.start)
     step = dtype.type(inf.step)
     stop = dtype.type(inf.stop)
 
-    if not explicit_dtype and dtype != numpy.float32:
+    if not explicit_dtype and dtype != np.float32:
         from warnings import warn
         warn("behavior change: arange guessed dtype other than float32. "
                 "suggest specifying explicit dtype.")
