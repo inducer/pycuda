@@ -364,31 +364,6 @@ void ${name_prefix}_final_update(
 
 
 
-def _div_ceil(nr, dr):
-    return (nr + dr -1) // dr
-
-
-def _uniform_interval_splitting(n, granularity, max_intervals):
-    grains  = _div_ceil(n, granularity)
-
-    # one grain per interval
-    if grains <= max_intervals:
-        return granularity, grains
-
-    # ensures that:
-    #     num_intervals * interval_size is >= n
-    #   and
-    #     (num_intervals - 1) * interval_size is < n
-
-    grains_per_interval = _div_ceil(grains, max_intervals)
-    interval_size = grains_per_interval * granularity
-    num_intervals = _div_ceil(n, interval_size)
-
-    return interval_size, num_intervals
-
-
-
-
 if _CL_MODE:
     class _ScanKernelBase(object):
         def __init__(self, ctx, dtype,
@@ -475,7 +450,8 @@ if _CL_MODE:
             unit_size  = self.scan_wg_size * self.scan_wg_seq_batches
             max_groups = 3*max(dev.max_compute_units for dev in self.devices)
 
-            interval_size, num_groups = _uniform_interval_splitting(
+            from pytools import uniform_interval_splitting
+            interval_size, num_groups = uniform_interval_splitting(
                     n, unit_size, max_groups);
 
             block_results = allocator(self.dtype.itemsize*num_groups)
@@ -576,7 +552,8 @@ else:
             max_groups = 3*dev.get_attribute(
                     driver.device_attribute.MULTIPROCESSOR_COUNT)
 
-            interval_size, num_groups = _uniform_interval_splitting(
+            from pytools import uniform_interval_splitting
+            interval_size, num_groups = uniform_interval_splitting(
                     n, unit_size, max_groups);
 
             block_results = allocator(self.dtype.itemsize*num_groups)

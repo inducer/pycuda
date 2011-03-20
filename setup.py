@@ -316,8 +316,8 @@ def main():
             packages=["pycuda", "pycuda.gl", "pycuda.sparse"],
 
             install_requires=[
-                "pytools>=11",
-                "py>=1.0.0b7",
+                "pytools>=2011.2",
+                "pytest>=2",
                 "decorator>=3.2.0"
                 ],
 
