@@ -393,7 +393,10 @@ if _CL_MODE:
     class _ScanKernelBase(object):
         def __init__(self, ctx, dtype,
                 scan_expr, neutral=None,
-                name_prefix="scan", options="", preamble="", devices=None):
+                name_prefix="scan", options=[], preamble="", devices=None):
+
+            if isinstance(self, ExclusiveScanKernel) and neutral is None:
+                raise ValueError("neutral element is required for exclusive scan")
 
             self.context = ctx
             dtype = self.dtype = np.dtype(dtype)
@@ -511,6 +514,9 @@ else:
         def __init__(self, dtype,
                 scan_expr, neutral=None,
                 name_prefix="scan", options=[], preamble="", devices=None):
+
+            if isinstance(self, ExclusiveScanKernel) and neutral is None:
+                raise ValueError("neutral element is required for exclusive scan")
 
             dtype = self.dtype = np.dtype(dtype)
             self.neutral = neutral

@@ -477,6 +477,43 @@ Here's a usage example::
 
     my_dot_prod = krnl(a, b).get()
 
+Parallel Scan / Prefix Sum
+--------------------------
+
+.. module:: pycuda.scan
+
+.. class:: ExclusiveScanKernel(dtype, scan_expr, neutral, name_prefix="scan", options=[], preamble="")
+
+    Generates a kernel that can compute a `prefix sum <https://secure.wikimedia.org/wikipedia/en/wiki/Prefix_sum>`_
+    using any associative operation given as *scan_expr*.
+    *scan_expr* uses the formal values "a" and "b" to indicate two operands of
+    an associative binary operation. *neutral* is the neutral element
+    of *scan_expr*, obeying *scan_expr(a, neutral) == a*.
+
+    *dtype* specifies the type of the arrays being operated on. 
+    *name_prefix* is used for kernel names to ensure recognizability
+    in profiles and logs. *options* is a list of compiler options to use
+    when building. *preamble* specifies a string of code that is
+    inserted before the actual kernels.
+
+    .. method:: __call__(self, input_ary, output_ary=None, allocator=None, queue=None)
+
+.. class:: InclusiveScanKernel(dtype, scan_expr, neutral=None, name_prefix="scan", options=[], preamble="", devices=None)
+
+    Works like :class:`ExclusiveScanKernel`. Unlike the exclusive case,
+    *neutral* is not required.
+
+Here's a usage example::
+
+    knl = InclusiveScanKernel(np.int32, "a+b")
+
+    n = 2**20-2**18+5
+    host_data = np.random.randint(0, 10, n).astype(np.int32)
+    dev_data = gpuarray.to_gpu(queue, host_data)
+
+    knl(dev_data)
+    assert (dev_data.get() == np.cumsum(host_data, axis=0)).all()
+
 Fast Fourier Transforms
 -----------------------
 

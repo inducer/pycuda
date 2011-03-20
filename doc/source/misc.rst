@@ -15,6 +15,7 @@ Version 2011.1
 * Document *preamble* constructor keyword argument to 
   :class:`pycuda.gpuarray.ElementwiseKernel`.
 * Add vector types, see :class:`pycuda.gpuarray.vec`.
+* Add :mod:`pycuda.scan`.
 
 Version 0.94.2
 --------------
@@ -250,6 +251,31 @@ HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY,
 WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
 FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
 OTHER DEALINGS IN THE SOFTWARE.
+
+PyCUDA includes derivatives of parts of the `Thrust
+<https://code.google.com/p/thrust/>`_ computing package (in particular the scan
+implementation). These parts are licensed as follows:
+
+    Copyright 2008-2011 NVIDIA Corporation
+
+    Licensed under the Apache License, Version 2.0 (the "License");
+    you may not use this file except in compliance with the License.
+    You may obtain a copy of the License at
+
+        <http://www.apache.org/licenses/LICENSE-2.0>
+
+    Unless required by applicable law or agreed to in writing, software
+    distributed under the License is distributed on an "AS IS" BASIS,
+    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+    See the License for the specific language governing permissions and
+    limitations under the License.
+
+.. note::
+
+    If you use Apache-licensed parts, be aware that these may be incompatible
+    with software licensed exclusively under GPL2.  (Most software is licensed
+    as GPL2 or later, in which case this is not an issue.)
+
 
 Frequently Asked Questions
 ==========================
