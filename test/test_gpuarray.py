@@ -646,6 +646,32 @@ class TestGPUArray:
         assert (a[255:257]== np.array([1,2], np.float32)).all()
         assert (a[255*256-1:255*256+1] == np.array([2,1], np.float32)).all()
 
+    @mark_cuda_test
+    def test_scan(self):
+        from pycuda.scan import ExclusiveScanKernel, InclusiveScanKernel
+        for cls in [ExclusiveScanKernel, InclusiveScanKernel]:
+            scan_kern = cls(np.int32, "a+b", "0")
+
+            for n in [
+                    10, 2**10-5, 2**10, 
+                    2**20-2**18, 
+                    2**20-2**18+5, 
+                    2**10+5,
+                    2**20+5,
+                    2**20, 2**24
+                    ]:
+                host_data = np.random.randint(0, 10, n).astype(np.int32)
+                gpu_data = gpuarray.to_gpu(host_data)
+
+                scan_kern(gpu_data)
+
+                desired_result = np.cumsum(host_data, axis=0)
+                if cls is ExclusiveScanKernel:
+                    desired_result -= host_data
+
+                assert (gpu_data.get() == desired_result).all()
+
+
 
 
 
