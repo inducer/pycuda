@@ -123,14 +123,14 @@ def _exact_div(dividend, divisor):
 
 def _int_ceiling(value, multiple_of=1):
     """Round C{value} up to be a C{multiple_of} something."""
-    # Mimicks the Excel "floor" function (for code stolen from occupany calculator)
+    # Mimicks the Excel "floor" function (for code stolen from occupancy calculator)
 
     from math import ceil
     return int(ceil(value/multiple_of))*multiple_of
 
 def _int_floor(value, multiple_of=1):
     """Round C{value} down to be a C{multiple_of} something."""
-    # Mimicks the Excel "floor" function (for code stolen from occupany calculator)
+    # Mimicks the Excel "floor" function (for code stolen from occupancy calculator)
 
     from math import floor
     return int(floor(value/multiple_of))*multiple_of
@@ -228,16 +228,26 @@ class DeviceData:
         self.max_threads = dev.get_attribute(drv.device_attribute.MAX_THREADS_PER_BLOCK)
         self.warp_size = dev.get_attribute(drv.device_attribute.WARP_SIZE)
 
-        if dev.compute_capability() < (1,2):
-            self.warps_per_mp = 24
-        else:
+        if dev.compute_capability() >= (2,0):
+            self.warps_per_mp = 48
+        elif dev.compute_capability() >= (1,2):
             self.warps_per_mp = 32
+        else:
+            self.warps_per_mp = 24
 
         self.thread_blocks_per_mp = 8
         self.registers = dev.get_attribute(drv.device_attribute.MAX_REGISTERS_PER_BLOCK)
         self.shared_memory = dev.get_attribute(drv.device_attribute.MAX_SHARED_MEMORY_PER_BLOCK)
 
-        self.smem_granularity = 16
+        if dev.compute_capability() >= (2,0):
+            self.smem_granularity = 128
+	else:
+            self.smem_granularity = 512
+
+        if dev.compute_capability() >= (2,0):
+            self.register_allocation_unit = "warp"
+	else:
+            self.register_allocation_unit = "block"
 
     def align(self, bytes, word_size=4):
         return _int_ceiling(bytes, self.align_bytes(word_size))
@@ -281,8 +291,13 @@ class OccupancyRecord:
 
         # copied literally from occupancy calculator
         alloc_warps = _int_ceiling(threads/devdata.warp_size)
-        alloc_regs = _int_ceiling(alloc_warps*2, 4)*16*registers
-        alloc_smem = _int_ceiling(shared_mem, 512)
+        alloc_smem = _int_ceiling(shared_mem, devdata.smem_granularity)
+	if devdata.register_allocation_unit == "warp":
+            alloc_regs = alloc_warps*32*registers
+	elif devdata.register_allocation_unit == "block":
+            alloc_regs = _int_ceiling(alloc_warps*2, 4)*16*registers
+	else:
+            raise ValueError("Improper register allocation unit:"+devdata.register_allocation_unit)
 
         if alloc_regs > devdata.registers:
             raise ValueError("too many registers")
