@@ -164,10 +164,10 @@ def _find_pycuda_include_path():
             join(pathname, "..", "include", "pycuda"),
             join(pathname, "..", "src", "cuda"),
             join(pathname, "..", "..", "..", "src", "cuda"),
-            join(pathname, "..", "..", "..", "..", "include", "pycuda")
+            join(pathname, "..", "..", "..", "..", "include", "pycuda"),
+            join(pathname, "..", "..", "..", "include", "pycuda"),
             ]
 
-    import sys
     if sys.platform in ("linux2", "darwin"):
         possible_include_paths.extend([
             join(sys.prefix, "include" , "pycuda"),
