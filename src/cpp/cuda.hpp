@@ -28,6 +28,12 @@
 #warning *****************************************************************
 #endif
 
+// TODO: cuCtxSetCurrent, cuCtxGetCurrent, cuMemHostRegister, cuMemHostUnregister
+// TODO: cuMemcpy, cuMemcpyPeer, cuMemcpyPeerAsync
+// TODO: in structured memcpy: set_{src,dest}_unified()
+// TODO: cuPointerGetAttribute, cuLaunchKernel, deprecation of other launch functions
+// TODO: cuMemPeerRegister, cuMemPeerUnregister, cuMemPeerGetDevicePointer
+
 
 
 
@@ -197,6 +203,12 @@ namespace pycuda
 #if CUDAPP_CUDA_VERSION >= 2000
           case CUDA_ERROR_DEINITIALIZED: return "deinitialized";
 #endif
+#if CUDAPP_CUDA_VERSION >= 4000
+          case CUDA_ERROR_PROFILER_DISABLED: return "profiler disabled";
+          case CUDA_ERROR_PROFILER_NOT_INITIALIZED: return "profiler not initialized";
+          case CUDA_ERROR_PROFILER_ALREADY_STARTED: return "profiler already started";
+          case CUDA_ERROR_PROFILER_ALREADY_STOPPED: return "profiler already stopped";
+#endif
 
           case CUDA_ERROR_NO_DEVICE: return "no device";
           case CUDA_ERROR_INVALID_DEVICE: return "invalid device";
@@ -221,6 +233,9 @@ namespace pycuda
 #if CUDAPP_CUDA_VERSION >= 3010
           case CUDA_ERROR_UNSUPPORTED_LIMIT: return "unsupported limit";
 #endif
+#if CUDAPP_CUDA_VERSION >= 4000
+          case CUDA_ERROR_CONTEXT_ALREADY_IN_USE: return "context already in use";
+#endif
 
           case CUDA_ERROR_INVALID_SOURCE: return "invalid source";
           case CUDA_ERROR_FILE_NOT_FOUND: return "file not found";
@@ -241,6 +256,15 @@ namespace pycuda
           case CUDA_ERROR_LAUNCH_OUT_OF_RESOURCES: return "launch out of resources";
           case CUDA_ERROR_LAUNCH_TIMEOUT: return "launch timeout";
           case CUDA_ERROR_LAUNCH_INCOMPATIBLE_TEXTURING: return "launch incompatible texturing";
+
+#if CUDAPP_CUDA_VERSION >= 4000
+          case CUDA_ERROR_PEER_ACCESS_ALREADY_ENABLED: return "peer access already enabled";
+          case CUDA_ERROR_PEER_ACCESS_NOT_ENABLED: return "peer access not enabled";
+          case CUDA_ERROR_PEER_MEMORY_ALREADY_REGISTERED: return "peer memory already registered";
+          case CUDA_ERROR_PEER_MEMORY_NOT_REGISTERED: return "peer memory not registered";
+          case CUDA_ERROR_PRIMARY_CONTEXT_ACTIVE: return "primary context active";
+          case CUDA_ERROR_CONTEXT_IS_DESTROYED: return "context is destroyed";
+#endif
 
 #if (CUDAPP_CUDA_VERSION >= 3000) && (CUDAPP_CUDA_VERSION < 3020)
           case CUDA_ERROR_POINTER_IS_64BIT:
@@ -351,6 +375,15 @@ namespace pycuda
 
       CUdevice handle() const
       { return m_device; }
+
+#if CUDAPP_CUDA_VERSION >= 4000
+      bool can_access_peer(device const &other)
+      {
+        int result;
+        CUDAPP_CALL_GUARDED(cuDeviceCanAccessPeer, (&result, handle(), other.handle()));
+        return result;
+      }
+#endif
 
   };
 
@@ -615,6 +648,18 @@ namespace pycuda
         unsigned int value;
         CUDAPP_CALL_GUARDED(cuCtxGetApiVersion, (m_context, &value));
         return value;
+      }
+#endif
+
+#if CUDAPP_CUDA_VERSION >= 4000
+      static void enable_peer_access(context const &peer, unsigned int flags)
+      {
+        CUDAPP_CALL_GUARDED(cuCtxEnablePeerAccess, (peer.handle(), flags));
+      }
+
+      static void disable_peer_access(context const &peer)
+      {
+        CUDAPP_CALL_GUARDED(cuCtxDisablePeerAccess, (peer.handle()));
       }
 #endif
 
@@ -1420,6 +1465,44 @@ namespace pycuda
   };
 #endif
 
+#if CUDAPP_CUDA_VERSION >= 4000
+  struct memcpy_3d_peer : public CUDA_MEMCPY3D_PEER
+  {
+    memcpy_3d_peer()
+    {
+      srcXInBytes = 0;
+      srcY = 0;
+      srcZ = 0;
+      srcLOD = 0;
+
+      dstXInBytes = 0;
+      dstY = 0;
+      dstZ = 0;
+      dstLOD = 0;
+    }
+
+    MEMCPY_SETTERS;
+
+    void set_src_context(context const &ctx)
+    {
+      srcContext = ctx.handle();
+    }
+
+    void set_dst_context(context const &ctx)
+    {
+      dstContext = ctx.handle();
+    }
+
+    void execute() const
+    {
+      CUDAPP_CALL_GUARDED_THREADED(cuMemcpy3DPeer, (this));
+    }
+
+    void execute_async(const stream &s) const
+    { CUDAPP_CALL_GUARDED_THREADED(cuMemcpy3DPeerAsync, (this, s.handle())); }
+  };
+#endif
+
   // }}}
 
   // {{{ host memory
@@ -1588,6 +1671,28 @@ namespace pycuda
   }
 #endif
 
+  // }}}
+
+  // {{{ profiler
+#if CUDAPP_CUDA_VERSION >= 4000
+  inline void initialize_profiler(
+      const char *config_file,
+      const char *output_file,
+      CUOutputMode output_mode)
+  {
+    CUDAPP_CALL_GUARDED(cuProfilerInitialize, (config_file, output_file, output_mode));
+  }
+
+  inline void start_profiler()
+  {
+    CUDAPP_CALL_GUARDED(cuProfilerStart, ());
+  }
+
+  inline void stop_profiler()
+  {
+    CUDAPP_CALL_GUARDED(cuProfilerStart, ());
+  }
+#endif
   // }}}
 }
 
