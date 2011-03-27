@@ -120,6 +120,19 @@ Constants
 
         Support mapped pinned allocations. CUDA 2.2 and newer.
 
+    .. attribute:: LMEM_RESIZE_TO_MAX
+
+        Keep local memory allocation after launch. CUDA 3.2 and newer.
+        Rumored to decrease Fermi launch overhead?
+
+        ..versionadded:: 2011.1
+
+    .. attribute:: PRIMARY
+
+        Initialize and return the primary context. CUDA 4.0 and newer.
+
+        ..versionadded:: 2011.1
+
     .. attribute:: FLAGS_MASK
 
         Mask of valid flags in this bitfield.
@@ -198,9 +211,19 @@ Constants
         MAXIMUM_TEXTURE2D_ARRAY_HEIGHT
         MAXIMUM_TEXTURE2D_ARRAY_NUMSLICES
 
-        CUDA 3.0 and above
+        CUDA 3.0 and above.
 
         .. versionadded:: 0.94
+
+    .. attribute:: MAXIMUM_TEXTURE2D_LAYERED_WIDTH
+        MAXIMUM_TEXTURE2D_LAYERED_HEIGHT
+        MAXIMUM_TEXTURE2D_LAYERED_LAYERS
+        MAXIMUM_TEXTURE1D_LAYERED_WIDTH
+        MAXIMUM_TEXTURE1D_LAYERED_LAYERS
+
+        CUDA 4.0 and above.
+
+        .. versionadded:: 2011.1
 
     .. attribute:: SURFACE_ALIGNMENT
 
@@ -237,6 +260,33 @@ Constants
         CUDA 3.2 and above.
 
         .. versionadded:: 0.94
+
+    .. attribute::MEMORY_CLOCK_RATE
+        GLOBAL_MEMORY_BUS_WIDTH
+        L2_CACHE_SIZE
+        MAX_THREADS_PER_MULTIPROCESSOR
+        ASYNC_ENGINE_COUNT
+        UNIFIED_ADDRESSING
+
+        CUDA 4.0 and above.
+
+        .. versionadded:: 2011.1
+
+.. class:: pointer_attribute
+
+    .. attribute:: CONTEXT MEMORY_TYPE DEVICE_POINTER HOST_POINTER
+
+    CUDA 4.0 and above.
+
+    .. versionadded:: 2011.1
+
+.. class:: profiler_output_mode
+
+    .. attribute:: KEY_VALUE_PAIR CSV
+
+    CUDA 4.0 and above.
+
+    .. versionadded:: 2011.1
 
 .. class:: function_attribute
 
@@ -284,11 +334,17 @@ Constants
 
 .. class:: array3d_flags
 
-    .. attribute 2DARRAY
+    .. attribute :: 2DARRAY
 
-        CUDA 3.0 and above
+        CUDA 3.0 and above. Deprecated--use :attr:`LAYERED`.
 
         .. versionadded:: 0.94
+
+    .. attribute :: LAYERED
+
+        CUDA 4.0 and above.
+
+        .. versionadded:: 2011.1
 
     .. attribute SURFACE_LDST
 
@@ -325,6 +381,11 @@ Constants
     .. attribute:: DEFAULT
     .. attribute:: EXCLUSIVE
     .. attribute:: PROHIBITED
+    .. attribute:: EXCLUSIVE_PROCESS
+
+        CUDA 4.0 and above.
+
+        .. versionadded:: 2011.1
 
 .. class:: jit_option
 
@@ -377,6 +438,23 @@ Constants
     .. attribute:: DEVICEMAP
     .. attribute:: WRITECOMBINED
 
+.. class:: mem_host_register_flags
+
+    .. attribute:: PORTABLE
+    .. attribute:: DEVICEMAP
+
+    CUDA 4.0 and newer.
+
+    .. versionadded:: 2011.1
+
+.. class:: mem_peer_register_flags
+
+    .. attribute:: DEVICEMAP
+
+    CUDA 4.0 and newer.
+
+    .. versionadded:: 2011.1
+
 .. class:: limit
 
     Limit values for :meth:`Context.get_limit` and :meth:`Context.set_limit`.
@@ -390,6 +468,29 @@ Constants
     .. attribute:: MALLOC_HEAP_SIE
 
         CUDA 3.2 and above
+
+
+Graphics-related constants
+^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+.. class:: graphics_register_flags
+
+    .. attribute:: NONE READ_ONLY WRITE_DISCARD SURFACE_LDST
+
+    CUDA 4.0 and above.
+
+    .. versionadded:: 2011.1
+
+.. class:: array_cubemap_face
+
+    .. attribute::
+        POSITIVE_X NEGATIVE_X
+        POSITIVE_Y NEGATIVE_Y
+        POSITIVE_Z NEGATIVE_Z
+
+    CUDA 3.2 and above.
+
+    .. versionadded:: 2011.1
 
 Devices and Contexts
 --------------------
@@ -452,6 +553,12 @@ Devices and Contexts
         :class:`ctx_flags` values.
 
         Also make the newly-created context the current context.
+
+    .. method:: can_access_peer(dev)
+
+        CUDA 4.0 and newer.
+
+        ..versionadded:: 2011.1
 
     .. method:: __hash__()
     .. method:: __eq__()
@@ -525,6 +632,18 @@ Devices and Contexts
         CUDA 3.2 and above.
 
         .. versionadded:: 0.94
+
+    .. method:: enable_peer_access(peer, flags=0)
+
+        CUDA 4.0 and above.
+
+        .. versionadded:: 2011.1
+
+    .. method:: disable_peer_access(peer, flags=0)
+
+        CUDA 4.0 and above.
+
+        .. versionadded:: 2011.1
 
 Concurrency and Streams
 -----------------------
@@ -1074,6 +1193,19 @@ Structured Memory Transfers
 
     :class:`Memcpy3D` is supported on CUDA 2.0 and above only.
 
+.. class:: Memcpy3DPeer()
+
+    :class:`Memcpy3DPeer` has the same members as :class:`Memcpy3D`, 
+    and additionally all of the following:
+
+    .. method:: set_src_context(ctx)
+
+    .. method:: set_dst_context(ctx)
+
+    CUDA 4.0 and newer.
+
+    ..versionadded:: 2011.1
+
 Code on the Device: Modules and Functions
 -----------------------------------------
 
@@ -1345,6 +1477,20 @@ Code on the Device: Modules and Functions
     Inherits from :class:`ArgumentHandler`. Indicates that :class:`buffer`
     *array* should be copied both onto the compute device before invoking
     the kernel, and off it afterwards.
+
+Profiler Control
+================
+
+CUDA 4.0 and newer.
+
+..versionadded:: 2011.1
+
+.. function:: initialize_profiler(config_file, output_file, output_mode)
+
+    *output_mode* is one of the attributes of :class:`profiler_output_mode`.
+
+.. function:: start_profiler()
+.. function:: stop()
 
 Just-in-time Compilation
 ========================

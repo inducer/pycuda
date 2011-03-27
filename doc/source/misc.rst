@@ -16,6 +16,7 @@ Version 2011.1
   :class:`pycuda.gpuarray.ElementwiseKernel`.
 * Add vector types, see :class:`pycuda.gpuarray.vec`.
 * Add :mod:`pycuda.scan`.
+* Add support for new features in CUDA 4.0.
 
 Version 0.94.2
 --------------
