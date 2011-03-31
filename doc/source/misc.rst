@@ -11,9 +11,9 @@ Version 2011.1
 
 * Add support for CUDA 3.0-style OpenGL interop. (thanks to Tomasz Rybak)
 * Add :meth:`pycuda.driver.Stream.wait_for_event`.
-* Add *range* and *slice* keyword argument to :meth:`pycuda.gpuarray.ElementwiseKernel.__call__`.
+* Add *range* and *slice* keyword argument to :meth:`pycuda.elementwise.ElementwiseKernel.__call__`.
 * Document *preamble* constructor keyword argument to 
-  :class:`pycuda.gpuarray.ElementwiseKernel`.
+  :class:`pycuda.elementwise.ElementwiseKernel`.
 * Add vector types, see :class:`pycuda.gpuarray.vec`.
 * Add :mod:`pycuda.scan`.
 * Add support for new features in CUDA 4.0.
@@ -284,3 +284,32 @@ Frequently Asked Questions
 The FAQ is now maintained collaboratively in the 
 `PyCUDA Wiki <http://wiki.tiker.net/PyCuda/FrequentlyAskedQuestions>`_.
 
+Citing PyCUDA
+===============
+
+We are not asking you to gratuitously cite PyCUDA in work that is otherwise
+unrelated to software. That said, if you do discuss some of the development
+aspects of your code and would like to highlight a few of the ideas behind
+PyCUDA, feel free to cite this article:
+
+    Andreas Klöckner, Nicolas Pinto, Yunsup Lee, Bryan Catanzaro, Paul Ivanov, Ahmed Fasih.
+    `PyCUDA and PyOpenCL: A Scripting-Based Approach to GPU Run-Time Code Generation <http://arxiv.org/abs/0911.3456>`_
+    November 2009, submitted.
+
+Here's a Bibtex entry for your convenience::
+
+    @techreport{kloeckner_pycuda_2009,
+       author = {{Kl{\"o}ckner}, Andreas 
+            and {Pinto}, Nicolas 
+            and {Lee}, Yunsup 
+            and {Catanzaro}, B. 
+            and {Ivanov}, Paul 
+            and {Fasih}, Ahmed },
+       title = "{PyCUDA and PyOpenCL: A Scripting-Based Approach to GPU Run-Time Code Generation}",
+       url = {http://arxiv.org/abs/0911.3456},
+       institution = "Scientific Computing Group, Brown University",
+       number = "2009-40",
+       address = "Providence, RI, USA",
+       year = 2009,
+       month = nov,
+    }
