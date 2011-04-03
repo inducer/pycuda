@@ -339,6 +339,8 @@ def main():
                     ),
                 Extension("_pvt_struct",
                     ["src/wrapper/_pycuda_struct.c"],
+                    extra_compile_args=conf["CXXFLAGS"],
+                    extra_link_args=conf["LDFLAGS"],
                     )],
 
             data_files=[
