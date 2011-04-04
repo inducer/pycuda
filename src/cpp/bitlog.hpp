@@ -13,8 +13,6 @@
 #include <boost/cstdint.hpp>
 
 
-
-
 namespace pycuda 
 {
   extern const char log_table_8[];
@@ -32,18 +30,18 @@ namespace pycuda
     if (boost::uint16_t t = v >> 16)
       return 16+bitlog2_16(t);
     else 
-      return bitlog2_16(v);
+      return bitlog2_16(boost::uint16_t(v));
   }
 
-  inline unsigned bitlog2(unsigned long v)
+  inline unsigned bitlog2(size_t v)
   {
-#if (ULONG_MAX != 4294967295)
+#if (ULONG_MAX != 4294967295) || defined(_WIN64)
     if (boost::uint32_t t = v >> 32)
       return 32+bitlog2_32(t);
     else 
 #endif
-      return bitlog2_32(v);
-  }
+      return bitlog2_32(unsigned(v));
+   }
 }
 
 

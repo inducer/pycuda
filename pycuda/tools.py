@@ -347,15 +347,22 @@ def allow_user_edit(s, filename, descr="the file"):
 # C code generation helpers ---------------------------------------------------
 def dtype_to_ctype(dtype, with_fp_tex_hack=False):
     from pycuda.characterize import platform_bits
+    from sys import platform
 
     if dtype is None:
         raise ValueError("dtype may not be None")
 
     dtype = np.dtype(dtype)
     if dtype == np.int64 and platform_bits() == 64:
-        return "long"
+        if 'win32' in platform:
+            return "long long"
+        else:
+            return "long"
     elif dtype == np.uint64 and platform_bits() == 64:
-        return "unsigned long"
+        if 'win32' in platform:
+            return "unsigned long long"
+        else:
+            return "unsigned long"
     elif dtype == np.int32:
         return "int"
     elif dtype == np.uint32:
@@ -446,6 +453,7 @@ def parse_c_arg(c_arg):
     tp = " ".join(tp.split())
 
     from pycuda.characterize import platform_bits
+    from sys import platform
 
     if tp == "float": dtype = np.float32
     elif tp == "double": dtype = np.float64
@@ -454,12 +462,12 @@ def parse_c_arg(c_arg):
     elif tp in ["int", "signed int"]: dtype = np.int32
     elif tp in ["unsigned", "unsigned int"]: dtype = np.uint32
     elif tp in ["long", "long int"]:
-        if platform_bits() == 64:
+        if platform_bits() == 64 and 'win32' not in platform:
             dtype = np.int64
         else:
             dtype = np.int32
     elif tp in ["unsigned long", "unsigned long int"]:
-        if platform_bits() == 64:
+        if platform_bits() == 64 and 'win32' not in platform:
             dtype = np.uint64
         else:
             dtype = np.uint32

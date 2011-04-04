@@ -117,7 +117,7 @@ namespace
       unsigned int width, unsigned int height, unsigned int access_size)
   {
     std::auto_ptr<device_allocation> da;
-    unsigned int pitch = mem_alloc_pitch(
+    Py_ssize_t pitch = mem_alloc_pitch(
         da, width, height, access_size);
     return py::make_tuple(
         handle_from_new_ptr(da.release()), pitch);
@@ -320,7 +320,7 @@ namespace
     
     CUDAPP_PRINT_CALL_TRACE("cuModuleLoadDataEx");
     CUresult cu_status_code; \
-    cu_status_code = cuModuleLoadDataEx(&mod, mod_buf, options.size(), 
+    cu_status_code = cuModuleLoadDataEx(&mod, mod_buf, unsigned int (options.size()), 
          const_cast<CUjit_option *>(&*options.begin()),
          const_cast<void **>(&*option_values.begin()));
 
@@ -350,7 +350,11 @@ namespace
 
   PyObject *device_allocation_to_long(device_allocation const &da)
   {
+#if defined(_WIN32) && defined(_WIN64)
+    return PyLong_FromUnsignedLongLong((CUdeviceptr) da);
+#else
     return PyLong_FromUnsignedLong((CUdeviceptr) da);
+#endif
   }
 
   // {{{ pagelocked memory <-> numpy
@@ -392,7 +396,7 @@ namespace
 
     py::handle<> result = py::handle<>(PyArray_NewFromDescr(
         &PyArray_Type, tp_descr,
-        dims.size(), &dims.front(), /*strides*/ NULL,
+        int(dims.size()), &dims.front(), /*strides*/ NULL,
         alloc->data(), ary_flags, /*obj*/NULL));
 
     py::handle<> alloc_py(handle_from_new_ptr(alloc.release()));
@@ -874,8 +878,8 @@ BOOST_PYTHON_MODULE(_driver)
       .DEF_SIMPLE_METHOD(param_set_texref)
 
       .DEF_SIMPLE_METHOD(launch)
-      .DEF_SIMPLE_METHOD(launch_grid)
-      .DEF_SIMPLE_METHOD(launch_grid_async)
+      .DEF_SIMPLE_METHOD_WITH_ARGS(launch_grid, ("grid_width", "grid_height"))
+      .DEF_SIMPLE_METHOD_WITH_ARGS(launch_grid_async, ("grid_width", "grid_height", "s"))
 
 #if CUDAPP_CUDA_VERSION >= 2020
       .DEF_SIMPLE_METHOD(get_attribute)

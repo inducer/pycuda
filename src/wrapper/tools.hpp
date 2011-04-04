@@ -15,10 +15,10 @@
 namespace pycuda
 {
   inline
-  npy_intp size_from_dims(int ndim, const npy_intp *dims)
+  npy_intp size_from_dims(size_t ndim, const npy_intp *dims)
   {
     if (ndim != 0)
-      return std::accumulate(dims, dims+ndim, 1, std::multiplies<npy_intp>());
+      return std::accumulate(dims, dims+ndim, npy_intp(1), std::multiplies<npy_intp>());
     else
       return 1;
   }
@@ -39,7 +39,7 @@ namespace pycuda
 
 
 
-  inline CUdeviceptr mem_alloc_gc(unsigned long bytes)
+  inline CUdeviceptr mem_alloc_gc(size_t bytes)
   {
     try
     {

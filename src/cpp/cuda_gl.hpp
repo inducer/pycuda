@@ -93,14 +93,14 @@ namespace pycuda { namespace gl {
     private:
       boost::shared_ptr<buffer_object> m_buffer_object;
       CUdeviceptr m_devptr;
-      unsigned int m_size;
+      size_t m_size;
       bool m_valid;
 
     public:
       buffer_object_mapping(
           boost::shared_ptr<buffer_object> bobj,
           CUdeviceptr devptr,
-          unsigned int size)
+          size_t size)
         : m_buffer_object(bobj), m_devptr(devptr), m_size(size), m_valid(true)
       { 
         PyErr_Warn(
@@ -134,7 +134,7 @@ namespace pycuda { namespace gl {
       CUdeviceptr device_ptr() const
       { return m_devptr; }
 
-      unsigned int size() const
+      size_t size() const
       { return m_size; }
   };
 

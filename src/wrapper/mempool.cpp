@@ -19,7 +19,7 @@ namespace
   {
     public:
       typedef CUdeviceptr pointer_type;
-      typedef unsigned long size_type;
+      typedef size_t size_type;
 
       pointer_type allocate(size_type s)
       {
@@ -53,7 +53,7 @@ namespace
 
     public:
       typedef void *pointer_type;
-      typedef unsigned int size_type;
+      typedef size_t size_type;
 
       host_allocator(unsigned flags=0)
         : m_flags(flags)
@@ -128,7 +128,11 @@ namespace
 
   PyObject *pooled_device_allocation_to_long(pooled_device_allocation const &da)
   {
+#if defined(_WIN32) && defined(_WIN64)
+    return PyLong_FromUnsignedLongLong(da.ptr());
+#else
     return PyLong_FromUnsignedLong(da.ptr());
+#endif
   }
 
 
@@ -166,7 +170,7 @@ namespace
         back_inserter(dims));
 
     std::auto_ptr<pooled_host_allocation> alloc(
-        new pooled_host_allocation(
+        new pooled_host_allocation( 
           pool, tp_descr->elsize*pycuda::size_from_dims(dims.size(), &dims.front())));
 
     NPY_ORDER order = PyArray_CORDER;
@@ -182,7 +186,7 @@ namespace
 
     py::handle<> result = py::handle<>(PyArray_NewFromDescr(
         &PyArray_Type, tp_descr,
-        dims.size(), &dims.front(), /*strides*/ NULL,
+        int(dims.size()), &dims.front(), /*strides*/ NULL,
         alloc->ptr(), flags, /*obj*/NULL));
 
     py::handle<> alloc_py(handle_from_new_ptr(alloc.release()));

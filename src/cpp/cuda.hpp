@@ -366,7 +366,11 @@ namespace pycuda
         return m_device != other.m_device;
       }
 
+#if defined(_WIN32) && defined(_WIN64)
+      long long hash() const
+#else
       long hash() const
+#endif
       {
         return m_device;
       }
@@ -494,10 +498,17 @@ namespace pycuda
         return m_context != other.m_context;
       }
 
+#if defined(_WIN32) && defined(_WIN64)
+      long long hash() const
+      {
+        return long long(m_context) ^ long long(this);
+      }
+#else
       long hash() const
       {
         return long(m_context) ^ long(this);
       }
+#endif
 
       boost::thread::id thread_id() const
       { return m_thread; }
@@ -1187,10 +1198,11 @@ namespace pycuda
         CUDAPP_CALL_GUARDED_WITH_TRACE_INFO(
           cuParamSetf, (m_function, offset, value), m_symbol);
       }
-      void param_setv(int offset, void *buf, unsigned long len)
+      void param_setv(int offset, void *buf, size_t len)
       {
+        // maybe the unsigned int will change, it does not seem right
         CUDAPP_CALL_GUARDED_WITH_TRACE_INFO(
-            cuParamSetv, (m_function, offset, buf, len), m_symbol);
+          cuParamSetv, (m_function, offset, buf, unsigned int(len)), m_symbol);
       }
       void param_set_texref(const texture_reference &tr)
       {
@@ -1254,7 +1266,7 @@ namespace pycuda
   }
 
   inline
-  CUdeviceptr mem_alloc(unsigned long bytes)
+  CUdeviceptr mem_alloc(size_t bytes)
   {
     CUdeviceptr devptr;
     CUDAPP_CALL_GUARDED(cuMemAlloc, (&devptr, bytes));
@@ -1320,7 +1332,7 @@ namespace pycuda
       { return m_devptr; }
   };
 
-  inline unsigned int mem_alloc_pitch(
+  inline Py_ssize_t mem_alloc_pitch(
       std::auto_ptr<device_allocation> &da,
         unsigned int width, unsigned int height, unsigned int access_size)
   {
@@ -1506,7 +1518,7 @@ namespace pycuda
   // }}}
 
   // {{{ host memory
-  inline void *mem_alloc_host(unsigned int size, unsigned flags=0)
+  inline void *mem_alloc_host(size_t size, unsigned flags=0)
   {
     void *m_data;
 #if CUDAPP_CUDA_VERSION >= 2020
@@ -1535,7 +1547,7 @@ namespace pycuda
       void *m_data;
 
     public:
-      host_allocation(unsigned bytesize, unsigned flags=0)
+      host_allocation(size_t bytesize, unsigned flags=0)
         : m_valid(true), m_data(mem_alloc_host(bytesize, flags))
       { }
 
