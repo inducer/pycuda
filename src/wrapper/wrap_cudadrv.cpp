@@ -604,7 +604,9 @@ BOOST_PYTHON_MODULE(_driver)
     .value("DEVICE_POINTER", CU_POINTER_ATTRIBUTE_DEVICE_POINTER)
     .value("HOST_POINTER", CU_POINTER_ATTRIBUTE_HOST_POINTER)
     ;
+#endif
 
+#if CUDAPP_CUDA_VERSION >= 4000 && !defined(__APPLE__)
   py::enum_<CUOutputMode>("profiler_output_mode")
     .value("KEY_VALUE_PAIR", CU_KEY_VALUE_PAIR)
     .value("CSV", CU_CSV)
@@ -1143,7 +1145,7 @@ BOOST_PYTHON_MODULE(_driver)
   // }}}
 
   // {{{ profiler control
-#if CUDAPP_CUDA_VERSION >= 4000
+#if CUDAPP_CUDA_VERSION >= 4000 && !defined(__APPLE__)
   DEF_SIMPLE_FUNCTION(initialize_profiler);
   DEF_SIMPLE_FUNCTION(start_profiler);
   DEF_SIMPLE_FUNCTION(stop_profiler);

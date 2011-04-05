@@ -1674,7 +1674,7 @@ namespace pycuda
   // }}}
 
   // {{{ profiler
-#if CUDAPP_CUDA_VERSION >= 4000
+#if CUDAPP_CUDA_VERSION >= 4000 && !defined(__APPLE__)
   inline void initialize_profiler(
       const char *config_file,
       const char *output_file,

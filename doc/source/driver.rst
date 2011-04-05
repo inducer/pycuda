@@ -1481,7 +1481,7 @@ Code on the Device: Modules and Functions
 Profiler Control
 ================
 
-CUDA 4.0 and newer.
+CUDA 4.0 and newer. Not available on OS X.
 
 ..versionadded:: 2011.1
 
