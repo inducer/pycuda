@@ -224,6 +224,8 @@ Acknowledgments
   failed to work on some Fermi chips. In addition, he provided
   a patch that updated PyCUDA's :ref:`gl-interop` to the state of
   CUDA 3.0.
+* Martin Bergtholdt of Philips Research provided a patch that made PyCUDA work
+  on 64-bit Windows 7.
 
 Licensing
 =========

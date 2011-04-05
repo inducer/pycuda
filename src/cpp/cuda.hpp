@@ -149,6 +149,14 @@ namespace pycuda
 #endif
         pycuda_size_t;
 
+  typedef 
+#if defined(_WIN32) && defined(_WIN64)
+    long long
+#else
+    long
+#endif
+    hash_type;
+
 
 
   // {{{ error reporting
@@ -366,11 +374,7 @@ namespace pycuda
         return m_device != other.m_device;
       }
 
-#if defined(_WIN32) && defined(_WIN64)
-      long long hash() const
-#else
-      long hash() const
-#endif
+      hash_type hash() const
       {
         return m_device;
       }
@@ -498,17 +502,10 @@ namespace pycuda
         return m_context != other.m_context;
       }
 
-#if defined(_WIN32) && defined(_WIN64)
-      long long hash() const
+      hash_type hash() const
       {
-        return long long(m_context) ^ long long(this);
+        return hash_type(m_context) ^ hash_type(this);
       }
-#else
-      long hash() const
-      {
-        return long(m_context) ^ long(this);
-      }
-#endif
 
       boost::thread::id thread_id() const
       { return m_thread; }
@@ -1202,7 +1199,7 @@ namespace pycuda
       {
         // maybe the unsigned int will change, it does not seem right
         CUDAPP_CALL_GUARDED_WITH_TRACE_INFO(
-          cuParamSetv, (m_function, offset, buf, unsigned int(len)), m_symbol);
+          cuParamSetv, (m_function, offset, buf, (unsigned int) len), m_symbol);
       }
       void param_set_texref(const texture_reference &tr)
       {
