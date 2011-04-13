@@ -473,7 +473,7 @@ def parse_c_arg(c_arg):
             dtype = np.uint32
     elif tp in ["short", "short int"]: dtype = np.int16
     elif tp in ["unsigned short", "unsigned short int"]: dtype = np.uint16
-    elif tp in ["char"]: dtype = np.int8
+    elif tp in ["char", "signed char"]: dtype = np.int8
     elif tp in ["unsigned char"]: dtype = np.uint8
     elif tp in ["bool"]: dtype = np.bool
     else:
