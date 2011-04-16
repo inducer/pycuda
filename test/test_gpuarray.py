@@ -671,6 +671,15 @@ class TestGPUArray:
 
                 assert (gpu_data.get() == desired_result).all()
 
+    @mark_cuda_test
+    def test_stride_preservation(self):
+        A = np.random.rand(3,3)
+        AT = A.T
+        print AT.flags.f_contiguous, AT.flags.c_contiguous
+        AT_GPU = gpuarray.to_gpu(AT)
+        print AT_GPU.flags.f_contiguous, AT_GPU.flags.c_contiguous
+        assert np.allclose(AT_GPU.get(),AT)
+
 
 
 
