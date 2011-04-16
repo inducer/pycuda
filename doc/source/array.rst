@@ -19,7 +19,7 @@ Vector Types
 The :class:`GPUArray` Array Class
 ---------------------------------
 
-.. class:: GPUArray(shape, dtype, allocator=None)
+.. class:: GPUArray(shape, dtype, *, allocator=None, order="C")
 
     A :class:`numpy.ndarray` work-alike that stores its data and performs its
     computations on the compute device.  *shape* and *dtype* work exactly as in
@@ -31,6 +31,8 @@ The :class:`GPUArray` Array Class
     :class:`int` representing the address of the newly allocated memory.
     Observe that both :func:`pycuda.driver.mem_alloc` and
     :meth:`pycuda.tools.DeviceMemoryPool.alloc` are a model of this interface.
+
+    All arguments beyond *allocator* should be considered keyword-only.
 
     .. attribute :: gpudata
 
@@ -60,6 +62,16 @@ The :class:`GPUArray` Array Class
 
         The size of the entire array in bytes. Computed as :attr:`size` times
         ``dtype.itemsize``.
+
+    .. attribute :: strides
+
+        Tuple of bytes to step in each dimension when traversing an array.
+
+    .. attribute :: flags
+
+        Return an object with attributes `c_contiguous`, `f_contiguous` and `forc`,
+        which may be used to query contiguity properties in analogy to
+        :attr:`numpy.ndarray.flags`.
 
     .. attribute :: ptr
 
@@ -225,11 +237,11 @@ Constructing :class:`GPUArray` Instances
 
     See :class:`GPUArray` for the meaning of *allocator*.
 
-.. function:: empty(shape, dtype)
+.. function:: empty(shape, dtype, *, allocator=None, order="C")
 
     A synonym for the :class:`GPUArray` constructor.
 
-.. function:: zeros(shape, dtype)
+.. function:: zeros(shape, dtype, *, allocator=None, order="C")
 
     Same as :func:`empty`, but the :class:`GPUArray` is zero-initialized before
     being returned.

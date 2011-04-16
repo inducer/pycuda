@@ -109,6 +109,48 @@ def splay(n, dev=None):
 def _get_common_dtype(obj1, obj2):
     return (obj1.dtype.type(0) + obj2.dtype.type(0)).dtype
 
+
+
+
+def _f_contiguous_strides(itemsize, shape):
+    if shape:
+        strides = [itemsize]
+        for s in shape[:-1]:
+            strides.append(strides[-1]*s)
+        return tuple(strides)
+    else:
+        return ()
+
+def _c_contiguous_strides(itemsize, shape):
+    if shape:
+        strides = [itemsize]
+        for s in shape[:0:-1]:
+            strides.append(strides[-1]*s)
+        return tuple(strides[::-1])
+    else:
+        return ()
+
+
+
+
+class _ArrayFlags:
+    def __init__(self, ary):
+        self.array = ary
+
+    @property
+    def f_contiguous(self):
+        return self.array.strides == _f_contiguous_strides(
+                self.array.dtype.itemsize, self.array.shape)
+
+    @property
+    def c_contiguous(self):
+        return self.array.strides == _c_contiguous_strides(
+                self.array.dtype.itemsize, self.array.shape)
+
+    @property
+    def forc(self):
+        return self.f_contiguous or self.c_contiguous
+
 # }}}
 
 # {{{ main GPUArray class
@@ -121,7 +163,9 @@ class GPUArray(object):
     """
 
     def __init__(self, shape, dtype, allocator=drv.mem_alloc,
-            base=None, gpudata=None):
+            base=None, gpudata=None, strides=None, order="C"):
+        dtype = np.dtype(dtype)
+
         try:
             s = 1
             for dim in shape:
@@ -131,9 +175,24 @@ class GPUArray(object):
             s = shape
             shape = (shape,)
 
-        self.shape = shape
-        self.dtype = np.dtype(dtype)
+        if strides is None:
+            if order == "F":
+                strides = _f_contiguous_strides(
+                        dtype.itemsize, shape)
+            elif order == "C":
+                strides = _c_contiguous_strides(
+                        dtype.itemsize, shape)
+            else:
+                raise ValueError("invalid order: %s" % order)
+        else:
+            # FIXME: We should possibly perform some plausibility
+            # checking on 'strides' here.
 
+            strides = tuple(strides)
+
+        self.shape = shape
+        self.dtype = dtype
+        self.strides = strides
         self.mem_size = self.size = s
         self.nbytes = self.dtype.itemsize * self.size
 
@@ -152,15 +211,30 @@ class GPUArray(object):
 
         self._grid, self._block = splay(self.mem_size)
 
+    @property
+    def flags(self):
+        return _ArrayFlags(self)
+
     def set(self, ary):
         assert ary.size == self.size
         assert ary.dtype == self.dtype
+
+        assert self.flags.forc
+        if not ary.flags.forc:
+            ary = ary.copy()
+
         if self.size:
             drv.memcpy_htod(self.gpudata, ary)
 
     def set_async(self, ary, stream=None):
         assert ary.size == self.size
         assert ary.dtype == self.dtype
+        assert self.flags.forc
+
+        if not ary.flags.forc:
+            raise RuntimeError("cannot asynchronously set from "
+                    "non-contiguous array")
+
         if self.size:
             drv.memcpy_htod_async(self.gpudata, ary, stream)
 
@@ -170,9 +244,16 @@ class GPUArray(object):
                 ary = drv.pagelocked_empty(self.shape, self.dtype)
             else:
                 ary = np.empty(self.shape, self.dtype)
+
+            from numpy.lib.stride_tricks import as_strided
+            ary = as_strided(ary, strides=self.strides)
         else:
             assert ary.size == self.size
             assert ary.dtype == self.dtype
+            assert ary.flags.forc
+
+        assert self.flags.forc, "Array in get() must be contiguous"
+
         if self.size:
             drv.memcpy_dtoh(ary, self.gpudata)
         return ary
@@ -180,9 +261,15 @@ class GPUArray(object):
     def get_async(self, stream=None, ary=None):
         if ary is None:
             ary = drv.pagelocked_empty(self.shape, self.dtype)
+
+            from numpy.lib.stride_tricks import as_strided
+            ary = as_strided(ary, strides=self.strides)
         else:
             assert ary.size == self.size
             assert ary.dtype == self.dtype
+            assert ary.flags.forc
+
+        assert self.flags.forc, "Array in get() must be contiguous"
 
         if self.size:
             drv.memcpy_dtoh_async(ary, self.gpudata, stream)
@@ -270,10 +357,15 @@ class GPUArray(object):
         return out
 
     def _new_like_me(self, dtype=None):
+        strides = None
         if dtype is None:
             dtype = self.dtype
+        else:
+            if dtype == self.dtype:
+                strides = self.strides
+
         return self.__class__(self.shape, dtype,
-                allocator=self.allocator)
+                allocator=self.allocator, strides=strides)
 
     # operators ---------------------------------------------------------------
     def mul_add(self, selffac, other, otherfac, add_timer=None, stream=None):
@@ -414,7 +506,9 @@ class GPUArray(object):
             allow_offset=False):
         if self.dtype == np.float64 and allow_double_hack:
             if channels != 1:
-                raise ValueError, "'fake' double precision textures can only have one channel"
+                raise ValueError(
+                        "'fake' double precision textures can "
+                        "only have one channel")
 
             channels = 2
             fmt = drv.array_format.SIGNED_INT32
@@ -686,22 +780,22 @@ class GPUArray(object):
 
 def to_gpu(ary, allocator=drv.mem_alloc):
     """converts a numpy array to a GPUArray"""
-    result = GPUArray(ary.shape, ary.dtype, allocator)
+    result = GPUArray(ary.shape, ary.dtype, allocator, strides=ary.strides)
     result.set(ary)
     return result
 
 def to_gpu_async(ary, allocator=drv.mem_alloc, stream=None):
     """converts a numpy array to a GPUArray"""
-    result = GPUArray(ary.shape, ary.dtype, allocator)
+    result = GPUArray(ary.shape, ary.dtype, allocator, strides=ary.strides)
     result.set_async(ary, stream)
     return result
 
 empty = GPUArray
 
-def zeros(shape, dtype, allocator=drv.mem_alloc):
+def zeros(shape, dtype, allocator=drv.mem_alloc, order="C"):
     """Returns an array of the given shape and dtype filled with 0's."""
 
-    result = GPUArray(shape, dtype, allocator)
+    result = GPUArray(shape, dtype, allocator, order=order)
     result.fill(0)
     return result
 
@@ -748,7 +842,7 @@ def arange(*args, **kwargs):
 
     argc = len(args)
     if argc == 0:
-        raise ValueError, "stop argument required"
+        raise ValueError("stop argument required")
     elif argc == 1:
         inf.stop = args[0]
     elif argc == 2:
@@ -759,7 +853,7 @@ def arange(*args, **kwargs):
         inf.stop = args[1]
         inf.step = args[2]
     else:
-        raise ValueError, "too many arguments"
+        raise ValueError("too many arguments")
 
     admissible_names = ["start", "stop", "step", "dtype"]
     for k, v in kwargs.iteritems():
@@ -769,9 +863,9 @@ def arange(*args, **kwargs):
                 if k == "dtype":
                     explicit_dtype = True
             else:
-                raise ValueError, "may not specify '%s' by position and keyword" % k
+                raise ValueError("may not specify '%s' by position and keyword" % k)
         else:
-            raise ValueError, "unexpected keyword argument '%s'" % k
+            raise ValueError("unexpected keyword argument '%s'" % k)
 
     if inf.start is None:
         inf.start = 0

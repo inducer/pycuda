@@ -17,6 +17,8 @@ Version 2011.1
 * Add vector types, see :class:`pycuda.gpuarray.vec`.
 * Add :mod:`pycuda.scan`.
 * Add support for new features in CUDA 4.0.
+* Add :attr:`pycuda.gpuarray.GPUArray.strides`, :attr:`pycuda.gpuarray.GPUArray.flags`.
+  Allow the creation of arrys in C and Fortran order.
 
 Version 0.94.2
 --------------
