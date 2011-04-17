@@ -125,7 +125,7 @@ Constants
         Keep local memory allocation after launch. CUDA 3.2 and newer.
         Rumored to decrease Fermi launch overhead?
 
-        ..versionadded:: 2011.1
+        .. versionadded:: 2011.1
 
     .. attribute:: FLAGS_MASK
 
@@ -255,7 +255,7 @@ Constants
 
         .. versionadded:: 0.94
 
-    .. attribute::MEMORY_CLOCK_RATE
+    .. attribute:: MEMORY_CLOCK_RATE
         GLOBAL_MEMORY_BUS_WIDTH
         L2_CACHE_SIZE
         MAX_THREADS_PER_MULTIPROCESSOR
@@ -268,7 +268,10 @@ Constants
 
 .. class:: pointer_attribute
 
-    .. attribute:: CONTEXT MEMORY_TYPE DEVICE_POINTER HOST_POINTER
+    .. attribute:: CONTEXT
+        MEMORY_TYPE
+        DEVICE_POINTER 
+        HOST_POINTER
 
     CUDA 4.0 and above.
 
@@ -276,7 +279,8 @@ Constants
 
 .. class:: profiler_output_mode
 
-    .. attribute:: KEY_VALUE_PAIR CSV
+    .. attribute:: KEY_VALUE_PAIR
+        CSV
 
     CUDA 4.0 and above.
 
@@ -767,6 +771,9 @@ Global Device Memory
 Pagelocked Host Memory
 ^^^^^^^^^^^^^^^^^^^^^^
 
+Pagelocked Allocation
+~~~~~~~~~~~~~~~~~~~~~
+
 .. function:: pagelocked_empty(shape, dtype, order="C", mem_flags=0)
 
     Allocate a pagelocked :class:`numpy.ndarray` of *shape*, *dtype* and *order*.
@@ -807,11 +814,14 @@ Pagelocked Host Memory
 The :class:`numpy.ndarray` instances returned by these functions
 have an attribute *base* that references an object of type
 
-.. class:: HostAllocation
+.. class:: PagelockedHostAllocation
+
+    Inherits from :class:`HostPointer`.
 
     An object representing an allocation of pagelocked
     host memory.  Once this object is deleted, its associated
     device memory is freed.
+
 
     .. method:: free()
 
@@ -820,13 +830,6 @@ have an attribute *base* that references an object of type
         associated :mod:`numpy` array) is an error
         and will lead to undefined behavior.
 
-    .. method:: get_device_pointer()
-
-        Return a device pointer that indicates the address at which
-        this memory is mapped into the device's address space.
-
-        Only available on CUDA 2.2 and newer.
-
     .. method:: get_flags()
 
         Return a bit field of values from :class:`host_alloc_flags`.
@@ -834,6 +837,113 @@ have an attribute *base* that references an object of type
         Only available on CUDA 3.2 and newer.
 
         .. versionadded:: 0.94
+
+.. class:: HostAllocation
+
+    A deprecated name for :class:`PagelockedHostAllocation`.
+
+Aligned Host Memory
+~~~~~~~~~~~~~~~~~~~
+
+.. function:: aligned_empty(shape, dtype, order="C", alignment=4096)
+
+    Allocate an :class:`numpy.ndarray` of *shape*, *dtype* and *order*,
+    with data aligned to *alignment* bytes
+
+    For the meaning of the other parameters, please refer to the :mod:`numpy`
+    documentation.
+
+    .. versionadded:: 2011.1
+
+.. function:: aligned_zeros(shape, dtype, order="C", alignment=4096)
+
+    Allocate an :class:`numpy.ndarray` of *shape*, *dtype* and *order*,
+    with data aligned to *alignment* bytes
+
+    For the meaning of the other parameters, please refer to the :mod:`numpy`
+    documentation.
+
+    .. versionadded:: 2011.1
+
+.. function:: aligned_empty_like(array, alignment=4096)
+
+    Allocate a :class:`numpy.ndarray` with the same shape, dtype and order
+    as *array*, with data aligned to *alignment* bytes.
+
+    .. versionadded:: 2011.1
+
+.. function:: aligned_zeros_like(array, alignment=4096)
+
+    Allocate a :class:`numpy.ndarray` with the same shape, dtype and order
+    as *array*, with data aligned to *alignment* bytes. Initialize it to 0.
+
+    .. versionadded:: 2011.1
+
+The :class:`numpy.ndarray` instances returned by these functions
+have an attribute *base* that references an object of type
+
+.. class:: AlignedHostAllocation
+
+    Inherits from :class:`HostPointer`.
+
+    An object representing an allocation of aligned
+    host memory.
+
+    .. method:: free()
+
+        Release the held memory now instead of when this object
+        becomes unreachable. Any further use of the object (or its
+        associated :mod:`numpy` array) is an error
+        and will lead to undefined behavior.
+
+Post-Allocation Pagelocking
+~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+.. function:: register_host_memory(ary, flags=0)
+
+    Returns a :class:`numpy.ndarray` which shares memory with *ary*.
+    This memory will be page-locked as long as the return value of
+    this function is alive.
+
+    The returned array's *base* attribute contains a
+    :class:`RegisteredHostMemory` function, whose *base* attribute
+    in turn contains *ary*.
+
+    CUDA 4.0 and newer.
+
+    *ary*'s data address and size must be page-aligned. One way to achieve this
+    is to use the functions from the preceding section.
+
+    .. versionadded:: 2011.1
+
+.. class:: RegisteredHostMemory
+
+    Inherits from :class:`HostPointer`.
+
+    CUDA 4.0 and newer.
+
+    .. versionadded:: 2011.1
+
+    .. method:: unregister()
+
+        Unregister the page-lock on the host memory held by this instance.
+        Note that this does not free the memory, it only frees the 
+        page-lock.
+
+    .. attribute:: base
+
+        Contains the Python object from which this instance was constructed.
+
+.. class:: HostPointer
+
+    Represents a page-locked host pointer.
+
+    .. method:: get_device_pointer()
+
+        Return a device pointer that indicates the address at which
+        this memory is mapped into the device's address space.
+
+        Only available on CUDA 2.2 and newer.
 
 Arrays and Textures
 ^^^^^^^^^^^^^^^^^^^
@@ -1469,14 +1579,20 @@ Profiler Control
 
 CUDA 4.0 and newer.
 
-..versionadded:: 2011.1
 
 .. function:: initialize_profiler(config_file, output_file, output_mode)
 
     *output_mode* is one of the attributes of :class:`profiler_output_mode`.
 
+    ..versionadded:: 2011.1
+
 .. function:: start_profiler()
+
+    ..versionadded:: 2011.1
+
 .. function:: stop()
+
+    ..versionadded:: 2011.1
 
 Just-in-time Compilation
 ========================

@@ -39,11 +39,12 @@
 #warning *****************************************************************
 #endif
 
-// TODO: cuCtxSetCurrent, cuCtxGetCurrent, cuMemHostRegister, cuMemHostUnregister
-// TODO: kuMemcpy, cuMemcpyPeer, cuMemcpyPeerAsync
+// TODO: cuMemcpy, cuMemcpyPeer, cuMemcpyPeerAsync
 // TODO: in structured memcpy: set_{src,dest}_unified()
 // TODO: cuPointerGetAttribute, cuLaunchKernel, deprecation of other launch functions
-// TODO: cuMemPeerRegister, cuMemPeerUnregister, cuMemPeerGetDevicePointer
+//
+// TODO: cuCtxSetCurrent, cuCtxGetCurrent 
+// (use once these functions have been removed from CUDA)
 
 
 
@@ -1543,43 +1544,55 @@ namespace pycuda
     CUDAPP_CALL_GUARDED_CLEANUP(cuMemFreeHost, (ptr));
   }
 
-
-
-
-  struct host_allocation : public boost::noncopyable, public context_dependent
+#if CUDAPP_CUDA_VERSION >= 4000
+  inline void *mem_host_register(void *ptr, size_t bytes, unsigned int flags=0)
   {
-    private:
+    CUDAPP_CALL_GUARDED(cuMemHostRegister, (ptr, bytes, flags));
+    return ptr;
+  }
+
+  inline void mem_host_unregister(void *ptr)
+  {
+    CUDAPP_CALL_GUARDED_CLEANUP(cuMemHostUnregister, (ptr));
+  }
+#endif
+
+  inline void *aligned_malloc(size_t size, size_t alignment)
+  {
+    // alignment must be a power of two.
+    if ((alignment & (alignment - 1)) != 0)
+      throw pycuda::error("host_allocation::free", CUDA_ERROR_INVALID_VALUE,
+          "alignment must be a power of two");
+
+    void *p = malloc(size + (alignment - 1));
+    return (void *)((((ptrdiff_t)(p)) + (alignment-1)) & -alignment);
+  }
+
+
+
+  struct host_pointer : public boost::noncopyable, public context_dependent
+  {
+    protected:
       bool m_valid;
       void *m_data;
 
     public:
-      host_allocation(size_t bytesize, unsigned flags=0)
-        : m_valid(true), m_data(mem_alloc_host(bytesize, flags))
+      host_pointer()
+        : m_valid(false)
       { }
 
-      ~host_allocation()
+      host_pointer(void *ptr)
+        : m_valid(true), m_data(ptr)
+      { }
+
+      virtual ~host_pointer()
       {
         if (m_valid)
           free();
       }
 
-      void free()
-      {
-        if (m_valid)
-        {
-          try
-          {
-            scoped_context_activation ca(get_context());
-            mem_free_host(m_data);
-          }
-          CUDAPP_CATCH_CLEANUP_ON_DEAD_CONTEXT(host_allocation);
-
-          release_context();
-          m_valid = false;
-        }
-        else
-          throw pycuda::error("host_allocation::free", CUDA_ERROR_INVALID_HANDLE);
-      }
+      virtual void free()
+      { }
 
       void *data()
       { return m_data; }
@@ -1593,6 +1606,33 @@ namespace pycuda
       }
 #endif
 
+  };
+
+  struct pagelocked_host_allocation : public host_pointer
+  {
+    public:
+      pagelocked_host_allocation(size_t bytesize, unsigned flags=0)
+        : host_pointer(mem_alloc_host(bytesize, flags))
+      { }
+
+      void free()
+      {
+        if (m_valid)
+        {
+          try
+          {
+            scoped_context_activation ca(get_context());
+            mem_free_host(m_data);
+          }
+          CUDAPP_CATCH_CLEANUP_ON_DEAD_CONTEXT(pagelocked_host_allocation);
+
+          release_context();
+          m_valid = false;
+        }
+        else
+          throw pycuda::error("pagelocked_host_allocation::free", CUDA_ERROR_INVALID_HANDLE);
+      }
+
 #if CUDAPP_CUDA_VERSION >= 3020
       unsigned int get_flags()
       {
@@ -1601,8 +1641,63 @@ namespace pycuda
         return flags;
       }
 #endif
-
   };
+
+  struct aligned_host_allocation : public host_pointer
+  {
+    public:
+      aligned_host_allocation(size_t size, size_t alignment)
+        : host_pointer(aligned_malloc(size, alignment))
+      { }
+
+      void free()
+      {
+        if (m_valid)
+        {
+          ::free(m_data);
+        }
+        else
+          throw pycuda::error("aligned_host_allocation::free", CUDA_ERROR_INVALID_HANDLE);
+      }
+  };
+
+#if CUDAPP_CUDA_VERSION >= 4000
+  struct registered_host_memory : public host_pointer
+  {
+    private:
+      py::object m_base;
+
+    public:
+      registered_host_memory(void *p, size_t bytes, unsigned int flags=0, 
+          py::object base=py::object())
+        : host_pointer(mem_host_register(p, bytes, flags)), m_base(base)
+      {
+      }
+
+      void free()
+      {
+        if (m_valid)
+        {
+          try
+          {
+            scoped_context_activation ca(get_context());
+            mem_host_unregister(m_data);
+          }
+          CUDAPP_CATCH_CLEANUP_ON_DEAD_CONTEXT(host_allocation);
+
+          release_context();
+          m_valid = false;
+        }
+        else
+          throw pycuda::error("registered_host_memory::free", CUDA_ERROR_INVALID_HANDLE);
+      }
+
+      py::object base() const
+      {
+        return m_base;
+      }
+  };
+#endif
 
   // }}}
 

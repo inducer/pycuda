@@ -357,10 +357,11 @@ namespace
 #endif
   }
 
-  // {{{ pagelocked memory <-> numpy
+  // {{{ special host memory <-> numpy
 
-  py::handle<> pagelocked_empty(py::object shape, py::object dtype, 
-      py::object order_py, unsigned mem_flags)
+  template <class Allocation>
+  py::handle<> numpy_empty(py::object shape, py::object dtype, 
+      py::object order_py, unsigned par1)
   {
     PyArray_Descr *tp_descr;
     if (PyArray_DescrConverter(dtype.ptr(), &tp_descr) != NPY_SUCCEED)
@@ -377,10 +378,10 @@ namespace
           py::stl_input_iterator<npy_intp>(),
           back_inserter(dims));
 
-    std::auto_ptr<host_allocation> alloc(
-        new host_allocation(
+    std::auto_ptr<Allocation> alloc(
+        new Allocation(
           tp_descr->elsize*pycuda::size_from_dims(dims.size(), &dims.front()),
-          mem_flags)
+          par1)
         );
 
     NPY_ORDER order = PyArray_CORDER;
@@ -392,7 +393,8 @@ namespace
     else if (order == PyArray_CORDER)
       ary_flags |= NPY_CARRAY;
     else
-      throw std::runtime_error("unrecognized order specifier");
+      throw pycuda::error("numpy_empty", CUDA_ERROR_INVALID_VALUE,
+          "unrecognized order specifier");
 
     py::handle<> result = py::handle<>(PyArray_NewFromDescr(
         &PyArray_Type, tp_descr,
@@ -405,6 +407,36 @@ namespace
 
     return result;
   }
+
+#if CUDAPP_CUDA_VERSION >= 4000
+  py::handle<> register_host_memory(py::object ary, unsigned flags)
+  {
+    if (!PyArray_Check(ary.ptr()))
+      throw pycuda::error("register_host_memory", CUDA_ERROR_INVALID_VALUE,
+          "ary argument is not a numpy array");
+
+    if (!PyArray_ISCONTIGUOUS(ary.ptr()))
+      throw pycuda::error("register_host_memory", CUDA_ERROR_INVALID_VALUE,
+          "ary argument is not contiguous");
+
+    std::auto_ptr<registered_host_memory> regmem(
+        new registered_host_memory(
+          PyArray_DATA(ary.ptr()), PyArray_SIZE(ary.ptr()), flags, ary));
+
+    PyObject *new_array_ptr = PyArray_FromInterface(ary.ptr());
+    if (new_array_ptr == Py_NotImplemented)
+      throw pycuda::error("register_host_memory", CUDA_ERROR_INVALID_VALUE,
+          "ary argument does not expose array interface");
+
+    py::handle<> result(new_array_ptr);
+
+    py::handle<> regmem_py(handle_from_new_ptr(regmem.release()));
+    PyArray_BASE(result.get()) = regmem_py.get();
+    Py_INCREF(regmem_py.get());
+
+    return result;
+  }
+#endif
 
   // }}}
 
@@ -888,6 +920,16 @@ BOOST_PYTHON_MODULE(_driver)
   // {{{ pointer holder
 
   {
+    typedef pointer_holder_base cl;
+    py::class_<pointer_holder_base_wrap, boost::noncopyable>(
+        "PointerHolderBase")
+      .def("get_pointer", py::pure_virtual(&cl::get_pointer))
+      ;
+
+    py::implicitly_convertible<pointer_holder_base, CUdeviceptr>();
+  }
+
+  {
     typedef device_allocation cl;
     py::class_<cl, boost::noncopyable>("DeviceAllocation", py::no_init)
       .def("__int__", &cl::operator CUdeviceptr)
@@ -900,28 +942,66 @@ BOOST_PYTHON_MODULE(_driver)
 
   // }}}
 
-  {
-    typedef pointer_holder_base cl;
-    py::class_<pointer_holder_base_wrap, boost::noncopyable>(
-        "PointerHolderBase")
-      .def("get_pointer", py::pure_virtual(&cl::get_pointer))
-      ;
-
-    py::implicitly_convertible<pointer_holder_base, CUdeviceptr>();
-  }
+  // {{{ host memory
 
   {
-    typedef host_allocation cl;
-    py::class_<cl, boost::noncopyable>("HostAllocation", py::no_init)
-      .DEF_SIMPLE_METHOD(free)
+    typedef host_pointer cl;
+    py::class_<cl, boost::noncopyable>("HostPointer", py::no_init)
 #if CUDAPP_CUDA_VERSION >= 2020
       .DEF_SIMPLE_METHOD(get_device_pointer)
 #endif
+      ;
+  }
+
+  {
+    typedef pagelocked_host_allocation cl;
+    py::class_<cl, boost::noncopyable, py::bases<host_pointer> > wrp(
+        "PagelockedHostAllocation", py::no_init);
+
+    wrp
+      .DEF_SIMPLE_METHOD(free)
 #if CUDAPP_CUDA_VERSION >= 3020
       .DEF_SIMPLE_METHOD(get_flags)
 #endif
       ;
+    py::scope().attr("HostAllocation") = wrp;
   }
+
+
+  {
+    typedef aligned_host_allocation cl;
+    py::class_<cl, boost::noncopyable, py::bases<host_pointer> > wrp(
+        "AlignedHostAllocation", py::no_init);
+
+    wrp
+      .DEF_SIMPLE_METHOD(free)
+      ;
+  }
+
+#if CUDAPP_CUDA_VERSION >= 4000
+  {
+    typedef registered_host_memory cl;
+    py::class_<cl, boost::noncopyable, py::bases<host_pointer> >(
+        "RegisteredHostMemory", py::no_init)
+      .def("unregister", &cl::free)
+      ;
+  }
+#endif
+
+  py::def("pagelocked_empty", numpy_empty<pagelocked_host_allocation>,
+      (py::arg("shape"), py::arg("dtype"), py::arg("order")="C",
+       py::arg("mem_flags")=0));
+
+  py::def("aligned_empty", numpy_empty<aligned_host_allocation>,
+      (py::arg("shape"), py::arg("dtype"),
+       py::arg("order")="C", py::arg("alignment")=4096));
+
+#if CUDAPP_CUDA_VERSION >= 4000
+  py::def("register_host_memory", register_host_memory,
+      (py::arg("ary"), py::arg("flags")=0));
+#endif
+
+  // }}}
 
   DEF_SIMPLE_FUNCTION(mem_get_info);
   py::def("mem_alloc", mem_alloc_wrap, 
@@ -1041,10 +1121,6 @@ BOOST_PYTHON_MODULE(_driver)
   }
 #endif
   // }}}
-
-  py::def("pagelocked_empty", pagelocked_empty,
-      (py::arg("shape"), py::arg("dtype"), py::arg("order")="C",
-       py::arg("mem_flags")=0));
 
   // {{{ event
   {
