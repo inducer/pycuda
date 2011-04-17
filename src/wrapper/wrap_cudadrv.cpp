@@ -474,9 +474,6 @@ BOOST_PYTHON_MODULE(_driver)
 #if CUDAPP_CUDA_VERSION >= 3020
     .value("LMEM_RESIZE_TO_MAX", CU_CTX_LMEM_RESIZE_TO_MAX)
 #endif
-#if CUDAPP_CUDA_VERSION >= 4000
-    .value("PRIMARY", CU_CTX_PRIMARY)
-#endif
     .value("FLAGS_MASK", CU_CTX_FLAGS_MASK)
     ;
 #endif
@@ -610,10 +607,10 @@ BOOST_PYTHON_MODULE(_driver)
     ;
 #endif
 
-#if CUDAPP_CUDA_VERSION >= 4000 && !defined(__APPLE__)
-  py::enum_<CUOutputMode>("profiler_output_mode")
-    .value("KEY_VALUE_PAIR", CU_KEY_VALUE_PAIR)
-    .value("CSV", CU_CSV)
+#if CUDAPP_CUDA_VERSION >= 4000
+  py::enum_<CUoutput_mode>("profiler_output_mode")
+    .value("KEY_VALUE_PAIR", CU_OUT_KEY_VALUE_PAIR)
+    .value("CSV", CU_OUT_CSV)
     ;
 #endif
 
@@ -708,10 +705,6 @@ BOOST_PYTHON_MODULE(_driver)
     py::class_<mem_host_register_flags> cls("mem_host_register_flags", py::no_init);
     cls.attr("PORTABLE") = CU_MEMHOSTREGISTER_PORTABLE;
     cls.attr("DEVICEMAP") = CU_MEMHOSTREGISTER_DEVICEMAP;
-  }
-  {
-    py::class_<mem_peer_register_flags> cls("mem_peer_register_flags", py::no_init);
-    cls.attr("DEVICEMAP") = CU_MEMPEERREGISTER_DEVICEMAP;
   }
 #endif
 
@@ -1149,7 +1142,7 @@ BOOST_PYTHON_MODULE(_driver)
   // }}}
 
   // {{{ profiler control
-#if CUDAPP_CUDA_VERSION >= 4000 && !defined(__APPLE__)
+#if CUDAPP_CUDA_VERSION >= 4000
   DEF_SIMPLE_FUNCTION(initialize_profiler);
   DEF_SIMPLE_FUNCTION(start_profiler);
   DEF_SIMPLE_FUNCTION(stop_profiler);

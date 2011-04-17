@@ -10,6 +10,17 @@
 
 
 #include <cuda.h>
+
+#ifdef CUDAPP_PRETEND_CUDA_VERSION
+#define CUDAPP_CUDA_VERSION CUDAPP_PRETEND_CUDA_VERSION
+#else
+#define CUDAPP_CUDA_VERSION CUDA_VERSION
+#endif
+
+#if CUDAPP_CUDA_VERSION >= 4000
+#include <cudaProfiler.h>
+#endif
+
 #include <stdexcept>
 #include <boost/shared_ptr.hpp>
 #include <boost/foreach.hpp>
@@ -29,7 +40,7 @@
 #endif
 
 // TODO: cuCtxSetCurrent, cuCtxGetCurrent, cuMemHostRegister, cuMemHostUnregister
-// TODO: cuMemcpy, cuMemcpyPeer, cuMemcpyPeerAsync
+// TODO: kuMemcpy, cuMemcpyPeer, cuMemcpyPeerAsync
 // TODO: in structured memcpy: set_{src,dest}_unified()
 // TODO: cuPointerGetAttribute, cuLaunchKernel, deprecation of other launch functions
 // TODO: cuMemPeerRegister, cuMemPeerUnregister, cuMemPeerGetDevicePointer
@@ -268,8 +279,6 @@ namespace pycuda
 #if CUDAPP_CUDA_VERSION >= 4000
           case CUDA_ERROR_PEER_ACCESS_ALREADY_ENABLED: return "peer access already enabled";
           case CUDA_ERROR_PEER_ACCESS_NOT_ENABLED: return "peer access not enabled";
-          case CUDA_ERROR_PEER_MEMORY_ALREADY_REGISTERED: return "peer memory already registered";
-          case CUDA_ERROR_PEER_MEMORY_NOT_REGISTERED: return "peer memory not registered";
           case CUDA_ERROR_PRIMARY_CONTEXT_ACTIVE: return "primary context active";
           case CUDA_ERROR_CONTEXT_IS_DESTROYED: return "context is destroyed";
 #endif
@@ -1683,11 +1692,11 @@ namespace pycuda
   // }}}
 
   // {{{ profiler
-#if CUDAPP_CUDA_VERSION >= 4000 && !defined(__APPLE__)
+#if CUDAPP_CUDA_VERSION >= 4000
   inline void initialize_profiler(
       const char *config_file,
       const char *output_file,
-      CUOutputMode output_mode)
+      CUoutput_mode output_mode)
   {
     CUDAPP_CALL_GUARDED(cuProfilerInitialize, (config_file, output_file, output_mode));
   }

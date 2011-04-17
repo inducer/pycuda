@@ -127,12 +127,6 @@ Constants
 
         ..versionadded:: 2011.1
 
-    .. attribute:: PRIMARY
-
-        Initialize and return the primary context. CUDA 4.0 and newer.
-
-        ..versionadded:: 2011.1
-
     .. attribute:: FLAGS_MASK
 
         Mask of valid flags in this bitfield.
@@ -441,14 +435,6 @@ Constants
 .. class:: mem_host_register_flags
 
     .. attribute:: PORTABLE
-    .. attribute:: DEVICEMAP
-
-    CUDA 4.0 and newer.
-
-    .. versionadded:: 2011.1
-
-.. class:: mem_peer_register_flags
-
     .. attribute:: DEVICEMAP
 
     CUDA 4.0 and newer.
@@ -1481,7 +1467,7 @@ Code on the Device: Modules and Functions
 Profiler Control
 ================
 
-CUDA 4.0 and newer. Not available on OS X.
+CUDA 4.0 and newer.
 
 ..versionadded:: 2011.1
 
