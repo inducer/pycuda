@@ -9,6 +9,12 @@ Version 2011.1
     This version is the current development version. You can get it from
     PyCUDA's version control repository.
 
+When you update code to run on this version of PyCUDA, please make sure
+to have deprecation warnings enabled, so that you know when your code needs
+updating. (See 
+`the Python docs <http://docs.python.org/dev/whatsnew/2.7.html#the-future-for-python-2-x>`_.
+Caution: As of Python 2.7, deprecation warnings are disabled by default.)
+
 * Add support for CUDA 3.0-style OpenGL interop. (thanks to Tomasz Rybak)
 * Add :meth:`pycuda.driver.Stream.wait_for_event`.
 * Add *range* and *slice* keyword argument to :meth:`pycuda.elementwise.ElementwiseKernel.__call__`.
@@ -19,6 +25,7 @@ Version 2011.1
 * Add support for new features in CUDA 4.0.
 * Add :attr:`pycuda.gpuarray.GPUArray.strides`, :attr:`pycuda.gpuarray.GPUArray.flags`.
   Allow the creation of arrys in C and Fortran order.
+* Adopt stateless launch interface from CUDA, deprecate old one.
 
 Version 0.94.2
 --------------

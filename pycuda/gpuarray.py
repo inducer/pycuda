@@ -295,14 +295,13 @@ class GPUArray(object):
         assert self.shape == other.shape
 
         func = elementwise.get_axpbyz_kernel(self.dtype, other.dtype, out.dtype)
-        func.set_block_shape(*self._block)
 
         if add_timer is not None:
             add_timer(3*self.size, func.prepared_timed_call(self._grid,
                 selffac, self.gpudata, otherfac, other.gpudata,
                 out.gpudata, self.mem_size))
         else:
-            func.prepared_async_call(self._grid, stream,
+            func.prepared_async_call(self._grid, self._block, stream,
                     selffac, self.gpudata, otherfac, other.gpudata,
                     out.gpudata, self.mem_size)
 
@@ -311,8 +310,7 @@ class GPUArray(object):
     def _axpbz(self, selffac, other, out, stream=None):
         """Compute ``out = selffac * self + other``, where `other` is a scalar."""
         func = elementwise.get_axpbz_kernel(self.dtype)
-        func.set_block_shape(*self._block)
-        func.prepared_async_call(self._grid, stream,
+        func.prepared_async_call(self._grid, self._block, stream,
                 selffac, self.gpudata,
                 other, out.gpudata, self.mem_size)
 
@@ -320,8 +318,7 @@ class GPUArray(object):
 
     def _elwise_multiply(self, other, out, stream=None):
         func = elementwise.get_multiply_kernel(self.dtype, other.dtype, out.dtype)
-        func.set_block_shape(*self._block)
-        func.prepared_async_call(self._grid, stream,
+        func.prepared_async_call(self._grid, self._block, stream,
                 self.gpudata, other.gpudata,
                 out.gpudata, self.mem_size)
 
@@ -336,8 +333,7 @@ class GPUArray(object):
         assert self.dtype == np.float32
 
         func = elementwise.get_rdivide_elwise_kernel(self.dtype)
-        func.set_block_shape(*self._block)
-        func.prepared_async_call(self._grid, stream,
+        func.prepared_async_call(self._grid, self._block, stream,
                 self.gpudata, other,
                 out.gpudata, self.mem_size)
 
@@ -349,8 +345,7 @@ class GPUArray(object):
         assert self.shape == other.shape
 
         func = elementwise.get_divide_kernel(self.dtype, other.dtype, out.dtype)
-        func.set_block_shape(*self._block)
-        func.prepared_async_call(self._grid, stream,
+        func.prepared_async_call(self._grid, self._block, stream,
                 self.gpudata, other.gpudata,
                 out.gpudata, self.mem_size)
 
@@ -473,8 +468,7 @@ class GPUArray(object):
             result = self._new_like_me(_get_common_dtype(self, other))
 
             func = elementwise.get_divide_kernel()
-            func.set_block_shape(*self._block)
-            func.prepared_async_call(self._grid, None,
+            func.prepared_async_call(self._grid, self._block, None,
                     other.gpudata, self.gpudata, result.gpudata,
                     self.mem_size)
 
@@ -492,8 +486,7 @@ class GPUArray(object):
     def fill(self, value, stream=None):
         """fills the array with the specified value"""
         func = elementwise.get_fill_kernel(self.dtype)
-        func.set_block_shape(*self._block)
-        func.prepared_async_call(self._grid, stream,
+        func.prepared_async_call(self._grid, self._block, stream,
                 value, self.gpudata, self.mem_size)
 
         return self
@@ -547,8 +540,7 @@ class GPUArray(object):
             fname = "abs"
 
         func = elementwise.get_unary_func_kernel(fname, self.dtype)
-        func.set_block_shape(*self._block)
-        func.prepared_async_call(self._grid, None,
+        func.prepared_async_call(self._grid, self._block, None,
                 self.gpudata,result.gpudata, self.mem_size)
 
         return result
@@ -571,8 +563,7 @@ class GPUArray(object):
             func = elementwise.get_pow_array_kernel(
                     self.dtype, other.dtype, result.dtype)
 
-            func.set_block_shape(*self._block)
-            func.prepared_async_call(self._grid, None,
+            func.prepared_async_call(self._grid, self._block, None,
                     self.gpudata, other.gpudata, result.gpudata,
                     self.mem_size)
 
@@ -580,8 +571,7 @@ class GPUArray(object):
         else:
             result = self._new_like_me()
             func = elementwise.get_pow_kernel(self.dtype)
-            func.set_block_shape(*self._block)
-            func.prepared_async_call(self._grid, None,
+            func.prepared_async_call(self._grid, self._block, None,
                     other, self.gpudata, result.gpudata,
                     self.mem_size)
 
@@ -595,8 +585,7 @@ class GPUArray(object):
         result = self._new_like_me()
 
         func = elementwise.get_reverse_kernel(self.dtype)
-        func.set_block_shape(*self._block)
-        func.prepared_async_call(self._grid, stream,
+        func.prepared_async_call(self._grid, self._block, stream,
                 self.gpudata, result.gpudata,
                 self.mem_size)
 
@@ -609,8 +598,7 @@ class GPUArray(object):
         result = self._new_like_me(dtype=dtype)
 
         func = elementwise.get_copy_kernel(dtype, self.dtype)
-        func.set_block_shape(*self._block)
-        func.prepared_async_call(self._grid, stream,
+        func.prepared_async_call(self._grid, self._block, stream,
                 result.gpudata, self.gpudata,
                 self.mem_size)
 
@@ -652,8 +640,7 @@ class GPUArray(object):
             result = self._new_like_me(dtype=real_dtype)
 
             func = elementwise.get_real_kernel(dtype, real_dtype)
-            func.set_block_shape(*self._block)
-            func.prepared_async_call(self._grid, None,
+            func.prepared_async_call(self._grid, self._block, None,
                     self.gpudata, result.gpudata,
                     self.mem_size)
 
@@ -671,8 +658,7 @@ class GPUArray(object):
             result = self._new_like_me(dtype=real_dtype)
 
             func = elementwise.get_imag_kernel(dtype, real_dtype)
-            func.set_block_shape(*self._block)
-            func.prepared_async_call(self._grid, None,
+            func.prepared_async_call(self._grid, self._block, None,
                     self.gpudata, result.gpudata,
                     self.mem_size)
 
@@ -686,8 +672,7 @@ class GPUArray(object):
             result = self._new_like_me()
 
             func = elementwise.get_conj_kernel(dtype)
-            func.set_block_shape(*self._block)
-            func.prepared_async_call(self._grid, None,
+            func.prepared_async_call(self._grid, self._block, None,
                     self.gpudata, result.gpudata,
                     self.mem_size)
 
@@ -702,8 +687,7 @@ class GPUArray(object):
         result = self._new_like_me()
 
         func = elementwise.get_eq_kernel(self.dtype, other.dtype, result.dtype)
-        func.set_block_shape(*self._block)
-        func.prepared_async_call(self._grid, None,
+        func.prepared_async_call(self._grid, self._block, None,
                 self.gpudata, other.gpudata, result.gpudata,
                 self.mem_size)
 
@@ -715,8 +699,7 @@ class GPUArray(object):
         result = self._new_like_me()
 
         func = elementwise.get_ne_kernel(self.dtype, other.dtype, result.dtype)
-        func.set_block_shape(*self._block)
-        func.prepared_async_call(self._grid, None,
+        func.prepared_async_call(self._grid, self._block, None,
                 self.gpudata, other.gpudata, result.gpudata,
                 self.mem_size)
 
@@ -728,8 +711,7 @@ class GPUArray(object):
         result = self._new_like_me()
 
         func = elementwise.get_le_kernel(self.dtype, other.dtype, result.dtype)
-        func.set_block_shape(*self._block)
-        func.prepared_async_call(self._grid, None,
+        func.prepared_async_call(self._grid, self._block, None,
                 self.gpudata, other.gpudata, result.gpudata,
                 self.mem_size)
 
@@ -741,8 +723,7 @@ class GPUArray(object):
         result = self._new_like_me()
 
         func = elementwise.get_ge_kernel(self.dtype, other.dtype, result.dtype)
-        func.set_block_shape(*self._block)
-        func.prepared_async_call(self._grid, None,
+        func.prepared_async_call(self._grid, self._block, None,
                 self.gpudata, other.gpudata, result.gpudata,
                 self.mem_size)
 
@@ -754,8 +735,7 @@ class GPUArray(object):
         result = self._new_like_me()
 
         func = elementwise.get_lt_kernel(self.dtype, other.dtype, result.dtype)
-        func.set_block_shape(*self._block)
-        func.prepared_async_call(self._grid, None,
+        func.prepared_async_call(self._grid, self._block, None,
                 self.gpudata, other.gpudata, result.gpudata,
                 self.mem_size)
 
@@ -767,8 +747,7 @@ class GPUArray(object):
         result = self._new_like_me()
 
         func = elementwise.get_gt_kernel(self.dtype, other.dtype, result.dtype)
-        func.set_block_shape(*self._block)
-        func.prepared_async_call(self._grid, None,
+        func.prepared_async_call(self._grid, self._block, None,
                 self.gpudata, other.gpudata, result.gpudata,
                 self.mem_size)
 
@@ -891,8 +870,7 @@ def arange(*args, **kwargs):
     result = GPUArray((size,), dtype)
 
     func = elementwise.get_arange_kernel(dtype)
-    func.set_block_shape(*result._block)
-    func.prepared_async_call(result._grid, kwargs.get("stream"),
+    func.prepared_async_call(result._grid, result._block, kwargs.get("stream"),
             result.gpudata, start, step, size)
 
     return result
@@ -910,8 +888,7 @@ def take(a, indices, out=None, stream=None):
     func, tex_src = elementwise.get_take_kernel(a.dtype, indices.dtype)
     a.bind_to_texref_ext(tex_src[0], allow_double_hack=True)
 
-    func.set_block_shape(*out._block)
-    func.prepared_async_call(out._grid, stream,
+    func.prepared_async_call(out._grid, out._block, stream,
             indices.gpudata, out.gpudata, indices.size)
 
     return out
@@ -941,10 +918,8 @@ def multi_take(arrays, indices, out=None, stream=None):
     chunk_size = _builtin_min(vec_count, 20)
 
     def make_func_for_chunk_size(chunk_size):
-        func, tex_src = elementwise.get_take_kernel(a_dtype, indices.dtype,
+        return elementwise.get_take_kernel(a_dtype, indices.dtype,
                 vec_count=chunk_size)
-        func.set_block_shape(*indices._block)
-        return func, tex_src
 
     func, tex_src = make_func_for_chunk_size(chunk_size)
 
@@ -957,7 +932,7 @@ def multi_take(arrays, indices, out=None, stream=None):
         for i, a in enumerate(arrays[chunk_slice]):
             a.bind_to_texref_ext(tex_src[i], allow_double_hack=True)
 
-        func.prepared_async_call(indices._grid, stream,
+        func.prepared_async_call(indices._grid, indices._block, stream,
                 indices.gpudata,
                 *([o.gpudata for o in out[chunk_slice]]
                     + [indices.size]))
@@ -1008,13 +983,10 @@ def multi_take_put(arrays, dest_indices, src_indices, dest_shape=None,
     chunk_size = _builtin_min(vec_count, max_chunk_size)
 
     def make_func_for_chunk_size(chunk_size):
-        func, tex_src = elementwise.get_take_put_kernel(
+        return elementwise.get_take_put_kernel(
                 a_dtype, src_indices.dtype,
                 with_offsets=src_offsets is not None,
                 vec_count=chunk_size)
-
-        func.set_block_shape(*src_indices._block)
-        return func, tex_src
 
     func, tex_src = make_func_for_chunk_size(chunk_size)
 
@@ -1027,7 +999,7 @@ def multi_take_put(arrays, dest_indices, src_indices, dest_shape=None,
         for src_tr, a in zip(tex_src, arrays[chunk_slice]):
             a.bind_to_texref_ext(src_tr, allow_double_hack=True)
 
-        func.prepared_async_call(src_indices._grid, stream,
+        func.prepared_async_call(src_indices._grid,  src_indices._block, stream,
                 dest_indices.gpudata, src_indices.gpudata,
                 *([o.gpudata for o in out[chunk_slice]]
                     + src_offsets_list[chunk_slice]
@@ -1063,10 +1035,8 @@ def multi_put(arrays, dest_indices, dest_shape=None, out=None, stream=None):
     chunk_size = _builtin_min(vec_count, 10)
 
     def make_func_for_chunk_size(chunk_size):
-        func = elementwise.get_put_kernel(
+        return elementwise.get_put_kernel(
                 a_dtype, dest_indices.dtype, vec_count=chunk_size)
-        func.set_block_shape(*dest_indices._block)
-        return func
 
     func = make_func_for_chunk_size(chunk_size)
 
@@ -1076,7 +1046,7 @@ def multi_put(arrays, dest_indices, dest_shape=None, out=None, stream=None):
         if start_i + chunk_size > vec_count:
             func = make_func_for_chunk_size(vec_count-start_i)
 
-        func.prepared_async_call(dest_indices._grid, stream,
+        func.prepared_async_call(dest_indices._grid, dest_indices._block, stream,
                 dest_indices.gpudata,
                 *([o.gpudata for o in out[chunk_slice]]
                     + [i.gpudata for i in arrays[chunk_slice]]
@@ -1101,8 +1071,7 @@ def if_positive(criterion, then_, else_, out=None, stream=None):
     if out is None:
         out = empty_like(then_)
 
-    func.set_block_shape(*criterion._block)
-    func.prepared_async_call(criterion._grid, stream,
+    func.prepared_async_call(criterion._grid, criterion._block, stream,
             criterion.gpudata, then_.gpudata, else_.gpudata, out.gpudata,
             criterion.size)
 
@@ -1119,8 +1088,7 @@ def _make_binary_minmax_func(which):
         func = elementwise.get_binary_minmax_kernel(which,
                 a.dtype, b.dtype, out.dtype)
 
-        func.set_block_shape(*a._block)
-        func.prepared_async_call(a._grid, stream,
+        func.prepared_async_call(a._grid, a._block, stream,
                 a.gpudata, b.gpudata, out.gpudata, a.size)
 
         return out

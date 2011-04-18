@@ -226,8 +226,7 @@ def rand(shape, dtype=np.float32, stream=None):
     else:
         raise NotImplementedError;
 
-    func.set_block_shape(*result._block)
-    func.prepared_async_call(result._grid, stream,
+    func.prepared_async_call(result._grid, result._block, stream,
             result.gpudata, np.random.randint(2**31-1), result.size)
 
     return result

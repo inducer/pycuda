@@ -152,7 +152,7 @@ def get_elwise_kernel_and_types(arguments, operation,
 
     from pycuda.tools import get_arg_type
     func = mod.get_function(name)
-    func.prepare("".join(arg.struct_char for arg in arguments), (1,1,1))
+    func.prepare("".join(arg.struct_char for arg in arguments))
 
     return func, arguments
 
@@ -234,8 +234,7 @@ class ElementwiseKernel:
             grid = repr_vec._grid
             invocation_args.append(repr_vec.mem_size)
 
-        func.set_block_shape(*block)
-        func.prepared_call(grid, *invocation_args)
+        func.prepared_call(grid, block, *invocation_args)
 
 
 
@@ -263,7 +262,7 @@ def get_take_kernel(dtype, idx_dtype, vec_count=1):
     mod = get_elwise_module(args, body, "take", preamble=preamble)
     func = mod.get_function("take")
     tex_src = [mod.get_texref("tex_src%d" % i) for i in range(vec_count)]
-    func.prepare("P"+(vec_count*"P")+np.dtype(np.uintp).char, (1,1,1), texrefs=tex_src)
+    func.prepare("P"+(vec_count*"P")+np.dtype(np.uintp).char, texrefs=tex_src)
     return func, tex_src
 
 
@@ -314,7 +313,7 @@ def get_take_put_kernel(dtype, idx_dtype, with_offsets, vec_count=1):
             "PP"+(vec_count*"P")
             +(bool(with_offsets)*vec_count*idx_dtype.char)
             +np.dtype(np.uintp).char,
-            (1,1,1), texrefs=tex_src)
+            texrefs=tex_src)
     return func, tex_src
 
 
@@ -343,7 +342,7 @@ def get_put_kernel(dtype, idx_dtype, vec_count=1):
                 for i in range(vec_count)))
 
     func = get_elwise_module(args, body, "put").get_function("put")
-    func.prepare("P"+(2*vec_count*"P")+np.dtype(np.uintp).char, (1,1,1))
+    func.prepare("P"+(2*vec_count*"P")+np.dtype(np.uintp).char)
     return func
 
 
@@ -403,7 +402,7 @@ def get_linear_combination_kernel(summand_descriptors,
     func = mod.get_function("linear_combination")
     tex_src = [mod.get_texref(tn) for tn in tex_names]
     func.prepare("".join(arg.struct_char for arg in args),
-            (1,1,1), texrefs=tex_src)
+            texrefs=tex_src)
 
     return func, tex_src
 

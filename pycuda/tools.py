@@ -548,7 +548,12 @@ def mark_cuda_test(inner_f):
             inner_f(*args, **kwargs)
         finally:
             ctx.pop()
-            ctx.detach()
+
+            from pycuda.tools import clear_context_caches
+            clear_context_caches()
+
+            from gc import collect
+            collect()
 
     try:
         from py.test import mark as mark_test

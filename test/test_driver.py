@@ -101,6 +101,8 @@ class TestDriver:
         set_them(drv.Out(dest), a, block=(400,1,1))
         assert (dest == a).all()
 
+    from py.test import mark as mark_test
+
     @mark_cuda_test
     def test_streamed_kernel(self):
         # this differs from the "simple_kernel" case in that *all* computation
@@ -459,16 +461,18 @@ class TestDriver:
             """)
 
         func = mod.get_function("doublify")
-        func.prepare("P", (4,4,1))
-        func.prepared_call((1, 1), a_gpu)
+        func.prepare("P")
+        func.prepared_call((1, 1), (4,4,1), a_gpu)
         a_doubled = np.empty_like(a)
         drv.memcpy_dtoh(a_doubled, a_gpu)
+        print a
+        print a_doubled
         assert la.norm(a_doubled-2*a) == 0
 
         # now with offsets
-        func.prepare("P", (15,1,1))
+        func.prepare("P")
         a_quadrupled = np.empty_like(a)
-        func.prepared_call((1, 1), int(a_gpu)+a.dtype.itemsize)
+        func.prepared_call((1, 1), (15,1,1), int(a_gpu)+a.dtype.itemsize)
         drv.memcpy_dtoh(a_quadrupled, a_gpu)
         assert la.norm(a_quadrupled[1:]-4*a[1:]) == 0
 

@@ -61,12 +61,12 @@ namespace
 
       pointer_type allocate(size_type s)
       {
-        return pycuda::mem_alloc_host(s, m_flags);
+        return pycuda::mem_host_alloc(s, m_flags);
       }
 
       void free(pointer_type p)
       {
-        pycuda::mem_free_host(p);
+        pycuda::mem_host_free(p);
       }
 
       void try_release_blocks()

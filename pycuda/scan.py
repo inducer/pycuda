@@ -517,7 +517,7 @@ else:
                     scan_intervals_src, options=options, no_extern_c=True)
             self.scan_intervals_knl = scan_intervals_prg.get_function(
                     name_prefix+"_scan_intervals")
-            self.scan_intervals_knl.prepare("PIIPP", (self.scan_wg_size, 1, 1))
+            self.scan_intervals_knl.prepare("PIIPP")
 
             final_update_src = str(self.final_update_tp.render(
                 wg_size=self.update_wg_size,
@@ -527,7 +527,7 @@ else:
                     final_update_src, options=options, no_extern_c=True)
             self.final_update_knl = final_update_prg.get_function(
                     name_prefix+"_final_update")
-            self.final_update_knl.prepare("PIIP", (self.update_wg_size, 1, 1))
+            self.final_update_knl.prepare("PIIP")
 
         def __call__(self, input_ary, output_ary=None, allocator=None,
                 stream=None):
@@ -561,7 +561,7 @@ else:
 
             # first level scan of interval (one interval per block)
             self.scan_intervals_knl.prepared_async_call(
-                    (num_groups, 1), stream,
+                    (num_groups, 1), (self.scan_wg_size, 1, 1), stream,
                     input_ary.gpudata,
                     n, interval_size,
                     output_ary.gpudata,
@@ -569,7 +569,7 @@ else:
 
             # second level inclusive scan of per-block results
             self.scan_intervals_knl.prepared_async_call(
-                    (1, 1), stream,
+                    (1,1), (self.scan_wg_size, 1, 1), stream,
                     block_results,
                     num_groups, interval_size,
                     block_results,
@@ -577,7 +577,7 @@ else:
 
             # update intervals with result of second level scan
             self.final_update_knl.prepared_async_call(
-                    (num_groups, 1,), stream,
+                    (num_groups, 1,), (self.update_wg_size, 1, 1), stream,
                     output_ary.gpudata,
                     n, interval_size,
                     block_results)

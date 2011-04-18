@@ -1393,10 +1393,7 @@ Code on the Device: Modules and Functions
         mildly less convenient) way of invoking kernels, see :meth:`prepare` and
         :meth:`prepared_call`.
 
-    .. method:: param_set(arg1, ... argn)
-
-        Set up *arg1* through *argn* as positional C arguments to *self*. They are
-        allowed to be of the following types:
+        *arg1* through *argn* are allowed to be of the following types:
 
         * Subclasses of :class:`numpy.number`. These are sized number types
           such as :class:`numpy.uint32` or :class:`numpy.float32`.
@@ -1425,45 +1422,11 @@ Code on the Device: Modules and Functions
             this can be inconvenient. For a faster (but mildly less convenient) way
             of invoking kernels, see :meth:`prepare` and :meth:`prepared_call`.
 
-    .. method:: set_block_shape(x, y, z)
-
-        Set the thread block shape for this function.
-
-    .. method:: set_shared_size(bytes)
-
-        Set *shared* to be the number of bytes available to the kernel in
-        *extern __shared__* arrays.
-
-    .. method:: param_set_size(bytes)
-
-        Size the parameter space to *bytes*.
-
-    .. method:: param_seti(offset, value)
-
-        Set the integer at *offset* in the parameter space to *value*.
-
-    .. method:: param_setf(offset, value)
-
-        Set the float at *offset* in the parameter space to *value*.
-
     .. method:: param_set_texref(texref)
 
         Make the :class:`TextureReference` texref available to the function.
 
-    .. method:: launch()
-
-        Launch a single thread block of *self*.
-
-    .. method:: launch_grid(width, height)
-
-        Launch a width*height grid of thread blocks of *self*.
-
-    .. method:: launch_grid_async(width, height, stream)
-
-        Launch a width*height grid of thread blocks of *self*, sequenced
-        by the :class:`Stream` *stream*.
-
-    .. method:: prepare(arg_types, block, shared=None, texrefs=[])
+    .. method:: prepare(arg_types, block=None, shared=None, texrefs=[])
 
         Prepare the invocation of this function by
 
@@ -1484,16 +1447,20 @@ Code on the Device: Modules and Functions
 
         Return `self`.
 
-    .. method:: prepared_call(grid, *args)
+        .. warning:: Passing *block* not equal to *None* is deprecated as of version 2011.1.
 
-        Invoke `self` using :meth:`launch_grid`, with `args` and a grid size of `grid`.
+    .. method:: prepared_call(grid, block, *args)
+
+        Invoke `self` using :meth:`launch_grid`, with `args` a grid size of `grid`,
+        and a block size of *block*.
         Assumes that :meth:`prepare` was called on *self*.
         The texture references given to :meth:`prepare` are set up as parameters, as
         well.
 
-    .. method:: prepared_timed_call(grid, *args)
+    .. method:: prepared_timed_call(grid, block, *args)
 
-        Invoke `self` using :meth:`launch_grid`, with `args` and a grid size of `grid`.
+        Invoke `self` using :meth:`launch_grid`, with `args`, a grid size of `grid`,
+        and a block size of *block*.
         Assumes that :meth:`prepare` was called on *self*.
         The texture references given to :meth:`prepare` are set up as parameters, as
         well.
@@ -1502,14 +1469,14 @@ Code on the Device: Modules and Functions
         the call, in seconds. Once called, this callable will block until
         completion of the invocation.
 
-    .. method:: prepared_async_call(grid, stream, *args)
+    .. method:: prepared_async_call(grid, block, stream, *args)
 
-        Invoke `self` using :meth:`launch_grid_async`, with `args` and a grid
-        size of `grid`, serialized into the :class:`pycuda.driver.Stream` `stream`.
-        If `stream` is None, do the same as :meth:`prepared_call`.
-        Assumes that :meth:`prepare` was called on *self*.
-        The texture references given to :meth:`prepare` are set up as parameters, as
-        well.
+        Invoke `self` using :meth:`launch_grid_async`, with `args`, a grid size
+        of `grid`, and a block size of *block*, serialized into the
+        :class:`pycuda.driver.Stream` `stream`.  If `stream` is None, do the
+        same as :meth:`prepared_call`.  Assumes that :meth:`prepare` was called
+        on *self*.  The texture references given to :meth:`prepare` are set up
+        as parameters, as well.
 
     .. method:: get_attribute(attr)
 
@@ -1555,6 +1522,63 @@ Code on the Device: Modules and Functions
         On CUDA 2.1 and below, this is only available if this function is part
         of a :class:`SourceModule`.  It replaces the now-deprecated attribute
         `registers`.
+
+    .. method:: set_shared_size(bytes)
+
+        Set *shared* to be the number of bytes available to the kernel in
+        *extern __shared__* arrays.
+
+        .. warning:: Deprecated as of version 2011.1.
+
+    .. method:: set_block_shape(x, y, z)
+
+        Set the thread block shape for this function.
+
+        .. warning:: Deprecated as of version 2011.1.
+
+    .. method:: param_set(arg1, ... argn)
+
+        Set the thread block shape for this function.
+
+        .. warning:: Deprecated as of version 2011.1.
+
+    .. method:: param_set_size(bytes)
+
+        Size the parameter space to *bytes*.
+
+        .. warning:: Deprecated as of version 2011.1.
+
+    .. method:: param_seti(offset, value)
+
+        Set the integer at *offset* in the parameter space to *value*.
+
+        .. warning:: Deprecated as of version 2011.1.
+
+    .. method:: param_setf(offset, value)
+
+        Set the float at *offset* in the parameter space to *value*.
+
+        .. warning:: Deprecated as of version 2011.1.
+
+    .. method:: launch()
+
+        Launch a single thread block of *self*.
+
+        .. warning:: Deprecated as of version 2011.1.
+
+    .. method:: launch_grid(width, height)
+
+        Launch a width*height grid of thread blocks of *self*.
+
+        .. warning:: Deprecated as of version 2011.1.
+
+    .. method:: launch_grid_async(width, height, stream)
+
+        Launch a width*height grid of thread blocks of *self*, sequenced
+        by the :class:`Stream` *stream*.
+
+        .. warning:: Deprecated as of version 2011.1.
+
 
 .. class:: ArgumentHandler(array)
 

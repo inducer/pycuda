@@ -894,17 +894,21 @@ BOOST_PYTHON_MODULE(_driver)
   {
     typedef function cl;
     py::class_<cl>("Function", py::no_init)
-      .DEF_SIMPLE_METHOD(set_block_shape)
-      .DEF_SIMPLE_METHOD(set_shared_size)
-      .DEF_SIMPLE_METHOD(param_set_size)
-      .def("param_seti", (void (cl::*)(int, unsigned int)) &cl::param_set)
-      .def("param_setf", (void (cl::*)(int, float )) &cl::param_set)
-      .def("param_setv", function_param_setv)
+      .def("_set_block_shape", &cl::set_block_shape)
+      .def("_set_shared_size", &cl::set_shared_size)
+      .def("_param_set_size", &cl::param_set_size)
+      .def("_param_seti", (void (cl::*)(int, unsigned int)) &cl::param_set)
+      .def("_param_setf", (void (cl::*)(int, float )) &cl::param_set)
+      .def("_param_setv", function_param_setv)
       .DEF_SIMPLE_METHOD(param_set_texref)
 
-      .DEF_SIMPLE_METHOD(launch)
-      .DEF_SIMPLE_METHOD_WITH_ARGS(launch_grid, ("grid_width", "grid_height"))
-      .DEF_SIMPLE_METHOD_WITH_ARGS(launch_grid_async, ("grid_width", "grid_height", "s"))
+      .def("launch_kernel", &cl::launch_kernel)
+
+      .def("_launch", &cl::launch)
+      .def("_launch_grid", &cl::launch_grid,
+          py::args("grid_width", "grid_height"))
+      .def("_launch_grid_async", &cl::launch_grid_async,
+          py::args("grid_width", "grid_height", "s"))
 
 #if CUDAPP_CUDA_VERSION >= 2020
       .DEF_SIMPLE_METHOD(get_attribute)
