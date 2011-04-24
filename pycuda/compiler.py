@@ -12,10 +12,18 @@ def get_nvcc_version(nvcc):
             from pytools.prefork import call_capture_output
         except ImportError:
             from pytools.prefork import call_capture_stdout
-            return call_capture_stdout(cmdline)
+            result = call_capture_stdout(cmdline)
         else:
             retcode, stdout, stderr = call_capture_output(cmdline)
-            return stdout
+            result = stdout
+
+        if result is None:
+            from warnings import warn
+            warn("NVCC version could not be determined.")
+            result = "nvcc unknown version"
+
+        return result
+
     except OSError, e:
         raise OSError("%s was not found (is it on the PATH?) [%s]" 
                 % (nvcc, str(e)))
@@ -45,6 +53,8 @@ def compile_plain(source, options, keep, nvcc, cache_dir):
         for option in options: 
             checksum.update(option)
         checksum.update(get_nvcc_version(nvcc))
+        from pycuda.characterize import platform_bits
+        checksum.update(str(platform_bits()))
 
         cache_file = checksum.hexdigest()
         cache_path = join(cache_dir, cache_file + ".cubin")
@@ -107,6 +117,12 @@ def compile_plain(source, options, keep, nvcc, cache_dir):
                 cmdline, stdout=stdout, stderr=stderr)
 
     if stdout or stderr:
+        lcase_err_text = (stdout+stderr).lower()
+        if "demoted" in lcase_err_text or "demoting" in lcase_err_text:
+            from pycuda.driver import CompileError
+            raise CompileError("nvcc said it demoted types in source code it "
+                "compiled--this is likely not what you want.",
+                cmdline, stdout=stdout, stderr=stderr)
         from warnings import warn
         warn("The CUDA compiler suceeded, but said the following:\n"
                 +stdout+stderr)
@@ -154,10 +170,10 @@ def _find_pycuda_include_path():
             join(pathname, "..", "include", "pycuda"),
             join(pathname, "..", "src", "cuda"),
             join(pathname, "..", "..", "..", "src", "cuda"),
-            join(pathname, "..", "..", "..", "..", "include", "pycuda")
+            join(pathname, "..", "..", "..", "..", "include", "pycuda"),
+            join(pathname, "..", "..", "..", "include", "pycuda"),
             ]
 
-    import sys
     if sys.platform in ("linux2", "darwin"):
         possible_include_paths.extend([
             join(sys.prefix, "include" , "pycuda"),
@@ -219,6 +235,11 @@ def compile(source, nvcc="nvcc", options=[], keep=False,
 
     if 'darwin' in sys.platform and sys.maxint == 9223372036854775807:
         options.append('-m64')
+    elif 'win32' in sys.platform and sys.maxsize == 9223372036854775807:
+        options.append('-m64')
+    elif 'win32' in sys.platform and sys.maxsize == 2147483647:
+        options.append('-m32')
+        
 
     include_dirs = include_dirs + [_find_pycuda_include_path()]
 

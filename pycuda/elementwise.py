@@ -31,7 +31,7 @@ OTHER DEALINGS IN THE SOFTWARE.
 
 
 from pycuda.tools import context_dependent_memoize
-import numpy
+import numpy as np
 from pycuda.tools import dtype_to_ctype, VectorArg, ScalarArg
 from pytools import memoize_method
 
@@ -135,12 +135,12 @@ def get_elwise_kernel_and_types(arguments, operation,
 
     if use_range:
         arguments.extend([
-            ScalarArg(numpy.intp, "start"),
-            ScalarArg(numpy.intp, "stop"),
-            ScalarArg(numpy.intp, "step"),
+            ScalarArg(np.intp, "start"),
+            ScalarArg(np.intp, "stop"),
+            ScalarArg(np.intp, "step"),
             ])
     else:
-        arguments.append(ScalarArg(numpy.uintp, "n"))
+        arguments.append(ScalarArg(np.uintp, "n"))
 
     if use_range:
         module_builder = get_elwise_range_module
@@ -152,7 +152,7 @@ def get_elwise_kernel_and_types(arguments, operation,
 
     from pycuda.tools import get_arg_type
     func = mod.get_function(name)
-    func.prepare("".join(arg.struct_char for arg in arguments), (1,1,1))
+    func.prepare("".join(arg.struct_char for arg in arguments))
 
     return func, arguments
 
@@ -234,8 +234,7 @@ class ElementwiseKernel:
             grid = repr_vec._grid
             invocation_args.append(repr_vec.mem_size)
 
-        func.set_block_shape(*block)
-        func.prepared_call(grid, *invocation_args)
+        func.prepared_call(grid, block, *invocation_args)
 
 
 
@@ -250,7 +249,7 @@ def get_take_kernel(dtype, idx_dtype, vec_count=1):
 
     args = [VectorArg(idx_dtype, "idx")] + [
             VectorArg(dtype, "dest"+str(i))for i in range(vec_count)] + [
-            ScalarArg(numpy.intp, "n")]
+            ScalarArg(np.intp, "n")]
     preamble = "#include <pycuda-helpers.hpp>\n\n" + "\n".join(
         "texture <%s, 1, cudaReadModeElementType> tex_src%d;" % (ctx["tex_tp"], i)
         for i in range(vec_count))
@@ -263,7 +262,7 @@ def get_take_kernel(dtype, idx_dtype, vec_count=1):
     mod = get_elwise_module(args, body, "take", preamble=preamble)
     func = mod.get_function("take")
     tex_src = [mod.get_texref("tex_src%d" % i) for i in range(vec_count)]
-    func.prepare("P"+(vec_count*"P")+numpy.dtype(numpy.uintp).char, (1,1,1), texrefs=tex_src)
+    func.prepare("P"+(vec_count*"P")+np.dtype(np.uintp).char, texrefs=tex_src)
     return func, tex_src
 
 
@@ -286,7 +285,7 @@ def get_take_put_kernel(dtype, idx_dtype, with_offsets, vec_count=1):
             ] + [
             ScalarArg(idx_dtype, "offset%d" % i)
                 for i in range(vec_count) if with_offsets
-            ] + [ScalarArg(numpy.intp, "n")]
+            ] + [ScalarArg(np.intp, "n")]
 
     preamble = "#include <pycuda-helpers.hpp>\n\n" + "\n".join(
         "texture <%s, 1, cudaReadModeElementType> tex_src%d;" % (ctx["tex_tp"], i)
@@ -313,8 +312,8 @@ def get_take_put_kernel(dtype, idx_dtype, with_offsets, vec_count=1):
     func.prepare(
             "PP"+(vec_count*"P")
             +(bool(with_offsets)*vec_count*idx_dtype.char)
-            +numpy.dtype(numpy.uintp).char,
-            (1,1,1), texrefs=tex_src)
+            +np.dtype(np.uintp).char,
+            texrefs=tex_src)
     return func, tex_src
 
 
@@ -335,7 +334,7 @@ def get_put_kernel(dtype, idx_dtype, vec_count=1):
             ] + [
             VectorArg(dtype, "src%d" % i)
                 for i in range(vec_count)
-            ] + [ScalarArg(numpy.intp, "n")]
+            ] + [ScalarArg(np.intp, "n")]
 
     body = (
             "%(idx_tp)s dest_idx = gmem_dest_idx[i];\n" % ctx
@@ -343,7 +342,7 @@ def get_put_kernel(dtype, idx_dtype, vec_count=1):
                 for i in range(vec_count)))
 
     func = get_elwise_module(args, body, "put").get_function("put")
-    func.prepare("P"+(2*vec_count*"P")+numpy.dtype(numpy.uintp).char, (1,1,1))
+    func.prepare("P"+(2*vec_count*"P")+np.dtype(np.uintp).char)
     return func
 
 
@@ -392,7 +391,7 @@ def get_linear_combination_kernel(summand_descriptors,
         summands.append("a%d*x%d[i]" % (i, i))
 
     args.append(VectorArg(dtype_z, "z"))
-    args.append(ScalarArg(numpy.uintp, "n"))
+    args.append(ScalarArg(np.uintp, "n"))
 
     mod = get_elwise_module(args,
             "z[i] = " + " + ".join(summands),
@@ -403,7 +402,7 @@ def get_linear_combination_kernel(summand_descriptors,
     func = mod.get_function("linear_combination")
     tex_src = [mod.get_texref(tn) for tn in tex_names]
     func.prepare("".join(arg.struct_char for arg in args),
-            (1,1,1), texrefs=tex_src)
+            texrefs=tex_src)
 
     return func, tex_src
 
@@ -472,7 +471,7 @@ def get_binary_func_kernel(func, dtype_x, dtype_y, dtype_z):
             func+"_kernel")
 
 def get_binary_minmax_kernel(func, dtype_x, dtype_y, dtype_z):
-    if not numpy.float64 in [dtype_x, dtype_y]:
+    if not np.float64 in [dtype_x, dtype_y]:
         func = func +"f"
 
     from pytools import any
@@ -540,7 +539,7 @@ def get_arange_kernel(dtype):
 
 @context_dependent_memoize
 def get_pow_kernel(dtype):
-    if dtype == numpy.float64:
+    if dtype == np.float64:
         func = "pow"
     else:
         func = "powf"
@@ -554,7 +553,7 @@ def get_pow_kernel(dtype):
 
 @context_dependent_memoize
 def get_pow_array_kernel(dtype_x, dtype_y, dtype_z):
-    if numpy.float64 in [dtype_x, dtype_y]:
+    if np.float64 in [dtype_x, dtype_y]:
         func = "pow"
     else:
         func = "powf"

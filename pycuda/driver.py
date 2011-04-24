@@ -8,6 +8,8 @@ except ImportError, e:
                 "does not match the version of your CUDA driver.")
     raise
 
+import numpy as np
+
 
 
 
@@ -82,6 +84,7 @@ class InOut(In, Out):
 
 
 def _add_functionality():
+
     def device_get_attributes(dev):
         result = {}
 
@@ -106,17 +109,13 @@ def _add_functionality():
         return dev.get_attribute(getattr(device_attribute, name.upper()))
 
     def function_param_set(func, *args):
-        try:
-            import numpy
-        except ImportError:
-            numpy = None
 
         handlers = []
 
         arg_data = []
         format = ""
         for i, arg in enumerate(args):
-            if numpy is not None and isinstance(arg, numpy.number):
+            if isinstance(arg, np.number):
                 arg_data.append(arg)
                 format += arg.dtype.char
             elif isinstance(arg, (DeviceAllocation, PooledDeviceAllocation)):
@@ -126,12 +125,13 @@ def _add_functionality():
                 handlers.append(arg)
                 arg_data.append(int(arg.get_device_alloc()))
                 format += "P"
-            elif isinstance(arg, buffer):
-                arg_data.append(arg)
-                format += "s"
+            elif isinstance(arg, np.ndarray):
+                s = str(buffer(arg))
+                arg_data.append(s)
+                format += "%ds" % len(s)
             else:
                 try:
-                    gpudata = arg.gpudata
+                    gpudata = np.intp(arg.gpudata)
                 except AttributeError:
                     raise TypeError("invalid type on parameter #%d (0-based)" % i)
                 else:
@@ -142,8 +142,8 @@ def _add_functionality():
         from pycuda._pvt_struct import pack
         buf = pack(format, *arg_data)
 
-        func.param_setv(0, buf)
-        func.param_set_size(len(buf))
+        func._param_setv(0, buf)
+        func._param_set_size(len(buf))
 
         return handlers
 
@@ -163,8 +163,8 @@ def _add_functionality():
         if block is None:
             raise ValueError, "must specify block size"
 
-        func.set_block_shape(*block)
-        handlers = func.param_set(*args)
+        func._set_block_shape(*block)
+        handlers = func._param_set(*args)
         if shared is not None:
             func.set_shared_size(shared)
 
@@ -184,7 +184,7 @@ def _add_functionality():
 
                 from time import time
                 start_time = time()
-            func.launch_grid(*grid)
+            func._launch_grid(*grid)
             if post_handlers or time_kernel:
                 Context.synchronize()
 
@@ -198,62 +198,79 @@ def _add_functionality():
                     return run_time
         else:
             assert not time_kernel, "Can't time the kernel on an asynchronous invocation"
-            func.launch_grid_async(grid[0], grid[1], stream)
+            func._launch_grid_async(grid[0], grid[1], stream)
 
             if post_handlers:
                 for handler in post_handlers:
                     handler.post_call(stream)
 
-    def function_prepare(func, arg_types, block, shared=None, texrefs=[]):
-        func.set_block_shape(*block)
+    def function_prepare(func, arg_types, block=None, shared=None, texrefs=[]):
+        from warnings import warn
+        if block is not None:
+            warn("setting the block size in Function.prepare is deprecated",
+                    DeprecationWarning, stacklevel=2)
+            func._set_block_shape(*block)
 
         if shared is not None:
-            func.set_shared_size(shared)
+            warn("setting the shared memory size in Function.prepare is deprecated",
+                    DeprecationWarning, stacklevel=2)
+            func._set_shared_size(shared)
 
         func.texrefs = texrefs
-
-        try:
-            import numpy
-        except ImportError:
-            numpy = None
 
         func.arg_format = ""
         param_size = 0
 
         for i, arg_type in enumerate(arg_types):
-            if isinstance(arg_type, type) and numpy is not None and numpy.number in arg_type.__mro__:
-                func.arg_format += numpy.dtype(arg_type).char
+            if isinstance(arg_type, type) and np is not None and np.number in arg_type.__mro__:
+                func.arg_format += np.dtype(arg_type).char
             elif isinstance(arg_type, str):
                 func.arg_format += arg_type
             else:
-                func.arg_format += numpy.dtype(numpy.intp).char
+                func.arg_format += np.dtype(np.intp).char
 
         from pycuda._pvt_struct import calcsize
-        func.param_set_size(calcsize(func.arg_format))
+        func._param_set_size(calcsize(func.arg_format))
 
         return func
 
-    def function_prepared_call(func, grid, *args):
+    def function_prepared_call(func, grid, block, *args, **kwargs):
+        if isinstance(block, tuple):
+            func._set_block_shape(*block)
+        else:
+            from warnings import warn
+            warn("Not passing the block size to prepared_call is deprecated as of "
+                    "version 2011.1.", DeprecationWarning, stacklevel=2)
+            args = (block,) + args
+
         from pycuda._pvt_struct import pack
-        func.param_setv(0, pack(func.arg_format, *args))
+        func._param_setv(0, pack(func.arg_format, *args))
 
         for texref in func.texrefs:
             func.param_set_texref(texref)
 
-        func.launch_grid(*grid)
+        func._launch_grid(*grid)
 
-    def function_prepared_timed_call(func, grid, *args):
+    def function_prepared_timed_call(func, grid, block, *args, **kwargs):
+        if isinstance(block, tuple):
+            func._set_block_shape(*block)
+        else:
+            from warnings import warn
+            warn("Not passing the block size to prepared_timed_call is deprecated as of "
+                    "version 2011.1.", DeprecationWarning, stacklevel=2)
+            args = (block,) + args
+
         from pycuda._pvt_struct import pack
-        func.param_setv(0, pack(func.arg_format, *args))
+        func._param_setv(0, pack(func.arg_format, *args))
 
         for texref in func.texrefs:
             func.param_set_texref(texref)
 
         start = Event()
         end = Event()
-        
+
         start.record()
-        func.launch_grid(*grid)
+        func._launch_grid(*grid)
         end.record()
 
         def get_call_time():
@@ -262,18 +279,27 @@ def _add_functionality():
 
         return get_call_time
 
-    def function_prepared_async_call(func, grid, stream, *args):
+    def function_prepared_async_call(func, grid, block, stream, *args, **kwargs):
+        if isinstance(block, tuple):
+            func._set_block_shape(*block)
+        else:
+            from warnings import warn
+            warn("Not passing the block size to prepared_async_call is deprecated as of "
+                    "version 2011.1.", DeprecationWarning, stacklevel=2)
+            args = (stream,) + args
+            stream = block
+
         from pycuda._pvt_struct import pack
-        func.param_setv(0, pack(func.arg_format, *args))
+        func._param_setv(0, pack(func.arg_format, *args))
 
         for texref in func.texrefs:
             func.param_set_texref(texref)
 
         if stream is None:
-            func.launch_grid(*grid)
+            func._launch_grid(*grid)
         else:
             grid_x, grid_y = grid
-            func.launch_grid_async(grid_x, grid_y, stream)
+            func._launch_grid_async(grid_x, grid_y, stream)
 
     def function___getattr__(self, name):
         if get_version() >= (2,2):
@@ -285,15 +311,39 @@ def _add_functionality():
             else:
                 raise AttributeError("no attribute '%s' in Function" % name)
 
+    def mark_func_method_deprecated(func):
+        def new_func(*args, **kwargs):
+            from warnings import warn
+            warn("'%s' has been deprecated in version 2011.1. Please use "
+                    "the stateless launch interface instead." % func.__name__[1:], 
+                    DeprecationWarning, stacklevel=2)
+            return func(*args, **kwargs)
+
+        try:
+            from functools import update_wrapper
+        except ImportError:
+            pass
+        else:
+            update_wrapper(new_func, func)
+
+        return new_func
+
     Device.get_attributes = device_get_attributes
     Device.__getattr__ = device___getattr__
-    Function.param_set = function_param_set
+    Function._param_set = function_param_set
     Function.__call__ = function_call
     Function.prepare = function_prepare
     Function.prepared_call = function_prepared_call
     Function.prepared_timed_call = function_prepared_timed_call
     Function.prepared_async_call = function_prepared_async_call
     Function.__getattr__ = function___getattr__
+
+    for meth_name in ["set_block_shape", "set_shared_size",
+            "param_set_size", "param_set", "param_seti", "param_setf", "param_setv",
+            "launch", "launch_grid", "launch_grid_async"]:
+        setattr(Function, meth_name, mark_func_method_deprecated(
+                getattr(Function, "_"+meth_name)))
+
 
 
 
@@ -302,6 +352,8 @@ _add_functionality()
 
 
 
+
+# {{{ pagelocked numpy arrays
 
 def pagelocked_zeros(shape, dtype, order="C", mem_flags=0):
     result = pagelocked_empty(shape, dtype, order, mem_flags)
@@ -317,7 +369,7 @@ def pagelocked_empty_like(array, mem_flags=0):
     elif array.flags.f_contiguous:
         order = "F"
     else:
-        raise ValueError, "could not detect array order"
+        raise ValueError("could not detect array order")
 
     return pagelocked_empty(array.shape, array.dtype, order, mem_flags)
 
@@ -328,6 +380,38 @@ def pagelocked_zeros_like(array, mem_flags=0):
     result = pagelocked_empty_like(array, mem_flags)
     result.fill(0)
     return result
+
+# }}}
+
+# {{{ aligned numpy arrays
+
+def aligned_zeros(shape, dtype, order="C", alignment=4096):
+    result = aligned_empty(shape, dtype, order, alignment)
+    result.fill(0)
+    return result
+
+
+
+
+def aligned_empty_like(array, alignment=4096):
+    if array.flags.c_contiguous:
+        order = "C"
+    elif array.flags.f_contiguous:
+        order = "F"
+    else:
+        raise ValueError("could not detect array order")
+
+    return aligned_empty(array.shape, array.dtype, order, alignment)
+
+
+
+
+def aligned_zeros_like(array, alignment=4096):
+    result = aligned_empty_like(array, alignment)
+    result.fill(0)
+    return result
+
+# }}}
 
 
 
@@ -348,21 +432,19 @@ def to_device(bf_obj):
 
 
 def dtype_to_array_format(dtype):
-    import numpy
-
-    if dtype == numpy.uint8:
+    if dtype == np.uint8:
         return array_format.UNSIGNED_INT8
-    elif dtype == numpy.uint16:
+    elif dtype == np.uint16:
         return array_format.UNSIGNED_INT16
-    elif dtype == numpy.uint32:
+    elif dtype == np.uint32:
         return array_format.UNSIGNED_INT32
-    elif dtype == numpy.int8:
+    elif dtype == np.int8:
         return array_format.SIGNED_INT8
-    elif dtype == numpy.int16:
+    elif dtype == np.int16:
         return array_format.SIGNED_INT16
-    elif dtype == numpy.int32:
+    elif dtype == np.int32:
         return array_format.SIGNED_INT32
-    elif dtype == numpy.float32:
+    elif dtype == np.float32:
         return array_format.FLOAT
     else:
         raise TypeError(
@@ -373,8 +455,6 @@ def dtype_to_array_format(dtype):
 
 
 def matrix_to_array(matrix, order, allow_double_hack=False):
-    import numpy
-
     if order.upper() == "C":
         h, w = matrix.shape
         stride = 0
@@ -384,13 +464,13 @@ def matrix_to_array(matrix, order, allow_double_hack=False):
     else: 
         raise LogicError, "order must be either F or C"
 
-    matrix = numpy.asarray(matrix, order=order)
+    matrix = np.asarray(matrix, order=order)
     descr = ArrayDescriptor()
 
     descr.width = w
     descr.height = h
 
-    if matrix.dtype == numpy.float64 and allow_double_hack:
+    if matrix.dtype == np.float64 and allow_double_hack:
         descr.format = array_format.SIGNED_INT32
         descr.num_channels = 2
     else:
@@ -463,8 +543,7 @@ def matrix_to_texref(matrix, texref, order):
 
 
 def from_device(devptr, shape, dtype, order="C"):
-    import numpy
-    result = numpy.empty(shape, dtype, order)
+    result = np.empty(shape, dtype, order)
     memcpy_dtoh(result, devptr)
     return result
 
@@ -472,7 +551,6 @@ def from_device(devptr, shape, dtype, order="C"):
 
 
 def from_device_like(devptr, other_ary):
-    import numpy
-    result = numpy.empty_like(other_ary)
+    result = np.empty_like(other_ary)
     memcpy_dtoh(result, devptr)
     return result

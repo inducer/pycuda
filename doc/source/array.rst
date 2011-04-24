@@ -1,9 +1,25 @@
-The :class:`GPUArray` Array Class
-=================================
+Multi-dimensional arrays on the GPU
+===================================
 
 .. module:: pycuda.gpuarray
 
-.. class:: GPUArray(shape, dtype, allocator=None)
+Vector Types
+------------
+
+.. class :: vec
+
+    All of CUDA's supported vector types, such as `float3` and `long4` are
+    available as :mod:`numpy` data types within this class. These
+    :class:`numpy.dtype` instances have field names of `x`, `y`, `z`, and `w`
+    just like their CUDA counterparts. They will work both for parameter passing
+    to kernels as well as for passing data back and forth between kernels and
+    Python code. For each type, a `make_type` function is also provided (e.g.
+    `make_float3(x,y,z)`).
+
+The :class:`GPUArray` Array Class
+---------------------------------
+
+.. class:: GPUArray(shape, dtype, *, allocator=None, order="C")
 
     A :class:`numpy.ndarray` work-alike that stores its data and performs its
     computations on the compute device.  *shape* and *dtype* work exactly as in
@@ -15,6 +31,8 @@ The :class:`GPUArray` Array Class
     :class:`int` representing the address of the newly allocated memory.
     Observe that both :func:`pycuda.driver.mem_alloc` and
     :meth:`pycuda.tools.DeviceMemoryPool.alloc` are a model of this interface.
+
+    All arguments beyond *allocator* should be considered keyword-only.
 
     .. attribute :: gpudata
 
@@ -44,6 +62,23 @@ The :class:`GPUArray` Array Class
 
         The size of the entire array in bytes. Computed as :attr:`size` times
         ``dtype.itemsize``.
+
+    .. attribute :: strides
+
+        Tuple of bytes to step in each dimension when traversing an array.
+
+    .. attribute :: flags
+
+        Return an object with attributes `c_contiguous`, `f_contiguous` and `forc`,
+        which may be used to query contiguity properties in analogy to
+        :attr:`numpy.ndarray.flags`.
+
+    .. attribute :: ptr
+
+        Return an :class:`int` reflecting the address in device memory where
+        this array resides.
+
+        .. versionadded: 2011.1
 
     .. method :: __len__()
 
@@ -202,11 +237,11 @@ Constructing :class:`GPUArray` Instances
 
     See :class:`GPUArray` for the meaning of *allocator*.
 
-.. function:: empty(shape, dtype)
+.. function:: empty(shape, dtype, *, allocator=None, order="C")
 
     A synonym for the :class:`GPUArray` constructor.
 
-.. function:: zeros(shape, dtype)
+.. function:: zeros(shape, dtype, *, allocator=None, order="C")
 
     Same as :func:`empty`, but the :class:`GPUArray` is zero-initialized before
     being returned.
@@ -347,8 +382,8 @@ Generating Arrays of Random Numbers
 
 .. warning::
 
-    The following classes are using random number generators that run on GPU.
-    Each thread uses own generator. Creation of those generators requires more
+    The following classes are using random number generators that run on the GPU.
+    Each thread uses its own generator. Creation of those generators requires more
     resources than subsequent generation of random numbers. After experiments
     it looks like maximum number of active generators on Tesla devices
     (with compute capabilities 1.x) is 256. Fermi devices allow for creating
@@ -535,6 +570,43 @@ Here's a usage example::
             arguments="float *x, float *y")
 
     my_dot_prod = krnl(a, b).get()
+
+Parallel Scan / Prefix Sum
+--------------------------
+
+.. module:: pycuda.scan
+
+.. class:: ExclusiveScanKernel(dtype, scan_expr, neutral, name_prefix="scan", options=[], preamble="")
+
+    Generates a kernel that can compute a `prefix sum <https://secure.wikimedia.org/wikipedia/en/wiki/Prefix_sum>`_
+    using any associative operation given as *scan_expr*.
+    *scan_expr* uses the formal values "a" and "b" to indicate two operands of
+    an associative binary operation. *neutral* is the neutral element
+    of *scan_expr*, obeying *scan_expr(a, neutral) == a*.
+
+    *dtype* specifies the type of the arrays being operated on. 
+    *name_prefix* is used for kernel names to ensure recognizability
+    in profiles and logs. *options* is a list of compiler options to use
+    when building. *preamble* specifies a string of code that is
+    inserted before the actual kernels.
+
+    .. method:: __call__(self, input_ary, output_ary=None, allocator=None, queue=None)
+
+.. class:: InclusiveScanKernel(dtype, scan_expr, neutral=None, name_prefix="scan", options=[], preamble="", devices=None)
+
+    Works like :class:`ExclusiveScanKernel`. Unlike the exclusive case,
+    *neutral* is not required.
+
+Here's a usage example::
+
+    knl = InclusiveScanKernel(np.int32, "a+b")
+
+    n = 2**20-2**18+5
+    host_data = np.random.randint(0, 10, n).astype(np.int32)
+    dev_data = gpuarray.to_gpu(queue, host_data)
+
+    knl(dev_data)
+    assert (dev_data.get() == np.cumsum(host_data, axis=0)).all()
 
 Fast Fourier Transforms
 -----------------------

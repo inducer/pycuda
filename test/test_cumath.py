@@ -1,6 +1,6 @@
 from __future__ import division
 import math
-import numpy
+import numpy as np
 from pycuda.tools import mark_cuda_test
 
 def have_pycuda():
@@ -21,7 +21,7 @@ if have_pycuda():
 
 
 sizes = [10, 128, 1024, 1<<10, 1<<13]
-dtypes = [numpy.float32, numpy.float64]
+dtypes = [np.float32, np.float64]
 
 
 
@@ -37,15 +37,15 @@ numpy_func_names = {
 def make_unary_function_test(name, (a, b)=(0, 1), threshold=0):
     def test():
         gpu_func = getattr(cumath, name)
-        cpu_func = getattr(numpy, numpy_func_names.get(name, name))
+        cpu_func = getattr(np, numpy_func_names.get(name, name))
 
         for s in sizes:
             for dtype in dtypes:
-                args = gpuarray.arange(a, b, (b-a)/s, dtype=numpy.float32)
+                args = gpuarray.arange(a, b, (b-a)/s, dtype=np.float32)
                 gpu_results = gpu_func(args).get()
                 cpu_results = cpu_func(args.get())
 
-                max_err = numpy.max(numpy.abs(cpu_results - gpu_results))
+                max_err = np.max(np.abs(cpu_results - gpu_results))
                 assert (max_err <= threshold).all(), \
                         (max_err, name, dtype)
 
@@ -85,8 +85,8 @@ class TestMath:
     def test_fmod(self):
         """tests if the fmod function works"""
         for s in sizes:
-            a = gpuarray.arange(s, dtype=numpy.float32)/10
-            a2 = gpuarray.arange(s, dtype=numpy.float32)/45.2 + 0.1
+            a = gpuarray.arange(s, dtype=np.float32)/10
+            a2 = gpuarray.arange(s, dtype=np.float32)/45.2 + 0.1
             b = cumath.fmod(a, a2)
 
             a = a.get()
@@ -100,8 +100,8 @@ class TestMath:
     def test_ldexp(self):
         """tests if the ldexp function works"""
         for s in sizes:
-            a = gpuarray.arange(s, dtype=numpy.float32)
-            a2 = gpuarray.arange(s, dtype=numpy.float32)*1e-3
+            a = gpuarray.arange(s, dtype=np.float32)
+            a2 = gpuarray.arange(s, dtype=np.float32)*1e-3
             b = cumath.ldexp(a,a2)
 
             a = a.get()
@@ -115,7 +115,7 @@ class TestMath:
     def test_modf(self):
         """tests if the modf function works"""
         for s in sizes:
-            a = gpuarray.arange(s, dtype=numpy.float32)/10
+            a = gpuarray.arange(s, dtype=np.float32)/10
             fracpart, intpart = cumath.modf(a)
 
             a = a.get()
@@ -132,7 +132,7 @@ class TestMath:
     def test_frexp(self):
         """tests if the frexp function works"""
         for s in sizes:
-            a = gpuarray.arange(s, dtype=numpy.float32)/10
+            a = gpuarray.arange(s, dtype=np.float32)/10
             significands, exponents = cumath.frexp(a)
 
             a = a.get()

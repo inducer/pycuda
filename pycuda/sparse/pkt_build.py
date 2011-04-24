@@ -1,4 +1,4 @@
-import numpy
+import numpy as np
 import pycuda.gpuarray as gpuarray
 
 
@@ -10,13 +10,13 @@ def build_pkt_data_structure(spmv, packet_nr_to_dofs, max_thread_costs,
     packet_start = 0
     base_dof_nr = 0
 
-    index_array = numpy.zeros(
+    index_array = np.zeros(
             max_thread_costs*thread_count, dtype=spmv.packed_index_dtype)
-    data_array = numpy.zeros(
+    data_array = np.zeros(
             max_thread_costs*thread_count, dtype=spmv.dtype)
-    thread_starts = numpy.zeros(
+    thread_starts = np.zeros(
             thread_count, dtype=spmv.index_dtype)
-    thread_ends = numpy.zeros(
+    thread_ends = np.zeros(
             thread_count, dtype=spmv.index_dtype)
 
     for packet_nr, packet_dofs in enumerate(packet_nr_to_dofs):

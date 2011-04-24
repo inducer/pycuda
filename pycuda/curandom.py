@@ -182,6 +182,9 @@ md5_code = """
   d += 0x10325476;
 """
 
+
+
+
 def rand(shape, dtype=np.float32, stream=None):
     from pycuda.gpuarray import GPUArray
     from pycuda.elementwise import get_elwise_kernel
@@ -233,8 +236,7 @@ def rand(shape, dtype=np.float32, stream=None):
     else:
         raise NotImplementedError;
 
-    func.set_block_shape(*result._block)
-    func.prepared_async_call(result._grid, stream,
+    func.prepared_async_call(result._grid, result._block, stream,
             result.gpudata, np.random.randint(2**31-1), result.size)
 
     return result
@@ -243,8 +245,13 @@ def rand(shape, dtype=np.float32, stream=None):
 
 # {{{ CURAND wrapper
 
-import pycuda._curand as _curand
-get_curand_version = _curand.get_curand_version
+try:
+    import pycuda._curand as _curand
+except ImportError:
+    def get_curand_version():
+        return None
+else:
+    get_curand_version = _curand.get_curand_version
 
 if get_curand_version() >= (3, 2, 0):
     direction_vector_set = _curand.direction_vector_set
@@ -368,13 +375,13 @@ class _RandomNumberGeneratorBase(object):
         self.generators = {}
         for name, out_type, suffix  in my_generators:
             gen_func = module.get_function(name)
-            gen_func.prepare("PPi", block=(self.generators_per_block, 1, 1))
+            gen_func.prepare("PPi")
             self.generators[name] = gen_func
 
         self.skip_ahead = module.get_function("skip_ahead")
-        self.skip_ahead.prepare("Pii", block=(self.generators_per_block, 1, 1))
+        self.skip_ahead.prepare("Pii")
         self.skip_ahead_array = module.get_function("skip_ahead_array")
-        self.skip_ahead_array.prepare("PiP", block=(self.generators_per_block, 1, 1))
+        self.skip_ahead_array.prepare("PiP")
 
     def fill_uniform(self, data, stream=None):
         if data.dtype == np.float32:
@@ -386,8 +393,9 @@ class _RandomNumberGeneratorBase(object):
         else:
             raise NotImplementedError
 
-        func.prepared_async_call((self.block_count, 1), stream,
-            self.state, data.gpudata, data.size)
+        func.prepared_async_call(
+                (self.block_count, 1), (self.generators_per_block, 1, 1), stream,
+                self.state, data.gpudata, data.size)
 
     def fill_normal(self, data, stream=None):
         if data.dtype == np.float32:
@@ -404,8 +412,9 @@ class _RandomNumberGeneratorBase(object):
 
         func = self.generators[func_name]
 
-        func.prepared_async_call((self.block_count, 1), stream,
-            self.state, data.gpudata, data_size)
+        func.prepared_async_call(
+                (self.block_count, 1), (self.generators_per_block, 1, 1), stream,
+                self.state, data.gpudata, data_size)
 
     def gen_uniform(self, shape, dtype, stream=None):
         result = array.empty(shape, dtype)
@@ -418,24 +427,26 @@ class _RandomNumberGeneratorBase(object):
         return result
 
     def call_skip_ahead(self, i, stream=None):
-        self.skip_ahead.prepared_async_call((self.block_count, 1), stream,
-            self.state, self.generators_per_block, i)
+        self.skip_ahead.prepared_async_call(
+                (self.block_count, 1), (self.generators_per_block, 1, 1), stream,
+                self.state, self.generators_per_block, i)
 
     def call_skip_ahead_array(self, i, stream=None):
-        self.skip_ahead_array.prepared_async_call((self.block_count, 1),
-            stream, self.state, self.generators_per_block, i.gpudata)
+        self.skip_ahead_array.prepared_async_call(
+                (self.block_count, 1), (self.generators_per_block, 1, 1), stream,
+                self.state, self.generators_per_block, i.gpudata)
 
 # }}}
 
 # {{{ XORWOW RNG
 
 def seed_getter_uniform(N):
-    result = pycuda.gpuarray.empty([N], numpy.int32)
+    result = pycuda.gpuarray.empty([N], np.int32)
     value = random.randint(0, 2**31-1)
     return result.fill(value)
 
 def seed_getter_unique(N):
-    result = numpy.random.randint(0, 2**31-1, N).astype(numpy.int32)
+    result = np.random.randint(0, 2**31-1, N).astype(np.int32)
     return pycuda.gpuarray.to_gpu(result)
 
 xorwow_random_source = """
@@ -480,7 +491,7 @@ if get_curand_version() >= (3, 2, 0):
                 raise TypeError("seed must be GPUArray of integers of right length")
 
             p = self.module.get_function("prepare_with_seeds")
-            p.prepare("PiPi", block=(self.generators_per_block, 1, 1))
+            p.prepare("PiPi")
 
             from pycuda.characterize import has_stack
             has_stack = has_stack()
@@ -494,11 +505,14 @@ if get_curand_version() >= (3, 2, 0):
                 try:
                     dev = drv.Context.get_device()
                     if dev.compute_capability() >= (2, 0):
-                        p.prepared_call((self.block_count, 1), self.state,
-                            self.block_count * self.generators_per_block, seed.gpudata, offset)
+                        # FIXME: What stream should these be in?
+                        p.prepared_call(
+                                (self.block_count, 1), (self.generators_per_block, 1, 1), self.state,
+                                self.block_count * self.generators_per_block, seed.gpudata, offset)
                     else:
-                        p.prepared_call((2 * self.block_count, 1), self.state,
-                            self.block_count * self.generators_per_block // 2, seed.gpudata, offset)
+                        p.prepared_call(
+                                (2 * self.block_count, 1), (self.generators_per_block, 1, 1), self.state,
+                                self.block_count * self.generators_per_block // 2, seed.gpudata, offset)
                 except drv.LaunchError:
                     raise ValueError("Initialisation failed. Decrease number of threads.")
 
