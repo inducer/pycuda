@@ -9,12 +9,24 @@ Version 2011.1
     This version is the current development version. You can get it from
     PyCUDA's version control repository.
 
+When you update code to run on this version of PyCUDA, please make sure
+to have deprecation warnings enabled, so that you know when your code needs
+updating. (See 
+`the Python docs <http://docs.python.org/dev/whatsnew/2.7.html#the-future-for-python-2-x>`_.
+Caution: As of Python 2.7, deprecation warnings are disabled by default.)
+
 * Add support for CUDA 3.0-style OpenGL interop. (thanks to Tomasz Rybak)
 * Add :meth:`pycuda.driver.Stream.wait_for_event`.
-* Add *range* and *slice* keyword argument to :meth:`pycuda.gpuarray.ElementwiseKernel.__call__`.
+* Add *range* and *slice* keyword argument to :meth:`pycuda.elementwise.ElementwiseKernel.__call__`.
 * Document *preamble* constructor keyword argument to 
-  :class:`pycuda.gpuarray.ElementwiseKernel`.
-* Add CURAND wrapper. (initial version by Tomasz Rybak)
+  :class:`pycuda.elementwise.ElementwiseKernel`.
+* Add vector types, see :class:`pycuda.gpuarray.vec`.
+* Add :mod:`pycuda.scan`.
+* Add support for new features in CUDA 4.0.
+* Add :attr:`pycuda.gpuarray.GPUArray.strides`, :attr:`pycuda.gpuarray.GPUArray.flags`.
+  Allow the creation of arrys in C and Fortran order.
+* Adopt stateless launch interface from CUDA, deprecate old one.
+* Add CURAND wrapper. (with work by Tomasz Rybak)
 
 Version 0.94.2
 --------------
@@ -222,6 +234,8 @@ Acknowledgments
   failed to work on some Fermi chips. In addition, he provided
   a patch that updated PyCUDA's :ref:`gl-interop` to the state of
   CUDA 3.0.
+* Martin Bergtholdt of Philips Research provided a patch that made PyCUDA work
+  on 64-bit Windows 7.
 
 Licensing
 =========
@@ -251,9 +265,63 @@ WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
 FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
 OTHER DEALINGS IN THE SOFTWARE.
 
+PyCUDA includes derivatives of parts of the `Thrust
+<https://code.google.com/p/thrust/>`_ computing package (in particular the scan
+implementation). These parts are licensed as follows:
+
+    Copyright 2008-2011 NVIDIA Corporation
+
+    Licensed under the Apache License, Version 2.0 (the "License");
+    you may not use this file except in compliance with the License.
+    You may obtain a copy of the License at
+
+        <http://www.apache.org/licenses/LICENSE-2.0>
+
+    Unless required by applicable law or agreed to in writing, software
+    distributed under the License is distributed on an "AS IS" BASIS,
+    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+    See the License for the specific language governing permissions and
+    limitations under the License.
+
+.. note::
+
+    If you use Apache-licensed parts, be aware that these may be incompatible
+    with software licensed exclusively under GPL2.  (Most software is licensed
+    as GPL2 or later, in which case this is not an issue.)
+
+
 Frequently Asked Questions
 ==========================
 
 The FAQ is now maintained collaboratively in the 
 `PyCUDA Wiki <http://wiki.tiker.net/PyCuda/FrequentlyAskedQuestions>`_.
 
+Citing PyCUDA
+===============
+
+We are not asking you to gratuitously cite PyCUDA in work that is otherwise
+unrelated to software. That said, if you do discuss some of the development
+aspects of your code and would like to highlight a few of the ideas behind
+PyCUDA, feel free to cite this article:
+
+    Andreas Klöckner, Nicolas Pinto, Yunsup Lee, Bryan Catanzaro, Paul Ivanov, Ahmed Fasih.
+    `PyCUDA and PyOpenCL: A Scripting-Based Approach to GPU Run-Time Code Generation <http://arxiv.org/abs/0911.3456>`_
+    November 2009, submitted.
+
+Here's a Bibtex entry for your convenience::
+
+    @techreport{kloeckner_pycuda_2009,
+       author = {{Kl{\"o}ckner}, Andreas 
+            and {Pinto}, Nicolas 
+            and {Lee}, Yunsup 
+            and {Catanzaro}, B. 
+            and {Ivanov}, Paul 
+            and {Fasih}, Ahmed },
+       title = "{PyCUDA and PyOpenCL: A Scripting-Based Approach to GPU Run-Time Code Generation}",
+       url = {http://arxiv.org/abs/0911.3456},
+       institution = "Scientific Computing Group, Brown University",
+       number = "2009-40",
+       address = "Providence, RI, USA",
+       year = 2009,
+       month = nov,
+    }

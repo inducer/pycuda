@@ -88,7 +88,7 @@ namespace PYGPU_PACKAGE
         if (size && (shifted & (1 << mantissa_bits)) == 0)
           throw std::runtime_error("memory_pool::bin_number: bitlog2 fault");
         size_type chopped = shifted & mantissa_mask;
-        return l << mantissa_bits | chopped;
+        return bin_nr_t(l << mantissa_bits | chopped);
       }
 
       static size_type alloc_size(bin_nr_t bin)

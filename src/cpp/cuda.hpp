@@ -10,6 +10,17 @@
 
 
 #include <cuda.h>
+
+#ifdef CUDAPP_PRETEND_CUDA_VERSION
+#define CUDAPP_CUDA_VERSION CUDAPP_PRETEND_CUDA_VERSION
+#else
+#define CUDAPP_CUDA_VERSION CUDA_VERSION
+#endif
+
+#if CUDAPP_CUDA_VERSION >= 4000
+#include <cudaProfiler.h>
+#endif
+
 #include <stdexcept>
 #include <boost/shared_ptr.hpp>
 #include <boost/foreach.hpp>
@@ -28,6 +39,13 @@
 #warning *****************************************************************
 #endif
 
+// TODO: cuMemcpy, cuMemcpyPeer, cuMemcpyPeerAsync
+// TODO: in structured memcpy: set_{src,dest}_unified()
+// TODO: cuPointerGetAttribute, 
+//
+// TODO: cuCtxSetCurrent, cuCtxGetCurrent 
+// (use once the old, deprecated functions have been removed from CUDA)
+
 
 
 
@@ -40,6 +58,14 @@
 #define CUDAPP_CUDA_VERSION CUDA_VERSION
 #endif
 
+
+
+
+#if PY_VERSION_HEX >= 0x02050000
+  typedef Py_ssize_t PYCUDA_BUFFER_SIZE_T;
+#else
+  typedef int PYCUDA_BUFFER_SIZE_T;
+#endif
 
 
 
@@ -143,6 +169,14 @@ namespace pycuda
 #endif
         pycuda_size_t;
 
+  typedef 
+#if defined(_WIN32) && defined(_WIN64)
+    long long
+#else
+    long
+#endif
+    hash_type;
+
 
 
   // {{{ error reporting
@@ -197,6 +231,12 @@ namespace pycuda
 #if CUDAPP_CUDA_VERSION >= 2000
           case CUDA_ERROR_DEINITIALIZED: return "deinitialized";
 #endif
+#if CUDAPP_CUDA_VERSION >= 4000
+          case CUDA_ERROR_PROFILER_DISABLED: return "profiler disabled";
+          case CUDA_ERROR_PROFILER_NOT_INITIALIZED: return "profiler not initialized";
+          case CUDA_ERROR_PROFILER_ALREADY_STARTED: return "profiler already started";
+          case CUDA_ERROR_PROFILER_ALREADY_STOPPED: return "profiler already stopped";
+#endif
 
           case CUDA_ERROR_NO_DEVICE: return "no device";
           case CUDA_ERROR_INVALID_DEVICE: return "invalid device";
@@ -221,6 +261,9 @@ namespace pycuda
 #if CUDAPP_CUDA_VERSION >= 3010
           case CUDA_ERROR_UNSUPPORTED_LIMIT: return "unsupported limit";
 #endif
+#if CUDAPP_CUDA_VERSION >= 4000
+          case CUDA_ERROR_CONTEXT_ALREADY_IN_USE: return "context already in use";
+#endif
 
           case CUDA_ERROR_INVALID_SOURCE: return "invalid source";
           case CUDA_ERROR_FILE_NOT_FOUND: return "file not found";
@@ -241,6 +284,13 @@ namespace pycuda
           case CUDA_ERROR_LAUNCH_OUT_OF_RESOURCES: return "launch out of resources";
           case CUDA_ERROR_LAUNCH_TIMEOUT: return "launch timeout";
           case CUDA_ERROR_LAUNCH_INCOMPATIBLE_TEXTURING: return "launch incompatible texturing";
+
+#if CUDAPP_CUDA_VERSION >= 4000
+          case CUDA_ERROR_PEER_ACCESS_ALREADY_ENABLED: return "peer access already enabled";
+          case CUDA_ERROR_PEER_ACCESS_NOT_ENABLED: return "peer access not enabled";
+          case CUDA_ERROR_PRIMARY_CONTEXT_ACTIVE: return "primary context active";
+          case CUDA_ERROR_CONTEXT_IS_DESTROYED: return "context is destroyed";
+#endif
 
 #if (CUDAPP_CUDA_VERSION >= 3000) && (CUDAPP_CUDA_VERSION < 3020)
           case CUDA_ERROR_POINTER_IS_64BIT:
@@ -342,7 +392,7 @@ namespace pycuda
         return m_device != other.m_device;
       }
 
-      long hash() const
+      hash_type hash() const
       {
         return m_device;
       }
@@ -351,6 +401,15 @@ namespace pycuda
 
       CUdevice handle() const
       { return m_device; }
+
+#if CUDAPP_CUDA_VERSION >= 4000
+      bool can_access_peer(device const &other)
+      {
+        int result;
+        CUDAPP_CALL_GUARDED(cuDeviceCanAccessPeer, (&result, handle(), other.handle()));
+        return result;
+      }
+#endif
 
   };
 
@@ -461,9 +520,9 @@ namespace pycuda
         return m_context != other.m_context;
       }
 
-      long hash() const
+      hash_type hash() const
       {
-        return long(m_context) ^ long(this);
+        return hash_type(m_context) ^ hash_type(this);
       }
 
       boost::thread::id thread_id() const
@@ -615,6 +674,18 @@ namespace pycuda
         unsigned int value;
         CUDAPP_CALL_GUARDED(cuCtxGetApiVersion, (m_context, &value));
         return value;
+      }
+#endif
+
+#if CUDAPP_CUDA_VERSION >= 4000
+      static void enable_peer_access(context const &peer, unsigned int flags)
+      {
+        CUDAPP_CALL_GUARDED(cuCtxEnablePeerAccess, (peer.handle(), flags));
+      }
+
+      static void disable_peer_access(context const &peer)
+      {
+        CUDAPP_CALL_GUARDED(cuCtxDisablePeerAccess, (peer.handle()));
       }
 #endif
 
@@ -1142,10 +1213,11 @@ namespace pycuda
         CUDAPP_CALL_GUARDED_WITH_TRACE_INFO(
           cuParamSetf, (m_function, offset, value), m_symbol);
       }
-      void param_setv(int offset, void *buf, unsigned long len)
+      void param_setv(int offset, void *buf, size_t len)
       {
+        // maybe the unsigned int will change, it does not seem right
         CUDAPP_CALL_GUARDED_WITH_TRACE_INFO(
-            cuParamSetv, (m_function, offset, buf, len), m_symbol);
+          cuParamSetv, (m_function, offset, buf, (unsigned int) len), m_symbol);
       }
       void param_set_texref(const texture_reference &tr)
       {
@@ -1187,6 +1259,67 @@ namespace pycuda
             cuFuncSetCacheConfig, (m_function, fc), m_symbol);
       }
 #endif
+
+#if CUDAPP_CUDA_VERSION >= 4000
+      void launch_kernel(py::tuple grid_dim_py, py::tuple block_dim_py,
+          py::object parameter_buffer,
+          unsigned shared_mem_bytes, py::object stream_py)
+      {
+        const unsigned axis_count = 3;
+        unsigned grid_dim[axis_count];
+        unsigned block_dim[axis_count];
+
+        for (unsigned i = 0; i < axis_count; ++i)
+        {
+          grid_dim[i] = 1;
+          block_dim[i] = 1;
+        }
+
+        unsigned gd_length = py::len(grid_dim_py);
+        if (gd_length > axis_count)
+          throw pycuda::error("function::launch_kernel", CUDA_ERROR_INVALID_HANDLE,
+              "too many grid dimensions in kernel launch");
+
+        for (unsigned i = 0; i < gd_length; ++i)
+          grid_dim[i] = py::extract<unsigned>(grid_dim_py[i]);
+
+        unsigned bd_length = py::len(block_dim_py);
+        if (bd_length > axis_count)
+          throw pycuda::error("function::launch_kernel", CUDA_ERROR_INVALID_HANDLE,
+              "too many block dimensions in kernel launch");
+
+        for (unsigned i = 0; i < bd_length; ++i)
+          block_dim[i] = py::extract<unsigned>(block_dim_py[i]);
+
+        CUstream s_handle;
+        if (stream_py.ptr() != Py_None)
+        {
+          const stream &s = py::extract<const stream &>(stream_py);
+          s_handle = s.handle();
+        }
+        else
+          s_handle = 0;
+
+        const void *par_buf;
+        PYCUDA_BUFFER_SIZE_T py_par_len;
+        if (PyObject_AsReadBuffer(parameter_buffer.ptr(), &par_buf, &py_par_len))
+          throw py::error_already_set();
+        size_t par_len = py_par_len;
+
+        void *config[] = {
+          CU_LAUNCH_PARAM_BUFFER_POINTER, const_cast<void *>(par_buf),
+          CU_LAUNCH_PARAM_BUFFER_SIZE, &par_len,
+          CU_LAUNCH_PARAM_END
+        };
+
+        CUDAPP_CALL_GUARDED(
+            cuLaunchKernel, (m_function, 
+              grid_dim[0], grid_dim[1], grid_dim[2],
+              block_dim[0], block_dim[1], block_dim[2],
+              shared_mem_bytes, s_handle, 0, config
+              ));
+      }
+#endif
   };
 
   inline
@@ -1209,7 +1342,7 @@ namespace pycuda
   }
 
   inline
-  CUdeviceptr mem_alloc(unsigned long bytes)
+  CUdeviceptr mem_alloc(size_t bytes)
   {
     CUdeviceptr devptr;
     CUDAPP_CALL_GUARDED(cuMemAlloc, (&devptr, bytes));
@@ -1275,7 +1408,7 @@ namespace pycuda
       { return m_devptr; }
   };
 
-  inline unsigned int mem_alloc_pitch(
+  inline Py_ssize_t mem_alloc_pitch(
       std::auto_ptr<device_allocation> &da,
         unsigned int width, unsigned int height, unsigned int access_size)
   {
@@ -1295,8 +1428,6 @@ namespace pycuda
     return py::make_tuple(base, size);
   }
 
-  // missing: htoa, atoh, dtoh, htod
-
   inline
   void memcpy_dtoa(array const &ary, unsigned int index, CUdeviceptr src, unsigned int len)
   { CUDAPP_CALL_GUARDED_THREADED(cuMemcpyDtoA, (ary.handle(), index, src, len)); }
@@ -1315,11 +1446,6 @@ namespace pycuda
   // }}}
 
   // {{{ structured memcpy
-#if PY_VERSION_HEX >= 0x02050000
-  typedef Py_ssize_t PYCUDA_BUFFER_SIZE_T;
-#else
-  typedef int PYCUDA_BUFFER_SIZE_T;
-#endif
 
 #define MEMCPY_SETTERS \
     void set_src_host(py::object buf_py) \
@@ -1379,7 +1505,7 @@ namespace pycuda
 
     MEMCPY_SETTERS;
 
-    void execute(bool aligned) const
+    void execute(bool aligned=false) const
     {
       if (aligned)
       { CUDAPP_CALL_GUARDED_THREADED(cuMemcpy2D, (this)); }
@@ -1422,65 +1548,123 @@ namespace pycuda
   };
 #endif
 
+#if CUDAPP_CUDA_VERSION >= 4000
+  struct memcpy_3d_peer : public CUDA_MEMCPY3D_PEER
+  {
+    memcpy_3d_peer()
+    {
+      srcXInBytes = 0;
+      srcY = 0;
+      srcZ = 0;
+      srcLOD = 0;
+
+      dstXInBytes = 0;
+      dstY = 0;
+      dstZ = 0;
+      dstLOD = 0;
+    }
+
+    MEMCPY_SETTERS;
+
+    void set_src_context(context const &ctx)
+    {
+      srcContext = ctx.handle();
+    }
+
+    void set_dst_context(context const &ctx)
+    {
+      dstContext = ctx.handle();
+    }
+
+    void execute() const
+    {
+      CUDAPP_CALL_GUARDED_THREADED(cuMemcpy3DPeer, (this));
+    }
+
+    void execute_async(const stream &s) const
+    { CUDAPP_CALL_GUARDED_THREADED(cuMemcpy3DPeerAsync, (this, s.handle())); }
+  };
+#endif
+
   // }}}
 
   // {{{ host memory
-  inline void *mem_alloc_host(unsigned int size, unsigned flags=0)
+  inline void *mem_host_alloc(size_t size, unsigned flags=0)
   {
     void *m_data;
 #if CUDAPP_CUDA_VERSION >= 2020
     CUDAPP_CALL_GUARDED(cuMemHostAlloc, (&m_data, size, flags));
 #else
     if (flags != 0)
-      throw pycuda::error("mem_alloc_host", CUDA_ERROR_INVALID_VALUE,
-          "nonzero flags in mem_alloc_host not allowed in CUDA 2.1 and older");
+      throw pycuda::error("mem_host_alloc", CUDA_ERROR_INVALID_VALUE,
+          "nonzero flags in mem_host_alloc not allowed in CUDA 2.1 and older");
     CUDAPP_CALL_GUARDED(cuMemAllocHost, (&m_data, size));
 #endif
     return m_data;
   }
 
-  inline void mem_free_host(void *ptr)
+  inline void mem_host_free(void *ptr)
   {
     CUDAPP_CALL_GUARDED_CLEANUP(cuMemFreeHost, (ptr));
   }
 
-
-
-
-  struct host_allocation : public boost::noncopyable, public context_dependent
+#if CUDAPP_CUDA_VERSION >= 4000
+  inline void *mem_host_register(void *ptr, size_t bytes, unsigned int flags=0)
   {
-    private:
+    CUDAPP_CALL_GUARDED(cuMemHostRegister, (ptr, bytes, flags));
+    return ptr;
+  }
+
+  inline void mem_host_unregister(void *ptr)
+  {
+    CUDAPP_CALL_GUARDED_CLEANUP(cuMemHostUnregister, (ptr));
+  }
+#endif
+
+  inline void *aligned_malloc(size_t size, size_t alignment)
+  {
+    // alignment must be a power of two.
+    if ((alignment & (alignment - 1)) != 0)
+      throw pycuda::error("aligned_malloc", CUDA_ERROR_INVALID_VALUE,
+          "alignment must be a power of two");
+
+    if (alignment == 0)
+      throw pycuda::error("aligned_malloc", CUDA_ERROR_INVALID_VALUE,
+          "alignment must non-zero");
+
+    void *p = malloc(size + (alignment - 1));
+    if (!p)
+      throw pycuda::error("aligned_malloc", CUDA_ERROR_OUT_OF_MEMORY,
+          "aligned malloc failed");
+
+    return (void *)((((ptrdiff_t)(p)) + (alignment-1)) & -alignment);
+  }
+
+
+
+  struct host_pointer : public boost::noncopyable, public context_dependent
+  {
+    protected:
       bool m_valid;
       void *m_data;
 
     public:
-      host_allocation(unsigned bytesize, unsigned flags=0)
-        : m_valid(true), m_data(mem_alloc_host(bytesize, flags))
+      host_pointer()
+        : m_valid(false)
       { }
 
-      ~host_allocation()
+      host_pointer(void *ptr)
+        : m_valid(true), m_data(ptr)
+      { }
+
+      virtual ~host_pointer()
       {
         if (m_valid)
           free();
       }
 
-      void free()
-      {
-        if (m_valid)
-        {
-          try
-          {
-            scoped_context_activation ca(get_context());
-            mem_free_host(m_data);
-          }
-          CUDAPP_CATCH_CLEANUP_ON_DEAD_CONTEXT(host_allocation);
-
-          release_context();
-          m_valid = false;
-        }
-        else
-          throw pycuda::error("host_allocation::free", CUDA_ERROR_INVALID_HANDLE);
-      }
+      virtual void free()
+      { }
 
       void *data()
       { return m_data; }
@@ -1494,6 +1678,33 @@ namespace pycuda
       }
 #endif
 
+  };
+
+  struct pagelocked_host_allocation : public host_pointer
+  {
+    public:
+      pagelocked_host_allocation(size_t bytesize, unsigned flags=0)
+        : host_pointer(mem_host_alloc(bytesize, flags))
+      { }
+
+      void free()
+      {
+        if (m_valid)
+        {
+          try
+          {
+            scoped_context_activation ca(get_context());
+            mem_host_free(m_data);
+          }
+          CUDAPP_CATCH_CLEANUP_ON_DEAD_CONTEXT(pagelocked_host_allocation);
+
+          release_context();
+          m_valid = false;
+        }
+        else
+          throw pycuda::error("pagelocked_host_allocation::free", CUDA_ERROR_INVALID_HANDLE);
+      }
+
 #if CUDAPP_CUDA_VERSION >= 3020
       unsigned int get_flags()
       {
@@ -1502,8 +1713,63 @@ namespace pycuda
         return flags;
       }
 #endif
-
   };
+
+  struct aligned_host_allocation : public host_pointer
+  {
+    public:
+      aligned_host_allocation(size_t size, size_t alignment)
+        : host_pointer(aligned_malloc(size, alignment))
+      { }
+
+      void free()
+      {
+        if (m_valid)
+        {
+          ::free(m_data);
+        }
+        else
+          throw pycuda::error("aligned_host_allocation::free", CUDA_ERROR_INVALID_HANDLE);
+      }
+  };
+
+#if CUDAPP_CUDA_VERSION >= 4000
+  struct registered_host_memory : public host_pointer
+  {
+    private:
+      py::object m_base;
+
+    public:
+      registered_host_memory(void *p, size_t bytes, unsigned int flags=0, 
+          py::object base=py::object())
+        : host_pointer(mem_host_register(p, bytes, flags)), m_base(base)
+      {
+      }
+
+      void free()
+      {
+        if (m_valid)
+        {
+          try
+          {
+            scoped_context_activation ca(get_context());
+            mem_host_unregister(m_data);
+          }
+          CUDAPP_CATCH_CLEANUP_ON_DEAD_CONTEXT(host_allocation);
+
+          release_context();
+          m_valid = false;
+        }
+        else
+          throw pycuda::error("registered_host_memory::free", CUDA_ERROR_INVALID_HANDLE);
+      }
+
+      py::object base() const
+      {
+        return m_base;
+      }
+  };
+#endif
 
   // }}}
 
@@ -1590,6 +1856,28 @@ namespace pycuda
   }
 #endif
 
+  // }}}
+
+  // {{{ profiler
+#if CUDAPP_CUDA_VERSION >= 4000
+  inline void initialize_profiler(
+      const char *config_file,
+      const char *output_file,
+      CUoutput_mode output_mode)
+  {
+    CUDAPP_CALL_GUARDED(cuProfilerInitialize, (config_file, output_file, output_mode));
+  }
+
+  inline void start_profiler()
+  {
+    CUDAPP_CALL_GUARDED(cuProfilerStart, ());
+  }
+
+  inline void stop_profiler()
+  {
+    CUDAPP_CALL_GUARDED(cuProfilerStart, ());
+  }
+#endif
   // }}}
 }
 

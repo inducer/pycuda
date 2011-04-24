@@ -120,6 +120,13 @@ Constants
 
         Support mapped pinned allocations. CUDA 2.2 and newer.
 
+    .. attribute:: LMEM_RESIZE_TO_MAX
+
+        Keep local memory allocation after launch. CUDA 3.2 and newer.
+        Rumored to decrease Fermi launch overhead?
+
+        .. versionadded:: 2011.1
+
     .. attribute:: FLAGS_MASK
 
         Mask of valid flags in this bitfield.
@@ -198,9 +205,19 @@ Constants
         MAXIMUM_TEXTURE2D_ARRAY_HEIGHT
         MAXIMUM_TEXTURE2D_ARRAY_NUMSLICES
 
-        CUDA 3.0 and above
+        CUDA 3.0 and above.
 
         .. versionadded:: 0.94
+
+    .. attribute:: MAXIMUM_TEXTURE2D_LAYERED_WIDTH
+        MAXIMUM_TEXTURE2D_LAYERED_HEIGHT
+        MAXIMUM_TEXTURE2D_LAYERED_LAYERS
+        MAXIMUM_TEXTURE1D_LAYERED_WIDTH
+        MAXIMUM_TEXTURE1D_LAYERED_LAYERS
+
+        CUDA 4.0 and above.
+
+        .. versionadded:: 2011.1
 
     .. attribute:: SURFACE_ALIGNMENT
 
@@ -237,6 +254,37 @@ Constants
         CUDA 3.2 and above.
 
         .. versionadded:: 0.94
+
+    .. attribute:: MEMORY_CLOCK_RATE
+        GLOBAL_MEMORY_BUS_WIDTH
+        L2_CACHE_SIZE
+        MAX_THREADS_PER_MULTIPROCESSOR
+        ASYNC_ENGINE_COUNT
+        UNIFIED_ADDRESSING
+
+        CUDA 4.0 and above.
+
+        .. versionadded:: 2011.1
+
+.. class:: pointer_attribute
+
+    .. attribute:: CONTEXT
+        MEMORY_TYPE
+        DEVICE_POINTER 
+        HOST_POINTER
+
+    CUDA 4.0 and above.
+
+    .. versionadded:: 2011.1
+
+.. class:: profiler_output_mode
+
+    .. attribute:: KEY_VALUE_PAIR
+        CSV
+
+    CUDA 4.0 and above.
+
+    .. versionadded:: 2011.1
 
 .. class:: function_attribute
 
@@ -284,11 +332,17 @@ Constants
 
 .. class:: array3d_flags
 
-    .. attribute 2DARRAY
+    .. attribute :: 2DARRAY
 
-        CUDA 3.0 and above
+        CUDA 3.0 and above. Deprecated--use :attr:`LAYERED`.
 
         .. versionadded:: 0.94
+
+    .. attribute :: LAYERED
+
+        CUDA 4.0 and above.
+
+        .. versionadded:: 2011.1
 
     .. attribute SURFACE_LDST
 
@@ -325,6 +379,11 @@ Constants
     .. attribute:: DEFAULT
     .. attribute:: EXCLUSIVE
     .. attribute:: PROHIBITED
+    .. attribute:: EXCLUSIVE_PROCESS
+
+        CUDA 4.0 and above.
+
+        .. versionadded:: 2011.1
 
 .. class:: jit_option
 
@@ -377,6 +436,15 @@ Constants
     .. attribute:: DEVICEMAP
     .. attribute:: WRITECOMBINED
 
+.. class:: mem_host_register_flags
+
+    .. attribute:: PORTABLE
+    .. attribute:: DEVICEMAP
+
+    CUDA 4.0 and newer.
+
+    .. versionadded:: 2011.1
+
 .. class:: limit
 
     Limit values for :meth:`Context.get_limit` and :meth:`Context.set_limit`.
@@ -390,6 +458,29 @@ Constants
     .. attribute:: MALLOC_HEAP_SIE
 
         CUDA 3.2 and above
+
+
+Graphics-related constants
+^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+.. class:: graphics_register_flags
+
+    .. attribute:: NONE READ_ONLY WRITE_DISCARD SURFACE_LDST
+
+    CUDA 4.0 and above.
+
+    .. versionadded:: 2011.1
+
+.. class:: array_cubemap_face
+
+    .. attribute::
+        POSITIVE_X NEGATIVE_X
+        POSITIVE_Y NEGATIVE_Y
+        POSITIVE_Z NEGATIVE_Z
+
+    CUDA 3.2 and above.
+
+    .. versionadded:: 2011.1
 
 Devices and Contexts
 --------------------
@@ -452,6 +543,12 @@ Devices and Contexts
         :class:`ctx_flags` values.
 
         Also make the newly-created context the current context.
+
+    .. method:: can_access_peer(dev)
+
+        CUDA 4.0 and newer.
+
+        ..versionadded:: 2011.1
 
     .. method:: __hash__()
     .. method:: __eq__()
@@ -525,6 +622,18 @@ Devices and Contexts
         CUDA 3.2 and above.
 
         .. versionadded:: 0.94
+
+    .. method:: enable_peer_access(peer, flags=0)
+
+        CUDA 4.0 and above.
+
+        .. versionadded:: 2011.1
+
+    .. method:: disable_peer_access(peer, flags=0)
+
+        CUDA 4.0 and above.
+
+        .. versionadded:: 2011.1
 
 Concurrency and Streams
 -----------------------
@@ -662,6 +771,9 @@ Global Device Memory
 Pagelocked Host Memory
 ^^^^^^^^^^^^^^^^^^^^^^
 
+Pagelocked Allocation
+~~~~~~~~~~~~~~~~~~~~~
+
 .. function:: pagelocked_empty(shape, dtype, order="C", mem_flags=0)
 
     Allocate a pagelocked :class:`numpy.ndarray` of *shape*, *dtype* and *order*.
@@ -702,11 +814,14 @@ Pagelocked Host Memory
 The :class:`numpy.ndarray` instances returned by these functions
 have an attribute *base* that references an object of type
 
-.. class:: HostAllocation
+.. class:: PagelockedHostAllocation
+
+    Inherits from :class:`HostPointer`.
 
     An object representing an allocation of pagelocked
     host memory.  Once this object is deleted, its associated
     device memory is freed.
+
 
     .. method:: free()
 
@@ -715,13 +830,6 @@ have an attribute *base* that references an object of type
         associated :mod:`numpy` array) is an error
         and will lead to undefined behavior.
 
-    .. method:: get_device_pointer()
-
-        Return a device pointer that indicates the address at which
-        this memory is mapped into the device's address space.
-
-        Only available on CUDA 2.2 and newer.
-
     .. method:: get_flags()
 
         Return a bit field of values from :class:`host_alloc_flags`.
@@ -729,6 +837,113 @@ have an attribute *base* that references an object of type
         Only available on CUDA 3.2 and newer.
 
         .. versionadded:: 0.94
+
+.. class:: HostAllocation
+
+    A deprecated name for :class:`PagelockedHostAllocation`.
+
+Aligned Host Memory
+~~~~~~~~~~~~~~~~~~~
+
+.. function:: aligned_empty(shape, dtype, order="C", alignment=4096)
+
+    Allocate an :class:`numpy.ndarray` of *shape*, *dtype* and *order*,
+    with data aligned to *alignment* bytes
+
+    For the meaning of the other parameters, please refer to the :mod:`numpy`
+    documentation.
+
+    .. versionadded:: 2011.1
+
+.. function:: aligned_zeros(shape, dtype, order="C", alignment=4096)
+
+    Allocate an :class:`numpy.ndarray` of *shape*, *dtype* and *order*,
+    with data aligned to *alignment* bytes
+
+    For the meaning of the other parameters, please refer to the :mod:`numpy`
+    documentation.
+
+    .. versionadded:: 2011.1
+
+.. function:: aligned_empty_like(array, alignment=4096)
+
+    Allocate a :class:`numpy.ndarray` with the same shape, dtype and order
+    as *array*, with data aligned to *alignment* bytes.
+
+    .. versionadded:: 2011.1
+
+.. function:: aligned_zeros_like(array, alignment=4096)
+
+    Allocate a :class:`numpy.ndarray` with the same shape, dtype and order
+    as *array*, with data aligned to *alignment* bytes. Initialize it to 0.
+
+    .. versionadded:: 2011.1
+
+The :class:`numpy.ndarray` instances returned by these functions
+have an attribute *base* that references an object of type
+
+.. class:: AlignedHostAllocation
+
+    Inherits from :class:`HostPointer`.
+
+    An object representing an allocation of aligned
+    host memory.
+
+    .. method:: free()
+
+        Release the held memory now instead of when this object
+        becomes unreachable. Any further use of the object (or its
+        associated :mod:`numpy` array) is an error
+        and will lead to undefined behavior.
+
+Post-Allocation Pagelocking
+~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+.. function:: register_host_memory(ary, flags=0)
+
+    Returns a :class:`numpy.ndarray` which shares memory with *ary*.
+    This memory will be page-locked as long as the return value of
+    this function is alive.
+
+    The returned array's *base* attribute contains a
+    :class:`RegisteredHostMemory` function, whose *base* attribute
+    in turn contains *ary*.
+
+    CUDA 4.0 and newer.
+
+    *ary*'s data address and size must be page-aligned. One way to achieve this
+    is to use the functions from the preceding section.
+
+    .. versionadded:: 2011.1
+
+.. class:: RegisteredHostMemory
+
+    Inherits from :class:`HostPointer`.
+
+    CUDA 4.0 and newer.
+
+    .. versionadded:: 2011.1
+
+    .. method:: unregister()
+
+        Unregister the page-lock on the host memory held by this instance.
+        Note that this does not free the memory, it only frees the 
+        page-lock.
+
+    .. attribute:: base
+
+        Contains the Python object from which this instance was constructed.
+
+.. class:: HostPointer
+
+    Represents a page-locked host pointer.
+
+    .. method:: get_device_pointer()
+
+        Return a device pointer that indicates the address at which
+        this memory is mapped into the device's address space.
+
+        Only available on CUDA 2.2 and newer.
 
 Arrays and Textures
 ^^^^^^^^^^^^^^^^^^^
@@ -1074,6 +1289,19 @@ Structured Memory Transfers
 
     :class:`Memcpy3D` is supported on CUDA 2.0 and above only.
 
+.. class:: Memcpy3DPeer()
+
+    :class:`Memcpy3DPeer` has the same members as :class:`Memcpy3D`, 
+    and additionally all of the following:
+
+    .. method:: set_src_context(ctx)
+
+    .. method:: set_dst_context(ctx)
+
+    CUDA 4.0 and newer.
+
+    ..versionadded:: 2011.1
+
 Code on the Device: Modules and Functions
 -----------------------------------------
 
@@ -1165,10 +1393,7 @@ Code on the Device: Modules and Functions
         mildly less convenient) way of invoking kernels, see :meth:`prepare` and
         :meth:`prepared_call`.
 
-    .. method:: param_set(arg1, ... argn)
-
-        Set up *arg1* through *argn* as positional C arguments to *self*. They are
-        allowed to be of the following types:
+        *arg1* through *argn* are allowed to be of the following types:
 
         * Subclasses of :class:`numpy.number`. These are sized number types
           such as :class:`numpy.uint32` or :class:`numpy.float32`.
@@ -1197,45 +1422,11 @@ Code on the Device: Modules and Functions
             this can be inconvenient. For a faster (but mildly less convenient) way
             of invoking kernels, see :meth:`prepare` and :meth:`prepared_call`.
 
-    .. method:: set_block_shape(x, y, z)
-
-        Set the thread block shape for this function.
-
-    .. method:: set_shared_size(bytes)
-
-        Set *shared* to be the number of bytes available to the kernel in
-        *extern __shared__* arrays.
-
-    .. method:: param_set_size(bytes)
-
-        Size the parameter space to *bytes*.
-
-    .. method:: param_seti(offset, value)
-
-        Set the integer at *offset* in the parameter space to *value*.
-
-    .. method:: param_setf(offset, value)
-
-        Set the float at *offset* in the parameter space to *value*.
-
     .. method:: param_set_texref(texref)
 
         Make the :class:`TextureReference` texref available to the function.
 
-    .. method:: launch()
-
-        Launch a single thread block of *self*.
-
-    .. method:: launch_grid(width, height)
-
-        Launch a width*height grid of thread blocks of *self*.
-
-    .. method:: launch_grid_async(width, height, stream)
-
-        Launch a width*height grid of thread blocks of *self*, sequenced
-        by the :class:`Stream` *stream*.
-
-    .. method:: prepare(arg_types, block, shared=None, texrefs=[])
+    .. method:: prepare(arg_types, block=None, shared=None, texrefs=[])
 
         Prepare the invocation of this function by
 
@@ -1256,16 +1447,20 @@ Code on the Device: Modules and Functions
 
         Return `self`.
 
-    .. method:: prepared_call(grid, *args)
+        .. warning:: Passing *block* not equal to *None* is deprecated as of version 2011.1.
 
-        Invoke `self` using :meth:`launch_grid`, with `args` and a grid size of `grid`.
+    .. method:: prepared_call(grid, block, *args)
+
+        Invoke `self` using :meth:`launch_grid`, with `args` a grid size of `grid`,
+        and a block size of *block*.
         Assumes that :meth:`prepare` was called on *self*.
         The texture references given to :meth:`prepare` are set up as parameters, as
         well.
 
-    .. method:: prepared_timed_call(grid, *args)
+    .. method:: prepared_timed_call(grid, block, *args)
 
-        Invoke `self` using :meth:`launch_grid`, with `args` and a grid size of `grid`.
+        Invoke `self` using :meth:`launch_grid`, with `args`, a grid size of `grid`,
+        and a block size of *block*.
         Assumes that :meth:`prepare` was called on *self*.
         The texture references given to :meth:`prepare` are set up as parameters, as
         well.
@@ -1274,14 +1469,14 @@ Code on the Device: Modules and Functions
         the call, in seconds. Once called, this callable will block until
         completion of the invocation.
 
-    .. method:: prepared_async_call(grid, stream, *args)
+    .. method:: prepared_async_call(grid, block, stream, *args)
 
-        Invoke `self` using :meth:`launch_grid_async`, with `args` and a grid
-        size of `grid`, serialized into the :class:`pycuda.driver.Stream` `stream`.
-        If `stream` is None, do the same as :meth:`prepared_call`.
-        Assumes that :meth:`prepare` was called on *self*.
-        The texture references given to :meth:`prepare` are set up as parameters, as
-        well.
+        Invoke `self` using :meth:`launch_grid_async`, with `args`, a grid size
+        of `grid`, and a block size of *block*, serialized into the
+        :class:`pycuda.driver.Stream` `stream`.  If `stream` is None, do the
+        same as :meth:`prepared_call`.  Assumes that :meth:`prepare` was called
+        on *self*.  The texture references given to :meth:`prepare` are set up
+        as parameters, as well.
 
     .. method:: get_attribute(attr)
 
@@ -1328,6 +1523,63 @@ Code on the Device: Modules and Functions
         of a :class:`SourceModule`.  It replaces the now-deprecated attribute
         `registers`.
 
+    .. method:: set_shared_size(bytes)
+
+        Set *shared* to be the number of bytes available to the kernel in
+        *extern __shared__* arrays.
+
+        .. warning:: Deprecated as of version 2011.1.
+
+    .. method:: set_block_shape(x, y, z)
+
+        Set the thread block shape for this function.
+
+        .. warning:: Deprecated as of version 2011.1.
+
+    .. method:: param_set(arg1, ... argn)
+
+        Set the thread block shape for this function.
+
+        .. warning:: Deprecated as of version 2011.1.
+
+    .. method:: param_set_size(bytes)
+
+        Size the parameter space to *bytes*.
+
+        .. warning:: Deprecated as of version 2011.1.
+
+    .. method:: param_seti(offset, value)
+
+        Set the integer at *offset* in the parameter space to *value*.
+
+        .. warning:: Deprecated as of version 2011.1.
+
+    .. method:: param_setf(offset, value)
+
+        Set the float at *offset* in the parameter space to *value*.
+
+        .. warning:: Deprecated as of version 2011.1.
+
+    .. method:: launch()
+
+        Launch a single thread block of *self*.
+
+        .. warning:: Deprecated as of version 2011.1.
+
+    .. method:: launch_grid(width, height)
+
+        Launch a width*height grid of thread blocks of *self*.
+
+        .. warning:: Deprecated as of version 2011.1.
+
+    .. method:: launch_grid_async(width, height, stream)
+
+        Launch a width*height grid of thread blocks of *self*, sequenced
+        by the :class:`Stream` *stream*.
+
+        .. warning:: Deprecated as of version 2011.1.
+
+
 .. class:: ArgumentHandler(array)
 
 .. class:: In(array)
@@ -1345,6 +1597,26 @@ Code on the Device: Modules and Functions
     Inherits from :class:`ArgumentHandler`. Indicates that :class:`buffer`
     *array* should be copied both onto the compute device before invoking
     the kernel, and off it afterwards.
+
+Profiler Control
+================
+
+CUDA 4.0 and newer.
+
+
+.. function:: initialize_profiler(config_file, output_file, output_mode)
+
+    *output_mode* is one of the attributes of :class:`profiler_output_mode`.
+
+    ..versionadded:: 2011.1
+
+.. function:: start_profiler()
+
+    ..versionadded:: 2011.1
+
+.. function:: stop()
+
+    ..versionadded:: 2011.1
 
 Just-in-time Compilation
 ========================

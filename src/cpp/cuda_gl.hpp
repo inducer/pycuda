@@ -93,14 +93,14 @@ namespace pycuda { namespace gl {
     private:
       boost::shared_ptr<buffer_object> m_buffer_object;
       CUdeviceptr m_devptr;
-      unsigned int m_size;
+      size_t m_size;
       bool m_valid;
 
     public:
       buffer_object_mapping(
           boost::shared_ptr<buffer_object> bobj,
           CUdeviceptr devptr,
-          unsigned int size)
+          size_t size)
         : m_buffer_object(bobj), m_devptr(devptr), m_size(size), m_valid(true)
       { 
         PyErr_Warn(
@@ -134,7 +134,7 @@ namespace pycuda { namespace gl {
       CUdeviceptr device_ptr() const
       { return m_devptr; }
 
-      unsigned int size() const
+      size_t size() const
       { return m_size; }
   };
 
@@ -286,6 +286,17 @@ namespace pycuda { namespace gl {
         CUDAPP_CALL_GUARDED(cuGraphicsResourceGetMappedPointer, 
             (&devptr, &size, m_object->resource()));
         return py::make_tuple(devptr, size);
+      }
+
+      inline
+      pycuda::array *array(unsigned int index, unsigned int level) const
+      {
+        CUarray devptr;
+        CUDAPP_CALL_GUARDED(cuGraphicsSubResourceGetMappedArray, 
+            (&devptr, m_object->resource(), index, level));
+        std::auto_ptr<pycuda::array> result(
+            new pycuda::array(devptr, false));
+        return result.release();
       }
   };
 

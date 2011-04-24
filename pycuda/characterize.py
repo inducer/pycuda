@@ -7,6 +7,12 @@ import numpy as np
 
 
 
+def platform_bits():
+    return tuple.__itemsize__ * 8
+
+
+
+
 def has_stack():
     from pycuda.driver import Context
     return Context.get_device().compute_capability() >= (2,0)

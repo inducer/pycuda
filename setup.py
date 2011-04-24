@@ -20,6 +20,7 @@ def get_config_schema():
         IncludeDir("CUDA", None),
 
         Switch("CUDA_ENABLE_GL", False, "Enable CUDA GL interoperability"),
+        Switch("CUDA_ENABLE_CURAND", True, "Enable CURAND library"),
 
         LibraryDir("CUDADRV", []),
         Libraries("CUDADRV", ["cuda"]),
@@ -210,10 +211,17 @@ def main():
 
         conf["CUDA_ROOT"] = normpath(join(dirname(nvcc_path), ".."))
 
-    if conf["CUDA_INC_DIR"] is None:
+    if not conf["CUDA_INC_DIR"]:
         conf["CUDA_INC_DIR"] = [join(conf["CUDA_ROOT"], "include")]
     if not conf["CUDADRV_LIB_DIR"]:
-        conf["CUDADRV_LIB_DIR"] = [join(conf["CUDA_ROOT"], "lib")]
+        platform_bits = tuple.__itemsize__ * 8
+
+        if platform_bits ==  64:
+            lib_dir_name = "lib64"
+        else:
+            lib_dir_name = "lib"
+
+        conf["CUDADRV_LIB_DIR"] = [join(conf["CUDA_ROOT"], lib_dir_name)]
 
     verify_siteconfig(conf)
 
@@ -244,6 +252,22 @@ def main():
     if conf["CUDA_ENABLE_GL"]:
         EXTRA_SOURCES.append("src/wrapper/wrap_cudagl.cpp")
         EXTRA_DEFINES["HAVE_GL"] = 1
+
+    extra_extensions = []
+
+    if conf["CUDA_ENABLE_CURAND"]:
+        EXTRA_DEFINES["HAVE_CURAND"] = 1
+
+        extra_extensions.append(
+                Extension("_curand",
+                    ["src/wrapper/wrap_curand.cpp"],
+                    include_dirs=INCLUDE_DIRS + EXTRA_INCLUDE_DIRS,
+                    library_dirs=LIBRARY_DIRS + conf["CUDADRV_LIB_DIR"],
+                    libraries=LIBRARIES + ["curand"] + conf["CUDADRV_LIBNAME"],
+                    define_macros=list(EXTRA_DEFINES.items()),
+                    extra_compile_args=conf["CXXFLAGS"],
+                    extra_link_args=conf["LDFLAGS"],
+                    ))
 
     ver_dic = {}
     exec(compile(open("pycuda/__init__.py").read(), "pycuda/__init__.py", 'exec'), ver_dic)
@@ -316,8 +340,8 @@ def main():
             packages=["pycuda", "pycuda.gl", "pycuda.sparse"],
 
             install_requires=[
-                "pytools>=8",
-                "py>=1.0.0b7",
+                "pytools>=2011.2",
+                "pytest>=2",
                 "decorator>=3.2.0"
                 ],
 
@@ -339,7 +363,10 @@ def main():
                     ),
                 Extension("_pvt_struct",
                     ["src/wrapper/_pycuda_struct.c"],
-                    )],
+                    extra_compile_args=conf["CXXFLAGS"],
+                    extra_link_args=conf["LDFLAGS"],
+                    ),
+                ] + extra_extensions,
 
             data_files=[
                 ("include/pycuda", glob.glob("src/cuda/*.hpp"))
