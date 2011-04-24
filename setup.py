@@ -20,6 +20,7 @@ def get_config_schema():
         IncludeDir("CUDA", None),
 
         Switch("CUDA_ENABLE_GL", False, "Enable CUDA GL interoperability"),
+        Switch("CUDA_ENABLE_CURAND", True, "Enable CURAND library"),
 
         LibraryDir("CUDADRV", []),
         Libraries("CUDADRV", ["cuda"]),
@@ -245,6 +246,9 @@ def main():
         EXTRA_SOURCES.append("src/wrapper/wrap_cudagl.cpp")
         EXTRA_DEFINES["HAVE_GL"] = 1
 
+    if conf["CUDA_ENABLE_CURAND"]:
+        EXTRA_DEFINES["HAVE_CURAND"] = 1
+
     ver_dic = {}
     exec(compile(open("pycuda/__init__.py").read(), "pycuda/__init__.py", 'exec'), ver_dic)
 
@@ -316,7 +320,7 @@ def main():
             packages=["pycuda", "pycuda.gl", "pycuda.sparse"],
 
             install_requires=[
-                "pytools>=8",
+                "pytools>=11",
                 "py>=1.0.0b7",
                 "decorator>=3.2.0"
                 ],
@@ -339,6 +343,13 @@ def main():
                     ),
                 Extension("_pvt_struct",
                     ["src/wrapper/_pycuda_struct.c"],
+                    ),
+                Extension("_curand",
+                    ["src/wrapper/wrap_curand.cpp"],
+                    include_dirs=INCLUDE_DIRS + EXTRA_INCLUDE_DIRS,
+                    library_dirs=LIBRARY_DIRS + conf["CUDADRV_LIB_DIR"],
+                    libraries=LIBRARIES + ["curand"] + conf["CUDADRV_LIBNAME"],
+                    define_macros=list(EXTRA_DEFINES.items()),
                     )],
 
             data_files=[

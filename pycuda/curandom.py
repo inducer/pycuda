@@ -7,7 +7,6 @@ import pycuda.gpuarray as array
 
 
 
-
 # {{{ MD5-based random number generation
 
 md5_code = """
@@ -244,6 +243,13 @@ def rand(shape, dtype=np.float32, stream=None):
 
 # {{{ CURAND wrapper
 
+import pycuda._curand as _curand
+get_curand_version = _curand.get_curand_version
+
+if get_curand_version() >= (3, 2, 0):
+    direction_vector_set = _curand.direction_vector_set
+    get_direction_vectors32 = _curand.get_direction_vectors32
+
 # {{{ Base class
 
 gen_template = """
@@ -260,19 +266,19 @@ random_source = """
 // Uses C++ features (templates); do not surround with extern C
 #include <curand_kernel.h>
 
-extern "C" 
+extern "C"
 {
 
 %(generators)s
 
-__global__ void skip_ahead(%(state_type)s *s, const int n, const int skip) 
+__global__ void skip_ahead(%(state_type)s *s, const int n, const int skip)
 {
   const int idx = blockIdx.x*blockDim.x+threadIdx.x;
   if (idx < n)
     skipahead(skip, &s[idx]);
 }
 
-__global__ void skip_ahead_array(%(state_type)s *s, const int n, const int *skip) 
+__global__ void skip_ahead_array(%(state_type)s *s, const int n, const int *skip)
 {
   const int idx = blockIdx.x*blockDim.x+threadIdx.x;
   if (idx < n)
@@ -302,7 +308,7 @@ class _RandomNumberGeneratorBase(object):
         ]
 
     def __init__(self, state_type, additional_source):
-        if drv.get_version() < (3, 2, 0):
+        if get_curand_version() < (3, 2, 0):
             raise EnvironmentError("Need at least CUDA 3.2")
 
         # Max 256 threads on ION during preparing
@@ -347,8 +353,8 @@ class _RandomNumberGeneratorBase(object):
                 if do_generate(out_type)]
 
         generator_sources = [
-                gen_template % { 
-                    "name":name, "out_type":out_type, "suffix": suffix, 
+                gen_template % {
+                    "name":name, "out_type":out_type, "suffix": suffix,
                     "state_type": state_type, }
                 for name, out_type, suffix in my_generators]
 
@@ -423,10 +429,19 @@ class _RandomNumberGeneratorBase(object):
 
 # {{{ XORWOW RNG
 
+def seed_getter_uniform(N):
+    result = pycuda.gpuarray.empty([N], numpy.int32)
+    value = random.randint(0, 2**31-1)
+    return result.fill(value)
+
+def seed_getter_unique(N):
+    result = numpy.random.randint(0, 2**31-1, N).astype(numpy.int32)
+    return pycuda.gpuarray.to_gpu(result)
+
 xorwow_random_source = """
 extern "C" {
 __global__ void prepare_with_seeds(curandState *s, const int n,
-  const int *seed, const int offset) 
+  const int *seed, const int offset)
 {
   const int id = blockIdx.x*blockDim.x+threadIdx.x;
   if (id < n)
@@ -436,58 +451,60 @@ __global__ void prepare_with_seeds(curandState *s, const int n,
 }
 """
 
-class XORWOWRandomNumberGenerator(_RandomNumberGeneratorBase):
-    has_box_muller = True
 
-    def __init__(self, seed_getter=None, offset=0):
-        """
-        :arg seed_getter: a function that, given an integer count, will yield an `int32` 
-          :class:`GPUArray` of seeds.
-        """
+if get_curand_version() >= (3, 2, 0):
+    class XORWOWRandomNumberGenerator(_RandomNumberGeneratorBase):
+        has_box_muller = True
 
-        super(XORWOWRandomNumberGenerator, self).__init__(
-            'curandStateXORWOW', xorwow_random_source)
+        def __init__(self, seed_getter=None, offset=0):
+            """
+            :arg seed_getter: a function that, given an integer count, will yield an `int32`
+              :class:`GPUArray` of seeds.
+            """
 
-        if seed_getter is None:
-            seed = array.to_gpu(
-                    np.asarray(
-                        np.random.random_integers(
-                            0, (1 << 31) - 1, self.generators_per_block), 
-                        dtype=np.int32))
-        else:
-            seed = seed_getter(self.generators_per_block)
+            super(XORWOWRandomNumberGenerator, self).__init__(
+                'curandStateXORWOW', xorwow_random_source)
 
-        if not (isinstance(seed, pycuda.gpuarray.GPUArray)
-                and seed.dtype == np.int32
-                and seed.size == self.generators_per_block):
-            raise TypeError("seed must be GPUArray of integers of right length")
+            if seed_getter is None:
+                seed = array.to_gpu(
+                        np.asarray(
+                            np.random.random_integers(
+                                0, (1 << 31) - 1, self.generators_per_block),
+                            dtype=np.int32))
+            else:
+                seed = seed_getter(self.generators_per_block)
 
-        p = self.module.get_function("prepare_with_seeds")
-        p.prepare("PiPi", block=(self.generators_per_block, 1, 1))
+            if not (isinstance(seed, pycuda.gpuarray.GPUArray)
+                    and seed.dtype == np.int32
+                    and seed.size == self.generators_per_block):
+                raise TypeError("seed must be GPUArray of integers of right length")
 
-        from pycuda.characterize import has_stack
-        has_stack = has_stack()
+            p = self.module.get_function("prepare_with_seeds")
+            p.prepare("PiPi", block=(self.generators_per_block, 1, 1))
 
-        if has_stack:
-            prev_stack_size = drv.Context.get_limit(drv.limit.STACK_SIZE)
+            from pycuda.characterize import has_stack
+            has_stack = has_stack()
 
-        try:
             if has_stack:
-                drv.Context.set_limit(drv.limit.STACK_SIZE, 1<<14) # 16k
+                prev_stack_size = drv.Context.get_limit(drv.limit.STACK_SIZE)
+
             try:
-                dev = drv.Context.get_device()
-                if dev.compute_capability() >= (2, 0):
-                    p.prepared_call((self.block_count, 1), self.state,
-                        self.block_count * self.generators_per_block, seed.gpudata, offset)
-                else:
-                    p.prepared_call((2 * self.block_count, 1), self.state,
-                        self.block_count * self.generators_per_block // 2, seed.gpudata, offset)
-            except drv.LaunchError:
-                raise ValueError("Initialisation failed. Decrease number of threads.")
+                if has_stack:
+                    drv.Context.set_limit(drv.limit.STACK_SIZE, 1<<14) # 16k
+                try:
+                    dev = drv.Context.get_device()
+                    if dev.compute_capability() >= (2, 0):
+                        p.prepared_call((self.block_count, 1), self.state,
+                            self.block_count * self.generators_per_block, seed.gpudata, offset)
+                    else:
+                        p.prepared_call((2 * self.block_count, 1), self.state,
+                            self.block_count * self.generators_per_block // 2, seed.gpudata, offset)
+                except drv.LaunchError:
+                    raise ValueError("Initialisation failed. Decrease number of threads.")
 
-        finally:
-            if has_stack:
-                drv.Context.set_limit(drv.limit.STACK_SIZE, prev_stack_size)
+            finally:
+                if has_stack:
+                    drv.Context.set_limit(drv.limit.STACK_SIZE, prev_stack_size)
 
 # }}}
 
@@ -495,58 +512,66 @@ class XORWOWRandomNumberGenerator(_RandomNumberGeneratorBase):
 
 sobol32_random_source = """
 extern "C" {
-__global__ void prepare(curandStateSobol32 *s, const int n, unsigned int *v,
-    const unsigned int o) 
+__global__ void prepare(curandStateSobol32 *s, const int n, unsigned int **v,
+    const unsigned int o)
 {
   const int id = blockIdx.x*blockDim.x+threadIdx.x;
   if (id < n)
-    curand_init(v, o, &s[id]);
+    curand_init(v[id], o, &s[id]);
 }
 }
 """
 
-class Sobol32RandomNumberGenerator(_RandomNumberGeneratorBase):
-    """
-    Class surrounding CURAND kernels from CUDA 3.2.
-    It allows for generating quasi-random numbers with uniform
-    and normal probability function of type int, float, and double.
-    """
+if get_curand_version() >= (3, 2, 0):
+    class Sobol32RandomNumberGenerator(_RandomNumberGeneratorBase):
+        """
+        Class surrounding CURAND kernels from CUDA 3.2.
+        It allows for generating quasi-random numbers with uniform
+        and normal probability function of type int, float, and double.
+        """
 
-    has_box_muller = False
+        has_box_muller = False
 
-    def __init__(self, dir_vector, offset):
-        super(Sobol32RandomNumberGenerator, self).__init__('curandStateSobol32',
-            sobol32_random_source)
+        def __init__(self, dir_vector=None, offset=0):
+            super(Sobol32RandomNumberGenerator, self).__init__('curandStateSobol32',
+                sobol32_random_source)
 
-        raise NotImplementedError("not working yet")
+            if dir_vector is None:
+                dir_vector = generate_direction_vectors(
+                    self.block_count * self.generators_per_block)
 
-        p = self.module.get_function("prepare")
-        p.prepare("PiPi", block=(self.generators_per_block, 1, 1))
+            if not (isinstance(dir_vector, pycuda.gpuarray.GPUArray)
+                    and dir_vector.dtype == np.int32
+                    and dir_vector.shape == (self.block_count * self.generators_per_block, 32)):
+                raise TypeError("seed must be GPUArray of integers of right length")
 
-        from pycuda.characterize import has_stack
-        has_stack = has_stack()
+            p = self.module.get_function("prepare")
+            p.prepare("PiPi", block=(self.generators_per_block, 1, 1))
 
-        if has_stack:
-            prev_stack_size = drv.Context.get_limit(drv.limit.STACK_SIZE)
+            from pycuda.characterize import has_stack
+            has_stack = has_stack()
 
-        try:
             if has_stack:
-                drv.Context.set_limit(drv.limit.STACK_SIZE, 1<<14) # 16k
+                prev_stack_size = drv.Context.get_limit(drv.limit.STACK_SIZE)
+
             try:
+                if has_stack:
+                    drv.Context.set_limit(drv.limit.STACK_SIZE, 1<<14) # 16k
+                try:
 
-                dev = drv.Context.get_device()
-                if dev.compute_capability() >= (2, 0):
-                    p.prepared_call((self.block_count, 1), self.state,
-                        self.block_count * self.generators_per_block, vector, offset)
-                else:
-                    p.prepared_call((2 * self.block_count, 1), self.state,
-                        self.block_count * self.generators_per_block // 2, vector, offset)
-            except drv.LaunchError:
-                raise ValueError("Initialisation failed. Decrease number of threads.")
+                    dev = drv.Context.get_device()
+                    if dev.compute_capability() >= (2, 0):
+                        p.prepared_call((self.block_count, 1), self.state,
+                            self.block_count * self.generators_per_block, vector, offset)
+                    else:
+                        p.prepared_call((2 * self.block_count, 1), self.state,
+                            self.block_count * self.generators_per_block // 2, vector, offset)
+                except drv.LaunchError:
+                    raise ValueError("Initialisation failed. Decrease number of threads.")
 
-        finally:
-            if has_stack:
-                drv.Context.set_limit(drv.limit.STACK_SIZE, prev_stack_size)
+            finally:
+                if has_stack:
+                    drv.Context.set_limit(drv.limit.STACK_SIZE, prev_stack_size)
 
 # }}}
 
