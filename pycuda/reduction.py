@@ -227,6 +227,10 @@ class ReductionKernel:
 
             for arg, arg_tp in zip(args, arg_types):
                 if arg_tp == "P":
+                    if not arg.flags.forc:
+                        raise RuntimeError("ReductionKernel cannot "
+                                "deal with non-contiguous arrays")
+
                     vectors.append(arg)
                     invocation_args.append(arg.gpudata)
                 else:

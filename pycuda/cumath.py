@@ -11,6 +11,10 @@ def _make_unary_array_func(name):
         else:
             func_name = name
 
+        if not array.flags.forc:
+            raise RuntimeError("only contiguous arrays may "
+                    "be used as arguments to this operation")
+
         func = elementwise.get_unary_func_kernel(func_name, array.dtype)
         func.prepared_async_call(array._grid, array._block, stream,
                 array.gpudata, result.gpudata, array.mem_size)
@@ -42,6 +46,10 @@ def fmod(arg, mod, stream=None):
     for each element in `arg` and `mod`."""
     result = gpuarray.GPUArray(arg.shape, arg.dtype)
 
+    if not arg.flags.forc or not mod.flags.forc:
+        raise RuntimeError("only contiguous arrays may "
+                "be used as arguments to this operation")
+
     func = elementwise.get_fmod_kernel()
     func.prepared_async_call(arg._grid, arg._block, stream,
             arg.gpudata, mod.gpudata, result.gpudata, arg.mem_size)
@@ -52,6 +60,10 @@ def frexp(arg, stream=None):
     """Return a tuple `(significands, exponents)` such that
     `arg == significand * 2**exponent`.
     """
+    if not arg.flags.forc:
+        raise RuntimeError("only contiguous arrays may "
+                "be used as arguments to this operation")
+
     sig = gpuarray.GPUArray(arg.shape, arg.dtype)
     expt = gpuarray.GPUArray(arg.shape, arg.dtype)
 
@@ -66,6 +78,10 @@ def ldexp(significand, exponent, stream=None):
     entries of `significand` and `exponent`, paired together as
     `result = significand * 2**exponent`.
     """
+    if not significand.flags.forc or not exponent.flags.forc:
+        raise RuntimeError("only contiguous arrays may "
+                "be used as arguments to this operation")
+
     result = gpuarray.GPUArray(significand.shape, significand.dtype)
 
     func = elementwise.get_ldexp_kernel()
@@ -79,6 +95,9 @@ def modf(arg, stream=None):
     """Return a tuple `(fracpart, intpart)` of arrays containing the
     integer and fractional parts of `arg`.
     """
+    if not arg.flags.forc:
+        raise RuntimeError("only contiguous arrays may "
+                "be used as arguments to this operation")
 
     intpart = gpuarray.GPUArray(arg.shape, arg.dtype)
     fracpart = gpuarray.GPUArray(arg.shape, arg.dtype)
