@@ -902,7 +902,6 @@ BOOST_PYTHON_MODULE(_driver)
       .def("_param_setv", function_param_setv)
       .DEF_SIMPLE_METHOD(param_set_texref)
 
-      .def("launch_kernel", &cl::launch_kernel)
 
       .def("_launch", &cl::launch)
       .def("_launch_grid", &cl::launch_grid,
@@ -915,6 +914,9 @@ BOOST_PYTHON_MODULE(_driver)
 #endif
 #if CUDAPP_CUDA_VERSION >= 3000 && defined(CUDAPP_POST_30_BETA)
       .DEF_SIMPLE_METHOD(set_cache_config)
+#endif
+#if CUDAPP_CUDA_VERSION >= 4000
+      .def("launch_kernel", &cl::launch_kernel)
 #endif
       ;
   }
