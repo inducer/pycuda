@@ -565,7 +565,7 @@ def set_up_shipped_boost_if_requested(conf):
                 if not f.startswith("bpl-subset/bpl_subset/libs/thread/src")]
 
         import sys
-        if sys.platform == "nt":
+        if sys.platform == "win32":
             source_files += glob(
                     "bpl-subset/bpl_subset/libs/thread/src/win32/*.cpp")
         else:
