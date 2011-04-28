@@ -573,7 +573,10 @@ def set_up_shipped_boost_if_requested(conf):
                     "bpl-subset/bpl_subset/libs/thread/src/pthread/*.cpp")
 
         return (source_files,
-                {"BOOST_MULTI_INDEX_DISABLE_SERIALIZATION": 1}
+                {
+                    "BOOST_MULTI_INDEX_DISABLE_SERIALIZATION": 1,
+                    "BOOST_PYTHON_SOURCE": 1,
+                    }
                 )
     else:
         return [], {}
