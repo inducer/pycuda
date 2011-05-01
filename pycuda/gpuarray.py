@@ -249,7 +249,7 @@ class GPUArray(object):
 
         assert self.flags.forc
         if not ary.flags.forc:
-            ary = ary.copy()
+            raise RuntimeError("cannot set from non-contiguous array")
 
         if self.size:
             drv.memcpy_htod(self.gpudata, ary)
