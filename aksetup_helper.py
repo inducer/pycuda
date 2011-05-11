@@ -5,6 +5,19 @@ distribute_setup.use_setuptools()
 import setuptools
 from setuptools import Extension
 
+def count_down_delay(delay):
+    from time import sleep
+    import sys
+    while delay:
+        sys.stdout.write("Continuing in %d seconds...   \r" % delay)
+        sys.stdout.flush()
+        delay -= 1
+        sleep(1)
+    print("")
+
+
+
+
 if not hasattr(setuptools, "_distribute"):
     print("-------------------------------------------------------------------------")
     print("Setuptools conflict detected.")
@@ -18,17 +31,11 @@ if not hasattr(setuptools, "_distribute"):
     print("http://wiki.tiker.net/DistributeVsSetuptools")
     print("-------------------------------------------------------------------------")
     print("I will continue after a short while, fingers crossed.")
+    print("Hit Ctrl-C now if you'd like to think about the situation.")
     print("-------------------------------------------------------------------------")
 
-    delay = 10
+    count_down_delay(delay=10)
 
-    from time import sleep
-    import sys
-    while delay:
-        sys.stdout.write("Continuing in %d seconds...   \r" % delay)
-        sys.stdout.flush()
-        delay -= 1
-        sleep(1)
 
 def setup(*args, **kwargs):
     from setuptools import setup
@@ -156,15 +163,7 @@ def get_config(schema=None, warn_about_no_config=True):
         print("*** HIT Ctrl-C NOW IF THIS IS NOT WHAT YOU WANT")
         print("*************************************************************")
 
-        delay = 10
-
-        from time import sleep
-        import sys
-        while delay:
-            sys.stdout.write("Continuing in %d seconds...   \r" % delay)
-            sys.stdout.flush()
-            delay -= 1
-            sleep(1)
+        count_down_delay(delay=10)
 
     return schema.read_config()
 
@@ -540,15 +539,7 @@ def set_up_shipped_boost_if_requested(conf):
             print("------------------------------------------------------------------------")
             conf["USE_SHIPPED_BOOST"] = False
 
-            delay = 10
-
-            from time import sleep
-            import sys
-            while delay:
-                sys.stdout.write("Continuing in %d seconds...   \r" % delay)
-                sys.stdout.flush()
-                delay -= 1
-                sleep(1)
+            count_down_delay(delay=10)
 
     if conf["USE_SHIPPED_BOOST"]:
         conf["BOOST_INC_DIR"] = ["bpl-subset/bpl_subset"]
@@ -565,7 +556,7 @@ def set_up_shipped_boost_if_requested(conf):
                 if not f.startswith("bpl-subset/bpl_subset/libs/thread/src")]
 
         import sys
-        if sys.platform == "nt":
+        if sys.platform == "win32":
             source_files += glob(
                     "bpl-subset/bpl_subset/libs/thread/src/win32/*.cpp")
         else:
@@ -573,7 +564,10 @@ def set_up_shipped_boost_if_requested(conf):
                     "bpl-subset/bpl_subset/libs/thread/src/pthread/*.cpp")
 
         return (source_files,
-                {"BOOST_MULTI_INDEX_DISABLE_SERIALIZATION": 1}
+                {
+                    "BOOST_MULTI_INDEX_DISABLE_SERIALIZATION": 1,
+                    "BOOST_PYTHON_SOURCE": 1,
+                    }
                 )
     else:
         return [], {}
@@ -685,3 +679,100 @@ def substitute(substitutions, fname):
     from os import stat, chmod
     infile_stat_res = stat(fname_in)
     chmod(fname, infile_stat_res.st_mode)
+
+
+
+
+def check_git_submodules():
+    from os.path import isdir
+    if not isdir(".git"):
+        # not a git repository
+        return
+
+    git_error = None
+    from subprocess import Popen, PIPE
+    try:
+        popen = Popen(["git", "--version"], stdout=PIPE)
+        stdout_data, _ = popen.communicate()
+        if popen.returncode != 0:
+            git_error = "git returned error code %d" % popen.returncode
+    except OSError, e:
+        git_error = e
+
+    if git_error is not None:
+        print("-------------------------------------------------------------------------")
+        print("Trouble invoking git")
+        print("-------------------------------------------------------------------------")
+        print("The package directory appears to be a git repository, but I could")
+        print("not invoke git to check whether my submodules are up to date.")
+        print("")
+        print("The error was:")
+        print(e)
+        print("Hit Ctrl-C now if you'd like to think about the situation.")
+        print("-------------------------------------------------------------------------")
+        count_down_delay(delay=5)
+        return
+
+    popen = Popen(["git", "submodule", "status"], stdout=PIPE)
+    stdout_data, _ = popen.communicate()
+    if popen.returncode != 0:
+        git_error = "git returned error code %d" % popen.returncode
+
+    pkg_warnings = []
+
+    lines = stdout_data.split("\n")
+    for l in lines:
+        if not l.strip():
+            continue
+
+        status = l[0]
+        sha, package = l[1:].split(" ", 1)
+
+        if package == "bpl-subset":
+            # treated separately
+            continue
+
+        if status == "+":
+            pkg_warnings.append("version of '%s' is not what this outer package wants"
+                    % package)
+        elif status == "-":
+            pkg_warnings.append("subpackage '%s' is not initialized" 
+                    % package)
+        elif status == " ":
+            pass
+        else:
+            pkg_warnings.append("subpackage '%s' has unrecognized status '%s'"
+                    % package)
+
+    if pkg_warnings:
+            print("-------------------------------------------------------------------------")
+            print("git submodules are not up-to-date or in odd state")
+            print("-------------------------------------------------------------------------")
+            print("If this makes no sense, you probably want to say")
+            print("")
+            print(" $ git submodule init")
+            print(" $ git submodule update")
+            print("")
+            print("to fetch what you are presently missing and move on with your life.")
+            print("If you got this from a distributed package on the net, that package is")
+            print("broken and should be fixed. Please inform whoever gave you this package.")
+            print("")
+            print("These issues were found:")
+            for w in pkg_warnings:
+                print("  %s" % w)
+            print("")
+            print("I will try to continue after a short wait, fingers crossed.")
+            print("-------------------------------------------------------------------------")
+            print("Hit Ctrl-C now if you'd like to think about the situation.")
+            print("-------------------------------------------------------------------------")
+
+            count_down_delay(delay=10)
+
+
+
+
+
+
+
+
+

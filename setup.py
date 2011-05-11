@@ -188,7 +188,10 @@ def verify_siteconfig(sc_vars):
 def main():
     import glob
     from aksetup_helper import (hack_distutils, get_config, setup, \
-            NumpyExtension, Extension, set_up_shipped_boost_if_requested)
+            NumpyExtension, Extension, set_up_shipped_boost_if_requested,
+            check_git_submodules)
+
+    check_git_submodules()
 
     hack_distutils()
     conf = get_config(get_config_schema())
@@ -337,7 +340,7 @@ def main():
               ],
 
             # build info
-            packages=["pycuda", "pycuda.gl", "pycuda.sparse"],
+            packages=["pycuda", "pycuda.gl", "pycuda.sparse", "pycuda.compyte"],
 
             install_requires=[
                 "pytools>=2011.2",

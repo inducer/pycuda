@@ -547,12 +547,12 @@ class TestDriver:
     @mark_cuda_test
     def test_register_host_memory(self):
         if drv.get_version() < (4,):
-            from pytest import skip
+            from py.test import skip
             skip("register_host_memory only exists on CUDA 4.0 and later")
 
         import sys
         if sys.platform == "darwin":
-            from pytest import skip
+            from py.test import skip
             skip("register_host_memory is not supported on OS X")
 
         a = drv.aligned_empty((2**20,), np.float64, alignment=4096)
