@@ -255,7 +255,7 @@ else:
 
 if get_curand_version() >= (3, 2, 0):
     direction_vector_set = _curand.direction_vector_set
-    get_direction_vectors32 = _curand.get_direction_vectors32
+    _get_direction_vectors = _curand._get_direction_vectors
 
 # {{{ Base class
 
@@ -524,9 +524,14 @@ if get_curand_version() >= (3, 2, 0):
 
 # {{{ Sobol32 RNG
 
+def generate_direction_vectors(count, direction=direction_vector_set.VECTOR_32):
+    result = np.empty((count, 32), dtype=np.int32)
+    _get_direction_vectors(direction, result, count)
+    return pycuda.gpuarray.to_gpu(result)
+
 sobol32_random_source = """
 extern "C" {
-__global__ void prepare(curandStateSobol32 *s, const int n, unsigned int **v,
+__global__ void prepare(curandStateSobol32 *s, const int n, curandDirectionVectors32_t *v,
     const unsigned int o)
 {
   const int id = blockIdx.x*blockDim.x+threadIdx.x;
@@ -576,10 +581,10 @@ if get_curand_version() >= (3, 2, 0):
                     dev = drv.Context.get_device()
                     if dev.compute_capability() >= (2, 0):
                         p.prepared_call((self.block_count, 1), self.state,
-                            self.block_count * self.generators_per_block, vector, offset)
+                            self.block_count * self.generators_per_block, dir_vector.gpudata, offset)
                     else:
                         p.prepared_call((2 * self.block_count, 1), self.state,
-                            self.block_count * self.generators_per_block // 2, vector, offset)
+                            self.block_count * self.generators_per_block // 2, dir_vector.gpudata, offset)
                 except drv.LaunchError:
                     raise ValueError("Initialisation failed. Decrease number of threads.")
 

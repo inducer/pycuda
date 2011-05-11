@@ -25,7 +25,8 @@ void pycuda_expose_curand()
   py::def("get_curand_version", py_curand_version);
 
 #if CUDAPP_CUDA_VERSION >= 3020
-  py::def("get_direction_vectors32", py_curand_get_direction_vectors32, (arg("vectors"), arg("set")));
+  py::def("_get_direction_vectors", py_curand_get_direction_vectors,
+      (arg("set"), arg("dst"), arg("count")));
 #endif
 }
 

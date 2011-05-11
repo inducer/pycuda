@@ -399,6 +399,21 @@ algorithm designed to fill an n-dimensional space evenly.
 
 Quasirandom numbers are more expensive to generate.
 
+.. function:: get_curand_version()
+
+    Obtain the version of CURAND against which PyCUDA was compiled. Returns a
+    3-tuple of integers as *(major, minor, revision)*.
+
+.. function:: seed_getter_uniform(N)
+
+    Return an :class:`GPUArray` filled with one random `int32` repeated `N`
+    times which can be used as a seed for XORWOW generator.
+
+.. function:: seed_getter_unique(N)
+
+    Return an :class:`GPUArray` filled with `N` random `int32` which can
+    be used as a seed for XORWOW generator.
+
 .. class:: XORWOWRandomNumberGenerator(seed_getter=None, offset=0)
 
     :arg seed_getter: a function that, given an integer count, will yield an
@@ -432,7 +447,18 @@ Quasirandom numbers are more expensive to generate.
         Accepts array i of integer values, telling each generator how many
         values to skip.
 
-.. class:: Sobol32RandomNumberGenerator(vector, offset)
+.. function:: generate_direction_vectors(count, direction=direction_vector_set.VECTOR_32)
+
+    Return an :class:`GPUArray` `count` filled with direction vectors
+    used to initialize Sobol32 generators.
+
+.. class:: Sobol32RandomNumberGenerator(dir_vector=None, offset=0)
+
+    :arg dir_vector: a :class:`GPUArray` of 32-element `int32` vectors which
+      are used to initialize quasirandom generator; it must contain one vector
+      for each initialized generator
+    :arg offset: Starting index into the Sobol32 sequence, given direction
+      vector.
 
     Provides quasirandom numbers. Generates
     sequences with period of :math:`2^32`.
