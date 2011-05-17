@@ -4,6 +4,7 @@ import pycuda.elementwise as elementwise
 from pytools import memoize, memoize_method
 import pycuda.driver as drv
 from pycuda.compyte.array import (
+        as_strided as _as_strided,
         f_contiguous_strides as _f_contiguous_strides, 
         c_contiguous_strides as _c_contiguous_strides, 
         ArrayFlags as _ArrayFlags,
@@ -230,8 +231,7 @@ class GPUArray(object):
             else:
                 ary = np.empty(self.shape, self.dtype)
 
-            from numpy.lib.stride_tricks import as_strided
-            ary = as_strided(ary, strides=self.strides)
+            ary = _as_strided(ary, strides=self.strides)
         else:
             assert ary.size == self.size
             assert ary.dtype == self.dtype
@@ -247,8 +247,7 @@ class GPUArray(object):
         if ary is None:
             ary = drv.pagelocked_empty(self.shape, self.dtype)
 
-            from numpy.lib.stride_tricks import as_strided
-            ary = as_strided(ary, strides=self.strides)
+            ary = _as_strided(ary, strides=self.strides)
         else:
             assert ary.size == self.size
             assert ary.dtype == self.dtype
