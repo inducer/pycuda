@@ -324,7 +324,11 @@ def _add_functionality():
         except ImportError:
             pass
         else:
-            update_wrapper(new_func, func)
+            try:
+                update_wrapper(new_func, func)
+            except:
+                # User won't see true signature. Oh well.
+                pass
 
         return new_func
 
