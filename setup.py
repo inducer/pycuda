@@ -262,7 +262,7 @@ def main():
         EXTRA_DEFINES["HAVE_CURAND"] = 1
 
         extra_extensions.append(
-                Extension("_curand",
+                NumpyExtension("_curand",
                     ["src/wrapper/wrap_curand.cpp"],
                     include_dirs=INCLUDE_DIRS + EXTRA_INCLUDE_DIRS,
                     library_dirs=LIBRARY_DIRS + conf["CUDADRV_LIB_DIR"],
