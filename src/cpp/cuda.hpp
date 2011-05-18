@@ -21,6 +21,7 @@
 #include <cudaProfiler.h>
 #endif
 
+#include <stdint.h>
 #include <stdexcept>
 #include <boost/shared_ptr.hpp>
 #include <boost/foreach.hpp>
@@ -854,6 +855,9 @@ namespace pycuda
 
       CUstream handle() const
       { return m_stream; }
+
+      intptr_t handle_int() const
+      { return (intptr_t) m_stream; }
 
 #if CUDAPP_CUDA_VERSION >= 3020
       void wait_for_event(const event &evt);

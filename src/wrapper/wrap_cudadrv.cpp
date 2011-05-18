@@ -858,6 +858,7 @@ BOOST_PYTHON_MODULE(_driver)
 #if CUDAPP_CUDA_VERSION >= 3020
       .DEF_SIMPLE_METHOD(wait_for_event)
 #endif
+      .add_property("handle", &cl::handle_int)
       ;
   }
   // }}}
