@@ -4,6 +4,7 @@ import numpy as np
 import pycuda.compiler
 import pycuda.driver as drv
 import pycuda.gpuarray as array
+from pytools import memoize_method
 
 
 
@@ -324,27 +325,8 @@ class _RandomNumberGeneratorBase(object):
 
         dev = drv.Context.get_device()
 
-        block_size = dev.get_attribute(
-            drv.device_attribute.MAX_THREADS_PER_BLOCK)
-        # On GT200, double2 normal kernel runs into register limits.
-        # Try to stay clear of those by using half the number possible.
-        if dev.compute_capability() < (2, 0):
-            block_size = block_size // 2
-        block_dimension =  dev.get_attribute(
-            drv.device_attribute.MAX_BLOCK_DIM_X)
-        self.generators_per_block = min(block_size, block_dimension)
-
-        # generators_per_block is divided by 2 below
-        assert self.generators_per_block % 2 == 0
-
         self.block_count = dev.get_attribute(
             pycuda.driver.device_attribute.MULTIPROCESSOR_COUNT)
-
-        from pycuda.characterize import sizeof
-        data_type_size = sizeof(state_type, "#include <curand_kernel.h>")
-
-        self.state = drv.mem_alloc(
-            self.block_count * self.generators_per_block * data_type_size)
 
         from pycuda.characterize import has_double_support
 
@@ -384,6 +366,31 @@ class _RandomNumberGeneratorBase(object):
         self.skip_ahead.prepare("Pii")
         self.skip_ahead_array = module.get_function("skip_ahead_array")
         self.skip_ahead_array.prepare("PiP")
+
+        self.state_type = state_type
+        self._state = None
+
+    def _kernels(self):
+        return (
+                list(self.generators.itervalues())
+                + [self.skip_ahead, self.skip_ahead_array])
+
+    @property
+    @memoize_method
+    def generators_per_block(self):
+        return min(kernel.max_threads_per_block
+                for kernel in self._kernels())
+
+    @property
+    def state(self):
+        if self._state is None:
+            from pycuda.characterize import sizeof
+            data_type_size = sizeof(self.state_type, "#include <curand_kernel.h>")
+
+            self._state = drv.mem_alloc(
+                self.block_count * self.generators_per_block * data_type_size)
+
+        return self._state
 
     def fill_uniform(self, data, stream=None):
         if data.dtype == np.float32:
@@ -506,21 +513,19 @@ if get_curand_version() >= (3, 2, 0):
                     drv.Context.set_limit(drv.limit.STACK_SIZE, 1<<14) # 16k
                 try:
                     dev = drv.Context.get_device()
-                    if dev.compute_capability() >= (2, 0):
-                        # FIXME: What stream should these be in?
-                        p.prepared_call(
-                                (self.block_count, 1), (self.generators_per_block, 1, 1), self.state,
-                                self.block_count * self.generators_per_block, seed.gpudata, offset)
-                    else:
-                        p.prepared_call(
-                                (2 * self.block_count, 1), (self.generators_per_block, 1, 1), self.state,
-                                self.block_count * self.generators_per_block // 2, seed.gpudata, offset)
+                    p.prepared_call(
+                            (self.block_count, 1), (self.generators_per_block, 1, 1), self.state,
+                            self.block_count * self.generators_per_block, seed.gpudata, offset)
                 except drv.LaunchError:
                     raise ValueError("Initialisation failed. Decrease number of threads.")
 
             finally:
                 if has_stack:
                     drv.Context.set_limit(drv.limit.STACK_SIZE, prev_stack_size)
+
+        def _kernels(self):
+            return (_RandomNumberGeneratorBase._kernels(self)
+                    + [self.module.get_function("prepare_with_seeds")])
 
 # }}}
 
@@ -593,6 +598,10 @@ if get_curand_version() >= (3, 2, 0):
             finally:
                 if has_stack:
                     drv.Context.set_limit(drv.limit.STACK_SIZE, prev_stack_size)
+
+        def _kernels(self):
+            return (_RandomNumberGeneratorBase._kernels(self)
+                    + [self.module.get_function("prepare")])
 
 # }}}
 
