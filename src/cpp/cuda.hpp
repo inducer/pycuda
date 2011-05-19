@@ -40,9 +40,7 @@
 #warning *****************************************************************
 #endif
 
-// TODO:  cuMemcpyPeer, cuMemcpyPeerAsync
-// TODO: cuMemcpy, cuPointerGetAttribute
-//
+// MAYBE? cuMemcpy, cuPointerGetAttribute
 // TODO: cuCtxSetCurrent, cuCtxGetCurrent 
 // (use once the old, deprecated functions have been removed from CUDA)
 
@@ -66,6 +64,18 @@
 #else
   typedef int PYCUDA_BUFFER_SIZE_T;
 #endif
+
+
+
+#define PYCUDA_PARSE_STREAM_PY \
+    CUstream s_handle; \
+    if (stream_py.ptr() != Py_None) \
+    { \
+      const stream &s = py::extract<const stream &>(stream_py); \
+      s_handle = s.handle(); \
+    } \
+    else \
+      s_handle = 0;
 
 
 
@@ -1294,14 +1304,7 @@ namespace pycuda
         for (unsigned i = 0; i < bd_length; ++i)
           block_dim[i] = py::extract<unsigned>(block_dim_py[i]);
 
-        CUstream s_handle;
-        if (stream_py.ptr() != Py_None)
-        {
-          const stream &s = py::extract<const stream &>(stream_py);
-          s_handle = s.handle();
-        }
-        else
-          s_handle = 0;
+        PYCUDA_PARSE_STREAM_PY;
 
         const void *par_buf;
         PYCUDA_BUFFER_SIZE_T py_par_len;
@@ -1822,14 +1825,7 @@ namespace pycuda
 
       event *record(py::object stream_py)
       {
-        CUstream s_handle;
-        if (stream_py.ptr() != Py_None)
-        {
-          const stream &s = py::extract<const stream &>(stream_py);
-          s_handle = s.handle();
-        }
-        else
-          s_handle = 0;
+        PYCUDA_PARSE_STREAM_PY;
 
         CUDAPP_CALL_GUARDED(cuEventRecord, (m_event, s_handle));
         return this;

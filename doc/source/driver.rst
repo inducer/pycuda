@@ -221,19 +221,19 @@ Constants
 
     .. attribute:: SURFACE_ALIGNMENT
 
-        CUDA 3.0 (post-beta) and above
+        CUDA 3.0 (post-beta) and above.
 
         .. versionadded:: 0.94
 
     .. attribute:: CONCURRENT_KERNELS
 
-        CUDA 3.0 (post-beta) and above
+        CUDA 3.0 (post-beta) and above.
 
         .. versionadded:: 0.94
 
     .. attribute:: ECC_ENABLED
 
-        CUDA 3.0 (post-beta) and above
+        CUDA 3.0 (post-beta) and above.
 
         .. versionadded:: 0.94
 
@@ -297,13 +297,13 @@ Constants
     .. attribute:: NUM_REGS
     .. attribute:: PTX_VERSION
 
-        CUDA 3.0 (post-beta) and above
+        CUDA 3.0 (post-beta) and above.
 
         .. versionadded:: 0.94
 
     .. attribute:: BINARY_VERSION
 
-        CUDA 3.0 (post-beta) and above
+        CUDA 3.0 (post-beta) and above.
 
         .. versionadded:: 0.94
 
@@ -311,7 +311,7 @@ Constants
 
 .. class:: func_cache
 
-    See :meth:`Function.set_cache_config`. CUDA 3.0 (post-beta) and above
+    See :meth:`Function.set_cache_config`. CUDA 3.0 (post-beta) and above.
 
     .. versionadded:: 0.94
 
@@ -411,13 +411,13 @@ Constants
     .. attribute:: COMPUTE_13
     .. attribute:: COMPUTE_20
 
-        CUDA 3.0 and above
+        CUDA 3.0 and above.
 
         .. versionadded:: 0.94
 
     .. attribute:: COMPUTE_21
 
-        CUDA 3.2 and above
+        CUDA 3.2 and above.
 
         .. versionadded:: 0.94
 
@@ -457,7 +457,7 @@ Constants
     .. attribute:: PRINTF_FIFO_SIZE
     .. attribute:: MALLOC_HEAP_SIE
 
-        CUDA 3.2 and above
+        CUDA 3.2 and above.
 
 
 Graphics-related constants
@@ -1148,9 +1148,16 @@ Unstructured Memory Transfers
 .. function:: memcpy_dtod(dest, src, size)
 .. function:: memcpy_dtod_async(dest, src, size, stream=None)
 
-    CUDA 3.0 and above
+    CUDA 3.0 and above.
 
     .. versionadded:: 0.94
+
+.. function:: memcpy_peer(dest, src, size, dest_context=None, src_context=None)
+.. function:: memcpy_peer_async(dest, src, size, dest_context=None, src_context=None, stream=None)
+
+    CUDA 4.0 and above.
+
+    .. versionadded:: 2011.1
 
 .. function:: memcpy_dtoa(ary, index, src, len)
 .. function:: memcpy_atod(dest, ary, index, len)

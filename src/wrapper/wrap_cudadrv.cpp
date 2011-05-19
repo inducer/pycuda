@@ -168,14 +168,7 @@ namespace
     if (PyObject_AsReadBuffer(src.ptr(), &buf, &len))
       throw py::error_already_set();
 
-    CUstream s_handle;
-    if (stream_py.ptr() != Py_None)
-    {
-      const stream &s = py::extract<const stream &>(stream_py);
-      s_handle = s.handle();
-    }
-    else
-      s_handle = 0;
+    PYCUDA_PARSE_STREAM_PY;
 
     CUDAPP_CALL_GUARDED(cuMemcpyHtoDAsync, (dst, buf, len, s_handle));
   }
@@ -203,14 +196,7 @@ namespace
     if (PyObject_AsWriteBuffer(dest.ptr(), &buf, &len))
       throw py::error_already_set();
 
-    CUstream s_handle;
-    if (stream_py.ptr() != Py_None)
-    {
-      const stream &s = py::extract<const stream &>(stream_py);
-      s_handle = s.handle();
-    }
-    else
-      s_handle = 0;
+    PYCUDA_PARSE_STREAM_PY;
 
     CUDAPP_CALL_GUARDED(cuMemcpyDtoHAsync, (buf, src, len, s_handle));
   }
@@ -231,11 +217,11 @@ namespace
 
 
 
-  void py_memcpy_atoh(py::object dst, array const &ary, unsigned int index)
+  void py_memcpy_atoh(py::object dest, array const &ary, unsigned int index)
   {
     void *buf;
     PYCUDA_BUFFER_SIZE_T len;
-    if (PyObject_AsWriteBuffer(dst.ptr(), &buf, &len))
+    if (PyObject_AsWriteBuffer(dest.ptr(), &buf, &len))
       throw py::error_already_set();
 
     CUDAPP_CALL_GUARDED(cuMemcpyAtoH, (buf, ary.handle(), index, len));
@@ -244,30 +230,69 @@ namespace
 
 
 
-  void  py_memcpy_dtod(CUdeviceptr dst, CUdeviceptr src, 
+  void  py_memcpy_dtod(CUdeviceptr dest, CUdeviceptr src, 
       unsigned int byte_count)
-  { CUDAPP_CALL_GUARDED_THREADED(cuMemcpyDtoD, (dst, src, byte_count)); }
+  { CUDAPP_CALL_GUARDED_THREADED(cuMemcpyDtoD, (dest, src, byte_count)); }
 
 
 
 
 #if CUDAPP_CUDA_VERSION >= 3000
-  void  py_memcpy_dtod_async(CUdeviceptr dst, CUdeviceptr src, 
+  void  py_memcpy_dtod_async(CUdeviceptr dest, CUdeviceptr src, 
       unsigned int byte_count, py::object stream_py)
   {
-    CUstream s_handle;
-    if (stream_py.ptr() != Py_None)
-    {
-      const stream &s = py::extract<const stream &>(stream_py);
-      s_handle = s.handle();
-    }
-    else
-      s_handle = 0;
+    PYCUDA_PARSE_STREAM_PY;
 
     CUDAPP_CALL_GUARDED_THREADED(cuMemcpyDtoDAsync, 
-        (dst, src, byte_count, s_handle)); 
+        (dest, src, byte_count, s_handle)); 
   }
 #endif
+
+#if CUDAPP_CUDA_VERSION >= 4000
+  void  py_memcpy_peer(CUdeviceptr dest, CUdeviceptr src, 
+      unsigned int byte_count,
+      py::object dest_context_py, py::object src_context_py
+      )
+  { 
+    boost::shared_ptr<context> dest_context = context::current_context();
+    boost::shared_ptr<context> src_context = dest_context;
+
+    if (dest_context_py.ptr() == Py_None)
+      dest_context = py::extract<boost::shared_ptr<context> >(dest_context_py);
+
+    if (src_context_py.ptr() == Py_None)
+      src_context = py::extract<boost::shared_ptr<context> >(src_context_py);
+
+    CUDAPP_CALL_GUARDED_THREADED(cuMemcpyPeer, (
+          dest, dest_context->handle(),
+          src, src_context->handle(),
+          byte_count)); 
+  }
+
+  void  py_memcpy_peer_async(CUdeviceptr dest, CUdeviceptr src, 
+      unsigned int byte_count,
+      py::object dest_context_py, py::object src_context_py, 
+      py::object stream_py)
+  { 
+    boost::shared_ptr<context> dest_context = context::current_context();
+    boost::shared_ptr<context> src_context = dest_context;
+
+    if (dest_context_py.ptr() == Py_None)
+      dest_context = py::extract<boost::shared_ptr<context> >(dest_context_py);
+
+    if (src_context_py.ptr() == Py_None)
+      src_context = py::extract<boost::shared_ptr<context> >(src_context_py);
+
+    PYCUDA_PARSE_STREAM_PY
+
+    CUDAPP_CALL_GUARDED_THREADED(cuMemcpyPeerAsync, (
+          dest, dest_context->handle(),
+          src, src_context->handle(),
+          byte_count, s_handle)); 
+  }
+#endif
+
+  // }}}
 
   // }}}
 
@@ -1042,6 +1067,20 @@ BOOST_PYTHON_MODULE(_driver)
 #if CUDAPP_CUDA_VERSION >= 3000
   py::def("memcpy_dtod_async", py_memcpy_dtod_async, 
       (py::args("dest", "src", "size"), py::arg("stream")=py::object()));
+#endif
+#if CUDAPP_CUDA_VERSION >= 4000
+  py::def("memcpy_peer", py_memcpy_peer,
+      (py::args("dest", "src", "size"),
+       py::arg("dest_context")=py::object(),
+       py::arg("src_context")=py::object()));
+
+  /*
+  py::def("memcpy_peer_async", py_memcpy_peer_async,
+      (py::args("dest", "src", "size"),
+       py::arg("dest_context")=py::object(),
+       py::arg("src_context")=py::object(),
+       py::arg("stream")=py::object()));
+       */
 #endif
 
   DEF_SIMPLE_FUNCTION_WITH_ARGS(memcpy_dtoa,
