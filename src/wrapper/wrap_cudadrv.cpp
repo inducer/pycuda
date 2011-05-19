@@ -1056,6 +1056,14 @@ BOOST_PYTHON_MODULE(_driver)
   DEF_SIMPLE_FUNCTION_WITH_ARGS(memcpy_atoa,
       ("dest", "dest_index", "src", "src_index", "len"));
 
+#if CUDAPP_CUDA_VERSION >= 4000
+#define WRAP_MEMCPY_2D_UNIFIED_SETTERS \
+      .DEF_SIMPLE_METHOD(set_src_unified) \
+      .DEF_SIMPLE_METHOD(set_dst_unified)
+#else
+#define WRAP_MEMCPY_2D_UNIFIED_SETTERS /* empty */
+#endif
+
 #define WRAP_MEMCPY_2D_PROPERTIES \
       .def_readwrite("src_x_in_bytes", &cl::srcXInBytes) \
       .def_readwrite("src_y", &cl::srcY) \
@@ -1078,7 +1086,9 @@ BOOST_PYTHON_MODULE(_driver)
       .DEF_SIMPLE_METHOD(set_dst_device) \
       \
       .def_readwrite("width_in_bytes", &cl::WidthInBytes) \
-      .def_readwrite("height", &cl::Height)
+      .def_readwrite("height", &cl::Height) \
+      \
+      WRAP_MEMCPY_2D_UNIFIED_SETTERS
 
   {
     typedef memcpy_2d cl;

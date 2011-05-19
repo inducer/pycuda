@@ -191,7 +191,7 @@ def make_default_context(ctx_maker=None):
         except:
             pass
 
-    # If either CUDA_DEVICE or $HOME/.cuda_device is set, try to use it ;-)
+    # If either CUDA_DEVICE or $HOME/.cuda_device is set, try to use it
     if devn is not None:
         try:
             devn = int(devn)

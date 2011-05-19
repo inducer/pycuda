@@ -40,9 +40,8 @@
 #warning *****************************************************************
 #endif
 
-// TODO: cuMemcpy, cuMemcpyPeer, cuMemcpyPeerAsync
-// TODO: in structured memcpy: set_{src,dest}_unified()
-// TODO: cuPointerGetAttribute, 
+// TODO:  cuMemcpyPeer, cuMemcpyPeerAsync
+// TODO: cuMemcpy, cuPointerGetAttribute
 //
 // TODO: cuCtxSetCurrent, cuCtxGetCurrent 
 // (use once the old, deprecated functions have been removed from CUDA)
@@ -1492,6 +1491,27 @@ namespace pycuda
       dstDevice = devptr; \
     }
 
+#if CUDAPP_CUDA_VERSION >= 4000
+#define MEMCPY_SETTERS_UNIFIED \
+    void set_src_unified(py::object buf_py) \
+    { \
+      srcMemoryType = CU_MEMORYTYPE_UNIFIED; \
+      PYCUDA_BUFFER_SIZE_T len; \
+      if (PyObject_AsReadBuffer(buf_py.ptr(), &srcHost, &len)) \
+        throw py::error_already_set(); \
+    } \
+    \
+    void set_dst_unified(py::object buf_py) \
+    { \
+      dstMemoryType = CU_MEMORYTYPE_UNIFIED; \
+      PYCUDA_BUFFER_SIZE_T len; \
+      if (PyObject_AsWriteBuffer(buf_py.ptr(), &dstHost, &len)) \
+        throw py::error_already_set(); \
+    }
+#else
+#define MEMCPY_SETTERS_UNIFIED /* empty */
+#endif
+
 
 
 
@@ -1508,6 +1528,7 @@ namespace pycuda
     }
 
     MEMCPY_SETTERS;
+    MEMCPY_SETTERS_UNIFIED;
 
     void execute(bool aligned=false) const
     {
@@ -1541,6 +1562,7 @@ namespace pycuda
     }
 
     MEMCPY_SETTERS;
+    MEMCPY_SETTERS_UNIFIED;
 
     void execute() const
     {
@@ -1569,6 +1591,7 @@ namespace pycuda
     }
 
     MEMCPY_SETTERS;
+    MEMCPY_SETTERS_UNIFIED;
 
     void set_src_context(context const &ctx)
     {

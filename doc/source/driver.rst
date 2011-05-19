@@ -548,7 +548,7 @@ Devices and Contexts
 
         CUDA 4.0 and newer.
 
-        ..versionadded:: 2011.1
+        .. versionadded:: 2011.1
 
     .. method:: __hash__()
     .. method:: __eq__()
@@ -786,30 +786,11 @@ Pagelocked Allocation
 
 .. function:: pagelocked_zeros(shape, dtype, order="C", mem_flags=0)
 
-    Allocate a pagelocked :class:`numpy.ndarray` of *shape*, *dtype* and *order* that
-    is zero-initialized.
-
-    *mem_flags* may be one of the values in :class:`host_alloc_flags`.
-    It may only be non-zero on CUDA 2.2 and newer.
-
-    For the meaning of the other parameters, please refer to the :mod:`numpy`
-    documentation.
+    Like :func:`pagelocked_empty`, but initialized to zero.
 
 .. function:: pagelocked_empty_like(array, mem_flags=0)
 
-    Allocate a pagelocked :class:`numpy.ndarray` with the same shape, dtype and order
-    as *array*.
-
-    *mem_flags* may be one of the values in :class:`host_alloc_flags`.
-    It may only be non-zero on CUDA 2.2 and newer.
-
 .. function:: pagelocked_zeros_like(array, mem_flags=0)
-
-    Allocate a pagelocked :class:`numpy.ndarray` with the same shape, dtype and order
-    as *array*. Initialize it to 0.
-
-    *mem_flags* may be one of the values in :class:`host_alloc_flags`.
-    It may only be non-zero on CUDA 2.2 and newer.
 
 The :class:`numpy.ndarray` instances returned by these functions
 have an attribute *base* that references an object of type
@@ -821,7 +802,6 @@ have an attribute *base* that references an object of type
     An object representing an allocation of pagelocked
     host memory.  Once this object is deleted, its associated
     device memory is freed.
-
 
     .. method:: free()
 
@@ -842,13 +822,15 @@ have an attribute *base* that references an object of type
 
     A deprecated name for :class:`PagelockedHostAllocation`.
 
+.. _aligned_host_memory :
+
 Aligned Host Memory
 ~~~~~~~~~~~~~~~~~~~
 
 .. function:: aligned_empty(shape, dtype, order="C", alignment=4096)
 
     Allocate an :class:`numpy.ndarray` of *shape*, *dtype* and *order*,
-    with data aligned to *alignment* bytes
+    with data aligned to *alignment* bytes.
 
     For the meaning of the other parameters, please refer to the :mod:`numpy`
     documentation.
@@ -857,25 +839,15 @@ Aligned Host Memory
 
 .. function:: aligned_zeros(shape, dtype, order="C", alignment=4096)
 
-    Allocate an :class:`numpy.ndarray` of *shape*, *dtype* and *order*,
-    with data aligned to *alignment* bytes
-
-    For the meaning of the other parameters, please refer to the :mod:`numpy`
-    documentation.
+    Like :func:`aligned_empty`, but with initialization to zero.
 
     .. versionadded:: 2011.1
 
 .. function:: aligned_empty_like(array, alignment=4096)
 
-    Allocate a :class:`numpy.ndarray` with the same shape, dtype and order
-    as *array*, with data aligned to *alignment* bytes.
-
     .. versionadded:: 2011.1
 
 .. function:: aligned_zeros_like(array, alignment=4096)
-
-    Allocate a :class:`numpy.ndarray` with the same shape, dtype and order
-    as *array*, with data aligned to *alignment* bytes. Initialize it to 0.
 
     .. versionadded:: 2011.1
 
@@ -906,13 +878,13 @@ Post-Allocation Pagelocking
     this function is alive.
 
     The returned array's *base* attribute contains a
-    :class:`RegisteredHostMemory` function, whose *base* attribute
+    :class:`RegisteredHostMemory` instance, whose *base* attribute
     in turn contains *ary*.
 
     CUDA 4.0 and newer.
 
     *ary*'s data address and size must be page-aligned. One way to achieve this
-    is to use the functions from the preceding section.
+    is to use the functions in :ref:`aligned_host_memory`.
 
     .. versionadded:: 2011.1
 
@@ -1217,6 +1189,15 @@ Structured Memory Transfers
         Set the device address *devptr* (an :class:`int` or a
         :class:`DeviceAllocation`) as the origin of the copy.
 
+    .. method:: set_src_unified(buffer)
+
+        Same as :meth:`set_src_host`, except that *buffer* may also correspond
+        to device memory.
+
+        CUDA 4.0 and above. Requires unified addressing.
+
+        .. versionadded:: 2011.1
+
     .. attribute :: dst_x_in_bytes
 
         X offset of the destination of the copy. (initialized to 0)
@@ -1242,6 +1223,15 @@ Structured Memory Transfers
 
         Set the device address *devptr* (an :class:`int` or a
         :class:`DeviceAllocation`) as the destination of the copy.
+
+    .. method:: set_dst_unified(buffer)
+
+        Same as :meth:`set_dst_host`, except that *buffer* may also correspond
+        to device memory.
+
+        CUDA 4.0 and above. Requires unified addressing.
+
+        .. versionadded:: 2011.1
 
     .. attribute:: width_in_bytes
 
@@ -1300,7 +1290,8 @@ Structured Memory Transfers
 
     CUDA 4.0 and newer.
 
-    ..versionadded:: 2011.1
+    .. versionadded:: 2011.1
+
 
 Code on the Device: Modules and Functions
 -----------------------------------------
@@ -1608,15 +1599,15 @@ CUDA 4.0 and newer.
 
     *output_mode* is one of the attributes of :class:`profiler_output_mode`.
 
-    ..versionadded:: 2011.1
+    .. versionadded:: 2011.1
 
 .. function:: start_profiler()
 
-    ..versionadded:: 2011.1
+    .. versionadded:: 2011.1
 
 .. function:: stop()
 
-    ..versionadded:: 2011.1
+    .. versionadded:: 2011.1
 
 Just-in-time Compilation
 ========================
