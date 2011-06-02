@@ -244,6 +244,7 @@ get_ulonglong(PyObject *v, unsigned PY_LONG_LONG *p)
 
 #endif
 
+#if (SIZEOF_LONG > SIZEOF_INT)
 
 /* Helper to format the range error exceptions */
 static int
@@ -275,6 +276,7 @@ _range_error(const formatdef *f, int is_unsigned)
 	return -1;
 }
 
+#endif
 
 
 /* A large number of small routines follow, with names of the form
