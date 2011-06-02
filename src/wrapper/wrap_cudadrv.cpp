@@ -499,7 +499,7 @@ BOOST_PYTHON_MODULE(_driver)
   // {{{ exceptions
 
 #define DECLARE_EXC(NAME, BASE) \
-  Cuda##NAME = py::handle<>(PyErr_NewException("pycuda._driver." #NAME, BASE, NULL)); \
+  Cuda##NAME = py::handle<>(PyErr_NewException(const_cast<char *>("pycuda._driver." #NAME), BASE, NULL)); \
   py::scope().attr(#NAME) = Cuda##NAME;
 
   {
