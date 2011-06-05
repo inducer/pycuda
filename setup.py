@@ -256,21 +256,12 @@ def main():
         EXTRA_SOURCES.append("src/wrapper/wrap_cudagl.cpp")
         EXTRA_DEFINES["HAVE_GL"] = 1
 
-    extra_extensions = []
-
     if conf["CUDA_ENABLE_CURAND"]:
         EXTRA_DEFINES["HAVE_CURAND"] = 1
-
-        extra_extensions.append(
-                NumpyExtension("_curand",
-                    ["src/wrapper/wrap_curand.cpp"],
-                    include_dirs=INCLUDE_DIRS + EXTRA_INCLUDE_DIRS,
-                    library_dirs=LIBRARY_DIRS + conf["CUDADRV_LIB_DIR"],
-                    libraries=LIBRARIES + ["curand"] + conf["CUDADRV_LIBNAME"],
-                    define_macros=list(EXTRA_DEFINES.items()),
-                    extra_compile_args=conf["CXXFLAGS"],
-                    extra_link_args=conf["LDFLAGS"],
-                    ))
+        EXTRA_SOURCES.extend([
+            "src/wrapper/wrap_curand.cpp"
+            ])
+        EXTRA_LIBRARIES.append("curand")
 
     ver_dic = {}
     exec(compile(open("pycuda/__init__.py").read(), "pycuda/__init__.py", 'exec'), ver_dic)
@@ -359,7 +350,7 @@ def main():
                         ]+EXTRA_SOURCES,
                     include_dirs=INCLUDE_DIRS + EXTRA_INCLUDE_DIRS,
                     library_dirs=LIBRARY_DIRS + conf["CUDADRV_LIB_DIR"],
-                    libraries=LIBRARIES + conf["CUDADRV_LIBNAME"],
+                    libraries=LIBRARIES + conf["CUDADRV_LIBNAME"] + EXTRA_LIBRARIES,
                     define_macros=list(EXTRA_DEFINES.items()),
                     extra_compile_args=conf["CXXFLAGS"],
                     extra_link_args=conf["LDFLAGS"],
@@ -369,7 +360,7 @@ def main():
                     extra_compile_args=conf["CXXFLAGS"],
                     extra_link_args=conf["LDFLAGS"],
                     ),
-                ] + extra_extensions,
+                ],
 
             data_files=[
                 ("include/pycuda", glob.glob("src/cuda/*.hpp"))

@@ -247,7 +247,7 @@ def rand(shape, dtype=np.float32, stream=None):
 # {{{ CURAND wrapper
 
 try:
-    import pycuda._curand as _curand
+    import pycuda._driver as _curand # used to be separate module
 except ImportError:
     def get_curand_version():
         return None
@@ -531,7 +531,10 @@ if get_curand_version() >= (3, 2, 0):
 
 # {{{ Sobol32 RNG
 
-def generate_direction_vectors(count, direction=direction_vector_set.VECTOR_32):
+def generate_direction_vectors(count, direction=None):
+    if direction is None:
+        direction = direction_vector_set.VECTOR_32
+
     result = np.empty((count, 32), dtype=np.int32)
     _get_direction_vectors(direction, result, count)
     return pycuda.gpuarray.to_gpu(result)
