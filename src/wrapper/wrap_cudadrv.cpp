@@ -485,6 +485,7 @@ namespace
 
 void pycuda_expose_tools();
 void pycuda_expose_gl();
+void pycuda_expose_curand();
 
 
 
@@ -1291,6 +1292,9 @@ BOOST_PYTHON_MODULE(_driver)
   pycuda_expose_tools();
 #ifdef HAVE_GL
   pycuda_expose_gl();
+#endif
+#ifdef HAVE_CURAND
+  pycuda_expose_curand();
 #endif
 }
 

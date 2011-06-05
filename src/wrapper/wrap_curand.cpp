@@ -29,9 +29,3 @@ void pycuda_expose_curand()
       (arg("set"), arg("dst"), arg("count")));
 #endif
 }
-
-BOOST_PYTHON_MODULE(_curand)
-{
-  pycuda_expose_curand();
-}
-
