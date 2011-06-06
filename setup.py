@@ -250,6 +250,12 @@ def main():
         if "-arch" not in conf["LDFLAGS"]:
             conf["LDFLAGS"].extend(['-arch', 'i386', '-m32'])
 
+    if 'darwin' in sys.platform:
+        # set path to Cuda dynamic libraries,
+        # as a safe substitute for DYLD_LIBRARY_PATH
+        for lib_dir in conf['CUDADRV_LIB_DIR']:
+            conf["LDFLAGS"].extend(["-Xlinker", "-rpath", "-Xlinker", lib_dir])
+
     ext_kwargs = dict()
 
     if conf["CUDA_ENABLE_GL"]:
