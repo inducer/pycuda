@@ -9,7 +9,7 @@ def get_config_schema():
             Switch, StringListOption, make_boost_base_options
 
     return ConfigSchema(make_boost_base_options() + [
-        Switch("USE_SHIPPED_BOOST", True, "Use included Boost library"),
+        Switch("USE_SHIPPED_BOOST", False, "Use included Boost library"),
 
         BoostLibraries("python"),
         BoostLibraries("thread"),
@@ -24,6 +24,9 @@ def get_config_schema():
 
         LibraryDir("CUDADRV", []),
         Libraries("CUDADRV", ["cuda"]),
+
+        LibraryDir("CUDART", []),
+        Libraries("CUDART", ["cudart"]),
 
         StringListOption("CXXFLAGS", [],
             help="Any extra C++ compiler options to include"),
@@ -181,7 +184,25 @@ def verify_siteconfig(sc_vars):
     else:
         print(warn_prefix + 'CUDADRV_LIBNAME is not set, should most likely be "cuda".')
 
+    # CUDART_LIB_DIR=(lib)?CUDART_LIBNAME(.so|.dylib|?Windows?)
+    if not 'CUDART_LIB_DIR' in sc_vars:
+        # Since libcurand.so is distributed in the CUDA Runtime lib directory.
+        # which is different from the CUDA Driver lib directory, we should check.
+        print(warn_prefix + 'CUDART_LIB_DIR is not set, should '
+                'be sometthing like CUDA_ROOT + "/lib".')
 
+    if 'CUDART_LIBNAME' in sc_vars:
+        verify_path (
+            description="CUDA runtime library",
+            paths=sc_vars['CUDART_LIB_DIR'],
+            names=sc_vars['CUDART_LIBNAME'],
+            extensions=LIB_EXTS,
+            prefixes=LIB_PREFIXES,
+            maybe_ok=True,
+            )
+    else:
+        # This should be optional, since PyCUDA doesn't directly use the CUDART
+        pass
 
 
 # main functionality ----------------------------------------------------------
@@ -265,7 +286,8 @@ def main():
                 NumpyExtension("_curand",
                     ["src/wrapper/wrap_curand.cpp"],
                     include_dirs=INCLUDE_DIRS + EXTRA_INCLUDE_DIRS,
-                    library_dirs=LIBRARY_DIRS + conf["CUDADRV_LIB_DIR"],
+                    library_dirs=LIBRARY_DIRS + conf["CUDADRV_LIB_DIR"] + \
+                                   conf["CUDART_LIB_DIR"],
                     libraries=LIBRARIES + ["curand"] + conf["CUDADRV_LIBNAME"],
                     define_macros=list(EXTRA_DEFINES.items()),
                     extra_compile_args=conf["CXXFLAGS"],
