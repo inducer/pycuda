@@ -244,31 +244,7 @@ get_ulonglong(PyObject *v, unsigned PY_LONG_LONG *p)
 
 #endif
 
-/* Floating point helpers */
-
-static PyObject *
-unpack_float(const char *p,  /* start of 4-byte string */
-             int le)	     /* true for little-endian, false for big-endian */
-{
-	double x;
-
-	x = _PyFloat_Unpack4((unsigned char *)p, le);
-	if (x == -1.0 && PyErr_Occurred())
-		return NULL;
-	return PyFloat_FromDouble(x);
-}
-
-static PyObject *
-unpack_double(const char *p,  /* start of 8-byte string */
-              int le)         /* true for little-endian, false for big-endian */
-{
-	double x;
-
-	x = _PyFloat_Unpack8((unsigned char *)p, le);
-	if (x == -1.0 && PyErr_Occurred())
-		return NULL;
-	return PyFloat_FromDouble(x);
-}
+#if (SIZEOF_LONG > SIZEOF_INT)
 
 /* Helper to format the range error exceptions */
 static int
@@ -300,6 +276,7 @@ _range_error(const formatdef *f, int is_unsigned)
 	return -1;
 }
 
+#endif
 
 
 /* A large number of small routines follow, with names of the form
