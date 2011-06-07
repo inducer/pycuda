@@ -9,7 +9,7 @@ def get_config_schema():
             Switch, StringListOption, make_boost_base_options
 
     return ConfigSchema(make_boost_base_options() + [
-        Switch("USE_SHIPPED_BOOST", False, "Use included Boost library"),
+        Switch("USE_SHIPPED_BOOST", True, "Use included Boost library"),
 
         BoostLibraries("python"),
         BoostLibraries("thread"),

@@ -452,13 +452,16 @@ class Switch(Option):
         if default is None:
             default = self.default
 
+        option_name = self.as_option()
+
         if default:
+            option_name = "no-" + option_name
             action = "store_false"
         else:
             action = "store_true"
 
         parser.add_option(
-            "--" + self.as_option(),
+            "--" + option_name,
             dest=self.name,
             help=self.get_help(default),
             default=default,
