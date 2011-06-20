@@ -466,13 +466,14 @@ def parse_c_arg(c_arg):
             dtype = np.int64
         else:
             dtype = np.int32
-    elif tp in ["unsigned long", "unsigned long int"]:
+    elif tp in ["unsigned long", "unsigned long int", "long unsigned int"]:
         if platform_bits() == 64 and 'win32' not in platform:
             dtype = np.uint64
         else:
             dtype = np.uint32
     elif tp in ["short", "short int"]: dtype = np.int16
-    elif tp in ["unsigned short", "unsigned short int"]: dtype = np.uint16
+    elif tp in ["unsigned short", "unsigned short int", "short unsigned int"]: 
+        dtype = np.uint16
     elif tp in ["char", "signed char"]: dtype = np.int8
     elif tp in ["unsigned char"]: dtype = np.uint8
     elif tp in ["bool"]: dtype = np.bool
