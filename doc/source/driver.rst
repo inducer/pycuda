@@ -1621,7 +1621,24 @@ Just-in-time Compilation
 
 .. module:: pycuda.compiler
 
-.. class:: SourceModule(source, nvcc="nvcc", options=[], keep=False, no_extern_c=False, arch=None, code=None, cache_dir=None)
+.. data:: DEFAULT_NVCC_FLAGS
+
+    .. versionadded:: 2011.1
+
+    If no *options* are given in the calls below, the value of this list-type
+    variable is used instead. This may be useful for injecting necessary flags
+    into the compilation of automatically compiled kernels, such as those used
+    by the module :mod:`pycuda.gpuarray`.
+
+    The initial value of this variable is taken from the environment variable
+    :envvar:`PYCUDA_DEFAULT_NVCC_FLAGS`.
+
+    If you modify this variable in your code, please be aware that this is a
+    globally shared variable that may be modified by multiple packages. Please
+    exercise caution in such modifications--you risk breaking other people's
+    code.
+
+.. class:: SourceModule(source, nvcc="nvcc", options=None, keep=False, no_extern_c=False, arch=None, code=None, cache_dir=None)
 
     Create a :class:`Module` from the CUDA source code *source*. The Nvidia
     compiler *nvcc* is assumed to be on the :envvar:`PATH` if no path to it is
@@ -1647,7 +1664,7 @@ Just-in-time Compilation
     *Change note:* :class:`SourceModule` was moved from :mod:`pycuda.driver` to
     :mod:`pycuda.compiler` in version 0.93.
 
-.. function:: compile(source, nvcc="nvcc", options=[], keep=False,
+.. function:: compile(source, nvcc="nvcc", options=None, keep=False,
         no_extern_c=False, arch=None, code=None, cache_dir=None,
         include_dirs=[])
 

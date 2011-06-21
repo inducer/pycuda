@@ -27,6 +27,7 @@ Caution: As of Python 2.7, deprecation warnings are disabled by default.)
   Allow the creation of arrys in C and Fortran order.
 * Adopt stateless launch interface from CUDA, deprecate old one.
 * Add CURAND wrapper. (with work by Tomasz Rybak)
+* Add :data:`pycuda.compiler.DEFAULT_NVCC_FLAGS`.
 
 Version 0.94.2
 --------------

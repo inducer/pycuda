@@ -192,12 +192,24 @@ def _find_pycuda_include_path():
 
 
 
-def compile(source, nvcc="nvcc", options=[], keep=False,
+import os
+DEFAULT_NVCC_FLAGS = [
+        _flag.strip() for _flag in
+        os.environ.get("PYCUDA_DEFAULT_NVCC_FLAGS", "").split()
+        if _flag.strip()]
+
+
+
+
+def compile(source, nvcc="nvcc", options=None, keep=False,
         no_extern_c=False, arch=None, code=None, cache_dir=None,
         include_dirs=[]):
 
     if not no_extern_c:
         source = 'extern "C" {\n%s\n}\n' % source
+
+    if options is None:
+        options = DEFAULT_NVCC_FLAGS
 
     options = options[:]
     if arch is None:
@@ -250,7 +262,7 @@ def compile(source, nvcc="nvcc", options=[], keep=False,
 
 
 class SourceModule(object):
-    def __init__(self, source, nvcc="nvcc", options=[], keep=False,
+    def __init__(self, source, nvcc="nvcc", options=None, keep=False,
             no_extern_c=False, arch=None, code=None, cache_dir=None,
             include_dirs=[]):
         self._check_arch(arch)
