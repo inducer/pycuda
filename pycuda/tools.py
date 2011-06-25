@@ -425,7 +425,11 @@ class ScalarArg(Argument):
 
     @property
     def struct_char(self):
-        return self.dtype.char
+        result = self.dtype.char
+        if result == "V":
+            result = "%ds" % self.dtype.itemsize
+
+        return result
 
 
 
@@ -480,7 +484,7 @@ def parse_c_arg(c_arg):
     else:
         import pycuda.gpuarray as gpuarray
         try:
-            return gpuarray.vec._c_name_to_dtype[tp]
+            dtype = gpuarray.vec._c_name_to_dtype[tp]
         except KeyError:
             raise ValueError("unknown type '%s'" % tp)
 

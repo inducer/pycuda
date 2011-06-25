@@ -126,7 +126,6 @@ def _add_functionality():
                 arg_data.append(int(arg.get_device_alloc()))
                 format += "P"
             elif isinstance(arg, np.ndarray):
-                s = str(buffer(arg))
                 arg_data.append(s)
                 format += "%ds" % len(s)
             else:

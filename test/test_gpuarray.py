@@ -712,6 +712,12 @@ class TestGPUArray:
         print AT_GPU.flags.f_contiguous, AT_GPU.flags.c_contiguous
         assert np.allclose(AT_GPU.get(),AT)
 
+    @mark_cuda_test
+    def test_vector_fill(self):
+        a_gpu = gpuarray.GPUArray(100, dtype=gpuarray.vec.float3)
+        a_gpu.fill(gpuarray.vec.make_float3(0.0, 0.0, 0.0))
+        a = a_gpu.get()
+        assert a.dtype is gpuarray.vec.float3
 
 
 

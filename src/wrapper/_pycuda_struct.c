@@ -1071,16 +1071,34 @@ s_pack_internal(PyStructObject *soself, PyObject *args, int offset, char* buf)
 		char *res = buf + code->offset;
 		if (e->format == 's') {
 			if (!PyString_Check(v)) {
-				PyErr_SetString(StructError,
-						"argument for 's' must "
-						"be a string");
-				return -1;
+				if (!PyObject_CheckReadBuffer(v))
+				{
+					PyErr_SetString(StructError,
+							"argument for 's' must "
+							"be a string or a buffer");
+					return -1;
+				}
+				else
+				{
+					void *buf;
+					Py_ssize_t len;
+					if (PyObject_AsReadBuffer(v, &buf, &len))
+						return -1;
+
+					if (len > code->size)
+						len = code->size;
+					if (len > 0)
+						memcpy(res, buf, len);
+				}
 			}
-			n = PyString_GET_SIZE(v);
-			if (n > code->size)
-				n = code->size;
-			if (n > 0)
-				memcpy(res, PyString_AS_STRING(v), n);
+			else
+			{
+				n = PyString_GET_SIZE(v);
+				if (n > code->size)
+					n = code->size;
+				if (n > 0)
+					memcpy(res, PyString_AS_STRING(v), n);
+			}
 		} else if (e->format == 'p') {
 			if (!PyString_Check(v)) {
 				PyErr_SetString(StructError,
