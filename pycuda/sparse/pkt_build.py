@@ -72,4 +72,4 @@ except ImportError:
     pass
 else:
     pyximport.install()
-    from pkt_build_cython import build_pkt_data_structure
+    from pycuda.sparse.pkt_build_cython import build_pkt_data_structure
