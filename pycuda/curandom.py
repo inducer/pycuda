@@ -489,7 +489,7 @@ if get_curand_version() >= (3, 2, 0):
                 seed = array.to_gpu(
                         np.asarray(
                             np.random.random_integers(
-                                0, (1 << 31) - 1, self.generators_per_block),
+                                0, (1 << 31) - 2, self.generators_per_block),
                             dtype=np.int32))
             else:
                 seed = seed_getter(self.generators_per_block)
