@@ -152,7 +152,7 @@ def _get_per_user_string():
     except ImportError:
         checksum = _new_md5()
         from os import environ
-        checksum.update(environ["HOME"])
+        checksum.update(environ["USERNAME"])
         return checksum.hexdigest()
     else:
         return "uid%d" % getuid()
