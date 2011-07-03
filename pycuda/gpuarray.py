@@ -746,7 +746,8 @@ def zeros(shape, dtype, allocator=drv.mem_alloc, order="C"):
     """Returns an array of the given shape and dtype filled with 0's."""
 
     result = GPUArray(shape, dtype, allocator, order=order)
-    result.fill(0)
+    zero = np.zeros((), dtype)
+    result.fill(zero)
     return result
 
 def empty_like(other_ary):
@@ -757,7 +758,8 @@ def empty_like(other_ary):
 def zeros_like(other_ary):
     result = GPUArray(
             other_ary.shape, other_ary.dtype, other_ary.allocator)
-    result.fill(0)
+    zero = np.zeros((), result.dtype)
+    result.fill(zero)
     return result
 
 
