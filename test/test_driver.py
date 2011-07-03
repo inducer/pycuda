@@ -559,6 +559,13 @@ class TestDriver:
         a2 = drv.register_host_memory(a)
 
 
+def test_import_pyopencl_before_pycuda():
+    try:
+        import pyopencl
+    except ImportError:
+        return
+    import pycuda.driver
+
 
 if __name__ == "__main__":
     # make sure that import failures get reported, instead of skipping the tests.
