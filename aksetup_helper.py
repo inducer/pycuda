@@ -545,26 +545,26 @@ def set_up_shipped_boost_if_requested(conf):
             count_down_delay(delay=10)
 
     if conf["USE_SHIPPED_BOOST"]:
-        conf["BOOST_INC_DIR"] = ["bpl-subset/bpl_subset"]
+        conf["BOOST_INC_DIR"] = ["pycuda-bpl-subset"]
         conf["BOOST_LIB_DIR"] = []
         conf["BOOST_PYTHON_LIBNAME"] = []
         conf["BOOST_THREAD_LIBNAME"] = []
 
         from glob import glob
-        source_files = (glob("bpl-subset/bpl_subset/libs/*/*/*/*.cpp")
-                + glob("bpl-subset/bpl_subset/libs/*/*/*.cpp")
-                + glob("bpl-subset/bpl_subset/libs/*/*.cpp"))
+        source_files = (glob("pycuda-bpl-subset/libs/*/*/*/*.cpp")
+                + glob("pycuda-bpl-subset/libs/*/*/*.cpp")
+                + glob("pycuda-bpl-subset/libs/*/*.cpp"))
 
         source_files = [f for f in source_files
-                if not f.startswith("bpl-subset/bpl_subset/libs/thread/src")]
+                if not f.startswith("pycuda-bpl-subset/libs/thread/src")]
 
         import sys
         if sys.platform == "win32":
             source_files += glob(
-                    "bpl-subset/bpl_subset/libs/thread/src/win32/*.cpp")
+                    "pycuda-bpl-subset/libs/thread/src/win32/*.cpp")
         else:
             source_files += glob(
-                    "bpl-subset/bpl_subset/libs/thread/src/pthread/*.cpp")
+                    "pycuda-bpl-subset/libs/thread/src/pthread/*.cpp")
 
         return (source_files,
                 {
