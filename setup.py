@@ -212,7 +212,7 @@ def main():
 
     hack_distutils()
     conf = get_config(get_config_schema())
-    EXTRA_SOURCES, EXTRA_DEFINES = set_up_shipped_boost_if_requested(conf)
+    EXTRA_SOURCES, EXTRA_DEFINES = set_up_shipped_boost_if_requested("pycuda", conf)
 
     EXTRA_DEFINES["PYGPU_PACKAGE"] = "pycuda"
     EXTRA_DEFINES["PYGPU_PYCUDA"] = "1"
@@ -279,9 +279,6 @@ def main():
             "src/wrapper/wrap_curand.cpp"
             ])
         EXTRA_LIBRARIES.append("curand")
-
-    if conf["USE_SHIPPED_BOOST"]:
-        EXTRA_DEFINES["boost"] = 'pycudaboost'
 
     ver_dic = {}
     exec(compile(open("pycuda/__init__.py").read(), "pycuda/__init__.py", 'exec'), ver_dic)

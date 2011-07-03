@@ -513,7 +513,7 @@ class BoostLibraries(Libraries):
                 help="Library names for Boost C++ %s library (without lib or .so)"
                     % humanize(lib_base_name))
 
-def set_up_shipped_boost_if_requested(conf):
+def set_up_shipped_boost_if_requested(project_name, conf):
     """Set up the package to use a shipped version of Boost.
 
     Return a tuple of a list of extra C files to build and extra
@@ -545,31 +545,45 @@ def set_up_shipped_boost_if_requested(conf):
             count_down_delay(delay=10)
 
     if conf["USE_SHIPPED_BOOST"]:
-        conf["BOOST_INC_DIR"] = ["pycuda-bpl-subset"]
+        conf["BOOST_INC_DIR"] = ["bpl-subset/bpl_subset"]
         conf["BOOST_LIB_DIR"] = []
         conf["BOOST_PYTHON_LIBNAME"] = []
         conf["BOOST_THREAD_LIBNAME"] = []
 
         from glob import glob
-        source_files = (glob("pycuda-bpl-subset/libs/*/*/*/*.cpp")
-                + glob("pycuda-bpl-subset/libs/*/*/*.cpp")
-                + glob("pycuda-bpl-subset/libs/*/*.cpp"))
+        source_files = (glob("bpl-subset/bpl_subset/libs/*/*/*/*.cpp")
+                + glob("bpl-subset/bpl_subset/libs/*/*/*.cpp")
+                + glob("bpl-subset/bpl_subset/libs/*/*.cpp"))
 
         source_files = [f for f in source_files
-                if not f.startswith("pycuda-bpl-subset/libs/thread/src")]
+                if not f.startswith("bpl-subset/bpl_subset/libs/thread/src")]
 
-        import sys
         if sys.platform == "win32":
             source_files += glob(
-                    "pycuda-bpl-subset/libs/thread/src/win32/*.cpp")
+                    "bpl-subset/bpl_subset/libs/thread/src/win32/*.cpp")
         else:
             source_files += glob(
-                    "pycuda-bpl-subset/libs/thread/src/pthread/*.cpp")
+                    "bpl-subset/bpl_subset/libs/thread/src/pthread/*.cpp")
+
+        from os.path import isdir
+        main_boost_inc = "bpl-subset/bpl_subset/boost"
+        bpl_project_boost_inc = "bpl-subset/bpl_subset/%sboost" % project_name
+
+        if not isdir(bpl_project_boost_inc):
+            try:
+                from os import symlink
+            except ImportError:
+                from shutil import copytree
+                print "Copying files, hang on... (do not interrupt)"
+                copytree(main_boost_inc, bpl_project_boost_inc)
+            else:
+                symlink("boost", bpl_project_boost_inc)
 
         return (source_files,
                 {
                     "BOOST_MULTI_INDEX_DISABLE_SERIALIZATION": 1,
                     "BOOST_PYTHON_SOURCE": 1,
+                    "boost": '%sboost' % project_name
                     }
                 )
     else:
