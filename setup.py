@@ -280,6 +280,9 @@ def main():
             ])
         EXTRA_LIBRARIES.append("curand")
 
+    if conf["USE_SHIPPED_BOOST"]:
+        EXTRA_DEFINES["boost"] = 'pycudaboost'
+
     ver_dic = {}
     exec(compile(open("pycuda/__init__.py").read(), "pycuda/__init__.py", 'exec'), ver_dic)
 
