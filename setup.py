@@ -2,7 +2,6 @@
 # -*- coding: latin-1 -*-
 
 
-
 def get_config_schema():
     from aksetup_helper import ConfigSchema, Option, \
             IncludeDir, LibraryDir, Libraries, BoostLibraries, \
@@ -35,8 +34,6 @@ def get_config_schema():
         ])
 
 
-
-
 def search_on_path(filenames):
     """Find file on system path."""
     # http://aspn.activestate.com/ASPN/Cookbook/Python/Recipe/52224
@@ -46,14 +43,11 @@ def search_on_path(filenames):
 
     search_path = environ["PATH"]
 
-    file_found = 0
     paths = search_path.split(pathsep)
     for path in paths:
         for filename in filenames:
             if exists(join(path, filename)):
                 return abspath(join(path, filename))
-
-
 
 
 # verification ----------------------------------------------------------------
@@ -62,7 +56,6 @@ def verify_path(description, paths, names, extensions, subpaths=['/'],
     try:
         from os.path import exists
 
-        defaultname = names[0] + extensions[0]
         prefixes.append("")
         looked_where = []
 
@@ -208,6 +201,9 @@ def verify_siteconfig(sc_vars):
 # main functionality ----------------------------------------------------------
 def main():
     import glob
+    import sys
+    from os.path import dirname, join, normpath
+
     from aksetup_helper import (hack_distutils, get_config, setup, \
             NumpyExtension, Extension, set_up_shipped_boost_if_requested,
             check_git_submodules)
@@ -224,23 +220,21 @@ def main():
     LIBRARY_DIRS = conf["BOOST_LIB_DIR"]
     LIBRARIES = conf["BOOST_PYTHON_LIBNAME"] + conf["BOOST_THREAD_LIBNAME"]
 
-    from os.path import dirname, join, normpath
-
     if conf["CUDA_ROOT"] is None:
         nvcc_path = search_on_path(["nvcc", "nvcc.exe"])
         if nvcc_path is None:
             print("*** CUDA_ROOT not set, and nvcc not in path. Giving up.")
-            import sys
             sys.exit(1)
 
         conf["CUDA_ROOT"] = normpath(join(dirname(nvcc_path), ".."))
 
     if not conf["CUDA_INC_DIR"]:
         conf["CUDA_INC_DIR"] = [join(conf["CUDA_ROOT"], "include")]
+
     if not conf["CUDADRV_LIB_DIR"]:
         platform_bits = tuple.__itemsize__ * 8
 
-        if platform_bits ==  64:
+        if platform_bits == 64 and 'darwin' not in sys.platform:
             lib_dir_name = "lib64"
         else:
             lib_dir_name = "lib"
@@ -250,7 +244,6 @@ def main():
     verify_siteconfig(conf)
 
     EXTRA_INCLUDE_DIRS = []
-    EXTRA_LIBRARY_DIRS = []
     EXTRA_LIBRARIES = []
 
     if conf["CUDA_TRACE"]:
@@ -262,7 +255,6 @@ def main():
     INCLUDE_DIRS = ['src/cpp'] + conf["BOOST_INC_DIR"] + conf["CUDA_INC_DIR"]
     conf["USE_CUDA"] = True
 
-    import sys
 
     if 'darwin' in sys.platform and sys.maxsize == 2147483647:
         # The Python interpreter is running in 32 bit mode on OS X
@@ -276,8 +268,6 @@ def main():
         # as a safe substitute for DYLD_LIBRARY_PATH
         for lib_dir in conf['CUDADRV_LIB_DIR']:
             conf["LDFLAGS"].extend(["-Xlinker", "-rpath", "-Xlinker", lib_dir])
-
-    ext_kwargs = dict()
 
     if conf["CUDA_ENABLE_GL"]:
         EXTRA_SOURCES.append("src/wrapper/wrap_cudagl.cpp")
@@ -395,8 +385,6 @@ def main():
 
             # 2to3 invocation
             cmdclass={'build_py': build_py})
-
-
 
 
 if __name__ == '__main__':
