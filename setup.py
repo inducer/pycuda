@@ -208,6 +208,9 @@ def verify_siteconfig(sc_vars):
 # main functionality ----------------------------------------------------------
 def main():
     import glob
+    import sys
+    from os.path import dirname, join, normpath
+
     from aksetup_helper import (hack_distutils, get_config, setup, \
             NumpyExtension, Extension, set_up_shipped_boost_if_requested,
             check_git_submodules)
@@ -224,23 +227,21 @@ def main():
     LIBRARY_DIRS = conf["BOOST_LIB_DIR"]
     LIBRARIES = conf["BOOST_PYTHON_LIBNAME"] + conf["BOOST_THREAD_LIBNAME"]
 
-    from os.path import dirname, join, normpath
-
     if conf["CUDA_ROOT"] is None:
         nvcc_path = search_on_path(["nvcc", "nvcc.exe"])
         if nvcc_path is None:
             print("*** CUDA_ROOT not set, and nvcc not in path. Giving up.")
-            import sys
             sys.exit(1)
 
         conf["CUDA_ROOT"] = normpath(join(dirname(nvcc_path), ".."))
 
     if not conf["CUDA_INC_DIR"]:
         conf["CUDA_INC_DIR"] = [join(conf["CUDA_ROOT"], "include")]
+
     if not conf["CUDADRV_LIB_DIR"]:
         platform_bits = tuple.__itemsize__ * 8
 
-        if platform_bits ==  64:
+        if platform_bits == 64 and 'darwin' not in sys.platform:
             lib_dir_name = "lib64"
         else:
             lib_dir_name = "lib"
@@ -262,7 +263,6 @@ def main():
     INCLUDE_DIRS = ['src/cpp'] + conf["BOOST_INC_DIR"] + conf["CUDA_INC_DIR"]
     conf["USE_CUDA"] = True
 
-    import sys
 
     if 'darwin' in sys.platform and sys.maxsize == 2147483647:
         # The Python interpreter is running in 32 bit mode on OS X
