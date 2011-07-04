@@ -282,7 +282,13 @@ class ConfigSchema:
     def read_config_from_pyfile(self, filename):
         result = {}
         filevars = {}
-        exec(compile(open(filename, "r").read(), filename, "exec"), filevars)
+        infile = open(filename, "r")
+        try:
+            contents = infile.read()
+        finally:
+            infile.close()
+
+        exec(compile(contents, filename, "exec"), filevars)
 
         for key, value in filevars.items():
             if key in self.optdict:
@@ -574,7 +580,7 @@ def set_up_shipped_boost_if_requested(project_name, conf):
                 from os import symlink
             except ImportError:
                 from shutil import copytree
-                print "Copying files, hang on... (do not interrupt)"
+                print("Copying files, hang on... (do not interrupt)")
                 copytree(main_boost_inc, bpl_project_boost_inc)
             else:
                 symlink("boost", bpl_project_boost_inc)
