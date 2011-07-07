@@ -1898,7 +1898,7 @@ namespace pycuda
 
   inline void stop_profiler()
   {
-    CUDAPP_CALL_GUARDED(cuProfilerStart, ());
+    CUDAPP_CALL_GUARDED(cuProfilerStop, ());
   }
 #endif
   // }}}
