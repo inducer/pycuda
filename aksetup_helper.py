@@ -719,7 +719,7 @@ def check_git_submodules():
         stdout_data, _ = popen.communicate()
         if popen.returncode != 0:
             git_error = "git returned error code %d" % popen.returncode
-    except OSError as e:
+    except OSError, e:
         git_error = e
 
     if git_error is not None:
