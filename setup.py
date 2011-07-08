@@ -373,7 +373,7 @@ def main():
                     extra_link_args=conf["LDFLAGS"],
                     ),
                 Extension("_pvt_struct",
-                    ["src/wrapper/_pycuda_struct.c"],
+                    ["src/wrapper/_pycuda_struct.cpp"],
                     extra_compile_args=conf["CXXFLAGS"],
                     extra_link_args=conf["LDFLAGS"],
                     ),

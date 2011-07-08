@@ -13,8 +13,9 @@
 #include "structseq.h"
 #include "structmember.h"
 #include <ctype.h>
+#include "numpy_init.hpp"
 
-static PyTypeObject PyStructType;
+// static PyTypeObject PyStructType;
 
 /* compatibility macros */
 #if (PY_VERSION_HEX < 0x02050000)
@@ -115,14 +116,9 @@ typedef struct { char c; PY_LONG_LONG x; } s_long_long;
 #define LONG_LONG_ALIGN (sizeof(s_long_long) - sizeof(PY_LONG_LONG))
 #endif
 
-#ifdef HAVE_C99_BOOL
-#define BOOL_TYPE _Bool
-typedef struct { char c; _Bool x; } s_bool;
+#define BOOL_TYPE bool
+typedef struct { char c; bool x; } s_bool;
 #define BOOL_ALIGN (sizeof(s_bool) - sizeof(BOOL_TYPE))
-#else
-#define BOOL_TYPE char
-#define BOOL_ALIGN 0
-#endif
 
 #define STRINGIFY(x)    #x
 
@@ -641,36 +637,59 @@ np_double(char *p, PyObject *v, const formatdef *f)
 static int
 np_complex_float(char *p, PyObject *v, const formatdef *f)
 {
-        float re = 0.0f;
-        float im = 0.0f;
-        Py_complex cplx = PyComplex_AsCComplex(v);
-	if (PyErr_Occurred()) {
-		PyErr_SetString(StructError,
-				"required argument is not a complex");
-		return -1;
+        if (PyArray_IsZeroDim(v)) {
+		PyObject *v_cast = PyArray_Cast(
+				reinterpret_cast<PyArrayObject *>(v),
+				NPY_CFLOAT);
+		if (!v_cast)
+			return -1;
+		memcpy(p, PyArray_BASE(v_cast), PyArray_NBYTES(v_cast));
+		Py_DECREF(v_cast);
 	}
-        re = (float)cplx.real;
-        im = (float)cplx.imag;
-	memcpy(p, (char *)&re, sizeof re);
-	memcpy(p+sizeof re, (char *)&im, sizeof im);
+	else {
+		float re = 0.0f;
+		float im = 0.0f;
+		Py_complex cplx = PyComplex_AsCComplex(v);
+		if (PyErr_Occurred()) {
+			PyErr_SetString(StructError,
+					"required argument is not a complex");
+			return -1;
+		}
+
+		re = (float)cplx.real;
+		im = (float)cplx.imag;
+		memcpy(p, (char *)&re, sizeof re);
+		memcpy(p+sizeof re, (char *)&im, sizeof im);
+	}
 	return 0;
 }
 
 static int
 np_complex_double(char *p, PyObject *v, const formatdef *f)
 {
-        double re = 0.0;
-        double im = 0.0;
-        Py_complex cplx = PyComplex_AsCComplex(v);
-	if (PyErr_Occurred()) {
-		PyErr_SetString(StructError,
-				"required argument is not a complex");
-		return -1;
+        if (PyArray_IsZeroDim(v)) {
+		PyObject *v_cast = PyArray_Cast(
+				reinterpret_cast<PyArrayObject *>(v),
+				NPY_CDOUBLE);
+		if (!v_cast)
+			return -1;
+		memcpy(p, PyArray_DATA(v_cast), PyArray_NBYTES(v_cast));
+		Py_DECREF(v_cast);
 	}
-        re = cplx.real;
-        im = cplx.imag;
-	memcpy(p, (char *)&re, sizeof re);
-	memcpy(p+sizeof re, (char *)&im, sizeof im);
+	else {
+		double re = 0.0;
+		double im = 0.0;
+		Py_complex cplx = PyComplex_AsCComplex(v);
+		if (PyErr_Occurred()) {
+			PyErr_SetString(StructError,
+					"required argument is not a complex");
+			return -1;
+		}
+		re = cplx.real;
+		im = cplx.imag;
+		memcpy(p, (char *)&re, sizeof re);
+		memcpy(p+sizeof re, (char *)&im, sizeof im);
+	}
 	return 0;
 }
 
@@ -820,7 +839,7 @@ prepare_s(PyStructObject *self)
 
 	self->s_size = size;
 	self->s_len = len;
-	codes = PyMem_MALLOC((len + 1) * sizeof(formatcode));
+	codes = (formatcode *) PyMem_MALLOC((len + 1) * sizeof(formatcode));
 	if (codes == NULL) {
 		PyErr_NoMemory();
 		return -1;
@@ -1080,7 +1099,7 @@ s_pack_internal(PyStructObject *soself, PyObject *args, int offset, char* buf)
 				}
 				else
 				{
-					void *buf;
+					const void *buf;
 					Py_ssize_t len;
 					if (PyObject_AsReadBuffer(v, &buf, &len))
 						return -1;
@@ -1549,3 +1568,5 @@ init_pvt_struct(void)
 #endif
 
 }
+
+// vim: noexpandtab:sw=8

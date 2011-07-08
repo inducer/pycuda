@@ -4,6 +4,7 @@
 
 
 #include <numpy/arrayobject.h>
+#include <stdexcept>
 
 
 
