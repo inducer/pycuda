@@ -721,7 +721,7 @@ class TestGPUArray:
 
     @mark_cuda_test
     def test_create_complex_zeros(self):
-        gpuarray.zeros(3, np.complex128)
+        gpuarray.zeros(3, np.complex64)
 
 
 
