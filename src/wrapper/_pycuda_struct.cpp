@@ -643,7 +643,7 @@ np_complex_float(char *p, PyObject *v, const formatdef *f)
 				NPY_CFLOAT);
 		if (!v_cast)
 			return -1;
-		memcpy(p, PyArray_BASE(v_cast), PyArray_NBYTES(v_cast));
+		memcpy(p, PyArray_DATA(v_cast), PyArray_NBYTES(v_cast));
 		Py_DECREF(v_cast);
 	}
 	else {
