@@ -240,13 +240,13 @@ class DeviceData:
         self.shared_memory = dev.get_attribute(drv.device_attribute.MAX_SHARED_MEMORY_PER_BLOCK)
 
         if dev.compute_capability() >= (2,0):
-            self.smem_granularity = 128
-	else:
-            self.smem_granularity = 512
+            self.smem_granularity = 32
+        else:
+            self.smem_granularity = 16
 
         if dev.compute_capability() >= (2,0):
             self.register_allocation_unit = "warp"
-	else:
+        else:
             self.register_allocation_unit = "block"
 
     def align(self, bytes, word_size=4):
@@ -292,11 +292,11 @@ class OccupancyRecord:
         # copied literally from occupancy calculator
         alloc_warps = _int_ceiling(threads/devdata.warp_size)
         alloc_smem = _int_ceiling(shared_mem, devdata.smem_granularity)
-	if devdata.register_allocation_unit == "warp":
+        if devdata.register_allocation_unit == "warp":
             alloc_regs = alloc_warps*32*registers
-	elif devdata.register_allocation_unit == "block":
+        elif devdata.register_allocation_unit == "block":
             alloc_regs = _int_ceiling(alloc_warps*2, 4)*16*registers
-	else:
+        else:
             raise ValueError("Improper register allocation unit:"+devdata.register_allocation_unit)
 
         if alloc_regs > devdata.registers:
@@ -476,7 +476,7 @@ def parse_c_arg(c_arg):
         else:
             dtype = np.uint32
     elif tp in ["short", "short int"]: dtype = np.int16
-    elif tp in ["unsigned short", "unsigned short int", "short unsigned int"]: 
+    elif tp in ["unsigned short", "unsigned short int", "short unsigned int"]:
         dtype = np.uint16
     elif tp in ["char", "signed char"]: dtype = np.int8
     elif tp in ["unsigned char"]: dtype = np.uint8
