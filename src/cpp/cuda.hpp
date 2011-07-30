@@ -1688,12 +1688,6 @@ namespace pycuda
       { }
 
       virtual ~host_pointer()
-      {
-        if (m_valid)
-          free();
-      }
-
-      virtual void free()
       { }
 
       void *data()
@@ -1717,8 +1711,18 @@ namespace pycuda
         : host_pointer(mem_host_alloc(bytesize, flags))
       { }
 
+      /* Don't try to be clever and coalesce these in the base class.
+       * Won't work: Destructors may not call virtual functions.
+       */
+      ~pagelocked_host_allocation()
+      {
+        if (m_valid)
+          free();
+      }
+
       void free()
       {
+        std::cout << "derivfree" << std::endl;
         if (m_valid)
         {
           try
@@ -1752,6 +1756,15 @@ namespace pycuda
         : host_pointer(aligned_malloc(size, alignment))
       { }
 
+      /* Don't try to be clever and coalesce these in the base class.
+       * Won't work: Destructors may not call virtual functions.
+       */
+      ~aligned_host_allocation()
+      {
+        if (m_valid)
+          free();
+      }
+
       void free()
       {
         if (m_valid)
@@ -1774,6 +1787,15 @@ namespace pycuda
           py::object base=py::object())
         : host_pointer(mem_host_register(p, bytes, flags)), m_base(base)
       {
+      }
+
+      /* Don't try to be clever and coalesce these in the base class.
+       * Won't work: Destructors may not call virtual functions.
+       */
+      ~registered_host_memory()
+      {
+        if (m_valid)
+          free();
       }
 
       void free()
