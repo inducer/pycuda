@@ -125,7 +125,7 @@ def compile_plain(source, options, keep, nvcc, cache_dir):
                 cmdline, stdout=stdout, stderr=stderr)
         from warnings import warn
         warn("The CUDA compiler suceeded, but said the following:\n"
-                +stdout+stderr)
+                +stdout+stderr, stacklevel=4)
 
     cubin = cubin_f.read()
     cubin_f.close()
