@@ -1,35 +1,25 @@
 from pytools import memoize
 # don't import pycuda.driver here--you'll create an import loop
 import sys
+from tempfile import mkstemp
+from os import unlink
+
+from pytools.prefork import call_capture_output
+
 
 
 
 @memoize
 def get_nvcc_version(nvcc):
     cmdline = [nvcc, "--version"]
-    try:
-        try:
-            from pytools.prefork import call_capture_output
-        except ImportError:
-            from pytools.prefork import call_capture_stdout
-            result = call_capture_stdout(cmdline)
-        else:
-            retcode, stdout, stderr = call_capture_output(cmdline)
-            result = stdout
+    result, stdout, stderr = call_capture_output(cmdline)
 
-        if result is None:
-            from warnings import warn
-            warn("NVCC version could not be determined.")
-            result = "nvcc unknown version"
+    if result != 0 or not stdout:
+        from warnings import warn
+        warn("NVCC version could not be determined.")
+        stdout = "nvcc unknown version"
 
-        return result
-
-    except OSError, e:
-        raise OSError("%s was not found (is it on the PATH?) [%s]" 
-                % (nvcc, str(e)))
-
-
-
+    return stdout
 
 def _new_md5(): 
     try:
@@ -43,13 +33,38 @@ def _new_md5():
 
 
 
+def preprocess_source(source, options, nvcc):
+    handle, source_path = mkstemp(suffix='.cu')
+
+    outf = open(source_path, 'w')
+    outf.write(source)
+    outf.close()
+
+    cmdline = [nvcc, '--preprocess'] + options + [source_path] + ['--compiler-options', '-P']
+    result, stdout, stderr = call_capture_output(cmdline, error_on_nonzero=False)
+
+    if result != 0:
+        from pycuda.driver import CompileError
+        raise CompileError("nvcc preprocessing of %s failed" % cu_file_path,
+                cmdline, stdout=stdout, stderr=stderr)
+
+    unlink(source_path)
+
+    return stdout
+
+
+
 def compile_plain(source, options, keep, nvcc, cache_dir):
     from os.path import join
 
     if cache_dir:
         checksum = _new_md5()
 
-        checksum.update(source)
+        if '#include' in source:
+            checksum.update(preprocess_source(source, options, nvcc))
+        else:
+            checksum.update(source)
+
         for option in options: 
             checksum.update(option)
         checksum.update(get_nvcc_version(nvcc))
@@ -82,23 +97,7 @@ def compile_plain(source, options, keep, nvcc, cache_dir):
         print "*** compiler output in %s" % file_dir
 
     cmdline = [nvcc, "--cubin"] + options + [cu_file_name]
-    try:
-        from pytools.prefork import call_capture_output
-    except ImportError:
-        from pytools.prefork import call
-        try:
-            result = call(cmdline, cwd=file_dir)
-        except OSError, e:
-            raise OSError("%s was not found (is it on the PATH?) [%s]" 
-                    % (nvcc, str(e)))
-
-        stdout = None
-        stderr = None
-
-    else:
-        result, stdout, stderr = call_capture_output(
-                cmdline, cwd=file_dir,
-                error_on_nonzero=False)
+    result, stdout, stderr = call_capture_output(cmdline, cwd=file_dir, error_on_nonzero=False)
 
     try:
         cubin_f = open(join(file_dir, file_root + ".cubin"), "rb")

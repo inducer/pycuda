@@ -1,13 +1,30 @@
 User-visible Changes
 ====================
 
-Version 2011.1
---------------
+Version 2011.1.3
+----------------
 
 .. note::
 
     This version is the current development version. You can get it from
     PyCUDA's version control repository.
+
+* Fix a memory leak when using pagelocked memory. (reported by Paul Cazeaux)
+* Fix complex scalar argument passing.
+* Fix :func:`pycuda.gpuarray.zeros` when used on complex arrays.
+
+Version 2011.1.2
+----------------
+
+* Various fixes.
+
+Version 2011.1.1
+----------------
+
+* Various fixes.
+
+Version 2011.1
+--------------
 
 When you update code to run on this version of PyCUDA, please make sure
 to have deprecation warnings enabled, so that you know when your code needs
