@@ -103,9 +103,13 @@ Device Metadata and Occupancy
   .. attribute:: registers
   .. attribute:: shared_memory
   .. attribute:: smem_granularity
-    
+
     The number of threads that participate in banked, simultaneous access
     to shared memory.
+
+  .. attribute:: smem_alloc_granularity
+
+    The size of the smallest possible (non-empty) shared memory allocation.
 
   .. method:: align_bytes(word_size=4)
 

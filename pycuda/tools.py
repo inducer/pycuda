@@ -240,8 +240,10 @@ class DeviceData:
         self.shared_memory = dev.get_attribute(drv.device_attribute.MAX_SHARED_MEMORY_PER_BLOCK)
 
         if dev.compute_capability() >= (2,0):
+            self.smem_alloc_granularity = 128
             self.smem_granularity = 32
         else:
+            self.smem_alloc_granularity = 512
             self.smem_granularity = 16
 
         if dev.compute_capability() >= (2,0):
@@ -291,7 +293,7 @@ class OccupancyRecord:
 
         # copied literally from occupancy calculator
         alloc_warps = _int_ceiling(threads/devdata.warp_size)
-        alloc_smem = _int_ceiling(shared_mem, devdata.smem_granularity)
+        alloc_smem = _int_ceiling(shared_mem, devdata.smem_alloc_granularity)
         if devdata.register_allocation_unit == "warp":
             alloc_regs = alloc_warps*32*registers
         elif devdata.register_allocation_unit == "block":
