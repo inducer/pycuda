@@ -1722,7 +1722,6 @@ namespace pycuda
 
       void free()
       {
-        std::cout << "derivfree" << std::endl;
         if (m_valid)
         {
           try
