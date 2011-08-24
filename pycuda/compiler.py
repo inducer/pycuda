@@ -45,8 +45,8 @@ def preprocess_source(source, options, nvcc):
 
     if result != 0:
         from pycuda.driver import CompileError
-        raise CompileError("nvcc preprocessing of %s failed" % cu_file_path,
-                cmdline, stdout=stdout, stderr=stderr)
+        raise CompileError("nvcc preprocessing of %s failed" % source_path,
+                           cmdline, stderr=stderr)
 
     unlink(source_path)
 
