@@ -22,7 +22,6 @@ def get_config_schema():
     from aksetup_helper import ConfigSchema, Option, \
             IncludeDir, LibraryDir, Libraries, BoostLibraries, \
             Switch, StringListOption, make_boost_base_options
-    from os.path import normpath, join, dirname
 
     nvcc_path = search_on_path(["nvcc", "nvcc.exe"])
     if nvcc_path is None:
