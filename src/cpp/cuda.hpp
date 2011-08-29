@@ -1290,7 +1290,7 @@ namespace pycuda
           block_dim[i] = 1;
         }
 
-        unsigned gd_length = py::len(grid_dim_py);
+        pycuda_size_t gd_length = py::len(grid_dim_py);
         if (gd_length > axis_count)
           throw pycuda::error("function::launch_kernel", CUDA_ERROR_INVALID_HANDLE,
               "too many grid dimensions in kernel launch");
@@ -1298,7 +1298,7 @@ namespace pycuda
         for (unsigned i = 0; i < gd_length; ++i)
           grid_dim[i] = py::extract<unsigned>(grid_dim_py[i]);
 
-        unsigned bd_length = py::len(block_dim_py);
+        pycuda_size_t bd_length = py::len(block_dim_py);
         if (bd_length > axis_count)
           throw pycuda::error("function::launch_kernel", CUDA_ERROR_INVALID_HANDLE,
               "too many block dimensions in kernel launch");
