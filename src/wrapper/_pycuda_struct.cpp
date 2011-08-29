@@ -603,7 +603,7 @@ static int
 np_bool(char *p, PyObject *v, const formatdef *f)
 {
 	BOOL_TYPE y; 
-	y = PyObject_IsTrue(v);
+	y = PyObject_IsTrue(v) != 0;
 	memcpy(p, (char *)&y, sizeof y);
 	return 0;
 }
