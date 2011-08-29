@@ -1,5 +1,6 @@
 #!/usr/bin/env python
 # -*- coding: latin-1 -*-
+from os.path import dirname, join, normpath
 
 
 def search_on_path(filenames):
@@ -66,7 +67,6 @@ def get_config_schema():
 def main():
     import glob
     import sys
-    from os.path import dirname, join, normpath
 
     from aksetup_helper import (hack_distutils, get_config, setup, \
             NumpyExtension, Extension, set_up_shipped_boost_if_requested,

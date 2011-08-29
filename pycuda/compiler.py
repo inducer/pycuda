@@ -39,6 +39,7 @@ def preprocess_source(source, options, nvcc):
     outf = open(source_path, 'w')
     outf.write(source)
     outf.close()
+    os.close(handle)
 
     cmdline = [nvcc, '--preprocess'] + options + [source_path] + ['--compiler-options', '-P']
     result, stdout, stderr = call_capture_output(cmdline, error_on_nonzero=False)

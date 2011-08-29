@@ -21,7 +21,9 @@
 #include <cudaProfiler.h>
 #endif
 
+#ifndef _MSC_VER
 #include <stdint.h>
+#endif
 #include <stdexcept>
 #include <boost/shared_ptr.hpp>
 #include <boost/foreach.hpp>
