@@ -24,8 +24,11 @@ def get_config_schema():
         LibraryDir("CUDADRV", []),
         Libraries("CUDADRV", ["cuda"]),
 
-        LibraryDir("CUDART", []),
+        LibraryDir("CUDART", ["${CUDA_ROOT}/lib", "${CUDA_ROOT}/lib64"]),
         Libraries("CUDART", ["cudart"]),
+
+        LibraryDir("CURAND", ["${CUDA_ROOT}/lib", "${CUDA_ROOT}/lib64"]),
+        Libraries("CUDRAND", ["curand"]),
 
         StringListOption("CXXFLAGS", [],
             help="Any extra C++ compiler options to include"),
@@ -217,8 +220,9 @@ def main():
     EXTRA_DEFINES["PYGPU_PACKAGE"] = "pycuda"
     EXTRA_DEFINES["PYGPU_PYCUDA"] = "1"
 
-    LIBRARY_DIRS = conf["BOOST_LIB_DIR"]
-    LIBRARIES = conf["BOOST_PYTHON_LIBNAME"] + conf["BOOST_THREAD_LIBNAME"]
+    LIBRARY_DIRS = conf["BOOST_LIB_DIR"] + conf["CUDADRV_LIB_DIR"]
+    LIBRARIES = (conf["BOOST_PYTHON_LIBNAME"] + conf["BOOST_THREAD_LIBNAME"]
+            + conf["CUDADRV_LIBNAME"])
 
     if conf["CUDA_ROOT"] is None:
         nvcc_path = search_on_path(["nvcc", "nvcc.exe"])
@@ -243,9 +247,6 @@ def main():
 
     verify_siteconfig(conf)
 
-    EXTRA_INCLUDE_DIRS = []
-    EXTRA_LIBRARIES = []
-
     if conf["CUDA_TRACE"]:
         EXTRA_DEFINES["CUDAPP_TRACE_CUDA"] = 1
 
@@ -254,7 +255,6 @@ def main():
 
     INCLUDE_DIRS = ['src/cpp'] + conf["BOOST_INC_DIR"] + conf["CUDA_INC_DIR"]
     conf["USE_CUDA"] = True
-
 
     if 'darwin' in sys.platform and sys.maxsize == 2147483647:
         # The Python interpreter is running in 32 bit mode on OS X
@@ -266,7 +266,7 @@ def main():
     if 'darwin' in sys.platform:
         # set path to Cuda dynamic libraries,
         # as a safe substitute for DYLD_LIBRARY_PATH
-        for lib_dir in conf['CUDADRV_LIB_DIR']:
+        for lib_dir in conf["CUDADRV_LIB_DIR"]:
             conf["LDFLAGS"].extend(["-Xlinker", "-rpath", "-Xlinker", lib_dir])
 
     if conf["CUDA_ENABLE_GL"]:
@@ -278,7 +278,8 @@ def main():
         EXTRA_SOURCES.extend([
             "src/wrapper/wrap_curand.cpp"
             ])
-        EXTRA_LIBRARIES.append("curand")
+        LIBRARIES.extend(conf("CURAND_LIBNAME"))
+        LIBRARY_DIRS.extend(conf("CURAND_LIB_DIR"))
 
     ver_dic = {}
     exec(compile(open("pycuda/__init__.py").read(), "pycuda/__init__.py", 'exec'), ver_dic)
@@ -365,9 +366,9 @@ def main():
                         "src/wrapper/wrap_cudadrv.cpp",
                         "src/wrapper/mempool.cpp",
                         ]+EXTRA_SOURCES,
-                    include_dirs=INCLUDE_DIRS + EXTRA_INCLUDE_DIRS,
-                    library_dirs=LIBRARY_DIRS + conf["CUDADRV_LIB_DIR"],
-                    libraries=LIBRARIES + conf["CUDADRV_LIBNAME"] + EXTRA_LIBRARIES,
+                    include_dirs=INCLUDE_DIRS,
+                    library_dirs=LIBRARY_DIRS,
+                    libraries=LIBRARIES,
                     define_macros=list(EXTRA_DEFINES.items()),
                     extra_compile_args=conf["CXXFLAGS"],
                     extra_link_args=conf["LDFLAGS"],

@@ -165,7 +165,7 @@ def get_config(schema=None, warn_about_no_config=True):
 
         count_down_delay(delay=10)
 
-    return schema.read_config()
+    return expand_options(schema.read_config())
 
 
 
@@ -241,15 +241,23 @@ def expand_value(v, options):
     if isinstance(v, str):
         return expand_str(v, options)
     elif isinstance(v, list):
-        return [expand_value(i, options) for i in v]
+        result = []
+        for i in v:
+            try:
+                exp_i = expand_value(i, options)
+            except:
+                pass
+            else:
+                result.append(exp_i)
+
+        return result
     else:
         return v
 
 
 def expand_options(options):
-    for k in options.keys():
-        options[k] = expand_value(options[k], options)
-    return options
+    return dict(
+            (k, expand_value(v, options)) for k, v in options.iteritems())
 
 
 
@@ -280,8 +288,7 @@ class ConfigSchema:
         self.conf_dir = conf_dir
 
     def get_default_config(self):
-        return dict((opt.name, opt.default)
-                for opt in self.options)
+        return dict((opt.name, opt.default) for opt in self.options)
 
     def read_config_from_pyfile(self, filename):
         result = {}
@@ -379,8 +386,6 @@ class ConfigSchema:
                     raise KeyError("invalid config key in %s: %s" % (
                             cfile, key))
 
-        expand_options(result)
-
         return result
 
     def add_to_configparser(self, parser, def_config=None):
@@ -395,11 +400,9 @@ class ConfigSchema:
         result = {}
         for opt in self.options:
             result[opt.name] = opt.take_from_configparser(options)
-        expand_options(result)
         return result
 
     def write_config(self, config):
-        import os
         outf = open(self.get_conf_file(), "w")
         for opt in self.options:
             value = config[opt.name]
