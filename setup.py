@@ -28,7 +28,7 @@ def get_config_schema():
         Libraries("CUDART", ["cudart"]),
 
         LibraryDir("CURAND", ["${CUDA_ROOT}/lib", "${CUDA_ROOT}/lib64"]),
-        Libraries("CUDRAND", ["curand"]),
+        Libraries("CURAND", ["curand"]),
 
         StringListOption("CXXFLAGS", [],
             help="Any extra C++ compiler options to include"),
@@ -278,8 +278,8 @@ def main():
         EXTRA_SOURCES.extend([
             "src/wrapper/wrap_curand.cpp"
             ])
-        LIBRARIES.extend(conf("CURAND_LIBNAME"))
-        LIBRARY_DIRS.extend(conf("CURAND_LIB_DIR"))
+        LIBRARIES.extend(conf["CURAND_LIBNAME"])
+        LIBRARY_DIRS.extend(conf["CURAND_LIB_DIR"])
 
     ver_dic = {}
     exec(compile(open("pycuda/__init__.py").read(), "pycuda/__init__.py", 'exec'), ver_dic)
