@@ -320,7 +320,7 @@ namespace
     CUmodule mod;
 
 #if CUDAPP_CUDA_VERSION >= 2010
-    const unsigned buf_size = 32768;
+    const size_t buf_size = 32768;
     char info_buf[buf_size], error_buf[buf_size];
 
     std::vector<CUjit_option> options;
