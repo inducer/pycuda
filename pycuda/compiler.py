@@ -41,10 +41,12 @@ def preprocess_source(source, options, nvcc):
     outf.close()
     os.close(handle)
 
+    cmdline = [nvcc, '--preprocess'] + options + [source_path]
     if 'win32' in sys.platform:
-        cmdline = [nvcc, '--preprocess'] + options + [source_path] + ['--compiler-options', '-EP']
+        cmdline.extend(['--compiler-options', '-EP'])
     else:
-        cmdline = [nvcc, '--preprocess'] + options + [source_path] + ['--compiler-options', '-P']
+        cmdline.extend(['--compiler-options', '-P'])
+
     result, stdout, stderr = call_capture_output(cmdline, error_on_nonzero=False)
 
     if result != 0:
