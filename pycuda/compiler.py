@@ -41,13 +41,25 @@ def preprocess_source(source, options, nvcc):
     outf.close()
     os.close(handle)
 
-    cmdline = [nvcc, '--preprocess'] + options + [source_path] + ['--compiler-options', '-P']
+    cmdline = [nvcc, '--preprocess'] + options + [source_path]
+    if 'win32' in sys.platform:
+        cmdline.extend(['--compiler-options', '-EP'])
+    else:
+        cmdline.extend(['--compiler-options', '-P'])
+
     result, stdout, stderr = call_capture_output(cmdline, error_on_nonzero=False)
 
     if result != 0:
         from pycuda.driver import CompileError
         raise CompileError("nvcc preprocessing of %s failed" % source_path,
                            cmdline, stderr=stderr)
+
+    # sanity check
+    if len(stdout) < 0.5*len(source):
+        from pycuda.driver import CompileError
+        raise CompileError("nvcc preprocessing of %s failed with ridiculously "
+                "small code output - likely unsupported compiler." % source_path,
+                cmdline, stderr=stderr)
 
     unlink(source_path)
 
