@@ -37,7 +37,7 @@ def _create_vector_types():
         ('uchar', np.uint8, [1,2,3,4]),
         ('short', np.int16, [1,2,3,4]),
         ('ushort', np.uint16, [1,2,3,4]),
-        ('int', np.uint32, [1,2,3,4]),
+        ('int', np.int32, [1,2,3,4]),
         ('uint', np.uint32, [1,2,3,4]),
         ('long', long_dtype, [1,2,3,4]),
         ('ulong', ulong_dtype, [1,2,3,4]),
