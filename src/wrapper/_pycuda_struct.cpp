@@ -128,6 +128,110 @@ typedef struct { char c; bool x; } s_bool;
 
 static char *integer_codes = "bBhHiIlLqQ";
 
+static void s_dealloc(PyStructObject *s);
+static int s_init(PyObject *self, PyObject *args, PyObject *kwds);
+static PyObject *s_new(PyTypeObject *type, PyObject *args, PyObject *kwds);
+static PyObject *s_pack(PyObject *self, PyObject *args);
+static PyObject *s_pack_into(PyObject *self, PyObject *args);
+static PyObject *s_unpack(PyObject *self, PyObject *inputstr);
+static PyObject *s_unpack_from(PyObject *self, PyObject *args, PyObject *kwds);
+static PyObject *s_get_format(PyStructObject *self, void *unused);
+static PyObject *s_get_size(PyStructObject *self, void *unused);
+
+PyDoc_STRVAR(s__doc__, "Compiled struct object");
+
+/* List of functions */
+
+PyDoc_STRVAR(s_pack__doc__,
+"S.pack(v1, v2, ...) -> string\n\
+\n\
+Return a string containing values v1, v2, ... packed according to this\n\
+Struct's format. See struct.__doc__ for more on format strings.");
+
+PyDoc_STRVAR(s_pack_into__doc__,
+"S.pack_into(buffer, offset, v1, v2, ...)\n\
+\n\
+Pack the values v1, v2, ... according to this Struct's format, write \n\
+the packed bytes into the writable buffer buf starting at offset.  Note\n\
+that the offset is not an optional argument.  See struct.__doc__ for \n\
+more on format strings.");
+
+PyDoc_STRVAR(s_unpack__doc__,
+"S.unpack(str) -> (v1, v2, ...)\n\
+\n\
+Return tuple containing values unpacked according to this Struct's format.\n\
+Requires len(str) == self.size. See struct.__doc__ for more on format\n\
+strings.");
+
+PyDoc_STRVAR(s_unpack_from__doc__,
+"S.unpack_from(buffer[, offset]) -> (v1, v2, ...)\n\
+\n\
+Return tuple containing values unpacked according to this Struct's format.\n\
+Unlike unpack, unpack_from can unpack values from any object supporting\n\
+the buffer API, not just str. Requires len(buffer[offset:]) >= self.size.\n\
+See struct.__doc__ for more on format strings.");
+
+
+static struct PyMethodDef s_methods[] = {
+	{"pack",	s_pack,		METH_VARARGS, s_pack__doc__},
+	{"pack_into",	s_pack_into,	METH_VARARGS, s_pack_into__doc__},
+	{"unpack",	s_unpack,       METH_O, s_unpack__doc__},
+	{"unpack_from",	(PyCFunction)s_unpack_from, METH_VARARGS|METH_KEYWORDS,
+			s_unpack_from__doc__},
+	{NULL,	 NULL}		/* sentinel */
+};
+
+#define OFF(x) offsetof(PyStructObject, x)
+
+static PyGetSetDef s_getsetlist[] = {
+	{"format", (getter)s_get_format, (setter)NULL, "struct format string", NULL},
+	{"size", (getter)s_get_size, (setter)NULL, "struct size in bytes", NULL},
+	{NULL} /* sentinel */
+};
+
+static
+PyTypeObject PyStructType = {
+	PyVarObject_HEAD_INIT(NULL, 0)
+	"Struct",
+	sizeof(PyStructObject),
+	0,
+	(destructor)s_dealloc,	/* tp_dealloc */
+	0,					/* tp_print */
+	0,					/* tp_getattr */
+	0,					/* tp_setattr */
+	0,					/* tp_compare */
+	0,					/* tp_repr */
+	0,					/* tp_as_number */
+	0,					/* tp_as_sequence */
+	0,					/* tp_as_mapping */
+	0,					/* tp_hash */
+	0,					/* tp_call */
+	0,					/* tp_str */
+	PyObject_GenericGetAttr,	/* tp_getattro */
+	PyObject_GenericSetAttr,	/* tp_setattro */
+	0,					/* tp_as_buffer */
+	Py_TPFLAGS_DEFAULT | Py_TPFLAGS_BASETYPE | Py_TPFLAGS_HAVE_WEAKREFS,/* tp_flags */
+	s__doc__,			/* tp_doc */
+	0,					/* tp_traverse */
+	0,					/* tp_clear */
+	0,					/* tp_richcompare */
+	offsetof(PyStructObject, weakreflist),	/* tp_weaklistoffset */
+	0,					/* tp_iter */
+	0,					/* tp_iternext */
+	s_methods,			/* tp_methods */
+	NULL,				/* tp_members */
+	s_getsetlist,		/* tp_getset */
+	0,					/* tp_base */
+	0,					/* tp_dict */
+	0,					/* tp_descr_get */
+	0,					/* tp_descr_set */
+	0,					/* tp_dictoffset */
+	s_init,				/* tp_init */
+	PyType_GenericAlloc,/* tp_alloc */
+	s_new,				/* tp_new */
+	PyObject_Del,		/* tp_free */
+};
+
 /* Helper to get a PyLongObject by hook or by crook.  Caller should decref. */
 
 static PyObject *
@@ -976,13 +1080,6 @@ fail:
 }
 
 
-PyDoc_STRVAR(s_unpack__doc__,
-"S.unpack(str) -> (v1, v2, ...)\n\
-\n\
-Return tuple containing values unpacked according to this Struct's format.\n\
-Requires len(str) == self.size. See struct.__doc__ for more on format\n\
-strings.");
-
 static PyObject *
 s_unpack(PyObject *self, PyObject *inputstr)
 {
@@ -1016,14 +1113,6 @@ fail:
 		soself->s_size);
 	return NULL;
 }
-
-PyDoc_STRVAR(s_unpack_from__doc__,
-"S.unpack_from(buffer[, offset]) -> (v1, v2, ...)\n\
-\n\
-Return tuple containing values unpacked according to this Struct's format.\n\
-Unlike unpack, unpack_from can unpack values from any object supporting\n\
-the buffer API, not just str. Requires len(buffer[offset:]) >= self.size.\n\
-See struct.__doc__ for more on format strings.");
 
 static PyObject *
 s_unpack_from(PyObject *self, PyObject *args, PyObject *kwds)
@@ -1149,12 +1238,6 @@ s_pack_internal(PyStructObject *soself, PyObject *args, int offset, char* buf)
 }
 
 
-PyDoc_STRVAR(s_pack__doc__,
-"S.pack(v1, v2, ...) -> string\n\
-\n\
-Return a string containing values v1, v2, ... packed according to this\n\
-Struct's format. See struct.__doc__ for more on format strings.");
-
 static PyObject *
 s_pack(PyObject *self, PyObject *args)
 {
@@ -1186,13 +1269,6 @@ s_pack(PyObject *self, PyObject *args)
 	return result;
 }
 
-PyDoc_STRVAR(s_pack_into__doc__,
-"S.pack_into(buffer, offset, v1, v2, ...)\n\
-\n\
-Pack the values v1, v2, ... according to this Struct's format, write \n\
-the packed bytes into the writable buffer buf starting at offset.  Note\n\
-that the offset is not an optional argument.  See struct.__doc__ for \n\
-more on format strings.");
 
 static PyObject *
 s_pack_into(PyObject *self, PyObject *args)
@@ -1257,71 +1333,6 @@ s_get_size(PyStructObject *self, void *unused)
 {
     return PyInt_FromSsize_t(self->s_size);
 }
-
-/* List of functions */
-
-static struct PyMethodDef s_methods[] = {
-	{"pack",	s_pack,		METH_VARARGS, s_pack__doc__},
-	{"pack_into",	s_pack_into,	METH_VARARGS, s_pack_into__doc__},
-	{"unpack",	s_unpack,       METH_O, s_unpack__doc__},
-	{"unpack_from",	(PyCFunction)s_unpack_from, METH_VARARGS|METH_KEYWORDS,
-			s_unpack_from__doc__},
-	{NULL,	 NULL}		/* sentinel */
-};
-
-PyDoc_STRVAR(s__doc__, "Compiled struct object");
-
-#define OFF(x) offsetof(PyStructObject, x)
-
-static PyGetSetDef s_getsetlist[] = {
-	{"format", (getter)s_get_format, (setter)NULL, "struct format string", NULL},
-	{"size", (getter)s_get_size, (setter)NULL, "struct size in bytes", NULL},
-	{NULL} /* sentinel */
-};
-
-static
-PyTypeObject PyStructType = {
-	PyVarObject_HEAD_INIT(NULL, 0)
-	"Struct",
-	sizeof(PyStructObject),
-	0,
-	(destructor)s_dealloc,	/* tp_dealloc */
-	0,					/* tp_print */
-	0,					/* tp_getattr */
-	0,					/* tp_setattr */
-	0,					/* tp_compare */
-	0,					/* tp_repr */
-	0,					/* tp_as_number */
-	0,					/* tp_as_sequence */
-	0,					/* tp_as_mapping */
-	0,					/* tp_hash */
-	0,					/* tp_call */
-	0,					/* tp_str */
-	PyObject_GenericGetAttr,	/* tp_getattro */
-	PyObject_GenericSetAttr,	/* tp_setattro */
-	0,					/* tp_as_buffer */
-	Py_TPFLAGS_DEFAULT | Py_TPFLAGS_BASETYPE | Py_TPFLAGS_HAVE_WEAKREFS,/* tp_flags */
-	s__doc__,			/* tp_doc */
-	0,					/* tp_traverse */
-	0,					/* tp_clear */
-	0,					/* tp_richcompare */
-	offsetof(PyStructObject, weakreflist),	/* tp_weaklistoffset */
-	0,					/* tp_iter */
-	0,					/* tp_iternext */
-	s_methods,			/* tp_methods */
-	NULL,				/* tp_members */
-	s_getsetlist,		/* tp_getset */
-	0,					/* tp_base */
-	0,					/* tp_dict */
-	0,					/* tp_descr_get */
-	0,					/* tp_descr_set */
-	0,					/* tp_dictoffset */
-	s_init,				/* tp_init */
-	PyType_GenericAlloc,/* tp_alloc */
-	s_new,				/* tp_new */
-	PyObject_Del,		/* tp_free */
-};
-
 
 /* ---- Standalone functions  ---- */
 
