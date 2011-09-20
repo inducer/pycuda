@@ -259,20 +259,30 @@ class TestGPUArray:
             from pytest import skip
             skip("curand not installed")
 
-
-        from pycuda.curandom import (
-                XORWOWRandomNumberGenerator,
-                Sobol32RandomNumberGenerator)
+        generator_types = []
+        if get_curand_version() >= (3, 2, 0):
+            from pycuda.curandom import (
+                    XORWOWRandomNumberGenerator,
+                    Sobol32RandomNumberGenerator)
+            generator_types.extend([
+                    XORWOWRandomNumberGenerator,
+                    Sobol32RandomNumberGenerator])
+        if get_curand_version() >= (4, 0, 0):
+            from pycuda.curandom import (
+                    ScrambledSobol32RandomNumberGenerator,
+                    Sobol64RandomNumberGenerator,
+                    ScrambledSobol64RandomNumberGenerator)
+            generator_types.extend([
+                    ScrambledSobol32RandomNumberGenerator,
+                    Sobol64RandomNumberGenerator,
+                    ScrambledSobol64RandomNumberGenerator])
 
         if has_double_support():
             dtypes = [np.float32, np.float64]
         else:
             dtypes = [np.float32]
 
-        for gen_type in [
-                XORWOWRandomNumberGenerator,
-                #Sobol32RandomNumberGenerator
-                ]:
+        for gen_type in generator_types:
             gen = gen_type()
 
             for dtype in dtypes:

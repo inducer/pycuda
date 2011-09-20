@@ -258,6 +258,10 @@ if get_curand_version() >= (3, 2, 0):
     direction_vector_set = _curand.direction_vector_set
     _get_direction_vectors = _curand._get_direction_vectors
 
+if get_curand_version() >= (4, 0, 0):
+    _get_scramble_constants32 = _curand._get_scramble_constants32
+    _get_scramble_constants64 = _curand._get_scramble_constants64
+
 # {{{ Base class
 
 gen_template = """
@@ -279,14 +283,19 @@ extern "C"
 
 %(generators)s
 
-__global__ void skip_ahead(%(state_type)s *s, const int n, const int skip)
+}
+"""
+
+random_skip_ahead32_source = """
+extern "C" {
+__global__ void skip_ahead(%(state_type)s *s, const int n, const unsigned int skip)
 {
   const int idx = blockIdx.x*blockDim.x+threadIdx.x;
   if (idx < n)
     skipahead(skip, &s[idx]);
 }
 
-__global__ void skip_ahead_array(%(state_type)s *s, const int n, const int *skip)
+__global__ void skip_ahead_array(%(state_type)s *s, const int n, const unsigned int *skip)
 {
   const int idx = blockIdx.x*blockDim.x+threadIdx.x;
   if (idx < n)
@@ -295,6 +304,23 @@ __global__ void skip_ahead_array(%(state_type)s *s, const int n, const int *skip
 }
 """
 
+random_skip_ahead64_source = """
+extern "C" {
+__global__ void skip_ahead(%(state_type)s *s, const int n, const unsigned long long skip)
+{
+  const int idx = blockIdx.x*blockDim.x+threadIdx.x;
+  if (idx < n)
+    skipahead(skip, &s[idx]);
+}
+
+__global__ void skip_ahead_array(%(state_type)s *s, const int n, const unsigned long long *skip)
+{
+  const int idx = blockIdx.x*blockDim.x+threadIdx.x;
+  if (idx < n)
+      skipahead(skip[idx], &s[idx]);
+}
+}
+"""
 
 
 
@@ -460,7 +486,7 @@ def seed_getter_unique(N):
 
 xorwow_random_source = """
 extern "C" {
-__global__ void prepare_with_seeds(curandState *s, const int n,
+__global__ void prepare_with_seeds(curandStateXORWOW *s, const int n,
   const int *seed, const int offset)
 {
   const int id = blockIdx.x*blockDim.x+threadIdx.x;
@@ -468,6 +494,19 @@ __global__ void prepare_with_seeds(curandState *s, const int n,
     curand_init(seed[id], threadIdx.x, offset, &s[id]);
 }
 
+__global__ void skip_ahead_sequence(%(state_type)s *s, const int n, const unsigned int skip)
+{
+  const int idx = blockIdx.x*blockDim.x+threadIdx.x;
+  if (idx < n)
+    skipahead_sequence(skip, &s[idx]);
+}
+
+__global__ void skip_ahead_sequence_array(%(state_type)s *s, const int n, const unsigned int *skip)
+{
+  const int idx = blockIdx.x*blockDim.x+threadIdx.x;
+  if (idx < n)
+      skipahead_sequence(skip[idx], &s[idx]);
+}
 }
 """
 
@@ -483,7 +522,7 @@ if get_curand_version() >= (3, 2, 0):
             """
 
             super(XORWOWRandomNumberGenerator, self).__init__(
-                'curandStateXORWOW', xorwow_random_source)
+                'curandStateXORWOW', xorwow_random_source+random_skip_ahead64_source)
 
             if seed_getter is None:
                 seed = array.to_gpu(
@@ -501,6 +540,10 @@ if get_curand_version() >= (3, 2, 0):
 
             p = self.module.get_function("prepare_with_seeds")
             p.prepare("PiPi")
+            self.skip_ahead_sequence = self.module.get_function("skip_ahead_sequence")
+            self.skip_ahead_sequence.prepare("Pii")
+            self.skip_ahead_sequence_array = self.module.get_function("skip_ahead_sequence_array")
+            self.skip_ahead_sequence_array.prepare("PiP")
 
             from pycuda.characterize import has_stack
             has_stack = has_stack()
@@ -523,26 +566,164 @@ if get_curand_version() >= (3, 2, 0):
                 if has_stack:
                     drv.Context.set_limit(drv.limit.STACK_SIZE, prev_stack_size)
 
+        def call_skip_ahead_sequence(self, i, stream=None):
+            self.skip_ahead_sequence.prepared_async_call(
+                    (self.block_count, 1), (self.generators_per_block, 1, 1), stream,
+                    self.state, self.generators_per_block, i)
+
+        def call_skip_ahead_sequence_array(self, i, stream=None):
+            self.skip_ahead_sequence_array.prepared_async_call(
+                    (self.block_count, 1), (self.generators_per_block, 1, 1), stream,
+                    self.state, self.generators_per_block, i.gpudata)
+
         def _kernels(self):
             return (_RandomNumberGeneratorBase._kernels(self)
-                    + [self.module.get_function("prepare_with_seeds")])
+                    + [self.module.get_function("prepare_with_seeds")]
+                    + [self.module.get_function("skip_ahead_sequence"),
+                       self.module.get_function("skip_ahead_sequence_array")])
 
 # }}}
 
-# {{{ Sobol32 RNG
+# {{{ Sobol RNG
 
 def generate_direction_vectors(count, direction=None):
-    if direction is None:
-        direction = direction_vector_set.VECTOR_32
-
-    result = np.empty((count, 32), dtype=np.int32)
+    if get_curand_version() >= (4, 0, 0):
+        if direction == direction_vector_set.VECTOR_64 or \
+            direction == direction_vector_set.SCRAMBLED_VECTOR_64:
+            result = np.empty((count, 64), dtype=np.uint64)
+        else:
+            result = np.empty((count, 32), dtype=np.uint32)
+    else:
+        result = np.empty((count, 32), dtype=np.uint32)
     _get_direction_vectors(direction, result, count)
     return pycuda.gpuarray.to_gpu(result)
 
+if get_curand_version() >= (4, 0, 0):
+    def generate_scramble_constants32(count):
+        result = np.empty((count, ), dtype=np.uint32)
+        _get_scramble_constants32(result, count)
+        return pycuda.gpuarray.to_gpu(result)
+
+    def generate_scramble_constants64(count):
+        result = np.empty((count, ), dtype=np.uint64)
+        _get_scramble_constants64(result, count)
+        return pycuda.gpuarray.to_gpu(result)
+
+class _SobolRandomNumberGeneratorBase(_RandomNumberGeneratorBase):
+    """
+    Class surrounding CURAND kernels from CUDA 3.2.
+    It allows for generating quasi-random numbers with uniform
+    and normal probability function of type int, float, and double.
+    """
+
+    has_box_muller = False
+
+    def __init__(self, dir_vector, dir_vector_dtype, dir_vector_size,
+        dir_vector_set, offset, state_type, sobol_random_source):
+        super(_SobolRandomNumberGeneratorBase, self).__init__(state_type,
+            sobol_random_source)
+
+        if dir_vector is None:
+            dir_vector = generate_direction_vectors(
+                self.block_count * self.generators_per_block, dir_vector_set)
+
+        if not (isinstance(dir_vector, pycuda.gpuarray.GPUArray)
+                and dir_vector.dtype == dir_vector_dtype
+                and dir_vector.shape == (self.block_count * self.generators_per_block, dir_vector_size)):
+            raise TypeError("seed must be GPUArray of integers of right length")
+
+        p = self.module.get_function("prepare")
+        p.prepare("PiPi")
+
+        from pycuda.characterize import has_stack
+        has_stack = has_stack()
+
+        if has_stack:
+            prev_stack_size = drv.Context.get_limit(drv.limit.STACK_SIZE)
+
+        try:
+            if has_stack:
+                drv.Context.set_limit(drv.limit.STACK_SIZE, 1<<14) # 16k
+            try:
+                p.prepared_call((2 * self.block_count, 1), (self.generators_per_block // 2, 1, 1),
+                    self.state, self.block_count * self.generators_per_block,
+                    dir_vector.gpudata, offset)
+            except drv.LaunchError:
+                raise ValueError("Initialisation failed. Decrease number of threads.")
+
+        finally:
+            if has_stack:
+                drv.Context.set_limit(drv.limit.STACK_SIZE, prev_stack_size)
+
+    def _kernels(self):
+        return (_RandomNumberGeneratorBase._kernels(self)
+                + [self.module.get_function("prepare")])
+
+class _ScrambledSobolRandomNumberGeneratorBase(_RandomNumberGeneratorBase):
+    """
+    Class surrounding CURAND kernels from CUDA 4.0.
+    It allows for generating quasi-random numbers with uniform
+    and normal probability function of type int, float, and double.
+    """
+
+    has_box_muller = False
+
+    def __init__(self, dir_vector, dir_vector_dtype, dir_vector_size,
+        dir_vector_set, scramble_vector, scramble_vector_function,
+        offset, state_type, sobol_random_source):
+        super(_ScrambledSobolRandomNumberGeneratorBase, self).__init__(state_type,
+            sobol_random_source)
+
+        if dir_vector is None:
+            dir_vector = generate_direction_vectors(
+                self.block_count * self.generators_per_block,
+                dir_vector_set)
+
+        if scramble_vector is None:
+            scramble_vector = scramble_vector_function(
+                self.block_count * self.generators_per_block)
+
+        if not (isinstance(dir_vector, pycuda.gpuarray.GPUArray)
+                and dir_vector.dtype == dir_vector_dtype
+                and dir_vector.shape == (self.block_count * self.generators_per_block, dir_vector_size)):
+            raise TypeError("seed must be GPUArray of integers of right length")
+
+        if not (isinstance(scramble_vector, pycuda.gpuarray.GPUArray)
+                and scramble_vector.dtype == dir_vector_dtype
+                and scramble_vector.shape == (self.block_count * self.generators_per_block, )):
+            raise TypeError("scramble must be GPUArray of integers of right length")
+
+        p = self.module.get_function("prepare")
+        p.prepare("PiPPi")
+
+        from pycuda.characterize import has_stack
+        has_stack = has_stack()
+
+        if has_stack:
+            prev_stack_size = drv.Context.get_limit(drv.limit.STACK_SIZE)
+
+        try:
+            if has_stack:
+                drv.Context.set_limit(drv.limit.STACK_SIZE, 1<<14) # 16k
+            try:
+                p.prepared_call((2 * self.block_count, 1), (self.generators_per_block // 2, 1, 1),
+                    self.state, self.block_count * self.generators_per_block,
+                    dir_vector.gpudata, scramble_vector.gpudata, offset)
+            except drv.LaunchError:
+                raise ValueError("Initialisation failed. Decrease number of threads.")
+
+        finally:
+            if has_stack:
+                drv.Context.set_limit(drv.limit.STACK_SIZE, prev_stack_size)
+
+    def _kernels(self):
+        return (_RandomNumberGeneratorBase._kernels(self)
+                + [self.module.get_function("prepare")])
+
 sobol32_random_source = """
 extern "C" {
-__global__ void prepare(curandStateSobol32 *s, const int n, curandDirectionVectors32_t *v,
-    const unsigned int o)
+__global__ void prepare(curandStateSobol32 *s, const int n,
+    curandDirectionVectors32_t *v, const unsigned int o)
 {
   const int id = blockIdx.x*blockDim.x+threadIdx.x;
   if (id < n)
@@ -552,59 +733,95 @@ __global__ void prepare(curandStateSobol32 *s, const int n, curandDirectionVecto
 """
 
 if get_curand_version() >= (3, 2, 0):
-    class Sobol32RandomNumberGenerator(_RandomNumberGeneratorBase):
+    class Sobol32RandomNumberGenerator(_SobolRandomNumberGeneratorBase):
         """
         Class surrounding CURAND kernels from CUDA 3.2.
         It allows for generating quasi-random numbers with uniform
         and normal probability function of type int, float, and double.
         """
 
-        has_box_muller = False
+        def __init__(self, dir_vector=None, offset=0):
+            super(Sobol32RandomNumberGenerator, self).__init__(dir_vector,
+                np.uint32, 32, direction_vector_set.VECTOR_32, offset,
+                'curandStateSobol32', sobol32_random_source+random_skip_ahead32_source)
+
+scrambledsobol32_random_source = """
+extern "C" {
+__global__ void prepare(curandStateScrambledSobol32 *s, const int n,
+    curandDirectionVectors32_t *v, unsigned int *scramble, const unsigned int o)
+{
+  const int id = blockIdx.x*blockDim.x+threadIdx.x;
+  if (id < n)
+    curand_init(v[id], scramble[id], o, &s[id]);
+}
+}
+"""
+
+if get_curand_version() >= (4, 0, 0):
+    class ScrambledSobol32RandomNumberGenerator(_ScrambledSobolRandomNumberGeneratorBase):
+        """
+        Class surrounding CURAND kernels from CUDA 4.0.
+        It allows for generating quasi-random numbers with uniform
+        and normal probability function of type int, float, and double.
+        """
+
+        def __init__(self, dir_vector=None, scramble_vector=None, offset=0):
+            super(ScrambledSobol32RandomNumberGenerator, self).__init__(dir_vector,
+                np.uint32, 32, direction_vector_set.SCRAMBLED_VECTOR_32,
+                scramble_vector, generate_scramble_constants32, offset,
+                'curandStateScrambledSobol32', scrambledsobol32_random_source+random_skip_ahead32_source)
+
+sobol64_random_source = """
+extern "C" {
+__global__ void prepare(curandStateSobol64 *s, const int n, curandDirectionVectors64_t *v,
+    const unsigned int o)
+{
+  const int id = blockIdx.x*blockDim.x+threadIdx.x;
+  if (id < n)
+    curand_init(v[id], o, &s[id]);
+}
+}
+"""
+
+
+if get_curand_version() >= (4, 0, 0):
+    class Sobol64RandomNumberGenerator(_SobolRandomNumberGeneratorBase):
+        """
+        Class surrounding CURAND kernels from CUDA 4.0.
+        It allows for generating quasi-random numbers with uniform
+        and normal probability function of type int, float, and double.
+        """
 
         def __init__(self, dir_vector=None, offset=0):
-            super(Sobol32RandomNumberGenerator, self).__init__('curandStateSobol32',
-                sobol32_random_source)
+            super(Sobol64RandomNumberGenerator, self).__init__(dir_vector,
+                np.uint64, 64, direction_vector_set.VECTOR_64, offset,
+                'curandStateSobol64', sobol64_random_source+random_skip_ahead64_source)
 
-            if dir_vector is None:
-                dir_vector = generate_direction_vectors(
-                    self.block_count * self.generators_per_block)
+scrambledsobol64_random_source = """
+extern "C" {
+__global__ void prepare(curandStateScrambledSobol64 *s, const int n,
+    curandDirectionVectors64_t *v, unsigned long long *scramble, const unsigned int o)
+{
+  const int id = blockIdx.x*blockDim.x+threadIdx.x;
+  if (id < n)
+    curand_init(v[id], scramble[id], o, &s[id]);
+}
+}
+"""
 
-            if not (isinstance(dir_vector, pycuda.gpuarray.GPUArray)
-                    and dir_vector.dtype == np.int32
-                    and dir_vector.shape == (self.block_count * self.generators_per_block, 32)):
-                raise TypeError("seed must be GPUArray of integers of right length")
+if get_curand_version() >= (4, 0, 0):
+    class ScrambledSobol64RandomNumberGenerator(_ScrambledSobolRandomNumberGeneratorBase):
+        """
+        Class surrounding CURAND kernels from CUDA 4.0.
+        It allows for generating quasi-random numbers with uniform
+        and normal probability function of type int, float, and double.
+        """
 
-            p = self.module.get_function("prepare")
-            p.prepare("PiPi", block=(self.generators_per_block, 1, 1))
-
-            from pycuda.characterize import has_stack
-            has_stack = has_stack()
-
-            if has_stack:
-                prev_stack_size = drv.Context.get_limit(drv.limit.STACK_SIZE)
-
-            try:
-                if has_stack:
-                    drv.Context.set_limit(drv.limit.STACK_SIZE, 1<<14) # 16k
-                try:
-
-                    dev = drv.Context.get_device()
-                    if dev.compute_capability() >= (2, 0):
-                        p.prepared_call((self.block_count, 1), self.state,
-                            self.block_count * self.generators_per_block, dir_vector.gpudata, offset)
-                    else:
-                        p.prepared_call((2 * self.block_count, 1), self.state,
-                            self.block_count * self.generators_per_block // 2, dir_vector.gpudata, offset)
-                except drv.LaunchError:
-                    raise ValueError("Initialisation failed. Decrease number of threads.")
-
-            finally:
-                if has_stack:
-                    drv.Context.set_limit(drv.limit.STACK_SIZE, prev_stack_size)
-
-        def _kernels(self):
-            return (_RandomNumberGeneratorBase._kernels(self)
-                    + [self.module.get_function("prepare")])
+        def __init__(self, dir_vector=None, scramble_vector=None, offset=0):
+            super(ScrambledSobol64RandomNumberGenerator, self).__init__(dir_vector,
+                np.uint64, 64, direction_vector_set.SCRAMBLED_VECTOR_64,
+                scramble_vector, generate_scramble_constants64, offset,
+                'curandStateScrambledSobol64', scrambledsobol64_random_source+random_skip_ahead64_source)
 
 # }}}
 

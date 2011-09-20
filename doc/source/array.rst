@@ -460,10 +460,31 @@ Quasirandom numbers are more expensive to generate.
         Accepts array i of integer values, telling each generator how many
         values to skip.
 
+    .. method call_skip_ahead_sequence(i, stream=None)
+
+        Forces all generators to skip i subsequences. Is equivalent to
+        generating i * :math:`2^67` values and discarding results,
+        but is much faster.
+
+    .. method call_skip_ahead_sequence_array(i, stream=None)
+
+        Accepts array i of integer values, telling each generator how many
+        subsequences to skip.
+
 .. function:: generate_direction_vectors(count, direction=direction_vector_set.VECTOR_32)
 
     Return an :class:`GPUArray` `count` filled with direction vectors
-    used to initialize Sobol32 generators.
+    used to initialize Sobol generators.
+
+.. function:: generate_scramble_constants32(count)
+
+    Return a :class:`GPUArray` filled with `count' 32-bit unsigned integer
+    numbers used to initialize :class:`ScrambledSobol32RandomNumberGenerator`
+
+.. function:: generate_scramble_constants64(count)
+
+    Return a :class:`GPUArray` filled with `count' 64-bit unsigned integer
+    numbers used to initialize :class:`ScrambledSobol64RandomNumberGenerator`
 
 .. class:: Sobol32RandomNumberGenerator(dir_vector=None, offset=0)
 
@@ -500,6 +521,116 @@ Quasirandom numbers are more expensive to generate.
         Accepts array i of integer values, telling each generator how many
         values to skip.
 
+.. class:: ScrambledSobol32RandomNumberGenerator(dir_vector=None, scramble_vector=None, offset=0)
+
+    :arg dir_vector: a :class:`GPUArray` of 32-element `uint32` vectors which
+      are used to initialize quasirandom generator; it must contain one vector
+      for each initialized generator
+    :arg scramble_vector: a :class:`GPUArray` of `uint32` elements which
+      are used to initialize quasirandom generator; it must contain one number
+      for each initialized generator
+    :arg offset: Starting index into the Sobol32 sequence, given direction
+      vector.
+
+    Provides quasirandom numbers. Generates
+    sequences with period of :math:`2^32`.
+
+    CUDA 4.0 and above.
+
+    .. versionadded:: 2011.1
+
+    .. method fill_uniform(data, stream=None)
+
+        Fills in :class:`GPUArray` *data* with uniformly distributed
+        quasirandom values.
+
+    .. method fill_normal(data, stream=None)
+
+        Fills in :class:`GPUArray` *data* with normally distributed
+        quasirandom values.
+
+    .. method call_skip_ahead(i, stream=None)
+
+        Forces all generators to skip i values. Is equivalent to generating
+        i values and discarding results, but is much faster.
+
+    .. method call_skip_ahead_array(i, stream=None)
+
+        Accepts array i of integer values, telling each generator how many
+        values to skip.
+
+.. class:: Sobol64RandomNumberGenerator(dir_vector=None, offset=0)
+
+    :arg dir_vector: a :class:`GPUArray` of 64-element `uint64` vectors which
+      are used to initialize quasirandom generator; it must contain one vector
+      for each initialized generator
+    :arg offset: Starting index into the Sobol64 sequence, given direction
+      vector.
+
+    Provides quasirandom numbers. Generates
+    sequences with period of :math:`2^64`.
+
+    CUDA 4.0 and above.
+
+    .. versionadded:: 2011.1
+
+    .. method fill_uniform(data, stream=None)
+
+        Fills in :class:`GPUArray` *data* with uniformly distributed
+        quasirandom values.
+
+    .. method fill_normal(data, stream=None)
+
+        Fills in :class:`GPUArray` *data* with normally distributed
+        quasirandom values.
+
+    .. method call_skip_ahead(i, stream=None)
+
+        Forces all generators to skip i values. Is equivalent to generating
+        i values and discarding results, but is much faster.
+
+    .. method call_skip_ahead_array(i, stream=None)
+
+        Accepts array i of integer values, telling each generator how many
+        values to skip.
+
+.. class:: ScrambledSobol64RandomNumberGenerator(dir_vector=None, scramble_vector=None, offset=0)
+
+    :arg dir_vector: a :class:`GPUArray` of 64-element `uint64` vectors which
+      are used to initialize quasirandom generator; it must contain one vector
+      for each initialized generator
+    :arg scramble_vector: a :class:`GPUArray` of `uint64` vectors which
+      are used to initialize quasirandom generator; it must contain one vector
+      for each initialized generator
+    :arg offset: Starting index into the ScrambledSobol64 sequence,
+      given direction vector.
+
+    Provides quasirandom numbers. Generates
+    sequences with period of :math:`2^64`.
+
+    CUDA 4.0 and above.
+
+    .. versionadded:: 2011.1
+
+    .. method fill_uniform(data, stream=None)
+
+        Fills in :class:`GPUArray` *data* with uniformly distributed
+        quasirandom values.
+
+    .. method fill_normal(data, stream=None)
+
+        Fills in :class:`GPUArray` *data* with normally distributed
+        quasirandom values.
+
+    .. method call_skip_ahead(i, stream=None)
+
+        Forces all generators to skip i values. Is equivalent to generating
+        i values and discarding results, but is much faster.
+
+    .. method call_skip_ahead_array(i, stream=None)
+
+        Accepts array i of integer values, telling each generator how many
+        values to skip.
 
 Single-pass Custom Expression Evaluation
 ----------------------------------------
