@@ -632,6 +632,42 @@ class GPUArray(object):
 
         return result
 
+    def reshape(self, *shape):
+        # TODO: add more error-checking, perhaps
+        if isinstance(shape[0], tuple) or isinstance(shape[0], list):
+            shape = tuple(shape[0])
+        size = reduce(lambda x, y: x * y, shape, 1)
+        if size != self.size:
+           raise ValueError("total size of new array must be unchanged")
+
+        return GPUArray(
+                shape=shape,
+                dtype=self.dtype,
+                allocator=self.allocator,
+                base=self,
+                gpudata=int(self.gpudata))
+
+    def ravel(self):
+        return self.reshape(self.size)
+
+    def view(self, dtype=None):
+        if dtype is None:
+            dtype = self.dtype
+
+        old_itemsize = self.dtype.itemsize
+        itemsize = np.dtype(dtype).itemsize
+
+        if self.shape[-1] * old_itemsize % itemsize != 0:
+            raise ValueError("new type not compatible with array")
+
+        shape = self.shape[:-1] + (self.shape[-1] * old_itemsize // itemsize,)
+
+        return GPUArray(
+                shape=shape,
+                dtype=dtype,
+                allocator=self.allocator,
+                base=self,
+                gpudata=int(self.gpudata))
 
     # slicing -----------------------------------------------------------------
     def __getitem__(self, idx):

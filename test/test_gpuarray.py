@@ -723,6 +723,33 @@ class TestGPUArray:
     def test_create_complex_zeros(self):
         gpuarray.zeros(3, np.complex64)
 
+    @mark_cuda_test
+    def test_reshape(self):
+        a = np.arange(128).reshape(8, 16).astype(np.float32)
+        a_gpu = gpuarray.to_gpu(a)
+
+        # different ways to specify the shape
+        a_gpu.reshape(4, 32)
+        a_gpu.reshape((4, 32))
+        a_gpu.reshape([4, 32])
+
+    @mark_cuda_test
+    def test_view(self):
+        a = np.arange(128).reshape(8, 16).astype(np.float32)
+        a_gpu = gpuarray.to_gpu(a)
+
+        # same dtype
+        view = a_gpu.view()
+        assert view.shape == a_gpu.shape and view.dtype == a_gpu.dtype
+
+        # larger dtype
+        view = a_gpu.view(np.complex64)
+        assert view.shape == (8, 8) and view.dtype == np.complex64
+
+        # smaller dtype
+        view = a_gpu.view(np.float16)
+        assert view.shape == (8, 32) and view.dtype == np.float16
+
 
 
 
