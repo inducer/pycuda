@@ -757,8 +757,8 @@ class TestGPUArray:
         assert view.shape == (8, 8) and view.dtype == np.complex64
 
         # smaller dtype
-        view = a_gpu.view(np.float16)
-        assert view.shape == (8, 32) and view.dtype == np.float16
+        view = a_gpu.view(np.int16)
+        assert view.shape == (8, 32) and view.dtype == np.int16
 
 
 
