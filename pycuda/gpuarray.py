@@ -156,7 +156,7 @@ class GPUArray(object):
             for dim in shape:
                 s *= dim
         except TypeError:
-            assert isinstance(shape, int)
+            assert isinstance(shape, (int, long, np.integer))
             s = shape
             shape = (shape,)
 
