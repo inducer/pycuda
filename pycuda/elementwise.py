@@ -39,7 +39,7 @@ from pytools import memoize_method
 
 
 def get_elwise_module(arguments, operation,
-        name="kernel", keep=False, options=[],
+        name="kernel", keep=False, options=None,
         preamble="", loop_prep="", after_loop=""):
     from pycuda.compiler import SourceModule
     return SourceModule("""
@@ -78,7 +78,7 @@ def get_elwise_module(arguments, operation,
 
 
 def get_elwise_range_module(arguments, operation,
-        name="kernel", keep=False, options=[],
+        name="kernel", keep=False, options=None,
         preamble="", loop_prep="", after_loop=""):
     from pycuda.compiler import SourceModule
     return SourceModule("""
@@ -128,7 +128,7 @@ def get_elwise_range_module(arguments, operation,
 
 
 def get_elwise_kernel_and_types(arguments, operation,
-        name="kernel", keep=False, options=[], use_range=False, **kwargs):
+        name="kernel", keep=False, options=None, use_range=False, **kwargs):
     if isinstance(arguments, str):
         from pycuda.tools import parse_c_arg
         arguments = [parse_c_arg(arg) for arg in arguments.split(",")]
@@ -157,7 +157,7 @@ def get_elwise_kernel_and_types(arguments, operation,
     return func, arguments
 
 def get_elwise_kernel(arguments, operation,
-        name="kernel", keep=False, options=[], **kwargs):
+        name="kernel", keep=False, options=None, **kwargs):
     """Return a L{pycuda.driver.Function} that performs the same scalar operation
     on one or several vectors.
     """
@@ -171,7 +171,7 @@ def get_elwise_kernel(arguments, operation,
 
 class ElementwiseKernel:
     def __init__(self, arguments, operation,
-            name="kernel", keep=False, options=[], **kwargs):
+            name="kernel", keep=False, options=None, **kwargs):
 
         self.gen_kwargs = kwargs.copy()
         self.gen_kwargs.update(dict(keep=keep, options=options, name=name,

@@ -70,7 +70,7 @@ import numpy as np
 
 def get_reduction_module(out_type, block_size,
         neutral, reduce_expr, map_expr, arguments,
-        name="reduce_kernel", keep=False, options=[], preamble=""):
+        name="reduce_kernel", keep=False, options=None, preamble=""):
 
     from pycuda.compiler import SourceModule
     src = """
@@ -153,7 +153,7 @@ def get_reduction_module(out_type, block_size,
 
 def get_reduction_kernel_and_types(out_type, block_size,
         neutral, reduce_expr, map_expr=None, arguments=None,
-        name="reduce_kernel", keep=False, options=[], preamble=""):
+        name="reduce_kernel", keep=False, options=None, preamble=""):
     if map_expr is None:
         map_expr = "in[i]"
 
@@ -177,7 +177,7 @@ def get_reduction_kernel_and_types(out_type, block_size,
 class ReductionKernel:
     def __init__(self, dtype_out,
             neutral, reduce_expr, map_expr=None, arguments=None,
-            name="reduce_kernel", keep=False, options=[], preamble=""):
+            name="reduce_kernel", keep=False, options=None, preamble=""):
 
         self.dtype_out = dtype_out
 
