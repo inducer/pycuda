@@ -44,7 +44,7 @@ def _create_vector_types():
         ('longlong', np.int64, [1,2]),
         ('ulonglong', np.uint64, [1,2]),
         ('float', np.float32, [1,2,3,4]),
-        ('ulonglong', np.float64, [1,2]),
+        ('double', np.float64, [1,2]),
         ]:
         for count in counts:
             name = "%s%d" % (base_name, count)
