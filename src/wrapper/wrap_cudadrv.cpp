@@ -339,10 +339,10 @@ namespace
 
     PYTHON_FOREACH(key_value, py_options)
       ADD_OPTION_PTR(
-          py::extract<CUjit_option>(key_value[0]), 
-          (void *) py::extract<int>(key_value[1])());
+          py::extract<CUjit_option>(key_value[0]),
+          (void *) py::extract<intptr_t>(key_value[1])());
 #undef ADD_OPTION
-    
+
     CUDAPP_PRINT_CALL_TRACE("cuModuleLoadDataEx");
     CUresult cu_status_code; \
     cu_status_code = cuModuleLoadDataEx(&mod, mod_buf, (unsigned int) options.size(),
