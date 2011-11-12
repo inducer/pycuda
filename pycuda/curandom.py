@@ -322,8 +322,6 @@ __global__ void skip_ahead_array(%(state_type)s *s, const int n, const unsigned 
 }
 """
 
-
-
 class _RandomNumberGeneratorBase(object):
     """
     Class surrounding CURAND kernels from CUDA 3.2.
@@ -341,13 +339,10 @@ class _RandomNumberGeneratorBase(object):
         ("normal_double2", "double2", "_normal2_double"),
         ]
 
-    def __init__(self, state_type, additional_source):
+    def __init__(self, state_type, vector_type, additional_source,
+        scramble_type=None):
         if get_curand_version() < (3, 2, 0):
             raise EnvironmentError("Need at least CUDA 3.2")
-
-        # Max 256 threads on ION during preparing
-        # Need to limit number of threads. If not there is failed execution:
-        # pycuda._driver.LaunchError: cuLaunchGrid failed: launch out of resources
 
         dev = drv.Context.get_device()
 
@@ -371,12 +366,14 @@ class _RandomNumberGeneratorBase(object):
 
         generator_sources = [
                 gen_template % {
-                    "name":name, "out_type":out_type, "suffix": suffix,
+                    "name":name, "out_type": out_type, "suffix": suffix,
                     "state_type": state_type, }
                 for name, out_type, suffix in my_generators]
 
         source = (random_source + additional_source) % {
             "state_type": state_type,
+            "vector_type": vector_type,
+            "scramble_type": scramble_type,
             "generators": "\n".join(generator_sources)}
 
         # store in instance to let subclass constructors get to it.
@@ -486,14 +483,18 @@ def seed_getter_unique(N):
 
 xorwow_random_source = """
 extern "C" {
-__global__ void prepare_with_seeds(curandStateXORWOW *s, const int n,
-  const int *seed, const int offset)
+__global__ void prepare( %(state_type)s *s, const int n,
+    %(vector_type)s *v, const unsigned int o)
 {
   const int id = blockIdx.x*blockDim.x+threadIdx.x;
   if (id < n)
-    curand_init(seed[id], threadIdx.x, offset, &s[id]);
+    curand_init(v[id], id, o, &s[id]);
 }
+}
+"""
 
+xorwow_skip_ahead_sequence_source = """
+extern "C" {
 __global__ void skip_ahead_sequence(%(state_type)s *s, const int n, const unsigned int skip)
 {
   const int idx = blockIdx.x*blockDim.x+threadIdx.x;
@@ -510,7 +511,6 @@ __global__ void skip_ahead_sequence_array(%(state_type)s *s, const int n, const 
 }
 """
 
-
 if get_curand_version() >= (3, 2, 0):
     class XORWOWRandomNumberGenerator(_RandomNumberGeneratorBase):
         has_box_muller = True
@@ -522,7 +522,8 @@ if get_curand_version() >= (3, 2, 0):
             """
 
             super(XORWOWRandomNumberGenerator, self).__init__(
-                'curandStateXORWOW', xorwow_random_source+random_skip_ahead64_source)
+                'curandStateXORWOW', 'unsigned int', xorwow_random_source+
+                xorwow_skip_ahead_sequence_source+random_skip_ahead64_source)
 
             if seed_getter is None:
                 seed = array.to_gpu(
@@ -538,7 +539,7 @@ if get_curand_version() >= (3, 2, 0):
                     and seed.size == self.generators_per_block):
                 raise TypeError("seed must be GPUArray of integers of right length")
 
-            p = self.module.get_function("prepare_with_seeds")
+            p = self.module.get_function("prepare")
             p.prepare("PiPi")
             self.skip_ahead_sequence = self.module.get_function("skip_ahead_sequence")
             self.skip_ahead_sequence.prepare("Pii")
@@ -555,7 +556,6 @@ if get_curand_version() >= (3, 2, 0):
                 if has_stack:
                     drv.Context.set_limit(drv.limit.STACK_SIZE, 1<<14) # 16k
                 try:
-                    dev = drv.Context.get_device()
                     p.prepared_call(
                             (self.block_count, 1), (self.generators_per_block, 1, 1), self.state,
                             self.block_count * self.generators_per_block, seed.gpudata, offset)
@@ -578,7 +578,7 @@ if get_curand_version() >= (3, 2, 0):
 
         def _kernels(self):
             return (_RandomNumberGeneratorBase._kernels(self)
-                    + [self.module.get_function("prepare_with_seeds")]
+                    + [self.module.get_function("prepare")]
                     + [self.module.get_function("skip_ahead_sequence"),
                        self.module.get_function("skip_ahead_sequence_array")])
 
@@ -609,6 +609,18 @@ if get_curand_version() >= (4, 0, 0):
         _get_scramble_constants64(result, count)
         return pycuda.gpuarray.to_gpu(result)
 
+sobol_random_source = """
+extern "C" {
+__global__ void prepare(%(state_type)s *s, const int n,
+    %(vector_type)s *v, const unsigned int o)
+{
+  const int id = blockIdx.x*blockDim.x+threadIdx.x;
+  if (id < n)
+    curand_init(v[id], o, &s[id]);
+}
+}
+"""
+
 class _SobolRandomNumberGeneratorBase(_RandomNumberGeneratorBase):
     """
     Class surrounding CURAND kernels from CUDA 3.2.
@@ -619,9 +631,9 @@ class _SobolRandomNumberGeneratorBase(_RandomNumberGeneratorBase):
     has_box_muller = False
 
     def __init__(self, dir_vector, dir_vector_dtype, dir_vector_size,
-        dir_vector_set, offset, state_type, sobol_random_source):
+        dir_vector_set, offset, state_type, vector_type, sobol_random_source):
         super(_SobolRandomNumberGeneratorBase, self).__init__(state_type,
-            sobol_random_source)
+            vector_type, sobol_random_source)
 
         if dir_vector is None:
             dir_vector = generate_direction_vectors(
@@ -645,7 +657,7 @@ class _SobolRandomNumberGeneratorBase(_RandomNumberGeneratorBase):
             if has_stack:
                 drv.Context.set_limit(drv.limit.STACK_SIZE, 1<<14) # 16k
             try:
-                p.prepared_call((2 * self.block_count, 1), (self.generators_per_block // 2, 1, 1),
+                p.prepared_call((self.block_count, 1), (self.generators_per_block, 1, 1),
                     self.state, self.block_count * self.generators_per_block,
                     dir_vector.gpudata, offset)
             except drv.LaunchError:
@@ -659,6 +671,18 @@ class _SobolRandomNumberGeneratorBase(_RandomNumberGeneratorBase):
         return (_RandomNumberGeneratorBase._kernels(self)
                 + [self.module.get_function("prepare")])
 
+scrambledsobol_random_source = """
+extern "C" {
+__global__ void prepare( %(state_type)s *s, const int n,
+    %(vector_type)s *v, %(scramble_type)s *scramble, const unsigned int o)
+{
+  const int id = blockIdx.x*blockDim.x+threadIdx.x;
+  if (id < n)
+    curand_init(v[id], scramble[id], o, &s[id]);
+}
+}
+"""
+
 class _ScrambledSobolRandomNumberGeneratorBase(_RandomNumberGeneratorBase):
     """
     Class surrounding CURAND kernels from CUDA 4.0.
@@ -670,9 +694,9 @@ class _ScrambledSobolRandomNumberGeneratorBase(_RandomNumberGeneratorBase):
 
     def __init__(self, dir_vector, dir_vector_dtype, dir_vector_size,
         dir_vector_set, scramble_vector, scramble_vector_function,
-        offset, state_type, sobol_random_source):
+        offset, state_type, vector_type, scramble_type, sobol_random_source):
         super(_ScrambledSobolRandomNumberGeneratorBase, self).__init__(state_type,
-            sobol_random_source)
+            vector_type, sobol_random_source, scramble_type)
 
         if dir_vector is None:
             dir_vector = generate_direction_vectors(
@@ -706,7 +730,7 @@ class _ScrambledSobolRandomNumberGeneratorBase(_RandomNumberGeneratorBase):
             if has_stack:
                 drv.Context.set_limit(drv.limit.STACK_SIZE, 1<<14) # 16k
             try:
-                p.prepared_call((2 * self.block_count, 1), (self.generators_per_block // 2, 1, 1),
+                p.prepared_call((self.block_count, 1), (self.generators_per_block, 1, 1),
                     self.state, self.block_count * self.generators_per_block,
                     dir_vector.gpudata, scramble_vector.gpudata, offset)
             except drv.LaunchError:
@@ -720,18 +744,6 @@ class _ScrambledSobolRandomNumberGeneratorBase(_RandomNumberGeneratorBase):
         return (_RandomNumberGeneratorBase._kernels(self)
                 + [self.module.get_function("prepare")])
 
-sobol32_random_source = """
-extern "C" {
-__global__ void prepare(curandStateSobol32 *s, const int n,
-    curandDirectionVectors32_t *v, const unsigned int o)
-{
-  const int id = blockIdx.x*blockDim.x+threadIdx.x;
-  if (id < n)
-    curand_init(v[id], o, &s[id]);
-}
-}
-"""
-
 if get_curand_version() >= (3, 2, 0):
     class Sobol32RandomNumberGenerator(_SobolRandomNumberGeneratorBase):
         """
@@ -743,19 +755,9 @@ if get_curand_version() >= (3, 2, 0):
         def __init__(self, dir_vector=None, offset=0):
             super(Sobol32RandomNumberGenerator, self).__init__(dir_vector,
                 np.uint32, 32, direction_vector_set.VECTOR_32, offset,
-                'curandStateSobol32', sobol32_random_source+random_skip_ahead32_source)
+                'curandStateSobol32', 'curandDirectionVectors32_t',
+                sobol_random_source+random_skip_ahead32_source)
 
-scrambledsobol32_random_source = """
-extern "C" {
-__global__ void prepare(curandStateScrambledSobol32 *s, const int n,
-    curandDirectionVectors32_t *v, unsigned int *scramble, const unsigned int o)
-{
-  const int id = blockIdx.x*blockDim.x+threadIdx.x;
-  if (id < n)
-    curand_init(v[id], scramble[id], o, &s[id]);
-}
-}
-"""
 
 if get_curand_version() >= (4, 0, 0):
     class ScrambledSobol32RandomNumberGenerator(_ScrambledSobolRandomNumberGeneratorBase):
@@ -769,20 +771,9 @@ if get_curand_version() >= (4, 0, 0):
             super(ScrambledSobol32RandomNumberGenerator, self).__init__(dir_vector,
                 np.uint32, 32, direction_vector_set.SCRAMBLED_VECTOR_32,
                 scramble_vector, generate_scramble_constants32, offset,
-                'curandStateScrambledSobol32', scrambledsobol32_random_source+random_skip_ahead32_source)
-
-sobol64_random_source = """
-extern "C" {
-__global__ void prepare(curandStateSobol64 *s, const int n, curandDirectionVectors64_t *v,
-    const unsigned int o)
-{
-  const int id = blockIdx.x*blockDim.x+threadIdx.x;
-  if (id < n)
-    curand_init(v[id], o, &s[id]);
-}
-}
-"""
-
+                'curandStateScrambledSobol32', 'curandDirectionVectors32_t',
+                'unsigned int',
+                scrambledsobol_random_source+random_skip_ahead32_source)
 
 if get_curand_version() >= (4, 0, 0):
     class Sobol64RandomNumberGenerator(_SobolRandomNumberGeneratorBase):
@@ -795,19 +786,8 @@ if get_curand_version() >= (4, 0, 0):
         def __init__(self, dir_vector=None, offset=0):
             super(Sobol64RandomNumberGenerator, self).__init__(dir_vector,
                 np.uint64, 64, direction_vector_set.VECTOR_64, offset,
-                'curandStateSobol64', sobol64_random_source+random_skip_ahead64_source)
-
-scrambledsobol64_random_source = """
-extern "C" {
-__global__ void prepare(curandStateScrambledSobol64 *s, const int n,
-    curandDirectionVectors64_t *v, unsigned long long *scramble, const unsigned int o)
-{
-  const int id = blockIdx.x*blockDim.x+threadIdx.x;
-  if (id < n)
-    curand_init(v[id], scramble[id], o, &s[id]);
-}
-}
-"""
+                'curandStateSobol64', 'curandDirectionVectors64_t',
+                 sobol_random_source+random_skip_ahead64_source)
 
 if get_curand_version() >= (4, 0, 0):
     class ScrambledSobol64RandomNumberGenerator(_ScrambledSobolRandomNumberGeneratorBase):
@@ -821,7 +801,9 @@ if get_curand_version() >= (4, 0, 0):
             super(ScrambledSobol64RandomNumberGenerator, self).__init__(dir_vector,
                 np.uint64, 64, direction_vector_set.SCRAMBLED_VECTOR_64,
                 scramble_vector, generate_scramble_constants64, offset,
-                'curandStateScrambledSobol64', scrambledsobol64_random_source+random_skip_ahead64_source)
+                'curandStateScrambledSobol64', 'curandDirectionVectors64_t',
+                'unsigned long long',
+                scrambledsobol_random_source+random_skip_ahead64_source)
 
 # }}}
 
