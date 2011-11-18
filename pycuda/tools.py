@@ -28,7 +28,6 @@ OTHER DEALINGS IN THE SOFTWARE.
 """
 
 import pycuda.driver as cuda
-from pytools import memoize
 from decorator import decorator
 import pycuda._driver as _drv
 import numpy as np
@@ -39,6 +38,15 @@ import numpy as np
 bitlog2 = _drv.bitlog2
 DeviceMemoryPool = _drv.DeviceMemoryPool
 PageLockedMemoryPool = _drv.PageLockedMemoryPool
+
+from pycuda.compyte.dtypes import (
+        register_dtype, _fill_dtype_registry,
+        dtype_to_ctype)
+
+_fill_dtype_registry(respect_windows=True)
+register_dtype(np.complex64, "pycuda::complex<float>")
+register_dtype(np.complex128, "pycuda::complex<double>")
+
 
 
 
@@ -327,77 +335,7 @@ class OccupancyRecord:
 
 # }}}
 
-# {{{ dtype -> C type mapping
-
-DTYPE_TO_NAME = {}
-NAME_TO_DTYPE = {}
-
-def register_dtype(dtype, c_names):
-    if isinstance(c_names, str):
-        c_names = [c_names]
-    if dtype in DTYPE_TO_NAME:
-        raise RuntimeError("dtype already registered")
-    for nm in c_names:
-        if nm in NAME_TO_DTYPE:
-            raise RuntimeError("name '%s' already registered" % nm)
-
-    for nm in c_names:
-        NAME_TO_DTYPE[nm] = dtype
-
-    DTYPE_TO_NAME[dtype] = c_names[0]
-
-def _fill_dtype_registry():
-    from pycuda.characterize import platform_bits
-    from sys import platform
-
-    if platform_bits() == 64:
-        pass
-
-    register_dtype(np.bool, "bool")
-    register_dtype(np.uint8, "unsigned char")
-    register_dtype(np.int16, ["short", "signed short", "signed short int", "short signed int"])
-    register_dtype(np.uint16, ["unsigned short", "unsigned short int", "short unsigned int"])
-    register_dtype(np.int32, ["int", "signed int"])
-    register_dtype(np.uint32, ["unsigned", "unsigned int"])
-
-    if platform_bits() == 64:
-        if 'win32' in platform:
-            i64_name = "long long"
-        else:
-            i64_name = "long"
-
-        register_dtype(np.int64, [i64_name, "%s int" % i64_name, "signed %s int" % i64_name,
-            "%s signed int" % i64_name])
-        register_dtype(np.uint64, ["unsigned %s" % i64_name, "unsigned %s int" % i64_name,
-            "%s unsigned int" % i64_name])
-
-    register_dtype(np.float32, "float")
-    register_dtype(np.float64, "double")
-    register_dtype(np.complex64, "pycuda::complex<float>")
-    register_dtype(np.complex128, "pycuda::complex<double>")
-
-
-_fill_dtype_registry()
-
-def dtype_to_ctype(dtype, with_fp_tex_hack=False):
-    if dtype is None:
-        raise ValueError("dtype may not be None")
-
-    dtype = np.dtype(dtype)
-    if with_fp_tex_hack:
-        if dtype == np.float32:
-            return "fp_tex_float"
-        elif dtype == np.float64:
-            return "fp_tex_double"
-
-    try:
-        return DTYPE_TO_NAME[dtype]
-    except KeyError:
-        raise ValueError, "unable to map dtype '%s'" % dtype
-
-# }}}
-
-# {{{ C argument lists
+# {{{ C types <-> dtypes
 
 class Argument:
     def __init__(self, dtype, name):
@@ -431,37 +369,9 @@ class ScalarArg(Argument):
 
 
 
-
 def parse_c_arg(c_arg):
-    c_arg = c_arg.replace("const", "").replace("volatile", "")
-
-    # process and remove declarator
-    import re
-    decl_re = re.compile(r"(\**)\s*([_a-zA-Z0-9]+)(\s*\[[ 0-9]*\])*\s*$")
-    decl_match = decl_re.search(c_arg)
-
-    if decl_match is None:
-        raise ValueError("couldn't parse C declarator '%s'" % c_arg)
-
-    name = decl_match.group(2)
-
-    if decl_match.group(1) or decl_match.group(3) is not None:
-        arg_class = VectorArg
-    else:
-        arg_class = ScalarArg
-
-    tp = c_arg[:decl_match.start()]
-    tp = " ".join(tp.split())
-
-    try:
-        dtype = NAME_TO_DTYPE[tp]
-    except KeyError:
-        raise ValueError("unknown type '%s'" % tp)
-
-    return arg_class(dtype, name)
-
-
-
+    from pycuda.compyte.dtypes import parse_c_arg_backend
+    return parse_c_arg_backend(c_arg, ScalarArg, VectorArg)
 
 def get_arg_type(c_arg):
     return parse_c_arg(c_arg).struct_char

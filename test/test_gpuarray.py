@@ -760,6 +760,72 @@ class TestGPUArray:
         view = a_gpu.view(np.int16)
         assert view.shape == (8, 32) and view.dtype == np.int16
 
+    @mark_cuda_test
+    def test_struct_reduce(self):
+        preamble = """
+        struct minmax_collector
+        {
+            float cur_min;
+            float cur_max;
+
+            __device__
+            minmax_collector()
+            { }
+
+            __device__
+            minmax_collector(float cmin, float cmax)
+            : cur_min(cmin), cur_max(cmax)
+            { }
+
+            __device__ minmax_collector(minmax_collector const &src)
+            : cur_min(src.cur_min), cur_max(src.cur_max)
+            { }
+
+            __device__ minmax_collector(minmax_collector const volatile &src)
+            : cur_min(src.cur_min), cur_max(src.cur_max)
+            { }
+
+            __device__ minmax_collector volatile &operator=(
+                minmax_collector const &src) volatile
+            {
+                cur_min = src.cur_min;
+                cur_max = src.cur_max;
+                return *this;
+            }
+        };
+
+        __device__
+        minmax_collector agg_mmc(minmax_collector a, minmax_collector b)
+        {
+            return minmax_collector(
+                fminf(a.cur_min, b.cur_min),
+                fmaxf(a.cur_max, b.cur_max));
+        }
+        """
+        mmc_dtype = np.dtype([("cur_min", np.float32), ("cur_max", np.float32)])
+
+        from pycuda.curandom import rand as curand
+        a_gpu = curand((20000,), dtype=np.float32)
+        a = a_gpu.get()
+
+        from pycuda.tools import register_dtype
+        register_dtype(mmc_dtype, "minmax_collector")
+
+        from pycuda.reduction import ReductionKernel
+        red = ReductionKernel(mmc_dtype,
+                neutral="minmax_collector(10000, -10000)",
+                # FIXME: needs infinity literal in real use, ok here
+                reduce_expr="agg_mmc(a, b)", map_expr="minmax_collector(x[i], x[i])",
+                arguments="float *x", preamble=preamble)
+
+        minmax = red(a_gpu).get()
+        #print minmax["cur_min"], minmax["cur_max"]
+        #print np.min(a), np.max(a)
+
+        assert minmax["cur_min"] == np.min(a)
+        assert minmax["cur_max"] == np.max(a)
+
+
 
 
 

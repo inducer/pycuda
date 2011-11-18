@@ -80,11 +80,13 @@ def get_reduction_module(out_type, block_size,
         #define READ_AND_MAP(i) (%(map_expr)s)
         #define REDUCE(a, b) (%(reduce_expr)s)
 
-        typedef %(out_type)s out_type;
-
         %(preamble)s
 
-        __global__ void %(name)s(out_type *out, %(arguments)s,
+        typedef %(out_type)s out_type;
+
+        extern "C"
+        __global__
+        void %(name)s(out_type *out, %(arguments)s,
           unsigned int seq_count, unsigned int n)
         {
           __shared__ out_type sdata[BLOCK_SIZE];

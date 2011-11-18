@@ -51,7 +51,7 @@ def _create_vector_types():
                 (field_names[i], base_type)
                 for i in range(count)])
 
-            register_dtype(dtype, name)
+            register_dtype(dtype, name, alias_ok=True)
 
             setattr(vec, name, dtype)
 
@@ -633,7 +633,7 @@ class GPUArray(object):
             shape = tuple(shape[0])
         size = reduce(lambda x, y: x * y, shape, 1)
         if size != self.size:
-           raise ValueError("total size of new array must be unchanged")
+            raise ValueError("total size of new array must be unchanged")
 
         return GPUArray(
                 shape=shape,

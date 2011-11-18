@@ -1,8 +1,8 @@
 User-visible Changes
 ====================
 
-Version 2011.1.3
-----------------
+Version 2011.2
+--------------
 
 .. note::
 
@@ -12,6 +12,8 @@ Version 2011.1.3
 * Fix a memory leak when using pagelocked memory. (reported by Paul Cazeaux)
 * Fix complex scalar argument passing.
 * Fix :func:`pycuda.gpuarray.zeros` when used on complex arrays.
+* Add :func:`pycuda.tools.register_dtype` to enable scan/reduction on struct types.
+* More improvements to CURAND.
 
 Version 2011.1.2
 ----------------

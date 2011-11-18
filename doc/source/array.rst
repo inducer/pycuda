@@ -778,6 +778,19 @@ Here's a usage example::
     knl(dev_data)
     assert (dev_data.get() == np.cumsum(host_data, axis=0)).all()
 
+Custom data types in Reduction and Scan
+---------------------------------------
+
+If you would like to use your own (struct/union/whatever) data types in
+scan and reduction, define those types in the *preamble* and let PyCUDA
+know about them using this function:
+
+.. function:: pycuda.tools.register_dtype(dtype, name)
+
+    *dtype* is a :func:`numpy.dtype`.
+
+    .. versionadded: 2011.2
+
 Fast Fourier Transforms
 -----------------------
 
