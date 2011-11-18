@@ -42,6 +42,8 @@ PageLockedMemoryPool = _drv.PageLockedMemoryPool
 
 
 
+# {{{ debug memory pool
+
 class DebugMemoryPool(DeviceMemoryPool):
     def __init__(self, interactive=True, logfile=None):
         DeviceMemoryPool.__init__(self)
@@ -113,30 +115,9 @@ class DebugMemoryPool(DeviceMemoryPool):
                 self.stacktrace_mnemonics[stack, size] = mnemonic
                 return mnemonic
 
+# }}}
 
-
-
-def _exact_div(dividend, divisor):
-    quot, rem = divmod(dividend, divisor)
-    assert rem == 0
-    return quot
-
-def _int_ceiling(value, multiple_of=1):
-    """Round C{value} up to be a C{multiple_of} something."""
-    # Mimicks the Excel "floor" function (for code stolen from occupancy calculator)
-
-    from math import ceil
-    return int(ceil(value/multiple_of))*multiple_of
-
-def _int_floor(value, multiple_of=1):
-    """Round C{value} down to be a C{multiple_of} something."""
-    # Mimicks the Excel "floor" function (for code stolen from occupancy calculator)
-
-    from math import floor
-    return int(floor(value/multiple_of))*multiple_of
-
-
-
+# {{{ default device/context
 
 def get_default_device(default=0):
     from warnings import warn
@@ -204,7 +185,6 @@ def make_default_context(ctx_maker=None):
 
     # Otherwise, try to use any available device
     else:
-        selected_device = None
         for devn in xrange(ndevices):
             dev = cuda.Device(devn)
             try:
@@ -215,8 +195,32 @@ def make_default_context(ctx_maker=None):
         raise RuntimeError("make_default_context() wasn't able to create a context "
                 "on any of the %d detected devices" % ndevices)
 
+# }}}
 
+# {{{ rounding helpers
 
+def _exact_div(dividend, divisor):
+    quot, rem = divmod(dividend, divisor)
+    assert rem == 0
+    return quot
+
+def _int_ceiling(value, multiple_of=1):
+    """Round C{value} up to be a C{multiple_of} something."""
+    # Mimicks the Excel "floor" function (for code stolen from occupancy calculator)
+
+    from math import ceil
+    return int(ceil(value/multiple_of))*multiple_of
+
+def _int_floor(value, multiple_of=1):
+    """Round C{value} down to be a C{multiple_of} something."""
+    # Mimicks the Excel "floor" function (for code stolen from occupancy calculator)
+
+    from math import floor
+    return int(floor(value/multiple_of))*multiple_of
+
+# }}}
+
+# {{{ device data
 
 class DeviceData:
     def __init__(self, dev=None):
@@ -283,8 +287,9 @@ class DeviceData:
 
         raise ValueError, "could not enlarge argument to valid channel count"
 
+# }}}
 
-
+# {{{ occupancy
 
 class OccupancyRecord:
     def __init__(self, devdata, threads, shared_mem=0, registers=0):
@@ -320,90 +325,80 @@ class OccupancyRecord:
         self.warps_per_mp = self.tb_per_mp * alloc_warps
         self.occupancy = self.warps_per_mp / devdata.warps_per_mp
 
+# }}}
 
+# {{{ dtype -> C type mapping
 
+DTYPE_TO_NAME = {}
+NAME_TO_DTYPE = {}
 
-def allow_user_edit(s, filename, descr="the file"):
-    from tempfile import mkdtemp
-    tempdir = mkdtemp()
+def register_dtype(dtype, c_names):
+    if isinstance(c_names, str):
+        c_names = [c_names]
+    if dtype in DTYPE_TO_NAME:
+        raise RuntimeError("dtype already registered")
+    for nm in c_names:
+        if nm in NAME_TO_DTYPE:
+            raise RuntimeError("name '%s' already registered" % nm)
 
-    from os.path import join
-    full_name = join(tempdir, filename)
+    for nm in c_names:
+        NAME_TO_DTYPE[nm] = dtype
 
-    outf = open(full_name, "w")
-    outf.write(str(s))
-    outf.close()
+    DTYPE_TO_NAME[dtype] = c_names[0]
 
-    raw_input("Edit %s at %s now, then hit [Enter]:"
-            % (descr, full_name))
-
-    inf = open(full_name, "r")
-    result = inf.read()
-    inf.close()
-
-    return result
-
-
-
-
-# C code generation helpers ---------------------------------------------------
-def dtype_to_ctype(dtype, with_fp_tex_hack=False):
+def _fill_dtype_registry():
     from pycuda.characterize import platform_bits
     from sys import platform
 
+    if platform_bits() == 64:
+        pass
+
+    register_dtype(np.bool, "bool")
+    register_dtype(np.uint8, "unsigned char")
+    register_dtype(np.int16, ["short", "signed short", "signed short int", "short signed int"])
+    register_dtype(np.uint16, ["unsigned short", "unsigned short int", "short unsigned int"])
+    register_dtype(np.int32, ["int", "signed int"])
+    register_dtype(np.uint32, ["unsigned", "unsigned int"])
+
+    if platform_bits() == 64:
+        if 'win32' in platform:
+            i64_name = "long long"
+        else:
+            i64_name = "long"
+
+        register_dtype(np.int64, [i64_name, "%s int" % i64_name, "signed %s int" % i64_name,
+            "%s signed int" % i64_name])
+        register_dtype(np.uint64, ["unsigned %s" % i64_name, "unsigned %s int" % i64_name,
+            "%s unsigned int" % i64_name])
+
+    register_dtype(np.float32, "float")
+    register_dtype(np.float64, "double")
+    register_dtype(np.complex64, "pycuda::complex<float>")
+    register_dtype(np.complex128, "pycuda::complex<double>")
+
+
+_fill_dtype_registry()
+
+def dtype_to_ctype(dtype, with_fp_tex_hack=False):
     if dtype is None:
         raise ValueError("dtype may not be None")
 
     dtype = np.dtype(dtype)
-    if dtype == np.int64 and platform_bits() == 64:
-        if 'win32' in platform:
-            return "long long"
-        else:
-            return "long"
-    elif dtype == np.uint64 and platform_bits() == 64:
-        if 'win32' in platform:
-            return "unsigned long long"
-        else:
-            return "unsigned long"
-    elif dtype == np.int32:
-        return "int"
-    elif dtype == np.uint32:
-        return "unsigned int"
-    elif dtype == np.int16:
-        return "short int"
-    elif dtype == np.uint16:
-        return "short unsigned int"
-    elif dtype == np.int8:
-        return "signed char"
-    elif dtype == np.uint8:
-        return "unsigned char"
-    elif dtype == np.bool:
-        return "bool"
-    elif dtype == np.float32:
-        if with_fp_tex_hack:
+    if with_fp_tex_hack:
+        if dtype == np.float32:
             return "fp_tex_float"
-        else:
-            return "float"
-    elif dtype == np.float64:
-        if with_fp_tex_hack:
+        elif dtype == np.float64:
             return "fp_tex_double"
-        else:
-            return "double"
-    elif dtype == np.complex64:
-        return "pycuda::complex<float>"
-    elif dtype == np.complex128:
-        return "pycuda::complex<double>"
-    else:
-        import pycuda.gpuarray as gpuarray
-        try:
-            return gpuarray.vec._dtype_to_c_name[dtype]
-        except KeyError:
-            raise ValueError, "unable to map dtype '%s'" % dtype
 
+    try:
+        return DTYPE_TO_NAME[dtype]
+    except KeyError:
+        raise ValueError, "unable to map dtype '%s'" % dtype
 
+# }}}
 
+# {{{ C argument lists
 
-# C argument lists ------------------------------------------------------------
 class Argument:
     def __init__(self, dtype, name):
         self.dtype = np.dtype(dtype)
@@ -458,37 +453,10 @@ def parse_c_arg(c_arg):
     tp = c_arg[:decl_match.start()]
     tp = " ".join(tp.split())
 
-    from pycuda.characterize import platform_bits
-    from sys import platform
-
-    if tp == "float": dtype = np.float32
-    elif tp == "double": dtype = np.float64
-    elif tp == "pycuda::complex<float>": dtype = np.complex64
-    elif tp == "pycuda::complex<double>": dtype = np.complex128
-    elif tp in ["int", "signed int"]: dtype = np.int32
-    elif tp in ["unsigned", "unsigned int"]: dtype = np.uint32
-    elif tp in ["long", "long int"]:
-        if platform_bits() == 64 and 'win32' not in platform:
-            dtype = np.int64
-        else:
-            dtype = np.int32
-    elif tp in ["unsigned long", "unsigned long int", "long unsigned int"]:
-        if platform_bits() == 64 and 'win32' not in platform:
-            dtype = np.uint64
-        else:
-            dtype = np.uint32
-    elif tp in ["short", "short int"]: dtype = np.int16
-    elif tp in ["unsigned short", "unsigned short int", "short unsigned int"]:
-        dtype = np.uint16
-    elif tp in ["char", "signed char"]: dtype = np.int8
-    elif tp in ["unsigned char"]: dtype = np.uint8
-    elif tp in ["bool"]: dtype = np.bool
-    else:
-        import pycuda.gpuarray as gpuarray
-        try:
-            dtype = gpuarray.vec._c_name_to_dtype[tp]
-        except KeyError:
-            raise ValueError("unknown type '%s'" % tp)
+    try:
+        dtype = NAME_TO_DTYPE[tp]
+    except KeyError:
+        raise ValueError("unknown type '%s'" % tp)
 
     return arg_class(dtype, name)
 
@@ -498,8 +466,9 @@ def parse_c_arg(c_arg):
 def get_arg_type(c_arg):
     return parse_c_arg(c_arg).struct_char
 
+# }}}
 
-
+# {{{ context-dep memoization
 
 context_dependent_memoized_functions = []
 
@@ -537,9 +506,9 @@ def clear_context_caches():
         else:
             ctx_dict.clear()
 
+# }}}
 
-
-
+# {{{ py.test interaction
 
 def mark_cuda_test(inner_f):
     def f(*args, **kwargs):
@@ -569,6 +538,7 @@ def mark_cuda_test(inner_f):
 
     return mark_test.cuda(f)
 
+# }}}
 
 
 
