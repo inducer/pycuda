@@ -148,18 +148,18 @@ def get_reduction_module(out_type, block_size,
             "name": name,
             "preamble": preamble
             }
-    return SourceModule(src, options=options, keep=keep)
+    return SourceModule(src, options=options, keep=keep, no_extern_c=True)
 
 
 
 
-def get_reduction_kernel_and_types(out_type, block_size,
+def get_reduction_kernel_and_types(stage, out_type, block_size,
         neutral, reduce_expr, map_expr=None, arguments=None,
         name="reduce_kernel", keep=False, options=None, preamble=""):
     if map_expr is None:
         map_expr = "in[i]"
 
-    if arguments is None:
+    if stage == 2:
         arguments = "const %s *in" % out_type
 
     mod = get_reduction_module(out_type, block_size,
@@ -186,7 +186,7 @@ class ReductionKernel:
         self.block_size = 512
 
         s1_func, self.stage1_arg_types = get_reduction_kernel_and_types(
-                dtype_to_ctype(dtype_out), self.block_size,
+                1, dtype_to_ctype(dtype_out), self.block_size,
                 neutral, reduce_expr, map_expr,
                 arguments, name=name+"_stage1", keep=keep, options=options,
                 preamble=preamble)
@@ -194,8 +194,8 @@ class ReductionKernel:
 
         # stage 2 has only one input and no map expression
         s2_func, self.stage2_arg_types = get_reduction_kernel_and_types(
-                dtype_to_ctype(dtype_out), self.block_size,
-                neutral, reduce_expr,
+                2, dtype_to_ctype(dtype_out), self.block_size,
+                neutral, reduce_expr, arguments=arguments,
                 name=name+"_stage2", keep=keep, options=options,
                 preamble=preamble)
         self.stage2_func = s2_func.prepared_async_call
