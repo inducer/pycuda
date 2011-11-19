@@ -156,11 +156,23 @@ def get_reduction_module(out_type, block_size,
 def get_reduction_kernel_and_types(stage, out_type, block_size,
         neutral, reduce_expr, map_expr=None, arguments=None,
         name="reduce_kernel", keep=False, options=None, preamble=""):
-    if map_expr is None:
-        map_expr = "in[i]"
 
-    if stage == 2:
-        arguments = "const %s *in" % out_type
+    if stage == 1:
+        if map_expr is None:
+            map_expr = "in[i]"
+
+    elif stage == 2:
+        if map_expr is None:
+            map_expr = "pycuda_reduction_inp[i]"
+
+        in_arg = "const %s *pycuda_reduction_inp" % out_type
+        if arguments:
+            arguments = in_arg + ", " + arguments
+        else:
+            arguments = in_arg
+
+    else:
+        assert False
 
     mod = get_reduction_module(out_type, block_size,
             neutral, reduce_expr, map_expr, arguments,
@@ -223,6 +235,8 @@ class ReductionKernel:
         f = s1_func
         arg_types = self.stage1_arg_types
 
+        stage1_args = args
+
         while True:
             invocation_args = []
             vectors = []
@@ -264,7 +278,7 @@ class ReductionKernel:
             else:
                 f = s2_func
                 arg_types = self.stage2_arg_types
-                args = [result]
+                args = (result,) + stage1_args
 
 
 
