@@ -22,7 +22,7 @@ CLUDA_PREAMBLE = """
 
 #define GDIM_0 gridDim.x
 #define GDIM_1 gridDim.y
-#define GDIM_2 gridDim.
+#define GDIM_2 gridDim.z
 """
 
 
