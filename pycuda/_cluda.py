@@ -15,6 +15,14 @@ CLUDA_PREAMBLE = """
 #define GID_0 blockIdx.x
 #define GID_1 blockIdx.y
 #define GID_2 blockIdx.z
+
+#define LDIM_0 blockDim.x
+#define LDIM_1 blockDim.y
+#define LDIM_2 blockDim.z
+
+#define GDIM_0 gridDim.x
+#define GDIM_1 gridDim.y
+#define GDIM_2 gridDim.
 """
 
 
