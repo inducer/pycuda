@@ -373,12 +373,13 @@ namespace
 
   // }}}
 
-  PyObject *device_allocation_to_long(device_allocation const &da)
+  template <class T>
+  PyObject *mem_obj_to_long(T const &mo)
   {
 #if defined(_WIN32) && defined(_WIN64)
-    return PyLong_FromUnsignedLongLong((CUdeviceptr) da);
+    return PyLong_FromUnsignedLongLong((CUdeviceptr) mo);
 #else
-    return PyLong_FromUnsignedLong((CUdeviceptr) da);
+    return PyLong_FromUnsignedLong((CUdeviceptr) mo);
 #endif
   }
 
@@ -526,7 +527,8 @@ BOOST_PYTHON_MODULE(_driver)
     .value("SCHED_YIELD", CU_CTX_SCHED_YIELD)
     .value("SCHED_MASK", CU_CTX_SCHED_MASK)
 #if CUDAPP_CUDA_VERSION >= 2020
-    .value("BLOCKING_SYNC", CU_CTX_BLOCKING_SYNC)
+    .value("BLOCKING_SYNC", CU_CTX_SCHED_BLOCKING_SYNC)
+    .value("SCHED_BLOCKING_SYNC", CU_CTX_SCHED_BLOCKING_SYNC)
     .value("MAP_HOST", CU_CTX_MAP_HOST)
 #endif
 #if CUDAPP_CUDA_VERSION >= 3020
@@ -543,9 +545,11 @@ BOOST_PYTHON_MODULE(_driver)
 #if CUDAPP_CUDA_VERSION >= 3020
     .value("DISABLE_TIMING", CU_EVENT_DISABLE_TIMING)
 #endif
+#if CUDAPP_CUDA_VERSION >= 4010
+    .value("INTERPROCESS", CU_EVENT_INTERPROCESS)
+#endif
     ;
 #endif
-
 
   py::enum_<CUarray_format>("array_format")
     .value("UNSIGNED_INT8", CU_AD_FORMAT_UNSIGNED_INT8)
@@ -570,6 +574,10 @@ BOOST_PYTHON_MODULE(_driver)
     cls.attr("2DARRAY") = CUDA_ARRAY3D_2DARRAY;
 #if CUDAPP_CUDA_VERSION >= 3010
     cls.attr("SURFACE_LDST") = CUDA_ARRAY3D_SURFACE_LDST;
+#endif
+#if CUDAPP_CUDA_VERSION >= 4010
+    cls.attr("CUBEMAP") = CUDA_ARRAY3D_CUBEMAP;
+    cls.attr("TEXTURE_GATHER") = CUDA_ARRAY3D_TEXTURE_GATHER;
 #endif
   }
 #endif
@@ -655,6 +663,36 @@ BOOST_PYTHON_MODULE(_driver)
     .value("ASYNC_ENGINE_COUNT", CU_DEVICE_ATTRIBUTE_ASYNC_ENGINE_COUNT)
     .value("UNIFIED_ADDRESSING", CU_DEVICE_ATTRIBUTE_UNIFIED_ADDRESSING)
 #endif
+#if CUDAPP_CUDA_VERSION >= 4010
+    .value("MAXIMUM_TEXTURE2D_GATHER_WIDTH", CU_DEVICE_ATTRIBUTE_MAXIMUM_TEXTURE2D_GATHER_WIDTH)
+    .value("MAXIMUM_TEXTURE2D_GATHER_HEIGHT", CU_DEVICE_ATTRIBUTE_MAXIMUM_TEXTURE2D_GATHER_HEIGHT)
+    .value("MAXIMUM_TEXTURE3D_WIDTH_ALTERNATE", CU_DEVICE_ATTRIBUTE_MAXIMUM_TEXTURE3D_WIDTH_ALTERNATE)
+    .value("MAXIMUM_TEXTURE3D_HEIGHT_ALTERNATE", CU_DEVICE_ATTRIBUTE_MAXIMUM_TEXTURE3D_HEIGHT_ALTERNATE)
+    .value("MAXIMUM_TEXTURE3D_DEPTH_ALTERNATE", CU_DEVICE_ATTRIBUTE_MAXIMUM_TEXTURE3D_DEPTH_ALTERNATE)
+    .value("PCI_DOMAIN_ID", CU_DEVICE_ATTRIBUTE_PCI_DOMAIN_ID)
+    .value("TEXTURE_PITCH_ALIGNMENT", CU_DEVICE_ATTRIBUTE_TEXTURE_PITCH_ALIGNMENT)
+    .value("MAXIMUM_TEXTURECUBEMAP_WIDTH", CU_DEVICE_ATTRIBUTE_MAXIMUM_TEXTURECUBEMAP_WIDTH)
+    .value("MAXIMUM_TEXTURECUBEMAP_LAYERED_WIDTH", CU_DEVICE_ATTRIBUTE_MAXIMUM_TEXTURECUBEMAP_LAYERED_WIDTH)
+    .value("MAXIMUM_TEXTURECUBEMAP_LAYERED_LAYERS", CU_DEVICE_ATTRIBUTE_MAXIMUM_TEXTURECUBEMAP_LAYERED_LAYERS)
+    .value("MAXIMUM_SURFACE1D_WIDTH", CU_DEVICE_ATTRIBUTE_MAXIMUM_SURFACE1D_WIDTH)
+    .value("MAXIMUM_SURFACE2D_WIDTH", CU_DEVICE_ATTRIBUTE_MAXIMUM_SURFACE2D_WIDTH)
+    .value("MAXIMUM_SURFACE2D_HEIGHT", CU_DEVICE_ATTRIBUTE_MAXIMUM_SURFACE2D_HEIGHT)
+    .value("MAXIMUM_SURFACE3D_WIDTH", CU_DEVICE_ATTRIBUTE_MAXIMUM_SURFACE3D_WIDTH)
+    .value("MAXIMUM_SURFACE3D_HEIGHT", CU_DEVICE_ATTRIBUTE_MAXIMUM_SURFACE3D_HEIGHT)
+    .value("MAXIMUM_SURFACE3D_DEPTH", CU_DEVICE_ATTRIBUTE_MAXIMUM_SURFACE3D_DEPTH)
+    .value("MAXIMUM_SURFACE1D_LAYERED_WIDTH", CU_DEVICE_ATTRIBUTE_MAXIMUM_SURFACE1D_LAYERED_WIDTH)
+    .value("MAXIMUM_SURFACE1D_LAYERED_LAYERS", CU_DEVICE_ATTRIBUTE_MAXIMUM_SURFACE1D_LAYERED_LAYERS)
+    .value("MAXIMUM_SURFACE2D_LAYERED_WIDTH", CU_DEVICE_ATTRIBUTE_MAXIMUM_SURFACE2D_LAYERED_WIDTH)
+    .value("MAXIMUM_SURFACE2D_LAYERED_HEIGHT", CU_DEVICE_ATTRIBUTE_MAXIMUM_SURFACE2D_LAYERED_HEIGHT)
+    .value("MAXIMUM_SURFACE2D_LAYERED_LAYERS", CU_DEVICE_ATTRIBUTE_MAXIMUM_SURFACE2D_LAYERED_LAYERS)
+    .value("MAXIMUM_SURFACECUBEMAP_WIDTH", CU_DEVICE_ATTRIBUTE_MAXIMUM_SURFACECUBEMAP_WIDTH)
+    .value("MAXIMUM_SURFACECUBEMAP_LAYERED_WIDTH", CU_DEVICE_ATTRIBUTE_MAXIMUM_SURFACECUBEMAP_LAYERED_WIDTH)
+    .value("MAXIMUM_SURFACECUBEMAP_LAYERED_LAYERS", CU_DEVICE_ATTRIBUTE_MAXIMUM_SURFACECUBEMAP_LAYERED_LAYERS)
+    .value("MAXIMUM_TEXTURE1D_LINEAR_WIDTH", CU_DEVICE_ATTRIBUTE_MAXIMUM_TEXTURE1D_LINEAR_WIDTH)
+    .value("MAXIMUM_TEXTURE2D_LINEAR_WIDTH", CU_DEVICE_ATTRIBUTE_MAXIMUM_TEXTURE2D_LINEAR_WIDTH)
+    .value("MAXIMUM_TEXTURE2D_LINEAR_HEIGHT", CU_DEVICE_ATTRIBUTE_MAXIMUM_TEXTURE2D_LINEAR_HEIGHT)
+    .value("MAXIMUM_TEXTURE2D_LINEAR_PITCH", CU_DEVICE_ATTRIBUTE_MAXIMUM_TEXTURE2D_LINEAR_PITCH)
+#endif
     ;
 #if CUDAPP_CUDA_VERSION >= 4000
   py::enum_<CUpointer_attribute>("pointer_attribute")
@@ -677,6 +715,9 @@ BOOST_PYTHON_MODULE(_driver)
     .value("PREFER_NONE", CU_FUNC_CACHE_PREFER_NONE)
     .value("PREFER_SHARED", CU_FUNC_CACHE_PREFER_SHARED)
     .value("PREFER_L1", CU_FUNC_CACHE_PREFER_L1)
+#if CUDAPP_CUDA_VERSION >= 4010
+    .value("PREFER_EQUAL", CU_FUNC_CACHE_PREFER_EQUAL)
+#endif
     ;
 #endif
 
@@ -786,6 +827,9 @@ BOOST_PYTHON_MODULE(_driver)
     .value("WRITE_DISCARD", CU_GRAPHICS_REGISTER_FLAGS_WRITE_DISCARD)
     .value("SURFACE_LDST", CU_GRAPHICS_REGISTER_FLAGS_SURFACE_LDST)
 #endif
+#if CUDAPP_CUDA_VERSION >= 4010
+    .value("TEXTURE_GATHER", CU_GRAPHICS_REGISTER_FLAGS_TEXTURE_GATHER)
+#endif
     ;
 
   py::enum_<CUarray_cubemap_face_enum>("array_cubemap_face")
@@ -808,9 +852,15 @@ BOOST_PYTHON_MODULE(_driver)
     typedef device cl;
     py::class_<cl>("Device", py::no_init)
       .def("__init__", py::make_constructor(make_device))
+#if CUDAPP_CUDA_VERSION >= 4010
+      .def("__init__", py::make_constructor(make_device_from_pci_bus_id))
+#endif
       .DEF_SIMPLE_METHOD(count)
       .staticmethod("count")
       .DEF_SIMPLE_METHOD(name)
+#if CUDAPP_CUDA_VERSION >= 4010
+      .DEF_SIMPLE_METHOD(pci_bus_id)
+#endif
       .DEF_SIMPLE_METHOD(compute_capability)
       .DEF_SIMPLE_METHOD(total_memory)
       .def("get_attribute", device_get_attribute)
@@ -966,12 +1016,27 @@ BOOST_PYTHON_MODULE(_driver)
     typedef device_allocation cl;
     py::class_<cl, boost::noncopyable>("DeviceAllocation", py::no_init)
       .def("__int__", &cl::operator CUdeviceptr)
-      .def("__long__", device_allocation_to_long)
+      .def("__long__", mem_obj_to_long<device_allocation>)
       .DEF_SIMPLE_METHOD(free)
       ;
 
     py::implicitly_convertible<device_allocation, CUdeviceptr>();
   }
+
+#if CUDAPP_CUDA_VERSION >= 4010 && PY_VERSION_HEX >= 0x02060000
+  {
+    typedef ipc_mem_handle cl;
+    py::class_<cl, boost::noncopyable>("IPCMemoryHandle", py::init<py::object>())
+      .def("__int__", &cl::operator CUdeviceptr)
+      .def("__long__", mem_obj_to_long<ipc_mem_handle>)
+      .DEF_SIMPLE_METHOD(close)
+      ;
+
+    py::implicitly_convertible<ipc_mem_handle, CUdeviceptr>();
+  }
+
+  DEF_SIMPLE_FUNCTION(mem_get_ipc_handle);
+#endif
 
   // }}}
 
@@ -1190,6 +1255,12 @@ BOOST_PYTHON_MODULE(_driver)
       .DEF_SIMPLE_METHOD(query)
       .DEF_SIMPLE_METHOD(time_since)
       .DEF_SIMPLE_METHOD(time_till)
+#if CUDAPP_CUDA_VERSION >= 4010 && PY_VERSION_HEX >= 0x02060000
+      .DEF_SIMPLE_METHOD(ipc_handle)
+      .def("from_ipc_handle", event_from_ipc_handle,
+          py::return_value_policy<py::manage_new_object>())
+      .staticmethod("from_ipc_handle")
+#endif
       ;
   }
   // }}}

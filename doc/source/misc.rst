@@ -14,6 +14,7 @@ Version 2011.2
 * Fix :func:`pycuda.gpuarray.zeros` when used on complex arrays.
 * Add :func:`pycuda.tools.register_dtype` to enable scan/reduction on struct types.
 * More improvements to CURAND.
+* Add support for CUDA 4.1.
 
 Version 2011.1.2
 ----------------

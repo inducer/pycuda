@@ -311,9 +311,20 @@ namespace pycuda
              return "attempted to retrieve 64-bit size via 32-bit api function";
 #endif
 
+#if CUDAPP_CUDA_VERSION >= 4010
+          case CUDA_ERROR_ASSERT:
+             return "device-side assert triggered";
+          case CUDA_ERROR_TOO_MANY_PEERS:
+             return "too many peers";
+          case CUDA_ERROR_HOST_MEMORY_ALREADY_REGISTERED:
+             return "host memory already registered";
+          case CUDA_ERROR_HOST_MEMORY_NOT_REGISTERED:
+             return "host memory not registered";
+#endif
+
           case CUDA_ERROR_UNKNOWN: return "unknown";
 
-          default: return "invalid error code";
+          default: return "invalid/unknown error code";
         }
       }
   };
@@ -371,6 +382,15 @@ namespace pycuda
         CUDAPP_CALL_GUARDED(cuDeviceGetName, (buffer, sizeof(buffer), m_device));
         return buffer;
       }
+
+#if CUDAPP_CUDA_VERSION >= 4010
+      std::string pci_bus_id()
+      {
+        char buffer[1024];
+        CUDAPP_CALL_GUARDED(cuDeviceGetPCIBusId, (buffer, sizeof(buffer), m_device));
+        return buffer;
+      }
+#endif
 
       py::tuple compute_capability()
       {
@@ -438,6 +458,17 @@ namespace pycuda
     CUDAPP_CALL_GUARDED(cuDeviceGet, (&result, ordinal));
     return new device(result);
   }
+
+#if CUDAPP_CUDA_VERSION >= 4010
+  inline
+  device *make_device_from_pci_bus_id(std::string const pci_bus_id)
+  {
+    CUdevice result;
+    CUDAPP_CALL_GUARDED(cuDeviceGetByPCIBusId, (&result,
+          const_cast<char *>(pci_bus_id.c_str())));
+    return new device(result);
+  }
+#endif
 
   // }}}
 
@@ -1453,6 +1484,76 @@ namespace pycuda
 
   // }}}
 
+  // {{{ ipc_mem_handle
+
+#if CUDAPP_CUDA_VERSION >= 4010 && PY_VERSION_HEX >= 0x02060000
+  class ipc_mem_handle : public boost::noncopyable, public context_dependent
+  {
+    private:
+      bool m_valid;
+
+    protected:
+      CUdeviceptr m_devptr;
+
+    public:
+      ipc_mem_handle(py::object obj)
+        : m_valid(true)
+      {
+        if (!PyByteArray_Check(obj.ptr()))
+          throw pycuda::error("event_from_ipc_handle", CUDA_ERROR_INVALID_VALUE,
+              "argument is not a bytes array");
+        CUipcMemHandle handle;
+        if (PyByteArray_GET_SIZE(obj.ptr()) != sizeof(handle))
+          throw pycuda::error("event_from_ipc_handle", CUDA_ERROR_INVALID_VALUE,
+              "handle has the wrong size");
+        memcpy(&handle, PyByteArray_AS_STRING(obj.ptr()), sizeof(handle));
+
+        CUDAPP_CALL_GUARDED(cuIpcOpenMemHandle, (&m_devptr, handle));
+      }
+
+      void close()
+      {
+        if (m_valid)
+        {
+          try
+          {
+            scoped_context_activation ca(get_context());
+            CUDAPP_CALL_GUARDED_CLEANUP(cuIpcCloseMemHandle, (m_devptr));
+            mem_free(m_devptr);
+          }
+          CUDAPP_CATCH_CLEANUP_ON_DEAD_CONTEXT(ipc_mem_handle);
+
+          release_context();
+          m_valid = false;
+        }
+        else
+          throw pycuda::error("ipc_mem_handle::close", CUDA_ERROR_INVALID_HANDLE);
+      }
+
+      ~ipc_mem_handle()
+      {
+        if (m_valid)
+          close();
+      }
+
+      operator CUdeviceptr() const
+      { return m_devptr; }
+  };
+
+  inline
+  py::object mem_get_ipc_handle(CUdeviceptr devptr)
+  {
+    CUipcMemHandle handle;
+    CUDAPP_CALL_GUARDED(cuIpcGetMemHandle, (&handle, devptr));
+    return py::object(py::handle<>(PyByteArray_FromStringAndSize(
+            reinterpret_cast<const char *>(&handle),
+            sizeof(handle))));
+  }
+
+#endif
+
+  // }}}
+
   // {{{ structured memcpy
 
 #define MEMCPY_SETTERS \
@@ -1836,6 +1937,10 @@ namespace pycuda
       event(unsigned int flags=0)
       { CUDAPP_CALL_GUARDED(cuEventCreate, (&m_event, flags)); }
 
+      event(CUevent evt)
+      : m_event(evt)
+      { }
+
       ~event()
       {
         try
@@ -1893,12 +1998,43 @@ namespace pycuda
         CUDAPP_CALL_GUARDED(cuEventElapsedTime, (&result, m_event, end.m_event));
         return result;
       }
+
+#if CUDAPP_CUDA_VERSION >= 4010 && PY_VERSION_HEX >= 0x02060000
+      py::object ipc_handle()
+      {
+        CUipcEventHandle handle;
+        CUDAPP_CALL_GUARDED(cuIpcGetEventHandle, (&handle, m_event));
+        return py::object(py::handle<>(PyByteArray_FromStringAndSize(
+              reinterpret_cast<const char *>(&handle),
+              sizeof(handle))));
+      }
+#endif
   };
 
 #if CUDAPP_CUDA_VERSION >= 3020
   inline void stream::wait_for_event(const event &evt)
   {
     CUDAPP_CALL_GUARDED(cuStreamWaitEvent, (m_stream, evt.handle(), 0));
+  }
+#endif
+
+#if CUDAPP_CUDA_VERSION >= 4010 && PY_VERSION_HEX >= 0x02060000
+  inline
+  event *event_from_ipc_handle(py::object obj)
+  {
+    if (!PyByteArray_Check(obj.ptr()))
+      throw pycuda::error("event_from_ipc_handle", CUDA_ERROR_INVALID_VALUE,
+          "argument is not a bytes array");
+    CUipcEventHandle handle;
+    if (PyByteArray_GET_SIZE(obj.ptr()) != sizeof(handle))
+      throw pycuda::error("event_from_ipc_handle", CUDA_ERROR_INVALID_VALUE,
+          "handle has the wrong size");
+    memcpy(&handle, PyByteArray_AS_STRING(obj.ptr()), sizeof(handle));
+
+    CUevent evt;
+    CUDAPP_CALL_GUARDED(cuIpcOpenEventHandle, (&evt, handle));
+
+    return new event(evt);
   }
 #endif
 

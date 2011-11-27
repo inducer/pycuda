@@ -112,7 +112,7 @@ Constants
 
         Mask of valid scheduling flags in this bitfield.
 
-    .. attribute:: BLOCKING_SYNC
+    .. attribute:: SCHED_BLOCKING_SYNC
 
         Use blocking synchronization. CUDA 2.2 and newer.
 
@@ -143,6 +143,12 @@ Constants
         CUDA 3.2 and newer.
 
         .. versionadded:: 0.94
+
+    .. attribute:: INTERPROCESS
+
+        CUDA 4.1 and newer.
+
+        .. versionadded:: 2011.2
 
 .. class:: device_attribute
 
@@ -266,6 +272,39 @@ Constants
 
         .. versionadded:: 2011.1
 
+    .. attribute :: MAXIMUM_TEXTURE2D_GATHER_WIDTH
+        MAXIMUM_TEXTURE2D_GATHER_HEIGHT
+        MAXIMUM_TEXTURE3D_WIDTH_ALTERNATE
+        MAXIMUM_TEXTURE3D_HEIGHT_ALTERNATE
+        MAXIMUM_TEXTURE3D_DEPTH_ALTERNATE
+        PCI_DOMAIN_ID
+        TEXTURE_PITCH_ALIGNMENT
+        MAXIMUM_TEXTURECUBEMAP_WIDTH
+        MAXIMUM_TEXTURECUBEMAP_LAYERED_WIDTH
+        MAXIMUM_TEXTURECUBEMAP_LAYERED_LAYERS
+        MAXIMUM_SURFACE1D_WIDTH
+        MAXIMUM_SURFACE2D_WIDTH
+        MAXIMUM_SURFACE2D_HEIGHT
+        MAXIMUM_SURFACE3D_WIDTH
+        MAXIMUM_SURFACE3D_HEIGHT
+        MAXIMUM_SURFACE3D_DEPTH
+        MAXIMUM_SURFACE1D_LAYERED_WIDTH
+        MAXIMUM_SURFACE1D_LAYERED_LAYERS
+        MAXIMUM_SURFACE2D_LAYERED_WIDTH
+        MAXIMUM_SURFACE2D_LAYERED_HEIGHT
+        MAXIMUM_SURFACE2D_LAYERED_LAYERS
+        MAXIMUM_SURFACECUBEMAP_WIDTH
+        MAXIMUM_SURFACECUBEMAP_LAYERED_WIDTH
+        MAXIMUM_SURFACECUBEMAP_LAYERED_LAYERS
+        MAXIMUM_TEXTURE1D_LINEAR_WIDTH
+        MAXIMUM_TEXTURE2D_LINEAR_WIDTH
+        MAXIMUM_TEXTURE2D_LINEAR_HEIGHT
+        MAXIMUM_TEXTURE2D_LINEAR_PITCH
+
+        CUDA 4.1 and above.
+
+        .. versionadded:: 2011.2
+
 .. class:: pointer_attribute
 
     .. attribute:: CONTEXT
@@ -318,6 +357,11 @@ Constants
     .. attribute:: PREFER_NONE
     .. attribute:: PREFER_SHARED
     .. attribute:: PREFER_L1
+    .. attribute:: PREFER_EQUAL
+
+        CUDA 4.1 and above.
+
+        .. versionadded:: 2011.2
 
 .. class:: array_format
 
@@ -344,11 +388,17 @@ Constants
 
         .. versionadded:: 2011.1
 
-    .. attribute SURFACE_LDST
+    .. attribute :: SURFACE_LDST
 
         CUDA 3.1 and above.
 
         .. versionadded:: 0.94
+
+    .. attribute :: CUBEMAP TEXTURE_GATHER
+
+        CUDA 4.1 and above.
+
+        .. versionadded:: 2011.2
 
 .. class:: address_mode
 
@@ -465,11 +515,18 @@ Graphics-related constants
 
 .. class:: graphics_register_flags
 
-    .. attribute:: NONE READ_ONLY WRITE_DISCARD SURFACE_LDST
+    .. versionadded:: 2011.1
 
     CUDA 4.0 and above.
 
-    .. versionadded:: 2011.1
+    .. attribute:: NONE READ_ONLY WRITE_DISCARD SURFACE_LDST
+
+    .. attribute :: TEXTURE_GATHER
+
+        CUDA 4.1 and above.
+
+        .. versionadded:: 2011.2
+
 
 .. class:: array_cubemap_face
 
@@ -504,8 +561,12 @@ Devices and Contexts
     See also :mod:`pycuda.autoinit`.
 
 .. class:: Device(number)
+        Device(pci_bus_id)
 
     A handle to the *number*'th CUDA device. See also :mod:`pycuda.autoinit`.
+
+    .. versionchanged:: 2011.2
+        The *pci_bus_id* version of the constructor is new in CUDA 4.1.
 
     .. staticmethod:: count()
 
@@ -513,7 +574,11 @@ Devices and Contexts
 
     .. method:: name()
 
-        Return the name of this CUDA device.
+    .. method:: pci_bus_id()
+
+        CUDA 4.1 and newer.
+
+        .. versionadded:: 2011.2
 
     .. method:: compute_cabability()
 
@@ -695,6 +760,18 @@ Concurrency and Streams
         with an "invalid value" error if either of the events has not been reached yet.
         Use :meth:`synchronize` to ensure that the event has been reached.
 
+    .. method:: ipc_handle()
+
+        Return a :class:`bytes` object representing an IPC handle to this event.
+        Requires Python 2.6 and CUDA 4.1.
+
+        .. versionadded: 2011.2
+
+    .. staticmethod:: from_ipc_handle(handle)
+
+        Requires Python 2.6 and CUDA 4.1.
+
+        .. versionadded: 2011.2
 
 Memory
 ------
@@ -753,6 +830,26 @@ Global Device Memory
         Release the held device memory now instead of when this object
         becomes unreachable. Any further use of the object is an error
         and will lead to undefined behavior.
+
+.. function:: mem_get_ipc_handle(devptr)
+
+    Return an opaque :class:`bytes` object representing an IPC handle to the
+    device pointer *devptr*.
+
+    .. versionadded:: 2011.2
+
+    Requires CUDA 4.1 and Python 2.6.
+
+.. class:: IPCMemoryHandle(ipc_handle)
+
+    .. versionadded:: 2011.2
+
+    Requires CUDA 4.1 and Python 2.6.
+
+    Objects of this type can be used in the same ways as a
+    :class:`DeviceAllocation`.
+
+    .. method:: close()
 
 .. class:: PointerHolderBase
 
