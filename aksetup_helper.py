@@ -257,7 +257,7 @@ def expand_value(v, options):
 
 def expand_options(options):
     return dict(
-            (k, expand_value(v, options)) for k, v in options.iteritems())
+            (k, expand_value(v, options)) for k, v in options.items())
 
 
 
@@ -726,8 +726,8 @@ def check_git_submodules():
         stdout_data, _ = popen.communicate()
         if popen.returncode != 0:
             git_error = "git returned error code %d" % popen.returncode
-    except OSError, e:
-        git_error = e
+    except OSError:
+        git_error = "(os error, likely git not found)"
 
     if git_error is not None:
         print("-------------------------------------------------------------------------")
