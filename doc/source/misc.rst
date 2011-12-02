@@ -1,13 +1,16 @@
 User-visible Changes
 ====================
 
-Version 2011.2
---------------
+Version 2011.2.1
+----------------
 
 .. note::
 
     This version is the current development version. You can get it from
     PyCUDA's version control repository.
+
+Version 2011.2
+--------------
 
 * Fix a memory leak when using pagelocked memory. (reported by Paul Cazeaux)
 * Fix complex scalar argument passing.
