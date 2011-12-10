@@ -1291,6 +1291,7 @@ BOOST_PYTHON_MODULE(_driver)
       .def_readwrite("depth", &cl::Depth)
       .def_readwrite("format", &cl::Format)
       .def_readwrite("num_channels", &cl::NumChannels)
+      .def_readwrite("flags", &cl::Flags)
       ;
   }
 #endif
