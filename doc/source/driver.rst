@@ -509,6 +509,10 @@ Constants
 
         CUDA 3.2 and above.
 
+.. class:: ipc_mem_flags
+
+    .. attribute:: LAZY_ENABLE_PEER_ACCESS
+
 
 Graphics-related constants
 ^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -840,7 +844,7 @@ Global Device Memory
 
     Requires CUDA 4.1 and Python 2.6.
 
-.. class:: IPCMemoryHandle(ipc_handle)
+.. class:: IPCMemoryHandle(ipc_handle, flags=ipc_mem_flags.LAZY_ENABLE_PEER_ACCESS)
 
     .. versionadded:: 2011.2
 

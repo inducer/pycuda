@@ -520,6 +520,12 @@ BOOST_PYTHON_MODULE(_driver)
   // }}}
 
   // {{{ constants
+#if CUDAPP_CUDA_VERSION >= 4010
+  py::enum_<CUipcMem_flags>("ipc_mem_flags")
+    .value("LAZY_ENABLE_PEER_ACCESS", CU_IPC_MEM_LAZY_ENABLE_PEER_ACCESS)
+    ;
+#endif
+
 #if CUDAPP_CUDA_VERSION >= 2000
   py::enum_<CUctx_flags>("ctx_flags")
     .value("SCHED_AUTO", CU_CTX_SCHED_AUTO)
@@ -1032,7 +1038,8 @@ BOOST_PYTHON_MODULE(_driver)
 #if CUDAPP_CUDA_VERSION >= 4010 && PY_VERSION_HEX >= 0x02060000
   {
     typedef ipc_mem_handle cl;
-    py::class_<cl, boost::noncopyable>("IPCMemoryHandle", py::init<py::object>())
+    py::class_<cl, boost::noncopyable>("IPCMemoryHandle",
+        py::init<py::object, py::optional<CUipcMem_flags> >())
       .def("__int__", &cl::operator CUdeviceptr)
       .def("__long__", mem_obj_to_long<ipc_mem_handle>)
       .DEF_SIMPLE_METHOD(close)

@@ -1496,7 +1496,7 @@ namespace pycuda
       CUdeviceptr m_devptr;
 
     public:
-      ipc_mem_handle(py::object obj)
+      ipc_mem_handle(py::object obj, CUipcMem_flags flags=CU_IPC_MEM_LAZY_ENABLE_PEER_ACCESS)
         : m_valid(true)
       {
         if (!PyByteArray_Check(obj.ptr()))
@@ -1508,7 +1508,7 @@ namespace pycuda
               "handle has the wrong size");
         memcpy(&handle, PyByteArray_AS_STRING(obj.ptr()), sizeof(handle));
 
-        CUDAPP_CALL_GUARDED(cuIpcOpenMemHandle, (&m_devptr, handle));
+        CUDAPP_CALL_GUARDED(cuIpcOpenMemHandle, (&m_devptr, handle, flags));
       }
 
       void close()
