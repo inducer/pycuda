@@ -130,12 +130,11 @@ def compile_plain(source, options, keep, nvcc, cache_dir):
 
     if stdout or stderr:
         lcase_err_text = (stdout+stderr).lower()
-        if "demoted" in lcase_err_text or "demoting" in lcase_err_text:
-            from pycuda.driver import CompileError
-            raise CompileError("nvcc said it demoted types in source code it "
-                "compiled--this is likely not what you want.",
-                cmdline, stdout=stdout, stderr=stderr)
         from warnings import warn
+        if "demoted" in lcase_err_text or "demoting" in lcase_err_text:
+            warn("nvcc said it demoted types in source code it "
+                "compiled--this is likely not what you want.",
+                stacklevel=4)
         warn("The CUDA compiler suceeded, but said the following:\n"
                 +stdout+stderr, stacklevel=4)
 
