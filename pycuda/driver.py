@@ -165,7 +165,7 @@ def _add_functionality():
         func._set_block_shape(*block)
         handlers = func._param_set(*args)
         if shared is not None:
-            func.set_shared_size(shared)
+            func._set_shared_size(shared)
 
         for handler in handlers:
             handler.pre_call(stream)
