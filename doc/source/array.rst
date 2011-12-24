@@ -440,33 +440,33 @@ Quasirandom numbers are more expensive to generate.
 
     .. versionadded:: 2011.1
 
-    .. method fill_uniform(data, stream=None)
+    .. method:: fill_uniform(data, stream=None)
 
         Fills in :class:`GPUArray` *data* with uniformly distributed
         pseudorandom values.
 
-    .. method fill_normal(data, stream=None)
+    .. method:: fill_normal(data, stream=None)
 
         Fills in :class:`GPUArray` *data* with normally distributed
         pseudorandom values.
 
-    .. method call_skip_ahead(i, stream=None)
+    .. method:: call_skip_ahead(i, stream=None)
 
         Forces all generators to skip i values. Is equivalent to generating
         i values and discarding results, but is much faster.
 
-    .. method call_skip_ahead_array(i, stream=None)
+    .. method::  call_skip_ahead_array(i, stream=None)
 
         Accepts array i of integer values, telling each generator how many
         values to skip.
 
-    .. method call_skip_ahead_sequence(i, stream=None)
+    .. method:: call_skip_ahead_sequence(i, stream=None)
 
         Forces all generators to skip i subsequences. Is equivalent to
         generating i * :math:`2^67` values and discarding results,
         but is much faster.
 
-    .. method call_skip_ahead_sequence_array(i, stream=None)
+    .. method:: call_skip_ahead_sequence_array(i, stream=None)
 
         Accepts array i of integer values, telling each generator how many
         subsequences to skip.
@@ -501,22 +501,22 @@ Quasirandom numbers are more expensive to generate.
 
     .. versionadded:: 2011.1
 
-    .. method fill_uniform(data, stream=None)
+    .. method:: fill_uniform(data, stream=None)
 
         Fills in :class:`GPUArray` *data* with uniformly distributed
         quasirandom values.
 
-    .. method fill_normal(data, stream=None)
+    .. method:: fill_normal(data, stream=None)
 
         Fills in :class:`GPUArray` *data* with normally distributed
         quasirandom values.
 
-    .. method call_skip_ahead(i, stream=None)
+    .. method:: call_skip_ahead(i, stream=None)
 
         Forces all generators to skip i values. Is equivalent to generating
         i values and discarding results, but is much faster.
 
-    .. method call_skip_ahead_array(i, stream=None)
+    .. method:: call_skip_ahead_array(i, stream=None)
 
         Accepts array i of integer values, telling each generator how many
         values to skip.
@@ -539,22 +539,22 @@ Quasirandom numbers are more expensive to generate.
 
     .. versionadded:: 2011.1
 
-    .. method fill_uniform(data, stream=None)
+    .. method:: fill_uniform(data, stream=None)
 
         Fills in :class:`GPUArray` *data* with uniformly distributed
         quasirandom values.
 
-    .. method fill_normal(data, stream=None)
+    .. method:: fill_normal(data, stream=None)
 
         Fills in :class:`GPUArray` *data* with normally distributed
         quasirandom values.
 
-    .. method call_skip_ahead(i, stream=None)
+    .. method:: call_skip_ahead(i, stream=None)
 
         Forces all generators to skip i values. Is equivalent to generating
         i values and discarding results, but is much faster.
 
-    .. method call_skip_ahead_array(i, stream=None)
+    .. method:: call_skip_ahead_array(i, stream=None)
 
         Accepts array i of integer values, telling each generator how many
         values to skip.
@@ -574,22 +574,22 @@ Quasirandom numbers are more expensive to generate.
 
     .. versionadded:: 2011.1
 
-    .. method fill_uniform(data, stream=None)
+    .. method:: fill_uniform(data, stream=None)
 
         Fills in :class:`GPUArray` *data* with uniformly distributed
         quasirandom values.
 
-    .. method fill_normal(data, stream=None)
+    .. method:: fill_normal(data, stream=None)
 
         Fills in :class:`GPUArray` *data* with normally distributed
         quasirandom values.
 
-    .. method call_skip_ahead(i, stream=None)
+    .. method:: call_skip_ahead(i, stream=None)
 
         Forces all generators to skip i values. Is equivalent to generating
         i values and discarding results, but is much faster.
 
-    .. method call_skip_ahead_array(i, stream=None)
+    .. method:: call_skip_ahead_array(i, stream=None)
 
         Accepts array i of integer values, telling each generator how many
         values to skip.
@@ -612,22 +612,22 @@ Quasirandom numbers are more expensive to generate.
 
     .. versionadded:: 2011.1
 
-    .. method fill_uniform(data, stream=None)
+    .. method:: fill_uniform(data, stream=None)
 
         Fills in :class:`GPUArray` *data* with uniformly distributed
         quasirandom values.
 
-    .. method fill_normal(data, stream=None)
+    .. method:: fill_normal(data, stream=None)
 
         Fills in :class:`GPUArray` *data* with normally distributed
         quasirandom values.
 
-    .. method call_skip_ahead(i, stream=None)
+    .. method:: call_skip_ahead(i, stream=None)
 
         Forces all generators to skip i values. Is equivalent to generating
         i values and discarding results, but is much faster.
 
-    .. method call_skip_ahead_array(i, stream=None)
+    .. method:: call_skip_ahead_array(i, stream=None)
 
         Accepts array i of integer values, telling each generator how many
         values to skip.
