@@ -269,7 +269,7 @@ class ReductionKernel:
             else:
                 result = empty((block_count,), self.dtype_out, repr_vec.allocator)
 
-            #print block_count, seq_count, self.block_size
+            #print block_count, seq_count, self.block_size, sz
             f((block_count, 1), (self.block_size, 1, 1), stream,
                     *([result.gpudata]+invocation_args+[seq_count, sz]))
 
@@ -320,7 +320,7 @@ def get_dot_kernel(dtype_out, dtype_a=None, dtype_b=None):
 
 
 @context_dependent_memoize
-def get_subset_dot_kernel(dtype_out, dtype_a=None, dtype_b=None):
+def get_subset_dot_kernel(dtype_out, dtype_subset, dtype_a=None, dtype_b=None):
     if dtype_out is None:
         dtype_out = dtype_a
 
@@ -336,10 +336,11 @@ def get_subset_dot_kernel(dtype_out, dtype_a=None, dtype_b=None):
     # important: lookup_tbl must be first--it controls the length
     return ReductionKernel(dtype_out, neutral="0",
             reduce_expr="a+b", map_expr="a[lookup_tbl[i]]*b[lookup_tbl[i]]",
-            arguments="const unsigned int *lookup_tbl, "
+            arguments="const %(tp_lut)s *lookup_tbl, "
             "const %(tp_a)s *a, const %(tp_b)s *b" % {
             "tp_a": dtype_to_ctype(dtype_a),
             "tp_b": dtype_to_ctype(dtype_b),
+            "tp_lut": dtype_to_ctype(dtype_subset),
             })
 
 
@@ -387,7 +388,7 @@ def get_minmax_kernel(what, dtype):
 
 
 @context_dependent_memoize
-def get_subset_minmax_kernel(what, dtype):
+def get_subset_minmax_kernel(what, dtype, dtype_subset):
     if dtype == np.float64:
         reduce_expr = "f%s(a,b)" % what
     elif dtype == np.float32:
@@ -401,7 +402,8 @@ def get_subset_minmax_kernel(what, dtype):
             neutral=get_minmax_neutral(what, dtype),
             reduce_expr="%(reduce_expr)s" % {"reduce_expr": reduce_expr},
             map_expr="in[lookup_tbl[i]]",
-            arguments="const unsigned int *lookup_tbl, "
+            arguments="const %(tp_lut)s *lookup_tbl, "
             "const %(tp)s *in"  % {
             "tp": dtype_to_ctype(dtype),
+            "tp_lut": dtype_to_ctype(dtype_subset),
             }, preamble="#define MY_INFINITY (1./0)")
