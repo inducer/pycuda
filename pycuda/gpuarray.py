@@ -1119,7 +1119,7 @@ def dot(a, b, dtype=None, stream=None):
 
 def subset_dot(subset, a, b, dtype=None, stream=None):
     from pycuda.reduction import get_subset_dot_kernel
-    krnl = get_subset_dot_kernel(dtype, a.dtype, b.dtype)
+    krnl = get_subset_dot_kernel(dtype, subset.dtype, a.dtype, b.dtype)
     return krnl(subset, a, b, stream=stream)
 
 def _make_minmax_kernel(what):
@@ -1139,7 +1139,7 @@ def _make_subset_minmax_kernel(what):
     def f(subset, a, stream=None):
         from pycuda.reduction import get_subset_minmax_kernel
         import pycuda.reduction
-        krnl = get_subset_minmax_kernel(what, a.dtype)
+        krnl = get_subset_minmax_kernel(what, a.dtype, subset.dtype)
         return krnl(subset, a,  stream=stream)
 
     return f

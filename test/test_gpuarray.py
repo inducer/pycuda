@@ -555,16 +555,18 @@ class TestGPUArray:
     @mark_cuda_test
     def test_dot(self):
         from pycuda.curandom import rand as curand
-        a_gpu = curand((200000,))
-        a = a_gpu.get()
-        b_gpu = curand((200000,))
-        b = b_gpu.get()
+        for l in [2,3,4,5,6,7, 31, 32, 33, 127, 128, 129, 255, 256, 257, 16384 - 993,
+                20000]:
+            a_gpu = curand((l,))
+            a = a_gpu.get()
+            b_gpu = curand((l,))
+            b = b_gpu.get()
 
-        dot_ab = np.dot(a, b)
+            dot_ab = np.dot(a, b)
 
-        dot_ab_gpu = gpuarray.dot(a_gpu, b_gpu).get()
+            dot_ab_gpu = gpuarray.dot(a_gpu, b_gpu).get()
 
-        assert abs(dot_ab_gpu-dot_ab)/abs(dot_ab) < 1e-4
+            assert abs(dot_ab_gpu-dot_ab)/abs(dot_ab) < 1e-4
 
     @mark_cuda_test
     def test_slice(self):
