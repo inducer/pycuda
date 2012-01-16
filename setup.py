@@ -25,7 +25,7 @@ def get_config_schema():
 
     nvcc_path = search_on_path(["nvcc", "nvcc.exe"])
     if nvcc_path is None:
-        print("*** CUDA_ROOT not set, and nvcc not in path. Giving up.")
+        print("*** nvcc not in path. Giving up.")
         sys.exit(1)
 
     cuda_root_default = normpath(join(dirname(nvcc_path), ".."))
