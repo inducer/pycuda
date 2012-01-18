@@ -328,13 +328,14 @@ unrelated to software. That said, if you do discuss some of the development
 aspects of your code and would like to highlight a few of the ideas behind
 PyCUDA, feel free to cite this article:
 
-    Andreas Klöckner, Nicolas Pinto, Yunsup Lee, Bryan Catanzaro, Paul Ivanov, Ahmed Fasih.
-    `PyCUDA and PyOpenCL: A Scripting-Based Approach to GPU Run-Time Code Generation <http://arxiv.org/abs/0911.3456>`_
-    November 2009, submitted.
+    Andreas Klöckner, Nicolas Pinto, Yunsup Lee, Bryan Catanzaro, Paul Ivanov,
+    Ahmed Fasih, PyCUDA and PyOpenCL: A scripting-based approach to GPU
+    run-time code generation, Parallel Computing, Volume 38, Issue 3, March
+    2012, Pages 157-174.
 
 Here's a Bibtex entry for your convenience::
 
-    @techreport{kloeckner_pycuda_2009,
+    @article{kloeckner_pycuda_2012,
        author = {{Kl{\"o}ckner}, Andreas 
             and {Pinto}, Nicolas 
             and {Lee}, Yunsup 
@@ -342,10 +343,11 @@ Here's a Bibtex entry for your convenience::
             and {Ivanov}, Paul 
             and {Fasih}, Ahmed },
        title = "{PyCUDA and PyOpenCL: A Scripting-Based Approach to GPU Run-Time Code Generation}",
-       url = {http://arxiv.org/abs/0911.3456},
-       institution = "Scientific Computing Group, Brown University",
-       number = "2009-40",
-       address = "Providence, RI, USA",
-       year = 2009,
-       month = nov,
+       journal = "Parallel Computing",
+       volume = "38",
+       number = "3",
+       pages = "157--174",
+       year = "2012",
+       issn = "0167-8191",
+       doi = "10.1016/j.parco.2011.09.001",
     }
