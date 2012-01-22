@@ -3,6 +3,7 @@
 .settings
 *~
 .*.sw[po]
+.sw[po]
 *.dat
 *.pyc
 *.pyo
