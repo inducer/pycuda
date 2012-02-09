@@ -325,8 +325,6 @@ class GPUArray(object):
             raise RuntimeError("only contiguous arrays may "
                     "be used as arguments to this operation")
 
-        assert self.dtype == np.float32
-
         func = elementwise.get_rdivide_elwise_kernel(self.dtype)
         func.prepared_async_call(self._grid, self._block, stream,
                 self.gpudata, other,
