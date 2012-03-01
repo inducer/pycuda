@@ -7,7 +7,7 @@ def search_on_path(filenames):
     """Find file on system path."""
     # http://aspn.activestate.com/ASPN/Cookbook/Python/Recipe/52224
 
-    from os.path import exists, join, abspath
+    from os.path import exists, abspath
     from os import pathsep, environ
 
     search_path = environ["PATH"]
@@ -26,6 +26,7 @@ def get_config_schema():
     nvcc_path = search_on_path(["nvcc", "nvcc.exe"])
     if nvcc_path is None:
         print("*** nvcc not in path. Giving up.")
+        import sys
         sys.exit(1)
 
     cuda_root_default = normpath(join(dirname(nvcc_path), ".."))
