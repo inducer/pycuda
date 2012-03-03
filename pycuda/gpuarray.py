@@ -355,9 +355,15 @@ class GPUArray(object):
         else:
             if dtype == self.dtype:
                 strides = self.strides
+        
+        ## respect old ordering
+        if self.flags.f_contiguous:
+            order="F"
+        else:
+            order="C"
 
         return self.__class__(self.shape, dtype,
-                allocator=self.allocator, strides=strides)
+                allocator=self.allocator, strides=strides, order=order)
 
     # operators ---------------------------------------------------------------
     def mul_add(self, selffac, other, otherfac, add_timer=None, stream=None):
@@ -629,6 +635,16 @@ class GPUArray(object):
         # TODO: add more error-checking, perhaps
         if isinstance(shape[0], tuple) or isinstance(shape[0], list):
             shape = tuple(shape[0])
+
+        # allow users to change ordering and respect
+        # the old ordering otherwise
+        if len(shape)==3:
+            order=shape[2]; shape=shape[0:2]
+        elif self.flags.f_contiguous:
+            order="F"
+        else:
+            order="C"
+            
         size = reduce(lambda x, y: x * y, shape, 1)
         if size != self.size:
             raise ValueError("total size of new array must be unchanged")
@@ -638,7 +654,8 @@ class GPUArray(object):
                 dtype=self.dtype,
                 allocator=self.allocator,
                 base=self,
-                gpudata=int(self.gpudata))
+                gpudata=int(self.gpudata),
+                order=order)
 
     def ravel(self):
         return self.reshape(self.size)
