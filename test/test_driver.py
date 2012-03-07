@@ -462,7 +462,7 @@ class TestDriver:
 
         func = mod.get_function("doublify")
         func.prepare("P")
-        func.prepared_call((1, 1), (4,4,1), a_gpu)
+        func.prepared_call((1, 1), (4,4,1), a_gpu, shared_size=20)
         a_doubled = np.empty_like(a)
         drv.memcpy_dtoh(a_doubled, a_gpu)
         print a

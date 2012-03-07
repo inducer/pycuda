@@ -242,6 +242,14 @@ def _add_functionality():
                     "version 2011.1.", DeprecationWarning, stacklevel=2)
             args = (block,) + args
 
+        shared_size = kwargs.pop("shared_size", None)
+        if shared_size is not None:
+            func._set_shared_size(shared_size)
+
+        if kwargs:
+            raise TypeError("unknown keyword arguments: "
+                    + ", ".join(kwargs.iterkeys()))
+
         from pycuda._pvt_struct import pack
         func._param_setv(0, pack(func.arg_format, *args))
 
@@ -258,6 +266,14 @@ def _add_functionality():
             warn("Not passing the block size to prepared_timed_call is deprecated as of "
                     "version 2011.1.", DeprecationWarning, stacklevel=2)
             args = (block,) + args
+
+        shared_size = kwargs.pop("shared_size", None)
+        if shared_size is not None:
+            func._set_shared_size(shared_size)
+
+        if kwargs:
+            raise TypeError("unknown keyword arguments: "
+                    + ", ".join(kwargs.iterkeys()))
 
         from pycuda._pvt_struct import pack
         func._param_setv(0, pack(func.arg_format, *args))
@@ -287,6 +303,14 @@ def _add_functionality():
                     "version 2011.1.", DeprecationWarning, stacklevel=2)
             args = (stream,) + args
             stream = block
+
+        shared_size = kwargs.pop("shared_size", None)
+        if shared_size is not None:
+            func._set_shared_size(shared_size)
+
+        if kwargs:
+            raise TypeError("unknown keyword arguments: "
+                    + ", ".join(kwargs.iterkeys()))
 
         from pycuda._pvt_struct import pack
         func._param_setv(0, pack(func.arg_format, *args))
