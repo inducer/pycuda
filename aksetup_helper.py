@@ -577,6 +577,8 @@ def set_up_shipped_boost_if_requested(project_name, conf):
         if sys.platform == "win32":
             source_files += glob(
                     "bpl-subset/bpl_subset/libs/thread/src/win32/*.cpp")
+            source_files += glob(
+                    "bpl-subset/bpl_subset/libs/thread/src/*.cpp")
         else:
             source_files += glob(
                     "bpl-subset/bpl_subset/libs/thread/src/pthread/*.cpp")
@@ -599,6 +601,7 @@ def set_up_shipped_boost_if_requested(project_name, conf):
                 {
                     # do not pick up libboost link dependency on windows
                     "BOOST_ALL_NO_LIB": 1,
+                    "BOOST_THREAD_BUILD_DLL": 1,
 
                     "BOOST_MULTI_INDEX_DISABLE_SERIALIZATION": 1,
                     "BOOST_PYTHON_SOURCE": 1,
