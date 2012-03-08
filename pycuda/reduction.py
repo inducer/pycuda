@@ -89,7 +89,9 @@ def get_reduction_module(out_type, block_size,
         void %(name)s(out_type *out, %(arguments)s,
           unsigned int seq_count, unsigned int n)
         {
-          __shared__ out_type sdata[BLOCK_SIZE];
+          // Needs to be variable-size to prevent the braindead CUDA compiler from
+          // running constructors on this array. Grrrr.
+          extern __shared__ out_type sdata[];
 
           unsigned int tid = threadIdx.x;
 
@@ -269,9 +271,12 @@ class ReductionKernel:
             else:
                 result = empty((block_count,), self.dtype_out, repr_vec.allocator)
 
+            kwargs = dict(shared_size=self.block_size*self.dtype_out.itemsize)
+
             #print block_count, seq_count, self.block_size, sz
             f((block_count, 1), (self.block_size, 1, 1), stream,
-                    *([result.gpudata]+invocation_args+[seq_count, sz]))
+                    *([result.gpudata]+invocation_args+[seq_count, sz]),
+                    **kwargs)
 
             if block_count == 1:
                 return result
