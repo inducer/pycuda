@@ -8,7 +8,14 @@ from pycuda.compyte.array import (
         f_contiguous_strides as _f_contiguous_strides, 
         c_contiguous_strides as _c_contiguous_strides, 
         ArrayFlags as _ArrayFlags,
-        get_common_dtype as _get_common_dtype)
+        get_common_dtype as _get_common_dtype_base)
+from pycuda.characterize import has_double_support
+
+
+
+
+def _get_common_dtype(obj1, obj2):
+    return _get_common_dtype_base(obj1, obj2, has_double_support())
 
 
 
