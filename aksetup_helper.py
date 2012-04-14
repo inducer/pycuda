@@ -316,7 +316,8 @@ class ConfigSchema:
         except IOError:
             pass
 
-        del filevars["__builtins__"]
+        if "__builtins__" in filevars:
+            del filevars["__builtins__"]
 
         for key, value in config.items():
             if value is not None:
