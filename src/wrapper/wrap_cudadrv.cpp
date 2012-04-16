@@ -1351,7 +1351,8 @@ BOOST_PYTHON_MODULE(_driver)
   {
     typedef surface_reference cl;
     py::class_<cl, boost::noncopyable>("SurfaceReference", py::no_init)
-      .DEF_SIMPLE_METHOD(set_array)
+      .def("set_array", &cl::set_array,
+          (py::arg("array"), py::arg("flags")=0))
       .def("get_array", &cl::get_array,
           py::return_value_policy<py::manage_new_object>())
       ;

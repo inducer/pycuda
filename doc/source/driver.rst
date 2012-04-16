@@ -1077,7 +1077,7 @@ Arrays and Textures
 
     .. versionadded:: 0.94
 
-    .. method:: set_array(array)
+    .. method:: set_array(array, flags=0)
 
         Bind *self* to the :class:`Array` *array*.
 
