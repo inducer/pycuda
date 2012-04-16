@@ -1005,7 +1005,7 @@ BOOST_PYTHON_MODULE(_driver)
       .DEF_SIMPLE_METHOD(set_cache_config)
 #endif
 #if CUDAPP_CUDA_VERSION >= 4000
-      .def("launch_kernel", &cl::launch_kernel)
+      .def("_launch_kernel", &cl::launch_kernel)
 #endif
       ;
   }
