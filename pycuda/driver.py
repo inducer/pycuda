@@ -108,8 +108,7 @@ def _add_functionality():
     def device___getattr__(dev, name):
         return dev.get_attribute(getattr(device_attribute, name.upper()))
 
-    def function_param_set(func, *args):
-
+    def _build_arg_buf(args):
         handlers = []
 
         arg_data = []
@@ -139,14 +138,22 @@ def _add_functionality():
                     format += "P"
 
         from pycuda._pvt_struct import pack
-        buf = pack(format, *arg_data)
+        return handlers, pack(format, *arg_data)
+
+    # {{{ pre-CUDA 4 call interface (stateful)
+
+    def function_param_set(func, *args):
+        handlers = []
+
+        handlers, buf = _build_arg_buf(args)
 
         func._param_setv(0, buf)
         func._param_set_size(len(buf))
 
         return handlers
 
-    def function_call(func, *args, **kwargs):
+
+    def function_call_pre_v4(func, *args, **kwargs):
         grid = kwargs.pop("grid", (1,1))
         stream = kwargs.pop("stream", None)
         block = kwargs.pop("block", None)
@@ -156,7 +163,7 @@ def _add_functionality():
 
         if kwargs:
             raise ValueError(
-                    "extra keyword arguments: %s" 
+                    "extra keyword arguments: %s"
                     % (",".join(kwargs.iterkeys())))
 
         if block is None:
@@ -203,7 +210,7 @@ def _add_functionality():
                 for handler in post_handlers:
                     handler.post_call(stream)
 
-    def function_prepare(func, arg_types, block=None, shared=None, texrefs=[]):
+    def function_prepare_pre_v4(func, arg_types, block=None, shared=None, texrefs=[]):
         from warnings import warn
         if block is not None:
             warn("setting the block size in Function.prepare is deprecated",
@@ -233,7 +240,7 @@ def _add_functionality():
 
         return func
 
-    def function_prepared_call(func, grid, block, *args, **kwargs):
+    def function_prepared_call_pre_v4(func, grid, block, *args, **kwargs):
         if isinstance(block, tuple):
             func._set_block_shape(*block)
         else:
@@ -258,7 +265,7 @@ def _add_functionality():
 
         func._launch_grid(*grid)
 
-    def function_prepared_timed_call(func, grid, block, *args, **kwargs):
+    def function_prepared_timed_call_pre_v4(func, grid, block, *args, **kwargs):
         if isinstance(block, tuple):
             func._set_block_shape(*block)
         else:
@@ -294,7 +301,7 @@ def _add_functionality():
 
         return get_call_time
 
-    def function_prepared_async_call(func, grid, block, stream, *args, **kwargs):
+    def function_prepared_async_call_pre_v4(func, grid, block, stream, *args, **kwargs):
         if isinstance(block, tuple):
             func._set_block_shape(*block)
         else:
@@ -324,6 +331,156 @@ def _add_functionality():
             grid_x, grid_y = grid
             func._launch_grid_async(grid_x, grid_y, stream)
 
+    # }}}
+
+    # {{{ CUDA 4+ call interface (stateless)
+
+    def function_call(func, *args, **kwargs):
+        grid = kwargs.pop("grid", (1,1))
+        stream = kwargs.pop("stream", None)
+        block = kwargs.pop("block", None)
+        shared = kwargs.pop("shared", 0)
+        texrefs = kwargs.pop("texrefs", [])
+        time_kernel = kwargs.pop("time_kernel", False)
+
+        if kwargs:
+            raise ValueError(
+                    "extra keyword arguments: %s"
+                    % (",".join(kwargs.iterkeys())))
+
+        if block is None:
+            raise ValueError, "must specify block size"
+
+        func._set_block_shape(*block)
+        handlers, arg_buf = _build_arg_buf(args)
+
+        for handler in handlers:
+            handler.pre_call(stream)
+
+        for texref in texrefs:
+            func.param_set_texref(texref)
+
+        post_handlers = [handler
+                for handler in handlers
+                if hasattr(handler, "post_call")]
+
+        if stream is None:
+            if time_kernel:
+                Context.synchronize()
+
+                from time import time
+                start_time = time()
+
+            func._launch_kernel(grid, block, arg_buf, shared, None)
+
+            if post_handlers or time_kernel:
+                Context.synchronize()
+
+                if time_kernel:
+                    run_time = time()-start_time
+
+                for handler in post_handlers:
+                    handler.post_call(stream)
+
+                if time_kernel:
+                    return run_time
+        else:
+            assert not time_kernel, "Can't time the kernel on an asynchronous invocation"
+            func._launch_kernel(grid, block, arg_buf, shared, stream)
+
+            if post_handlers:
+                for handler in post_handlers:
+                    handler.post_call(stream)
+
+    def function_prepare(func, arg_types, texrefs=[]):
+        func.texrefs = texrefs
+
+        func.arg_format = ""
+
+        for i, arg_type in enumerate(arg_types):
+            if isinstance(arg_type, type) and np is not None and np.number in arg_type.__mro__:
+                func.arg_format += np.dtype(arg_type).char
+            elif isinstance(arg_type, str):
+                func.arg_format += arg_type
+            else:
+                func.arg_format += np.dtype(np.intp).char
+
+        return func
+
+    def function_prepared_call(func, grid, block, *args, **kwargs):
+        if isinstance(block, tuple):
+            func._set_block_shape(*block)
+        else:
+            from warnings import warn
+            warn("Not passing the block size to prepared_call is deprecated as of "
+                    "version 2011.1.", DeprecationWarning, stacklevel=2)
+            args = (block,) + args
+
+        shared_size = kwargs.pop("shared_size", 0)
+
+        if kwargs:
+            raise TypeError("unknown keyword arguments: "
+                    + ", ".join(kwargs.iterkeys()))
+
+        from pycuda._pvt_struct import pack
+        arg_buf = pack(func.arg_format, *args)
+
+        for texref in func.texrefs:
+            func.param_set_texref(texref)
+
+        func._launch_kernel(grid, block, arg_buf, shared_size, None)
+
+    def function_prepared_timed_call(func, grid, block, *args, **kwargs):
+        shared_size = kwargs.pop("shared_size", 0)
+        if kwargs:
+            raise TypeError("unknown keyword arguments: "
+                    + ", ".join(kwargs.iterkeys()))
+
+        from pycuda._pvt_struct import pack
+        arg_buf = pack(func.arg_format, *args)
+
+        for texref in func.texrefs:
+            func.param_set_texref(texref)
+
+        start = Event()
+        end = Event()
+
+        start.record()
+        func._launch_kernel(grid, block, arg_buf, shared_size, None)
+        end.record()
+
+        def get_call_time():
+            end.synchronize()
+            return end.time_since(start)*1e-3
+
+        return get_call_time
+
+    def function_prepared_async_call(func, grid, block, stream, *args, **kwargs):
+        if isinstance(block, tuple):
+            func._set_block_shape(*block)
+        else:
+            from warnings import warn
+            warn("Not passing the block size to prepared_async_call is deprecated as of "
+                    "version 2011.1.", DeprecationWarning, stacklevel=2)
+            args = (stream,) + args
+            stream = block
+
+        shared_size = kwargs.pop("shared_size", 0)
+
+        if kwargs:
+            raise TypeError("unknown keyword arguments: "
+                    + ", ".join(kwargs.iterkeys()))
+
+        from pycuda._pvt_struct import pack
+        arg_buf = pack(func.arg_format, *args)
+
+        for texref in func.texrefs:
+            func.param_set_texref(texref)
+
+        func._launch_kernel(grid, block, arg_buf, shared_size, stream)
+
+    # }}}
+
     def function___getattr__(self, name):
         if get_version() >= (2,2):
             return self.get_attribute(getattr(function_attribute, name.upper()))
@@ -338,7 +495,7 @@ def _add_functionality():
         def new_func(*args, **kwargs):
             from warnings import warn
             warn("'%s' has been deprecated in version 2011.1. Please use "
-                    "the stateless launch interface instead." % func.__name__[1:], 
+                    "the stateless launch interface instead." % func.__name__[1:],
                     DeprecationWarning, stacklevel=2)
             return func(*args, **kwargs)
 
@@ -357,28 +514,35 @@ def _add_functionality():
 
     Device.get_attributes = device_get_attributes
     Device.__getattr__ = device___getattr__
-    Function._param_set = function_param_set
-    Function.__call__ = function_call
-    Function.prepare = function_prepare
-    Function.prepared_call = function_prepared_call
-    Function.prepared_timed_call = function_prepared_timed_call
-    Function.prepared_async_call = function_prepared_async_call
+
+    if get_version() >= (4,):
+        Function.__call__ = function_call
+        Function.prepare = function_prepare
+        Function.prepared_call = function_prepared_call
+        Function.prepared_timed_call = function_prepared_timed_call
+        Function.prepared_async_call = function_prepared_async_call
+    else:
+        Function._param_set = function_param_set_pre_v4
+        Function.__call__ = function_call_pre_v4
+        Function.prepare = function_prepare_pre_v4
+        Function.prepared_call = function_prepared_call_pre_v4
+        Function.prepared_timed_call = function_prepared_timed_call_pre_v4
+        Function.prepared_async_call = function_prepared_async_call_pre_v4
+
+        for meth_name in ["set_block_shape", "set_shared_size",
+                "param_set_size", "param_set", "param_seti", "param_setf", "param_setv",
+                "launch", "launch_grid", "launch_grid_async"]:
+            setattr(Function, meth_name, mark_func_method_deprecated(
+                    getattr(Function, "_"+meth_name)))
+
     Function.__getattr__ = function___getattr__
 
-    for meth_name in ["set_block_shape", "set_shared_size",
-            "param_set_size", "param_set", "param_seti", "param_setf", "param_setv",
-            "launch", "launch_grid", "launch_grid_async"]:
-        setattr(Function, meth_name, mark_func_method_deprecated(
-                getattr(Function, "_"+meth_name)))
 
 
 
 
 
 _add_functionality()
-
-
-
 
 # {{{ pagelocked numpy arrays
 
@@ -440,23 +604,10 @@ def aligned_zeros_like(array, alignment=4096):
 
 # }}}
 
-
-
-
 def mem_alloc_like(ary):
     return mem_alloc(ary.nbytes)
 
-
-
-
-def to_device(bf_obj):
-    bf = buffer(bf_obj)
-    result = mem_alloc(len(bf))
-    memcpy_htod(result, bf)
-    return result
-
-
-
+# {{{ array handling
 
 def dtype_to_array_format(dtype):
     if dtype == np.uint8:
@@ -475,7 +626,7 @@ def dtype_to_array_format(dtype):
         return array_format.FLOAT
     else:
         raise TypeError(
-                "cannot convert dtype '%s' to array format" 
+                "cannot convert dtype '%s' to array format"
                 % dtype)
 
 
@@ -488,7 +639,7 @@ def matrix_to_array(matrix, order, allow_double_hack=False):
     elif order.upper() == "F":
         w, h = matrix.shape
         stride = -1
-    else: 
+    else:
         raise LogicError, "order must be either F or C"
 
     matrix = np.asarray(matrix, order=order)
@@ -530,7 +681,7 @@ def make_multichannel_2d_array(ndarray, order):
     elif order.upper() == "F":
         num_channels, w, h = ndarray.shape
         stride = 2
-    else: 
+    else:
         raise LogicError, "order must be either F or C"
 
     descr.width = w
@@ -560,13 +711,18 @@ def bind_array_to_texref(ary, texref):
     texref.set_filter_mode(filter_mode.POINT)
     assert texref.get_flags() == 0
 
-
-
+# }}}
 
 def matrix_to_texref(matrix, texref, order):
     bind_array_to_texref(matrix_to_array(matrix, order), texref)
 
+# {{{ device copies
 
+def to_device(bf_obj):
+    bf = buffer(bf_obj)
+    result = mem_alloc(len(bf))
+    memcpy_htod(result, bf)
+    return result
 
 
 def from_device(devptr, shape, dtype, order="C"):
@@ -581,3 +737,7 @@ def from_device_like(devptr, other_ary):
     result = np.empty_like(other_ary)
     memcpy_dtoh(result, devptr)
     return result
+
+# }}}
+
+# vim: fdm=marker
