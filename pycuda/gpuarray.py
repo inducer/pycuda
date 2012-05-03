@@ -206,10 +206,14 @@ class GPUArray(object):
     def set(self, ary):
         assert ary.size == self.size
         assert ary.dtype == self.dtype
+        assert ary.strides == self.strides
 
         assert self.flags.forc
         if not ary.flags.forc:
-            raise RuntimeError("cannot set from non-contiguous array")
+            from warnings import warn
+            warn("Setting array from one with different strides/storage order. "
+                    "This will cease to work in 2013.x.",
+                    stacklevel=2)
 
         if self.size:
             drv.memcpy_htod(self.gpudata, ary)
@@ -217,6 +221,12 @@ class GPUArray(object):
     def set_async(self, ary, stream=None):
         assert ary.size == self.size
         assert ary.dtype == self.dtype
+        if ary.strides != self.strides:
+            from warnings import warn
+            warn("Setting array from one with different strides/storage order. "
+                    "This will cease to work in 2013.x.",
+                    stacklevel=2)
+
         assert self.flags.forc
 
         if not ary.flags.forc:
