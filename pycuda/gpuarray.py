@@ -206,14 +206,13 @@ class GPUArray(object):
     def set(self, ary):
         assert ary.size == self.size
         assert ary.dtype == self.dtype
-        assert ary.strides == self.strides
-
-        assert self.flags.forc
-        if not ary.flags.forc:
+        if ary.strides != self.strides:
             from warnings import warn
             warn("Setting array from one with different strides/storage order. "
                     "This will cease to work in 2013.x.",
                     stacklevel=2)
+
+        assert self.flags.forc
 
         if self.size:
             drv.memcpy_htod(self.gpudata, ary)
