@@ -576,6 +576,15 @@ namespace pycuda
         return m_valid;
       }
 
+      static boost::shared_ptr<context> attach(unsigned int flags)
+      {
+        CUcontext current;
+        CUDAPP_CALL_GUARDED(cuCtxAttach, (&current, flags));
+        boost::shared_ptr<context> result(new context(current));
+        context_stack::get().push(result);
+        return result;
+      }
+
       void detach()
       {
         if (m_valid)
@@ -752,6 +761,10 @@ namespace pycuda
     context_stack::get().push(result);
     return result;
   }
+
+
+
+
 
 
 

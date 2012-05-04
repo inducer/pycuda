@@ -896,6 +896,8 @@ BOOST_PYTHON_MODULE(_driver)
       .def(py::self != py::self)
       .def("__hash__", &cl::hash)
 
+      .def("attach", &cl::attach, (py::arg("flags")=0))
+      .staticmethod("attach")
       .DEF_SIMPLE_METHOD(detach)
 
 #if CUDAPP_CUDA_VERSION >= 2000
