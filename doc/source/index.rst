@@ -1,6 +1,9 @@
 Welcome to PyCUDA's documentation!
 ==================================
 
+(Also available in `Japanese <http://translation.saitonorio.com/pycuda/>`_,
+thanks to Norio Saito.)
+
 PyCUDA gives you easy, Pythonic access to `Nvidia <http://nvidia.com>`_'s `CUDA
 <http://nvidia.com/cuda/>`_ parallel computation API. Several wrappers of the
 CUDA API already exist--so why the need for PyCUDA?
