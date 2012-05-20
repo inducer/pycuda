@@ -74,7 +74,7 @@ def main():
 
     check_git_submodules()
 
-    hack_distutils(debug=True)
+    hack_distutils()
     conf = get_config(get_config_schema())
     EXTRA_SOURCES, EXTRA_DEFINES = set_up_shipped_boost_if_requested("pycuda", conf)
 
@@ -130,6 +130,12 @@ def main():
     except ImportError:
         # 2.x
         from distutils.command.build_py import build_py
+
+    import sys
+    if sys.version_info >= (3,):
+        pvt_struct_source = "src/wrapper/_pvt_struct_v3.cpp"
+    else:
+        pvt_struct_source = "src/wrapper/_pvt_struct_v2.cpp"
 
     setup(name="pycuda",
             # metadata
@@ -215,7 +221,7 @@ def main():
                     extra_link_args=conf["LDFLAGS"],
                     ),
                 NumpyExtension("_pvt_struct",
-                    ["src/wrapper/_pycuda_struct.cpp"],
+                    [pvt_struct_source],
                     extra_compile_args=conf["CXXFLAGS"],
                     extra_link_args=conf["LDFLAGS"],
                     ),

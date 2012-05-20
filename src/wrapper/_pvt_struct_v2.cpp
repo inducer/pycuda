@@ -19,7 +19,9 @@
 
 /* compatibility macros */
 #if (PY_VERSION_HEX < 0x02050000)
+#ifndef PY_SSIZE_T_MIN
 typedef long int Py_ssize_t;
+#endif
 
 #define PyInt_FromSsize_t(x) PyInt_FromLong(x)
 #define PyInt_AsSsize_t(x) PyInt_AsLong(x)
