@@ -142,7 +142,7 @@ def _add_functionality():
 
     # {{{ pre-CUDA 4 call interface (stateful)
 
-    def function_param_set(func, *args):
+    def function_param_set_pre_v4(func, *args):
         handlers = []
 
         handlers, buf = _build_arg_buf(args)
