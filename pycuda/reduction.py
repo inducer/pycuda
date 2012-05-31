@@ -76,17 +76,17 @@ def get_reduction_module(out_type, block_size,
     src = """
         #include <pycuda-complex.hpp>
 
-        #define BLOCK_SIZE %(block_size)d
-        #define READ_AND_MAP(i) (%(map_expr)s)
-        #define REDUCE(a, b) (%(reduce_expr)s)
+        #define BLOCK_SIZE ${block_size}
+        #define READ_AND_MAP(i) (${map_expr})
+        #define REDUCE(a, b) (${reduce_expr})
 
-        %(preamble)s
+        ${preamble}
 
-        typedef %(out_type)s out_type;
+        typedef ${out_type} out_type;
 
         extern "C"
         __global__
-        void %(name)s(out_type *out, %(arguments)s,
+        void ${name}(out_type *out, ${arguments},
           unsigned int seq_count, unsigned int n)
         {
           // Needs to be variable-size to prevent the braindead CUDA compiler from
@@ -97,7 +97,7 @@ def get_reduction_module(out_type, block_size,
 
           unsigned int i = blockIdx.x*BLOCK_SIZE*seq_count + tid;
 
-          out_type acc = %(neutral)s;
+          out_type acc = ${neutral};
           for (unsigned s = 0; s < seq_count; ++s)
           {
             if (i >= n)
@@ -109,8 +109,29 @@ def get_reduction_module(out_type, block_size,
 
           sdata[tid] = acc;
 
-          __syncthreads();
+          <%
+            cur_size = block_size
+          %>
 
+          % while cur_size > 1:
+              __syncthreads();
+
+              <%
+              new_size = cur_size // 2
+              assert new_size * 2 == cur_size
+              %>
+
+              if (threadIdx.x < ${new_size})
+              {
+                  sdata[threadIdx.x] = REDUCE(
+                    sdata[threadIdx.x],
+                    sdata[threadIdx.x + ${new_size}]);
+              }
+
+              <% cur_size = new_size %>
+          % endwhile
+
+          /*
           #if (BLOCK_SIZE >= 512)
             if (tid < 256) { sdata[tid] = REDUCE(sdata[tid], sdata[tid + 256]); }
             __syncthreads();
@@ -137,19 +158,24 @@ def get_reduction_module(out_type, block_size,
             if (BLOCK_SIZE >= 4)  smem[tid] = REDUCE(smem[tid], smem[tid + 2]);
             if (BLOCK_SIZE >= 2)  smem[tid] = REDUCE(smem[tid], smem[tid + 1]);
           }
+          #endif
+          */
 
           if (tid == 0) out[blockIdx.x] = sdata[0];
         }
-        """ % {
-            "out_type": out_type,
-            "arguments": arguments,
-            "block_size": block_size,
-            "neutral": neutral,
-            "reduce_expr": reduce_expr,
-            "map_expr": map_expr,
-            "name": name,
-            "preamble": preamble
-            }
+        """
+
+    from mako.template import Template
+    src = Template(src).render(
+        out_type=out_type,
+        arguments=arguments,
+        block_size=block_size,
+        neutral=neutral,
+        reduce_expr=reduce_expr,
+        map_expr=map_expr,
+        name=name,
+        preamble=preamble
+        )
     return SourceModule(src, options=options, keep=keep, no_extern_c=True)
 
 
