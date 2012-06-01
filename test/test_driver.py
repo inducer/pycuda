@@ -465,8 +465,8 @@ class TestDriver:
         func.prepared_call((1, 1), (4,4,1), a_gpu, shared_size=20)
         a_doubled = np.empty_like(a)
         drv.memcpy_dtoh(a_doubled, a_gpu)
-        print a
-        print a_doubled
+        print (a)
+        print (a_doubled)
         assert la.norm(a_doubled-2*a) == 0
 
         # now with offsets
@@ -573,7 +573,7 @@ if __name__ == "__main__":
 
     import sys
     if len(sys.argv) > 1:
-        exec sys.argv[1]
+        exec (sys.argv[1])
     else:
         from py.test.cmdline import main
         main([__file__])

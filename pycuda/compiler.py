@@ -76,13 +76,13 @@ def compile_plain(source, options, keep, nvcc, cache_dir):
         if '#include' in source:
             checksum.update(preprocess_source(source, options, nvcc))
         else:
-            checksum.update(source)
+            checksum.update(source.encode("utf-8"))
 
         for option in options: 
-            checksum.update(option)
+            checksum.update(option.encode("utf-8"))
         checksum.update(get_nvcc_version(nvcc))
         from pycuda.characterize import platform_bits
-        checksum.update(str(platform_bits()))
+        checksum.update(str(platform_bits()).encode("utf-8"))
 
         cache_file = checksum.hexdigest()
         cache_path = join(cache_dir, cache_file + ".cubin")

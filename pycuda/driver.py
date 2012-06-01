@@ -719,7 +719,11 @@ def matrix_to_texref(matrix, texref, order):
 # {{{ device copies
 
 def to_device(bf_obj):
-    bf = buffer(bf_obj)
+    import sys
+    if sys.version_info >= (2, 7):
+        bf = memoryview(bf_obj).tobytes()
+    else:
+        bf = buffer(bf_obj)
     result = mem_alloc(len(bf))
     memcpy_htod(result, bf)
     return result

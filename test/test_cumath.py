@@ -34,7 +34,7 @@ numpy_func_names = {
 
 
 
-def make_unary_function_test(name, (a, b)=(0, 1), threshold=0):
+def make_unary_function_test(name, a=0, b=1, threshold=0):
     def test():
         gpu_func = getattr(cumath, name)
         cpu_func = getattr(np, numpy_func_names.get(name, name))
@@ -55,25 +55,25 @@ def make_unary_function_test(name, (a, b)=(0, 1), threshold=0):
 
 
 if have_pycuda():
-    test_ceil = make_unary_function_test("ceil", (-10, 10))
-    test_floor = make_unary_function_test("ceil", (-10, 10))
-    test_fabs = make_unary_function_test("fabs", (-10, 10))
-    test_exp = make_unary_function_test("exp", (-3, 3), 1e-5)
-    test_log = make_unary_function_test("log", (1e-5, 1), 5e-7)
-    test_log10 = make_unary_function_test("log10", (1e-5, 1), 3e-7)
-    test_sqrt = make_unary_function_test("sqrt", (1e-5, 1), 2e-7)
+    test_ceil = make_unary_function_test("ceil", -10, 10)
+    test_floor = make_unary_function_test("ceil", -10, 10)
+    test_fabs = make_unary_function_test("fabs", -10, 10)
+    test_exp = make_unary_function_test("exp", -3, 3, 1e-5)
+    test_log = make_unary_function_test("log", 1e-5, 1, 5e-7)
+    test_log10 = make_unary_function_test("log10", 1e-5, 1, 3e-7)
+    test_sqrt = make_unary_function_test("sqrt", 1e-5, 1, 2e-7)
 
-    test_sin = make_unary_function_test("sin", (-10, 10), 1e-7)
-    test_cos = make_unary_function_test("cos", (-10, 10), 1e-7)
-    test_asin = make_unary_function_test("asin", (-0.9, 0.9), 5e-7)
-    test_acos = make_unary_function_test("acos", (-0.9, 0.9), 5e-7)
+    test_sin = make_unary_function_test("sin", -10, 10, 1e-7)
+    test_cos = make_unary_function_test("cos", -10, 10, 1e-7)
+    test_asin = make_unary_function_test("asin", -0.9, 0.9, 5e-7)
+    test_acos = make_unary_function_test("acos", -0.9, 0.9, 5e-7)
     test_tan = make_unary_function_test("tan", 
-            (-math.pi/2 + 0.1, math.pi/2 - 0.1), 1e-5)
-    test_atan = make_unary_function_test("atan", (-10, 10), 2e-7)
+            -math.pi/2 + 0.1, math.pi/2 - 0.1, 1e-5)
+    test_atan = make_unary_function_test("atan", -10, 10, 2e-7)
 
-    test_sinh = make_unary_function_test("sinh", (-3, 3), 1e-6)
-    test_cosh = make_unary_function_test("cosh", (-3, 3), 1e-6)
-    test_tanh = make_unary_function_test("tanh", (-3, 3), 2e-6)
+    test_sinh = make_unary_function_test("sinh", -3, 3, 1e-6)
+    test_cosh = make_unary_function_test("cosh", -3, 3, 1e-6)
+    test_tanh = make_unary_function_test("tanh", -3, 3, 2e-6)
 
 
 
@@ -151,7 +151,7 @@ if __name__ == "__main__":
 
     import sys
     if len(sys.argv) > 1:
-        exec sys.argv[1]
+        exec (sys.argv[1])
     else:
         from py.test.cmdline import main
         main([__file__])

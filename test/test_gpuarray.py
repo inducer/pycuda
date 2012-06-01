@@ -601,8 +601,8 @@ class TestGPUArray:
         max_a_b_gpu = gpuarray.maximum(a_gpu, b_gpu)
         min_a_b_gpu = gpuarray.minimum(a_gpu, b_gpu)
 
-        print max_a_b_gpu
-        print np.maximum(a, b)
+        print (max_a_b_gpu)
+        print (np.maximum(a, b))
 
         assert la.norm(max_a_b_gpu.get()- np.maximum(a, b)) == 0
         assert la.norm(min_a_b_gpu.get()- np.minimum(a, b)) == 0
@@ -719,9 +719,9 @@ class TestGPUArray:
     def test_stride_preservation(self):
         A = np.random.rand(3,3)
         AT = A.T
-        print AT.flags.f_contiguous, AT.flags.c_contiguous
+        print (AT.flags.f_contiguous, AT.flags.c_contiguous)
         AT_GPU = gpuarray.to_gpu(AT)
-        print AT_GPU.flags.f_contiguous, AT_GPU.flags.c_contiguous
+        print (AT_GPU.flags.f_contiguous, AT_GPU.flags.c_contiguous)
         assert np.allclose(AT_GPU.get(),AT)
 
     @mark_cuda_test
@@ -838,7 +838,7 @@ if __name__ == "__main__":
 
     import sys
     if len(sys.argv) > 1:
-        exec sys.argv[1]
+        exec (sys.argv[1])
     else:
         from py.test.cmdline import main
         main([__file__])
