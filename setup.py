@@ -25,11 +25,10 @@ def get_config_schema():
 
     nvcc_path = search_on_path(["nvcc", "nvcc.exe"])
     if nvcc_path is None:
-        print("*** nvcc not in path. Giving up.")
-        import sys
-        sys.exit(1)
-
-    cuda_root_default = normpath(join(dirname(nvcc_path), ".."))
+        print("*** WARNING: nvcc not in path.")
+        cuda_root_default = None
+    else:
+        cuda_root_default = normpath(join(dirname(nvcc_path), ".."))
 
     return ConfigSchema(make_boost_base_options() + [
         Switch("USE_SHIPPED_BOOST", True, "Use included Boost library"),
@@ -69,13 +68,14 @@ def main():
     import sys
 
     from aksetup_helper import (hack_distutils, get_config, setup, \
-            NumpyExtension, Extension, set_up_shipped_boost_if_requested,
+            NumpyExtension, set_up_shipped_boost_if_requested,
             check_git_submodules)
 
     check_git_submodules()
 
     hack_distutils()
     conf = get_config(get_config_schema())
+
     EXTRA_SOURCES, EXTRA_DEFINES = set_up_shipped_boost_if_requested("pycuda", conf)
 
     EXTRA_DEFINES["PYGPU_PACKAGE"] = "pycuda"
