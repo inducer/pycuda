@@ -1,13 +1,18 @@
 User-visible Changes
 ====================
 
-Version 2011.2.1
-----------------
-
+Version 2012.2
+--------------
 .. note::
 
     This version is the current development version. You can get it from
     PyCUDA's version control repository.
+
+Version 2012.1
+--------------
+
+* Support fo
+* Numerous bug fixes. (including shipped-boost compilation on gcc 4.7)
 
 Version 2011.2
 --------------
