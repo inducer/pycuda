@@ -895,6 +895,15 @@ def arange(*args, **kwargs):
 
 # }}}
 
+# {{{ pickle support
+
+import copy_reg
+copy_reg.pickle(GPUArray,
+                lambda data: (to_gpu, (data.get(),)),
+                to_gpu)
+
+# }}}
+
 # {{{ take/put
 
 def take(a, indices, out=None, stream=None):
