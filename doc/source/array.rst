@@ -673,6 +673,9 @@ on one or several operands in a single pass.
         truncated to the container. Also, *slice* may contain negative indices
         to index relative to the end of the array.
 
+        If *stream* is given, it must be a :class:`pycuda.driver.Stream` object,
+        where the execution will be serialized.
+
 Here's a usage example::
 
     import pycuda.gpuarray as gpuarray
