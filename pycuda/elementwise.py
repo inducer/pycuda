@@ -194,6 +194,7 @@ class ElementwiseKernel:
 
         range_ = kwargs.pop("range", None)
         slice_ = kwargs.pop("slice", None)
+        stream = kwargs.pop("stream", None)
 
         if kwargs:
             raise TypeError("invalid keyword arguments specified: "
@@ -238,7 +239,7 @@ class ElementwiseKernel:
             grid = repr_vec._grid
             invocation_args.append(repr_vec.mem_size)
 
-        func.prepared_call(grid, block, *invocation_args)
+        func.prepared_async_call(grid, block, stream, *invocation_args)
 
 
 
