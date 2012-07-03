@@ -525,18 +525,19 @@ if get_curand_version() >= (3, 2, 0):
                 'curandStateXORWOW', 'unsigned int', xorwow_random_source+
                 xorwow_skip_ahead_sequence_source+random_skip_ahead64_source)
 
+            generator_count = self.generators_per_block * self.block_count
             if seed_getter is None:
                 seed = array.to_gpu(
                         np.asarray(
                             np.random.random_integers(
-                                0, (1 << 31) - 2, self.generators_per_block),
+                                0, (1 << 31) - 2, generator_count),
                             dtype=np.int32))
             else:
-                seed = seed_getter(self.generators_per_block)
+                seed = seed_getter(generator_count)
 
             if not (isinstance(seed, pycuda.gpuarray.GPUArray)
                     and seed.dtype == np.int32
-                    and seed.size == self.generators_per_block):
+                    and seed.size == generator_count):
                 raise TypeError("seed must be GPUArray of integers of right length")
 
             p = self.module.get_function("prepare")
@@ -558,7 +559,7 @@ if get_curand_version() >= (3, 2, 0):
                 try:
                     p.prepared_call(
                             (self.block_count, 1), (self.generators_per_block, 1, 1), self.state,
-                            self.block_count * self.generators_per_block, seed.gpudata, offset)
+                            generator_count, seed.gpudata, offset)
                 except drv.LaunchError:
                     raise ValueError("Initialisation failed. Decrease number of threads.")
 
@@ -569,12 +570,12 @@ if get_curand_version() >= (3, 2, 0):
         def call_skip_ahead_sequence(self, i, stream=None):
             self.skip_ahead_sequence.prepared_async_call(
                     (self.block_count, 1), (self.generators_per_block, 1, 1), stream,
-                    self.state, self.generators_per_block, i)
+                    self.state, self.generators_per_block * self.block_count, i)
 
         def call_skip_ahead_sequence_array(self, i, stream=None):
             self.skip_ahead_sequence_array.prepared_async_call(
                     (self.block_count, 1), (self.generators_per_block, 1, 1), stream,
-                    self.state, self.generators_per_block, i.gpudata)
+                    self.state, self.generators_per_block * self.block_count, i.gpudata)
 
         def _kernels(self):
             return (_RandomNumberGeneratorBase._kernels(self)
