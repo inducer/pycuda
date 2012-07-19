@@ -195,7 +195,7 @@ class ReductionKernel:
             neutral, reduce_expr, map_expr=None, arguments=None,
             name="reduce_kernel", keep=False, options=None, preamble=""):
 
-        self.dtype_out = dtype_out
+        self.dtype_out = np.dtype(dtype_out)
 
         self.block_size = 512
 
