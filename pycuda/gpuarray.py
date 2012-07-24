@@ -450,8 +450,11 @@ class GPUArray(object):
         result = self._new_like_me()
         return self._axpbz(scalar, 0, result)
 
-    def __imul__(self, scalar):
-        return self._axpbz(scalar, 0, self)
+    def __imul__(self, other):
+        if isinstance(other, GPUArray):
+            return self._elwise_multiply(other, self)
+        else:
+            return self._axpbz(other, 0, self)
 
     def __div__(self, other):
         """Divides an array by an array or a scalar::
