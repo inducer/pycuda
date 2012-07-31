@@ -1549,7 +1549,7 @@ Code on the Device: Modules and Functions
         .. warning:: Passing *block* or *shared* not equal to *None* is
             djprecated as of version 2011.1.
 
-    .. method:: prepared_call(grid, block, *args, shared_size=None)
+    .. method:: prepared_call(grid, block, *args, shared_size=0)
 
         Invoke `self` using :meth:`launch_grid`, with `args` a grid size of `grid`,
         and a block size of *block*.
@@ -1560,7 +1560,7 @@ Code on the Device: Modules and Functions
         .. versionchanged:: 2012.1
             *shared_size* was added.
 
-    .. method:: prepared_timed_call(grid, block, *args, shared_size=None)
+    .. method:: prepared_timed_call(grid, block, *args, shared_size=0)
 
         Invoke `self` using :meth:`launch_grid`, with `args`, a grid size of `grid`,
         and a block size of *block*.
@@ -1575,7 +1575,7 @@ Code on the Device: Modules and Functions
         .. versionchanged:: 2012.1
             *shared_size* was added.
 
-    .. method:: prepared_async_call(grid, block, stream, *args, shared_size=None)
+    .. method:: prepared_async_call(grid, block, stream, *args, shared_size=0)
 
         Invoke `self` using :meth:`launch_grid_async`, with `args`, a grid size
         of `grid`, and a block size of *block*, serialized into the
