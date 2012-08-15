@@ -486,7 +486,7 @@ class StringListOption(Option):
         if default is None:
             return None
 
-        return ",".join([str(el) for el in default])
+        return ",".join([str(el).replace(",", r"\,") for el in default])
 
     def get_help(self, default):
         return Option.get_help(self, default) + " (several ok)"
@@ -497,7 +497,11 @@ class StringListOption(Option):
             return None
         else:
             if opt:
-                return opt.split(",")
+                import re
+                sep = re.compile(r"(?<!\\),")
+                result = sep.split(opt)
+                result = [i.replace(r"\,", ",") for i in result]
+                return result
             else:
                 return []
 
