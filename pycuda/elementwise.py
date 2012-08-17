@@ -447,10 +447,11 @@ def get_binary_op_kernel(dtype_x, dtype_y, dtype_z, operator):
             "multiply")
 
 @context_dependent_memoize
-def get_rdivide_elwise_kernel(dtype):
+def get_rdivide_elwise_kernel(dtype_x,dtype_z):
     return get_elwise_kernel(
-            "%(tp)s *x, %(tp)s y, %(tp)s *z" % {
-                "tp": dtype_to_ctype(dtype),
+            "%(tp_x)s *x, %(tp_z)s y, %(tp_z)s *z" % {
+                "tp_x": dtype_to_ctype(dtype_x),
+                "tp_z": dtype_to_ctype(dtype_z),
                 },
             "z[i] = y / x[i]",
             "divide_r")

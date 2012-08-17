@@ -341,7 +341,7 @@ class GPUArray(object):
             raise RuntimeError("only contiguous arrays may "
                     "be used as arguments to this operation")
 
-        func = elementwise.get_rdivide_elwise_kernel(self.dtype)
+        func = elementwise.get_rdivide_elwise_kernel(self.dtype,out.dtype)
         func.prepared_async_call(self._grid, self._block, stream,
                 self.gpudata, other,
                 out.gpudata, self.mem_size)
@@ -394,7 +394,7 @@ class GPUArray(object):
             if other == 0:
                 return self
             else:
-                result = self._new_like_me()
+                result = self._new_like_me(_get_common_dtype(self, other))
                 return self._axpbz(1, other, result)
 
     __radd__ = __add__
@@ -443,11 +443,11 @@ class GPUArray(object):
             result = self._new_like_me(_get_common_dtype(self, other))
             return self._elwise_multiply(other, result)
         else:
-            result = self._new_like_me()
+            result = self._new_like_me(_get_common_dtype(self, other))
             return self._axpbz(other, 0, result)
 
     def __rmul__(self, scalar):
-        result = self._new_like_me()
+        result = self._new_like_me(_get_common_dtype(self, other))
         return self._axpbz(scalar, 0, result)
 
     def __imul__(self, other):
@@ -469,7 +469,7 @@ class GPUArray(object):
                 return self
             else:
                 # create a new array for the result
-                result = self._new_like_me()
+                result = self._new_like_me(_get_common_dtype(self, other))
                 return self._axpbz(1/other, 0, result)
 
     __truediv__ = __div__
@@ -479,27 +479,13 @@ class GPUArray(object):
 
            x = n / self
         """
-
-        if isinstance(other, GPUArray):
-            if not self.flags.forc or not other.flags.forc:
-                raise RuntimeError("only contiguous arrays may "
-                        "be used as arguments to this operation")
-
-            result = self._new_like_me(_get_common_dtype(self, other))
-
-            func = elementwise.get_divide_kernel()
-            func.prepared_async_call(self._grid, self._block, None,
-                    other.gpudata, self.gpudata, result.gpudata,
-                    self.mem_size)
-
-            return result
+        # other must be a scalar
+        if other == 1:
+            return self
         else:
-            if other == 1:
-                return self
-            else:
-                # create a new array for the result
-                result = self._new_like_me()
-                return self._rdiv_scalar(other, result)
+            # create a new array for the result
+            result = self._new_like_me(_get_common_dtype(self, other))
+            return self._rdiv_scalar(other, result)
 
     __rtruediv__ = __div__
 
