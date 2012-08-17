@@ -426,10 +426,12 @@ def get_axpbyz_kernel(dtype_x, dtype_y, dtype_z):
             "axpbyz")
 
 @context_dependent_memoize
-def get_axpbz_kernel(dtype):
+def get_axpbz_kernel(dtype_x,dtype_z):
     return get_elwise_kernel(
-            "%(tp)s a, %(tp)s *x,%(tp)s b, %(tp)s *z" % {
-                "tp": dtype_to_ctype(dtype)},
+            "%(tp_z)s a, %(tp_x)s *x,%(tp_z)s b, %(tp_z)s *z" % {
+                "tp_x": dtype_to_ctype(dtype_x),
+                "tp_z": dtype_to_ctype(dtype_z)
+                },
             "z[i] = a * x[i] + b",
             "axpb")
 

@@ -312,7 +312,7 @@ class GPUArray(object):
             raise RuntimeError("only contiguous arrays may "
                     "be used as arguments to this operation")
 
-        func = elementwise.get_axpbz_kernel(self.dtype)
+        func = elementwise.get_axpbz_kernel(self.dtype,out.dtype)
         func.prepared_async_call(self._grid, self._block, stream,
                 selffac, self.gpudata,
                 other, out.gpudata, self.mem_size)
@@ -410,7 +410,7 @@ class GPUArray(object):
                 return self
             else:
                 # create a new array for the result
-                result = self._new_like_me()
+                result = self._new_like_me(_get_common_dtype(self, other))
                 return self._axpbz(1, -other, result)
 
     def __rsub__(self,other):
@@ -419,7 +419,7 @@ class GPUArray(object):
            x = n - self
         """
         # other must be a scalar
-        result = self._new_like_me()
+        result = self._new_like_me(_get_common_dtype(self, other))
         return self._axpbz(-1, other, result)
 
     def __iadd__(self, other):
