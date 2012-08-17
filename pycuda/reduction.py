@@ -301,19 +301,7 @@ def get_sum_kernel(dtype_out, dtype_in):
 
 
 @context_dependent_memoize
-def get_dot_kernel(dtype_out, dtype_a=None, dtype_b=None):
-    if dtype_out is None:
-        dtype_out = dtype_a
-
-    if dtype_b is None:
-        if dtype_a is None:
-            dtype_b = dtype_out
-        else:
-            dtype_b = dtype_a
-
-    if dtype_a is None:
-        dtype_a = dtype_out
-
+def get_dot_kernel(dtype_out, dtype_a, dtype_b):
     return ReductionKernel(dtype_out, neutral="0",
             reduce_expr="a+b", map_expr="a[i]*b[i]",
             arguments="const %(tp_a)s *a, const %(tp_b)s *b" % {

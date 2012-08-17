@@ -1126,6 +1126,8 @@ def sum(a, dtype=None, stream=None):
 
 def dot(a, b, dtype=None, stream=None):
     from pycuda.reduction import get_dot_kernel
+    if dtype is None:
+        dtype = _get_common_dtype(a,b)
     krnl = get_dot_kernel(dtype, a.dtype, b.dtype)
     return krnl(a, b, stream=stream)
 
