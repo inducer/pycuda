@@ -533,10 +533,10 @@ def get_arange_kernel(dtype):
 
 @context_dependent_memoize
 def get_pow_kernel(dtype):
-    if dtype == np.float64:
-        func = "pow"
-    else:
+    if dtype == np.float32:
         func = "powf"
+    else:
+        func = "pow"
 
     return get_elwise_kernel(
             "%(tp)s value, %(tp)s *y, %(tp)s *z" % {
