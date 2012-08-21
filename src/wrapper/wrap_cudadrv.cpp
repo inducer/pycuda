@@ -506,10 +506,7 @@ BOOST_PYTHON_MODULE(_driver)
 
   {
     DECLARE_EXC(Error, NULL);
-    py::tuple memerr_bases = py::make_tuple(
-        CudaError, 
-        py::handle<>(py::borrowed(PyExc_MemoryError)));
-    DECLARE_EXC(MemoryError, memerr_bases.ptr());
+    DECLARE_EXC(MemoryError, CudaError.get());
     DECLARE_EXC(LogicError, CudaError.get());
     DECLARE_EXC(LaunchError, CudaError.get());
     DECLARE_EXC(RuntimeError, CudaError.get());
