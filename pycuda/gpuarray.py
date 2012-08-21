@@ -447,7 +447,7 @@ class GPUArray(object):
             return self._axpbz(other, 0, result)
 
     def __rmul__(self, scalar):
-        result = self._new_like_me(_get_common_dtype(self, other))
+        result = self._new_like_me(_get_common_dtype(self, scalar))
         return self._axpbz(scalar, 0, result)
 
     def __imul__(self, other):
