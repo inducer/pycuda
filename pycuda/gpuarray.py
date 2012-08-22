@@ -413,7 +413,7 @@ class GPUArray(object):
                 result = self._new_like_me(_get_common_dtype(self, other))
                 return self._axpbz(1, -other, result)
 
-    def __rsub__(self,other):
+    def __rsub__(self, other):
         """Substracts an array by a scalar or an array::
 
            x = n - self
@@ -474,7 +474,7 @@ class GPUArray(object):
 
     __truediv__ = __div__
 
-    def __rdiv__(self,other):
+    def __rdiv__(self, other):
         """Divides an array by a scalar or an array::
 
            x = n / self
@@ -488,6 +488,21 @@ class GPUArray(object):
             return self._rdiv_scalar(other, result)
 
     __rtruediv__ = __div__
+
+    def __idiv__(self, other):
+        """Divides an array by an array or a scalar::
+
+           x /= n
+        """
+        if isinstance(other, GPUArray):
+            return self._div(other, self)
+        else:
+            if other == 1:
+                return self
+            else:
+                return self._axpbz(1/other, 0, self)
+
+    __itruediv__ = __idiv__
 
     def fill(self, value, stream=None):
         """fills the array with the specified value"""
@@ -549,7 +564,13 @@ class GPUArray(object):
         else:
             fname = "abs"
 
-        func = elementwise.get_unary_func_kernel(fname, self.dtype)
+        from pytools import match_precision
+        out_dtype = match_precision(np.dtype(np.float64), self.dtype)
+        result = self._new_like_me(out_dtype)
+
+        func = elementwise.get_unary_func_kernel(fname, self.dtype,
+                out_dtype=out_dtype)
+
         func.prepared_async_call(self._grid, self._block, None,
                 self.gpudata,result.gpudata, self.mem_size)
 
