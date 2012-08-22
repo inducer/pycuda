@@ -564,9 +564,12 @@ class GPUArray(object):
         else:
             fname = "abs"
 
-        from pytools import match_precision
-        out_dtype = match_precision(np.dtype(np.float64), self.dtype)
-        result = self._new_like_me(out_dtype)
+        if issubclass(self.dtype.type, np.complexfloating):
+            from pytools import match_precision
+            out_dtype = match_precision(np.dtype(np.float64), self.dtype)
+            result = self._new_like_me(out_dtype)
+        else:
+            out_dtype = self.dtype
 
         func = elementwise.get_unary_func_kernel(fname, self.dtype,
                 out_dtype=out_dtype)
