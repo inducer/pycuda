@@ -290,6 +290,11 @@ class TestGPUArray:
                 # test non-Box-Muller version, if available
                 gen.gen_normal(10001, dtype)
 
+                if get_curand_version() >= (4, 0, 0):
+                    gen.gen_log_normal(10000, dtype, 10.0, 3.0)
+                    # test non-Box-Muller version, if available
+                    gen.gen_log_normal(10001, dtype, 10.0, 3.0)
+
                 x = gen.gen_uniform(10000, dtype)
                 x_host = x.get()
                 assert (-1 <= x_host).all()

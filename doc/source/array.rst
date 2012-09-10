@@ -445,10 +445,42 @@ Quasirandom numbers are more expensive to generate.
         Fills in :class:`GPUArray` *data* with uniformly distributed
         pseudorandom values.
 
+    .. method:: gen_uniform(shape, dtype, stream=None)
+
+        Creates object of :class:`GPUArray` with given *shape* and *dtype*,
+        fills it in with uniformly distributed pseudorandom values,
+        and returns newly created object.
+
     .. method:: fill_normal(data, stream=None)
 
         Fills in :class:`GPUArray` *data* with normally distributed
         pseudorandom values.
+
+    .. method:: gen_normal(shape, dtype, stream=None)
+
+        Creates object of :class:`GPUArray` with given *shape* and *dtype*,
+        fills it in with normally distributed pseudorandom values,
+        and returns newly created object.
+
+    .. method:: fill_log_normal(data, mean, stddev, stream=None)
+
+        Fills in :class:`GPUArray` *data* with log-normally distributed
+        pseudorandom values with mean *mean* and standard deviation *stddev*.
+
+        CUDA 4.0 and above.
+
+        .. versionadded:: 2012.2
+
+    .. method:: gen_log_normal(shape, dtype, mean, stddev, stream=None)
+
+        Creates object of :class:`GPUArray` with given *shape* and *dtype*,
+        fills it in with log-normally distributed pseudorandom values
+        with mean *mean* and standard deviation *stddev*, and returns
+        newly created object.
+
+        CUDA 4.0 and above.
+
+        .. versionadded:: 2012.2
 
     .. method:: call_skip_ahead(i, stream=None)
 
@@ -506,10 +538,42 @@ Quasirandom numbers are more expensive to generate.
         Fills in :class:`GPUArray` *data* with uniformly distributed
         quasirandom values.
 
+    .. method:: gen_uniform(shape, dtype, stream=None)
+
+        Creates object of :class:`GPUArray` with given *shape* and *dtype*,
+        fills it in with uniformly distributed pseudorandom values,
+        and returns newly created object.
+
     .. method:: fill_normal(data, stream=None)
 
         Fills in :class:`GPUArray` *data* with normally distributed
         quasirandom values.
+
+    .. method:: gen_normal(shape, dtype, stream=None)
+
+        Creates object of :class:`GPUArray` with given *shape* and *dtype*,
+        fills it in with normally distributed pseudorandom values,
+        and returns newly created object.
+
+    .. method:: fill_log_normal(data, mean, stddev, stream=None)
+
+        Fills in :class:`GPUArray` *data* with log-normally distributed
+        pseudorandom values with mean *mean* and standard deviation *stddev*.
+
+        CUDA 4.0 and above.
+
+        .. versionadded:: 2012.2
+
+    .. method:: gen_log_normal(shape, dtype, mean, stddev, stream=None)
+
+        Creates object of :class:`GPUArray` with given *shape* and *dtype*,
+        fills it in with log-normally distributed pseudorandom values
+        with mean *mean* and standard deviation *stddev*, and returns
+        newly created object.
+
+        CUDA 4.0 and above.
+
+        .. versionadded:: 2012.2
 
     .. method:: call_skip_ahead(i, stream=None)
 
@@ -544,10 +608,42 @@ Quasirandom numbers are more expensive to generate.
         Fills in :class:`GPUArray` *data* with uniformly distributed
         quasirandom values.
 
+    .. method:: gen_uniform(shape, dtype, stream=None)
+
+        Creates object of :class:`GPUArray` with given *shape* and *dtype*,
+        fills it in with uniformly distributed pseudorandom values,
+        and returns newly created object.
+
     .. method:: fill_normal(data, stream=None)
 
         Fills in :class:`GPUArray` *data* with normally distributed
         quasirandom values.
+
+    .. method:: gen_normal(shape, dtype, stream=None)
+
+        Creates object of :class:`GPUArray` with given *shape* and *dtype*,
+        fills it in with normally distributed pseudorandom values,
+        and returns newly created object.
+
+    .. method:: fill_log_normal(data, mean, stddev, stream=None)
+
+        Fills in :class:`GPUArray` *data* with log-normally distributed
+        pseudorandom values with mean *mean* and standard deviation *stddev*.
+
+        CUDA 4.0 and above.
+
+        .. versionadded:: 2012.2
+
+    .. method:: gen_log_normal(shape, dtype, mean, stddev, stream=None)
+
+        Creates object of :class:`GPUArray` with given *shape* and *dtype*,
+        fills it in with log-normally distributed pseudorandom values
+        with mean *mean* and standard deviation *stddev*, and returns
+        newly created object.
+
+        CUDA 4.0 and above.
+
+        .. versionadded:: 2012.2
 
     .. method:: call_skip_ahead(i, stream=None)
 
@@ -579,10 +675,42 @@ Quasirandom numbers are more expensive to generate.
         Fills in :class:`GPUArray` *data* with uniformly distributed
         quasirandom values.
 
+    .. method:: gen_uniform(shape, dtype, stream=None)
+
+        Creates object of :class:`GPUArray` with given *shape* and *dtype*,
+        fills it in with uniformly distributed pseudorandom values,
+        and returns newly created object.
+
     .. method:: fill_normal(data, stream=None)
 
         Fills in :class:`GPUArray` *data* with normally distributed
         quasirandom values.
+
+    .. method:: gen_normal(shape, dtype, stream=None)
+
+        Creates object of :class:`GPUArray` with given *shape* and *dtype*,
+        fills it in with normally distributed pseudorandom values,
+        and returns newly created object.
+
+    .. method:: fill_log_normal(data, mean, stddev, stream=None)
+
+        Fills in :class:`GPUArray` *data* with log-normally distributed
+        pseudorandom values with mean *mean* and standard deviation *stddev*.
+
+        CUDA 4.0 and above.
+
+        .. versionadded:: 2012.2
+
+    .. method:: gen_log_normal(shape, dtype, mean, stddev, stream=None)
+
+        Creates object of :class:`GPUArray` with given *shape* and *dtype*,
+        fills it in with log-normally distributed pseudorandom values
+        with mean *mean* and standard deviation *stddev*, and returns
+        newly created object.
+
+        CUDA 4.0 and above.
+
+        .. versionadded:: 2012.2
 
     .. method:: call_skip_ahead(i, stream=None)
 
@@ -617,10 +745,42 @@ Quasirandom numbers are more expensive to generate.
         Fills in :class:`GPUArray` *data* with uniformly distributed
         quasirandom values.
 
+    .. method:: gen_uniform(shape, dtype, stream=None)
+
+        Creates object of :class:`GPUArray` with given *shape* and *dtype*,
+        fills it in with uniformly distributed pseudorandom values,
+        and returns newly created object.
+
     .. method:: fill_normal(data, stream=None)
 
         Fills in :class:`GPUArray` *data* with normally distributed
         quasirandom values.
+
+    .. method:: gen_normal(shape, dtype, stream=None)
+
+        Creates object of :class:`GPUArray` with given *shape* and *dtype*,
+        fills it in with normally distributed pseudorandom values,
+        and returns newly created object.
+
+    .. method:: fill_log_normal(data, mean, stddev, stream=None)
+
+        Fills in :class:`GPUArray` *data* with log-normally distributed
+        pseudorandom values with mean *mean* and standard deviation *stddev*.
+
+        CUDA 4.0 and above.
+
+        .. versionadded:: 2012.2
+
+    .. method:: gen_log_normal(shape, dtype, mean, stddev, stream=None)
+
+        Creates object of :class:`GPUArray` with given *shape* and *dtype*,
+        fills it in with log-normally distributed pseudorandom values
+        with mean *mean* and standard deviation *stddev*, and returns
+        newly created object.
+
+        CUDA 4.0 and above.
+
+        .. versionadded:: 2012.2
 
     .. method:: call_skip_ahead(i, stream=None)
 
