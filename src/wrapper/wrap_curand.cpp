@@ -40,4 +40,11 @@ void pycuda_expose_curand()
   py::def("_get_scramble_constants64", py_curand_get_scramble_constants64,
       (arg("dst"), arg("count")));
 #endif
+
+#if CUDAPP_CUDA_VERSION >= 4010
+  py::def("_make_mtpg32_constants", py_curand_make_mtpg32_constants,
+      (arg("dst"), arg("count")));
+  py::def("_make_mtpg32_kernel_state", py_curand_make_mtpg32_kernel_state,
+      (arg("dst"), arg("count")));
+#endif
 }

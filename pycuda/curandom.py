@@ -646,6 +646,153 @@ if get_curand_version() >= (3, 2, 0):
 
 # }}}
 
+# {{{ MRG32k3a RNG
+
+mrg32k3a_random_source = """
+extern "C" {
+__global__ void prepare( %(state_type)s *s, const int n,
+    %(vector_type)s *v, const unsigned int o)
+{
+  const int id = blockIdx.x*blockDim.x+threadIdx.x;
+  if (id < n)
+    curand_init(v[id], id, o, &s[id]);
+}
+}
+"""
+
+mrg32k3a_skip_ahead_sequence_source = """
+extern "C" {
+__global__ void skip_ahead_sequence(%(state_type)s *s, const int n, const unsigned int skip)
+{
+  const int idx = blockIdx.x*blockDim.x+threadIdx.x;
+  if (idx < n)
+    skipahead_sequence(skip, &s[idx]);
+}
+
+__global__ void skip_ahead_sequence_array(%(state_type)s *s, const int n, const unsigned int *skip)
+{
+  const int idx = blockIdx.x*blockDim.x+threadIdx.x;
+  if (idx < n)
+      skipahead_sequence(skip[idx], &s[idx]);
+}
+
+__global__ void skip_ahead_subsequence(%(state_type)s *s, const int n, const unsigned int skip)
+{
+  const int idx = blockIdx.x*blockDim.x+threadIdx.x;
+  if (idx < n)
+    skipahead_subsequence(skip, &s[idx]);
+}
+
+__global__ void skip_ahead_subsequence_array(%(state_type)s *s, const int n, const unsigned int *skip)
+{
+  const int idx = blockIdx.x*blockDim.x+threadIdx.x;
+  if (idx < n)
+      skipahead_subsequence(skip[idx], &s[idx]);
+}
+}
+"""
+
+if get_curand_version() >= (4, 1, 0):
+    class MRG32k3aRandomNumberGenerator(_RandomNumberGeneratorBase):
+        has_box_muller = True
+
+        def __init__(self, seed_getter=None, offset=0):
+            """
+            :arg seed_getter: a function that, given an integer count, will yield an `int32`
+              :class:`GPUArray` of seeds.
+            """
+
+            super(MRG32k3aRandomNumberGenerator, self).__init__(
+                'curandStateMRG32k3a', 'unsigned int', mrg32k3a_random_source+
+                mrg32k3a_skip_ahead_sequence_source+random_skip_ahead64_source)
+
+            generator_count = self.generators_per_block * self.block_count
+            if seed_getter is None:
+                seed = array.to_gpu(
+                        np.asarray(
+                            np.random.random_integers(
+                                0, (1 << 31) - 2, generator_count),
+                            dtype=np.int32))
+            else:
+                seed = seed_getter(generator_count)
+
+            if not (isinstance(seed, pycuda.gpuarray.GPUArray)
+                    and seed.dtype == np.int32
+                    and seed.size == generator_count):
+                raise TypeError("seed must be GPUArray of integers of right length")
+
+            p = self.module.get_function("prepare")
+            p.prepare("PiPi")
+            self.skip_ahead_sequence = self.module.get_function("skip_ahead_sequence")
+            self.skip_ahead_sequence.prepare("Pii")
+            self.skip_ahead_sequence_array = self.module.get_function("skip_ahead_sequence_array")
+            self.skip_ahead_sequence_array.prepare("PiP")
+            self.skip_ahead_subsequence = self.module.get_function("skip_ahead_subsequence")
+            self.skip_ahead_subsequence.prepare("Pii")
+            self.skip_ahead_subsequence_array = self.module.get_function("skip_ahead_subsequence_array")
+            self.skip_ahead_subsequence_array.prepare("PiP")
+
+            from pycuda.characterize import has_stack
+            has_stack = has_stack()
+
+            if has_stack:
+                prev_stack_size = drv.Context.get_limit(drv.limit.STACK_SIZE)
+
+            try:
+                if has_stack:
+                    drv.Context.set_limit(drv.limit.STACK_SIZE, 1<<14) # 16k
+                try:
+                    p.prepared_call(
+                            (self.block_count, 1), (self.generators_per_block, 1, 1), self.state,
+                            generator_count, seed.gpudata, offset)
+                except drv.LaunchError:
+                    raise ValueError("Initialisation failed. Decrease number of threads.")
+
+            finally:
+                if has_stack:
+                    drv.Context.set_limit(drv.limit.STACK_SIZE, prev_stack_size)
+
+        def call_skip_ahead_sequence(self, i, stream=None):
+            self.skip_ahead_sequence.prepared_async_call(
+                    (self.block_count, 1), (self.generators_per_block, 1, 1), stream,
+                    self.state, self.generators_per_block * self.block_count, i)
+
+        def call_skip_ahead_sequence_array(self, i, stream=None):
+            self.skip_ahead_sequence_array.prepared_async_call(
+                    (self.block_count, 1), (self.generators_per_block, 1, 1), stream,
+                    self.state, self.generators_per_block * self.block_count, i.gpudata)
+
+        def call_skip_ahead_subsequence(self, i, stream=None):
+            self.skip_ahead_subsequence.prepared_async_call(
+                    (self.block_count, 1), (self.generators_per_block, 1, 1), stream,
+                    self.state, self.generators_per_block * self.block_count, i)
+
+        def call_skip_ahead_subsequence_array(self, i, stream=None):
+            self.skip_ahead_subsequence_array.prepared_async_call(
+                    (self.block_count, 1), (self.generators_per_block, 1, 1), stream,
+                    self.state, self.generators_per_block * self.block_count, i.gpudata)
+
+        def _kernels(self):
+            return (_RandomNumberGeneratorBase._kernels(self)
+                    + [self.module.get_function("prepare")]
+                    + [self.module.get_function("skip_ahead_sequence"),
+                       self.module.get_function("skip_ahead_sequence_array"),
+                       self.module.get_function("skip_ahead_subsequence"),
+                       self.module.get_function("skip_ahead_subsequence_array")])
+
+# }}}
+
+# {{{ Mtpg2 RNG
+
+class Mtpg32RandomNumberGenerator(_RandomNumberGeneratorBase):
+    """
+    Something completely different.
+
+    Hard limit of 256 threads per block.
+    """
+
+# }}}
+
 # {{{ Sobol RNG
 
 def generate_direction_vectors(count, direction=None):

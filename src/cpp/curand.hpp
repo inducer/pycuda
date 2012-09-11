@@ -124,22 +124,18 @@ namespace pycuda { namespace curandom {
   }
 #endif
 
-// TODO: add more methods in classes (log)
-// log_normal(state, mean, stddev)
-// log_normal(Scrambled64)
-// log_normal_double(Scrambled64)
-// log_normal(Sobol64)
-// log_normal_double(Sobol64)
-// log_normal(Scrambled32)
-// log_normal_double(Scrambled32)
-// log_normal(Sobol32)
-// log_normal_double(Sobol32)
-//
-// log_normal(XORWOW)
-// log_normal_double(XORWOW)
-// log_normal2(XORWOW)
-// log_normal2_double(XORWOW)
-//
+#if CUDAPP_CUDA_VERSION >= 4010
+  void py_curand_make_mtgp32_constants(py::object dst, int count)
+  {
+    CURAND_CALL_GUARDED(curandMakeMTPG32Constants, (&vectors));
+  }
+
+  void py_curand_make_mtgp32_kernel_state(py::object dst, int count)
+  {
+    CURAND_CALL_GUARDED(curandMakeMTPG32KernelState, (&vectors));
+  }
+#endif
+
 } }
 
 #endif
