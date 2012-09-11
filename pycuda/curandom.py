@@ -274,6 +274,16 @@ __global__ void %(name)s(%(state_type)s *s, %(out_type)s *d, const int n)
 }
 """
 
+gen_log_template = """
+__global__ void %(name)s(%(state_type)s *s, %(out_type)s *d, %(in_type)s mean, %(in_type)s stddev, const int n)
+{
+  const int tidx = blockIdx.x*blockDim.x+threadIdx.x;
+  const int delta = blockDim.x*gridDim.x;
+  for (int idx = tidx; idx < n; idx += delta)
+    d[idx] = curand_log%(suffix)s(&s[tidx], mean, stddev);
+}
+"""
+
 random_source = """
 // Uses C++ features (templates); do not surround with extern C
 #include <curand_kernel.h>
@@ -339,6 +349,13 @@ class _RandomNumberGeneratorBase(object):
         ("normal_double2", "double2", "_normal2_double"),
         ]
 
+    gen_log_info = [
+        ("normal_log_float", "float", "float", "_normal"),
+        ("normal_log_double", "double", "double", "_normal_double"),
+        ("normal_log_float2", "float", "float2", "_normal2"),
+        ("normal_log_double2", "double", "double2", "_normal2_double"),
+        ]
+
     def __init__(self, state_type, vector_type, additional_source,
         scramble_type=None):
         if get_curand_version() < (3, 2, 0):
@@ -364,11 +381,23 @@ class _RandomNumberGeneratorBase(object):
                 for name, out_type, suffix in self.gen_info
                 if do_generate(out_type)]
 
+        if get_curand_version() >= (4, 0, 0):
+            my_log_generators = [
+                    (name, in_type, out_type, suffix)
+                    for name, in_type, out_type, suffix in self.gen_log_info
+                    if do_generate(out_type)]
+
         generator_sources = [
                 gen_template % {
-                    "name":name, "out_type": out_type, "suffix": suffix,
+                    "name": name, "out_type": out_type, "suffix": suffix,
                     "state_type": state_type, }
                 for name, out_type, suffix in my_generators]
+        
+        generator_sources.extend([
+                gen_log_template % {
+                    "name": name, "in_type": in_type, "out_type": out_type,
+                    "suffix": suffix, "state_type": state_type, }
+                for name, in_type, out_type, suffix in my_log_generators])
 
         source = (random_source + additional_source) % {
             "state_type": state_type,
@@ -383,6 +412,13 @@ class _RandomNumberGeneratorBase(object):
         for name, out_type, suffix  in my_generators:
             gen_func = module.get_function(name)
             gen_func.prepare("PPi")
+            self.generators[name] = gen_func
+        for name, in_type, out_type, suffix  in my_log_generators:
+            gen_func = module.get_function(name)
+            if in_type == "float":
+                gen_func.prepare("PPffi")
+            if in_type == "double":
+                gen_func.prepare("PPddi")
             self.generators[name] = gen_func
 
         self.skip_ahead = module.get_function("skip_ahead")
@@ -457,6 +493,31 @@ class _RandomNumberGeneratorBase(object):
         result = array.empty(shape, dtype)
         self.fill_normal(result, stream)
         return result
+
+    if get_curand_version() >= (4, 0, 0):
+        def fill_log_normal(self, data, mean, stddev, stream=None):
+            if data.dtype == np.float32:
+                func_name = "normal_log_float"
+            elif data.dtype == np.float64:
+                func_name = "normal_log_double"
+            else:
+                raise NotImplementedError
+
+            data_size = data.size
+            if self.has_box_muller and data_size % 2 == 0:
+                func_name += "2"
+                data_size /= 2
+
+            func = self.generators[func_name]
+
+            func.prepared_async_call(
+                    (self.block_count, 1), (self.generators_per_block, 1, 1), stream,
+                    self.state, data.gpudata, mean, stddev, data_size)
+
+        def gen_log_normal(self, shape, dtype, mean, stddev, stream=None):
+            result = array.empty(shape, dtype)
+            self.fill_log_normal(result, mean, stddev, stream)
+            return result
 
     def call_skip_ahead(self, i, stream=None):
         self.skip_ahead.prepared_async_call(
