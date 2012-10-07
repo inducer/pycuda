@@ -162,7 +162,9 @@ class GPUArray(object):
             s = shape
             shape = (shape,)
 
-        s = np.asscalar(s)
+        if isinstance(s, np.integer):
+            # bombs if s is a Python integer
+            s = np.asscalar(s)
 
         if strides is None:
             if order == "F":
