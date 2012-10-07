@@ -28,10 +28,10 @@ namespace
 {
   // {{{ error handling
 
-  py::handle<> 
-    CudaError, 
-    CudaMemoryError, 
-    CudaLogicError, 
+  py::handle<>
+    CudaError,
+    CudaMemoryError,
+    CudaLogicError,
     CudaRuntimeError,
     CudaLaunchError;
 
@@ -60,7 +60,7 @@ namespace
       PyErr_SetString(CudaRuntimeError.get(), err.what());
     else if (err.code() == CUDA_ERROR_UNKNOWN)
       PyErr_SetString(CudaError.get(), err.what());
-    else 
+    else
       PyErr_SetString(CudaLogicError.get(), err.what());
   }
 
@@ -69,8 +69,8 @@ namespace
   py::tuple cuda_version()
   {
     return py::make_tuple(
-        CUDAPP_CUDA_VERSION / 1000, 
-        (CUDAPP_CUDA_VERSION % 1000)/10, 
+        CUDAPP_CUDA_VERSION / 1000,
+        (CUDAPP_CUDA_VERSION % 1000)/10,
         CUDAPP_CUDA_VERSION % 10);
   }
 
@@ -102,8 +102,8 @@ namespace
     return new device_allocation(pycuda::mem_alloc_gc(bytes));
   }
 
-  class pointer_holder_base_wrap 
-    : public pointer_holder_base, 
+  class pointer_holder_base_wrap
+    : public pointer_holder_base,
     public py::wrapper<pointer_holder_base>
   {
     public:
@@ -125,22 +125,22 @@ namespace
 
   // {{{ memory set
 
-  void  py_memset_d8(CUdeviceptr dst, unsigned char uc, unsigned int n ) 
+  void  py_memset_d8(CUdeviceptr dst, unsigned char uc, unsigned int n )
   { CUDAPP_CALL_GUARDED_THREADED(cuMemsetD8, (dst, uc, n )); }
-  void  py_memset_d16(CUdeviceptr dst, unsigned short us, unsigned int n ) 
+  void  py_memset_d16(CUdeviceptr dst, unsigned short us, unsigned int n )
   { CUDAPP_CALL_GUARDED_THREADED(cuMemsetD16, (dst, us, n )); }
-  void  py_memset_d32(CUdeviceptr dst, unsigned int ui, unsigned int n ) 
+  void  py_memset_d32(CUdeviceptr dst, unsigned int ui, unsigned int n )
   { CUDAPP_CALL_GUARDED_THREADED(cuMemsetD32, (dst, ui, n )); }
 
-  void  py_memset_d2d8(CUdeviceptr dst, unsigned int dst_pitch, 
+  void  py_memset_d2d8(CUdeviceptr dst, unsigned int dst_pitch,
       unsigned char uc, unsigned int width, unsigned int height )
   { CUDAPP_CALL_GUARDED_THREADED(cuMemsetD2D8, (dst, dst_pitch, uc, width, height)); }
 
-  void  py_memset_d2d16(CUdeviceptr dst, unsigned int dst_pitch, 
+  void  py_memset_d2d16(CUdeviceptr dst, unsigned int dst_pitch,
       unsigned short us, unsigned int width, unsigned int height )
   { CUDAPP_CALL_GUARDED_THREADED(cuMemsetD2D16, (dst, dst_pitch, us, width, height)); }
 
-  void  py_memset_d2d32(CUdeviceptr dst, unsigned int dst_pitch, 
+  void  py_memset_d2d32(CUdeviceptr dst, unsigned int dst_pitch,
       unsigned int ui, unsigned int width, unsigned int height )
   { CUDAPP_CALL_GUARDED_THREADED(cuMemsetD2D32, (dst, dst_pitch, ui, width, height)); }
 
@@ -230,7 +230,7 @@ namespace
 
 
 
-  void  py_memcpy_dtod(CUdeviceptr dest, CUdeviceptr src, 
+  void  py_memcpy_dtod(CUdeviceptr dest, CUdeviceptr src,
       unsigned int byte_count)
   { CUDAPP_CALL_GUARDED_THREADED(cuMemcpyDtoD, (dest, src, byte_count)); }
 
@@ -238,22 +238,22 @@ namespace
 
 
 #if CUDAPP_CUDA_VERSION >= 3000
-  void  py_memcpy_dtod_async(CUdeviceptr dest, CUdeviceptr src, 
+  void  py_memcpy_dtod_async(CUdeviceptr dest, CUdeviceptr src,
       unsigned int byte_count, py::object stream_py)
   {
     PYCUDA_PARSE_STREAM_PY;
 
-    CUDAPP_CALL_GUARDED_THREADED(cuMemcpyDtoDAsync, 
-        (dest, src, byte_count, s_handle)); 
+    CUDAPP_CALL_GUARDED_THREADED(cuMemcpyDtoDAsync,
+        (dest, src, byte_count, s_handle));
   }
 #endif
 
 #if CUDAPP_CUDA_VERSION >= 4000
-  void  py_memcpy_peer(CUdeviceptr dest, CUdeviceptr src, 
+  void  py_memcpy_peer(CUdeviceptr dest, CUdeviceptr src,
       unsigned int byte_count,
       py::object dest_context_py, py::object src_context_py
       )
-  { 
+  {
     boost::shared_ptr<context> dest_context = context::current_context();
     boost::shared_ptr<context> src_context = dest_context;
 
@@ -266,14 +266,14 @@ namespace
     CUDAPP_CALL_GUARDED_THREADED(cuMemcpyPeer, (
           dest, dest_context->handle(),
           src, src_context->handle(),
-          byte_count)); 
+          byte_count));
   }
 
-  void  py_memcpy_peer_async(CUdeviceptr dest, CUdeviceptr src, 
+  void  py_memcpy_peer_async(CUdeviceptr dest, CUdeviceptr src,
       unsigned int byte_count,
-      py::object dest_context_py, py::object src_context_py, 
+      py::object dest_context_py, py::object src_context_py,
       py::object stream_py)
-  { 
+  {
     boost::shared_ptr<context> dest_context = context::current_context();
     boost::shared_ptr<context> src_context = dest_context;
 
@@ -288,7 +288,7 @@ namespace
     CUDAPP_CALL_GUARDED_THREADED(cuMemcpyPeerAsync, (
           dest, dest_context->handle(),
           src, src_context->handle(),
-          byte_count, s_handle)); 
+          byte_count, s_handle));
   }
 #endif
 
@@ -297,7 +297,7 @@ namespace
   // }}}
 
   void function_param_setv(function &f, int offset, py::object buffer)
-  { 
+  {
     const void *buf;
     PYCUDA_BUFFER_SIZE_T len;
     if (PyObject_AsReadBuffer(buffer.ptr(), &buf, &len))
@@ -310,7 +310,7 @@ namespace
 
   // {{{ module_from_buffer
 
-  module *module_from_buffer(py::object buffer, py::object py_options, 
+  module *module_from_buffer(py::object buffer, py::object py_options,
       py::object message_handler)
   {
     const char *mod_buf;
@@ -358,7 +358,7 @@ namespace
           std::string(error_buf, error_buf_size));
 
     if (cu_status_code != CUDA_SUCCESS)
-      throw pycuda::error("cuModuleLoadDataEx", cu_status_code, 
+      throw pycuda::error("cuModuleLoadDataEx", cu_status_code,
           std::string(error_buf, error_buf_size).c_str());
 #else
     if (py::len(py_options))
@@ -386,7 +386,7 @@ namespace
   // {{{ special host memory <-> numpy
 
   template <class Allocation>
-  py::handle<> numpy_empty(py::object shape, py::object dtype, 
+  py::handle<> numpy_empty(py::object shape, py::object dtype,
       py::object order_py, unsigned par1)
   {
     PyArray_Descr *tp_descr;
@@ -876,7 +876,7 @@ BOOST_PYTHON_MODULE(_driver)
       .def(py::self == py::self)
       .def(py::self != py::self)
       .def("__hash__", &cl::hash)
-      .def("make_context", &cl::make_context, 
+      .def("make_context", &cl::make_context,
           (py::args("self"), py::args("flags")=0))
 #if CUDAPP_CUDA_VERSION >= 4000
       .DEF_SIMPLE_METHOD(can_access_peer)
@@ -957,11 +957,11 @@ BOOST_PYTHON_MODULE(_driver)
       .def("get_function", &cl::get_function, (py::args("self", "name")),
           py::with_custodian_and_ward_postcall<0, 1>())
       .def("get_global", &cl::get_global, (py::args("self", "name")))
-      .def("get_texref", module_get_texref, 
+      .def("get_texref", module_get_texref,
           (py::args("self", "name")),
           py::return_value_policy<py::manage_new_object>())
 #if CUDAPP_CUDA_VERSION >= 3010
-      .def("get_surfref", module_get_surfref, 
+      .def("get_surfref", module_get_surfref,
           (py::args("self", "name")),
           py::return_value_policy<py::manage_new_object>())
 #endif
@@ -970,9 +970,9 @@ BOOST_PYTHON_MODULE(_driver)
 
   py::def("module_from_file", module_from_file, (py::arg("filename")),
       py::return_value_policy<py::manage_new_object>());
-  py::def("module_from_buffer", module_from_buffer, 
-      (py::arg("buffer"), 
-       py::arg("options")=py::list(), 
+  py::def("module_from_buffer", module_from_buffer,
+      (py::arg("buffer"),
+       py::arg("options")=py::list(),
        py::arg("message_handler")=py::object()),
       py::return_value_policy<py::manage_new_object>());
 
@@ -1114,7 +1114,7 @@ BOOST_PYTHON_MODULE(_driver)
   // }}}
 
   DEF_SIMPLE_FUNCTION(mem_get_info);
-  py::def("mem_alloc", mem_alloc_wrap, 
+  py::def("mem_alloc", mem_alloc_wrap,
       py::return_value_policy<py::manage_new_object>());
   py::def("mem_alloc_pitch", mem_alloc_pitch_wrap,
       py::args("width", "height", "access_size"));
@@ -1125,25 +1125,25 @@ BOOST_PYTHON_MODULE(_driver)
   py::def("memset_d16", py_memset_d16, py::args("dest", "data", "size"));
   py::def("memset_d32", py_memset_d32, py::args("dest", "data", "size"));
 
-  py::def("memset_d2d8", py_memset_d2d8, 
+  py::def("memset_d2d8", py_memset_d2d8,
       py::args("dest", "pitch", "data", "width", "height"));
-  py::def("memset_d2d16", py_memset_d2d16, 
+  py::def("memset_d2d16", py_memset_d2d16,
       py::args("dest", "pitch", "data", "width", "height"));
-  py::def("memset_d2d32", py_memset_d2d32, 
+  py::def("memset_d2d32", py_memset_d2d32,
       py::args("dest", "pitch", "data", "width", "height"));
 
-  py::def("memcpy_htod", py_memcpy_htod, 
+  py::def("memcpy_htod", py_memcpy_htod,
       (py::args("dest"), py::arg("src")));
-  py::def("memcpy_htod_async", py_memcpy_htod_async, 
+  py::def("memcpy_htod_async", py_memcpy_htod_async,
       (py::args("dest"), py::arg("src"), py::arg("stream")=py::object()));
-  py::def("memcpy_dtoh", py_memcpy_dtoh, 
+  py::def("memcpy_dtoh", py_memcpy_dtoh,
       (py::args("dest"), py::arg("src")));
-  py::def("memcpy_dtoh_async", py_memcpy_dtoh_async, 
+  py::def("memcpy_dtoh_async", py_memcpy_dtoh_async,
       (py::args("dest"), py::arg("src"), py::arg("stream")=py::object()));
 
   py::def("memcpy_dtod", py_memcpy_dtod, py::args("dest", "src", "size"));
 #if CUDAPP_CUDA_VERSION >= 3000
-  py::def("memcpy_dtod_async", py_memcpy_dtod_async, 
+  py::def("memcpy_dtod_async", py_memcpy_dtod_async,
       (py::args("dest", "src", "size"), py::arg("stream")=py::object()));
 #endif
 #if CUDAPP_CUDA_VERSION >= 4000
@@ -1321,7 +1321,7 @@ BOOST_PYTHON_MODULE(_driver)
     typedef texture_reference cl;
     py::class_<cl, boost::noncopyable>("TextureReference")
       .DEF_SIMPLE_METHOD(set_array)
-      .def("set_address", &cl::set_address, 
+      .def("set_address", &cl::set_address,
           (py::arg("devptr"), py::arg("bytes"), py::arg("allow_offset")=false))
 #if CUDAPP_CUDA_VERSION >= 2020
       .DEF_SIMPLE_METHOD_WITH_ARGS(set_address_2d, ("devptr", "descr", "pitch"))
