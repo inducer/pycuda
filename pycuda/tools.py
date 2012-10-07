@@ -40,12 +40,12 @@ DeviceMemoryPool = _drv.DeviceMemoryPool
 PageLockedMemoryPool = _drv.PageLockedMemoryPool
 
 from pycuda.compyte.dtypes import (
-        register_dtype, _fill_dtype_registry,
+        register_dtype, get_or_register_dtype, _fill_dtype_registry,
         dtype_to_ctype)
 
 _fill_dtype_registry(respect_windows=True)
-register_dtype(np.complex64, "pycuda::complex<float>")
-register_dtype(np.complex128, "pycuda::complex<double>")
+get_or_register_dtype("pycuda::complex<float>", np.complex64)
+get_or_register_dtype("pycuda::complex<double>", np.complex128)
 
 
 

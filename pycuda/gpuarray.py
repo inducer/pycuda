@@ -36,7 +36,7 @@ def _create_vector_types():
 
     field_names = ["x", "y", "z", "w"]
 
-    from pycuda.tools import register_dtype
+    from pycuda.tools import get_or_register_dtype
 
     for base_name, base_type, counts in [
         ('char', np.int8, [1,2,3,4]),
@@ -58,7 +58,7 @@ def _create_vector_types():
                 (field_names[i], base_type)
                 for i in range(count)])
 
-            register_dtype(dtype, name, alias_ok=True)
+            get_or_register_dtype(name, dtype)
 
             setattr(vec, name, dtype)
 
