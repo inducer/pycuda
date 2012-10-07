@@ -21,6 +21,16 @@ namespace
       typedef CUdeviceptr pointer_type;
       typedef size_t size_type;
 
+      bool is_deferred() const
+      {
+        return false;
+      }
+
+      device_allocator *copy() const
+      {
+        return new device_allocator(*this);
+      }
+
       pointer_type allocate(size_type s)
       {
         pycuda::scoped_context_activation ca(get_context());
@@ -54,6 +64,16 @@ namespace
     public:
       typedef void *pointer_type;
       typedef size_t size_type;
+
+      bool is_deferred() const
+      {
+        return false;
+      }
+
+      host_allocator *copy() const
+      {
+        return new host_allocator(*this);
+      }
 
       host_allocator(unsigned flags=0)
         : m_flags(flags)
