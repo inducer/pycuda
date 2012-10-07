@@ -50,6 +50,15 @@ class TestGPUArray:
 
 
 
+
+    @mark_cuda_test
+    def test_numpy_integer_shape(self):
+        gpuarray.empty(np.int32(17), np.float32)
+        gpuarray.empty((np.int32(17), np.int32(17)), np.float32)
+
+
+
+
     @mark_cuda_test
     def test_abs(self):
         a = -gpuarray.arange(111, dtype=np.float32)

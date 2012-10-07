@@ -162,6 +162,8 @@ class GPUArray(object):
             s = shape
             shape = (shape,)
 
+        s = np.asscalar(s)
+
         if strides is None:
             if order == "F":
                 strides = _f_contiguous_strides(
