@@ -286,7 +286,8 @@ class SourceModule(object):
 
         self.get_global = self.module.get_global
         self.get_texref = self.module.get_texref
-        self.get_surfref = self.module.get_surfref
+        if hasattr(self.module, "get_surfref"):
+            self.get_surfref = self.module.get_surfref
 
     def _check_arch(self, arch):
         if arch is None: return
