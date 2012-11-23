@@ -1232,9 +1232,6 @@ Unstructured Memory Transfers
     :class:`DeviceAllocation`) to the Python buffer *dest*. The size of the copy
     is determined by the size of the buffer.
 
-    Optionally execute asynchronously, serialized via *stream*. In
-    this case, *dest* must be page-locked.
-
 .. function:: memcpy_dtoh_async(dest, src, stream=None)
 
     Copy from the device pointer *src* (an :class:`int` or a
