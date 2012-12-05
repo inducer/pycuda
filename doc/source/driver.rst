@@ -44,7 +44,7 @@ Error Reporting
 
 .. exception:: CompileError
 
-    Thrown when :class:`SourceModule` compilation fails.
+    Thrown when :class:`pycuda.compiler.SourceModule` compilation fails.
 
     .. attribute:: msg
 
@@ -1610,7 +1610,7 @@ Code on the Device: Modules and Functions
         The number of bytes of local memory used by this function.
 
         On CUDA 2.1 and below, this is only available if this function is part
-        of a :class:`SourceModule`.  It replaces the now-deprecated attribute
+        of a :class:`pycuda.compiler.SourceModule`.  It replaces the now-deprecated attribute
         `lmem`.
 
     .. attribute:: shared_size_bytes
@@ -1618,7 +1618,7 @@ Code on the Device: Modules and Functions
         The number of bytes of shared memory used by this function.
 
         On CUDA 2.1 and below, this is only available if this function is part
-        of a :class:`SourceModule`.  It replaces the now-deprecated attribute
+        of a :class:`pycuda.compiler.SourceModule`.  It replaces the now-deprecated attribute
         `smem`.
 
     .. attribute:: num_regs
@@ -1626,7 +1626,7 @@ Code on the Device: Modules and Functions
         The number of 32-bit registers used by this function.
 
         On CUDA 2.1 and below, this is only available if this function is part
-        of a :class:`SourceModule`.  It replaces the now-deprecated attribute
+        of a :class:`pycuda.compiler.SourceModule`.  It replaces the now-deprecated attribute
         `registers`.
 
     .. method:: set_shared_size(bytes)
@@ -1746,7 +1746,7 @@ Just-in-time Compilation
     exercise caution in such modifications--you risk breaking other people's
     code.
 
-.. class:: SourceModule(source, nvcc="nvcc", options=None, keep=False, no_extern_c=False, arch=None, code=None, cache_dir=None)
+.. class:: SourceModule(source, nvcc="nvcc", options=None, keep=False, no_extern_c=False, arch=None, code=None, cache_dir=None, include_dirs=[])
 
     Create a :class:`Module` from the CUDA source code *source*. The Nvidia
     compiler *nvcc* is assumed to be on the :envvar:`PATH` if no path to it is
@@ -1766,7 +1766,7 @@ Just-in-time Compilation
     sensible per-user default. If it is set to `False`, caching is
     disabled.
 
-    This class exhibits the same public interface as :class:`Module`, but
+    This class exhibits the same public interface as :class:`pycuda.driver.Module`, but
     does not inherit from it.
 
     *Change note:* :class:`SourceModule` was moved from :mod:`pycuda.driver` to
