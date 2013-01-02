@@ -533,6 +533,72 @@ class _RandomNumberGeneratorBase(object):
 
 # {{{ XORWOW RNG
 
+class _PseudoRandomNumberGeneratorBase(_RandomNumberGeneratorBase):
+    def __init__(self, seed_getter=None, offset=0,
+        state_type, vector_type, additional_source, scramble_type=None):
+
+        super(_PseudoRandomNumberGeneratorBase, self).__init__(
+            state_type, vector_type, additional_source)
+
+        generator_count = self.generators_per_block * self.block_count
+        if seed_getter is None:
+            seed = array.to_gpu(
+                    np.asarray(
+                        np.random.random_integers(
+                            0, (1 << 31) - 2, generator_count),
+                        dtype=np.int32))
+        else:
+            seed = seed_getter(generator_count)
+
+        if not (isinstance(seed, pycuda.gpuarray.GPUArray)
+                and seed.dtype == np.int32
+                and seed.size == generator_count):
+            raise TypeError("seed must be GPUArray of integers of right length")
+
+        p = self.module.get_function("prepare")
+        p.prepare("PiPi")
+        self.skip_ahead_sequence = self.module.get_function("skip_ahead_sequence")
+        self.skip_ahead_sequence.prepare("Pii")
+        self.skip_ahead_sequence_array = self.module.get_function("skip_ahead_sequence_array")
+        self.skip_ahead_sequence_array.prepare("PiP")
+
+        from pycuda.characterize import has_stack
+        has_stack = has_stack()
+
+        if has_stack:
+            prev_stack_size = drv.Context.get_limit(drv.limit.STACK_SIZE)
+
+        try:
+            if has_stack:
+                drv.Context.set_limit(drv.limit.STACK_SIZE, 1<<14) # 16k
+            try:
+                p.prepared_call(
+                        (self.block_count, 1), (self.generators_per_block, 1, 1), self.state,
+                        generator_count, seed.gpudata, offset)
+            except drv.LaunchError:
+                raise ValueError("Initialisation failed. Decrease number of threads.")
+
+        finally:
+            if has_stack:
+                drv.Context.set_limit(drv.limit.STACK_SIZE, prev_stack_size)
+
+    def call_skip_ahead_sequence(self, i, stream=None):
+        self.skip_ahead_sequence.prepared_async_call(
+                (self.block_count, 1), (self.generators_per_block, 1, 1), stream,
+                self.state, self.generators_per_block * self.block_count, i)
+
+    def call_skip_ahead_sequence_array(self, i, stream=None):
+        self.skip_ahead_sequence_array.prepared_async_call(
+                (self.block_count, 1), (self.generators_per_block, 1, 1), stream,
+                self.state, self.generators_per_block * self.block_count, i.gpudata)
+
+    def _kernels(self):
+        return (_RandomNumberGeneratorBase._kernels(self)
+                + [self.module.get_function("prepare")]
+                + [self.module.get_function("skip_ahead_sequence"),
+                   self.module.get_function("skip_ahead_sequence_array")])
+
+
 def seed_getter_uniform(N):
     result = pycuda.gpuarray.empty([N], np.int32)
     value = random.randint(0, 2**31-1)
@@ -573,7 +639,7 @@ __global__ void skip_ahead_sequence_array(%(state_type)s *s, const int n, const 
 """
 
 if get_curand_version() >= (3, 2, 0):
-    class XORWOWRandomNumberGenerator(_RandomNumberGeneratorBase):
+    class XORWOWRandomNumberGenerator(_PseudoRandomNumberGeneratorBase):
         has_box_muller = True
 
         def __init__(self, seed_getter=None, offset=0):
@@ -583,66 +649,9 @@ if get_curand_version() >= (3, 2, 0):
             """
 
             super(XORWOWRandomNumberGenerator, self).__init__(
+                seed_getter, offset,
                 'curandStateXORWOW', 'unsigned int', xorwow_random_source+
                 xorwow_skip_ahead_sequence_source+random_skip_ahead64_source)
-
-            generator_count = self.generators_per_block * self.block_count
-            if seed_getter is None:
-                seed = array.to_gpu(
-                        np.asarray(
-                            np.random.random_integers(
-                                0, (1 << 31) - 2, generator_count),
-                            dtype=np.int32))
-            else:
-                seed = seed_getter(generator_count)
-
-            if not (isinstance(seed, pycuda.gpuarray.GPUArray)
-                    and seed.dtype == np.int32
-                    and seed.size == generator_count):
-                raise TypeError("seed must be GPUArray of integers of right length")
-
-            p = self.module.get_function("prepare")
-            p.prepare("PiPi")
-            self.skip_ahead_sequence = self.module.get_function("skip_ahead_sequence")
-            self.skip_ahead_sequence.prepare("Pii")
-            self.skip_ahead_sequence_array = self.module.get_function("skip_ahead_sequence_array")
-            self.skip_ahead_sequence_array.prepare("PiP")
-
-            from pycuda.characterize import has_stack
-            has_stack = has_stack()
-
-            if has_stack:
-                prev_stack_size = drv.Context.get_limit(drv.limit.STACK_SIZE)
-
-            try:
-                if has_stack:
-                    drv.Context.set_limit(drv.limit.STACK_SIZE, 1<<14) # 16k
-                try:
-                    p.prepared_call(
-                            (self.block_count, 1), (self.generators_per_block, 1, 1), self.state,
-                            generator_count, seed.gpudata, offset)
-                except drv.LaunchError:
-                    raise ValueError("Initialisation failed. Decrease number of threads.")
-
-            finally:
-                if has_stack:
-                    drv.Context.set_limit(drv.limit.STACK_SIZE, prev_stack_size)
-
-        def call_skip_ahead_sequence(self, i, stream=None):
-            self.skip_ahead_sequence.prepared_async_call(
-                    (self.block_count, 1), (self.generators_per_block, 1, 1), stream,
-                    self.state, self.generators_per_block * self.block_count, i)
-
-        def call_skip_ahead_sequence_array(self, i, stream=None):
-            self.skip_ahead_sequence_array.prepared_async_call(
-                    (self.block_count, 1), (self.generators_per_block, 1, 1), stream,
-                    self.state, self.generators_per_block * self.block_count, i.gpudata)
-
-        def _kernels(self):
-            return (_RandomNumberGeneratorBase._kernels(self)
-                    + [self.module.get_function("prepare")]
-                    + [self.module.get_function("skip_ahead_sequence"),
-                       self.module.get_function("skip_ahead_sequence_array")])
 
 # }}}
 
@@ -693,7 +702,7 @@ __global__ void skip_ahead_subsequence_array(%(state_type)s *s, const int n, con
 """
 
 if get_curand_version() >= (4, 1, 0):
-    class MRG32k3aRandomNumberGenerator(_RandomNumberGeneratorBase):
+    class MRG32k3aRandomNumberGenerator(_PseudoRandomNumberGeneratorBase):
         has_box_muller = True
 
         def __init__(self, seed_getter=None, offset=0):
@@ -703,64 +712,14 @@ if get_curand_version() >= (4, 1, 0):
             """
 
             super(MRG32k3aRandomNumberGenerator, self).__init__(
+                seed_getter, offset,
                 'curandStateMRG32k3a', 'unsigned int', mrg32k3a_random_source+
                 mrg32k3a_skip_ahead_sequence_source+random_skip_ahead64_source)
 
-            generator_count = self.generators_per_block * self.block_count
-            if seed_getter is None:
-                seed = array.to_gpu(
-                        np.asarray(
-                            np.random.random_integers(
-                                0, (1 << 31) - 2, generator_count),
-                            dtype=np.int32))
-            else:
-                seed = seed_getter(generator_count)
-
-            if not (isinstance(seed, pycuda.gpuarray.GPUArray)
-                    and seed.dtype == np.int32
-                    and seed.size == generator_count):
-                raise TypeError("seed must be GPUArray of integers of right length")
-
-            p = self.module.get_function("prepare")
-            p.prepare("PiPi")
-            self.skip_ahead_sequence = self.module.get_function("skip_ahead_sequence")
-            self.skip_ahead_sequence.prepare("Pii")
-            self.skip_ahead_sequence_array = self.module.get_function("skip_ahead_sequence_array")
-            self.skip_ahead_sequence_array.prepare("PiP")
             self.skip_ahead_subsequence = self.module.get_function("skip_ahead_subsequence")
             self.skip_ahead_subsequence.prepare("Pii")
             self.skip_ahead_subsequence_array = self.module.get_function("skip_ahead_subsequence_array")
             self.skip_ahead_subsequence_array.prepare("PiP")
-
-            from pycuda.characterize import has_stack
-            has_stack = has_stack()
-
-            if has_stack:
-                prev_stack_size = drv.Context.get_limit(drv.limit.STACK_SIZE)
-
-            try:
-                if has_stack:
-                    drv.Context.set_limit(drv.limit.STACK_SIZE, 1<<14) # 16k
-                try:
-                    p.prepared_call(
-                            (self.block_count, 1), (self.generators_per_block, 1, 1), self.state,
-                            generator_count, seed.gpudata, offset)
-                except drv.LaunchError:
-                    raise ValueError("Initialisation failed. Decrease number of threads.")
-
-            finally:
-                if has_stack:
-                    drv.Context.set_limit(drv.limit.STACK_SIZE, prev_stack_size)
-
-        def call_skip_ahead_sequence(self, i, stream=None):
-            self.skip_ahead_sequence.prepared_async_call(
-                    (self.block_count, 1), (self.generators_per_block, 1, 1), stream,
-                    self.state, self.generators_per_block * self.block_count, i)
-
-        def call_skip_ahead_sequence_array(self, i, stream=None):
-            self.skip_ahead_sequence_array.prepared_async_call(
-                    (self.block_count, 1), (self.generators_per_block, 1, 1), stream,
-                    self.state, self.generators_per_block * self.block_count, i.gpudata)
 
         def call_skip_ahead_subsequence(self, i, stream=None):
             self.skip_ahead_subsequence.prepared_async_call(
@@ -773,11 +732,8 @@ if get_curand_version() >= (4, 1, 0):
                     self.state, self.generators_per_block * self.block_count, i.gpudata)
 
         def _kernels(self):
-            return (_RandomNumberGeneratorBase._kernels(self)
-                    + [self.module.get_function("prepare")]
-                    + [self.module.get_function("skip_ahead_sequence"),
-                       self.module.get_function("skip_ahead_sequence_array"),
-                       self.module.get_function("skip_ahead_subsequence"),
+            return (_PseudoRandomNumberGeneratorBase._kernels(self)
+                    + [self.module.get_function("skip_ahead_subsequence"),
                        self.module.get_function("skip_ahead_subsequence_array")])
 
 # }}}
