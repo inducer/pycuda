@@ -535,6 +535,7 @@ class _RandomNumberGeneratorBase(object):
 
 def seed_getter_uniform(N):
     result = pycuda.gpuarray.empty([N], np.int32)
+    import random
     value = random.randint(0, 2**31-1)
     return result.fill(value)
 
