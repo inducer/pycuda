@@ -483,13 +483,9 @@ class GPUArray(object):
 
            x = n / self
         """
-        # other must be a scalar
-        if other == 1:
-            return self
-        else:
-            # create a new array for the result
-            result = self._new_like_me(_get_common_dtype(self, other))
-            return self._rdiv_scalar(other, result)
+        # create a new array for the result
+        result = self._new_like_me(_get_common_dtype(self, other))
+        return self._rdiv_scalar(other, result)
 
     __rtruediv__ = __div__
 
