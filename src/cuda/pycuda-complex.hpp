@@ -550,9 +550,9 @@ struct _STLP_CLASS_DECLSPEC complex<double> {
 // Converting constructors from one of these three specialized types
 // to another.
 
-inline complex<float>::complex(const complex<double>& __z)
+inline __device__ complex<float>::complex(const complex<double>& __z)
   : _M_re((float)__z._M_re), _M_im((float)__z._M_im) {}
-inline complex<double>::complex(const complex<float>& __z)
+inline __device__ complex<double>::complex(const complex<float>& __z)
   : _M_re(__z._M_re), _M_im(__z._M_im) {}
 
 // Unary non-member arithmetic operators.
