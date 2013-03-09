@@ -262,6 +262,10 @@ if get_curand_version() >= (4, 0, 0):
     _get_scramble_constants32 = _curand._get_scramble_constants32
     _get_scramble_constants64 = _curand._get_scramble_constants64
 
+if get_curand_version() >= (4, 0, 0):
+    _make_mtgp32_constants = _curand._make_mtgp32_constants
+    _make_mtgp32_kernel_state = curand._make_mtgp32_kernel_state
+
 # {{{ Base class
 
 gen_template = """
@@ -738,14 +742,27 @@ if get_curand_version() >= (4, 1, 0):
 
 # }}}
 
-# {{{ Mtpg2 RNG
+# {{{ Mtgp32 RNG
 
-class Mtpg32RandomNumberGenerator(_RandomNumberGeneratorBase):
-    """
-    Something completely different.
+if get_curand_version() >= (4, 1, 0):
+    def make_mtgp32_constants(count):
+        result = np.empty((count, ), dtype=np.uint32)
+        _make_mtgp32_constants(result, count)
+        return pycuda.gpuarray.to_gpu(result)
 
-    Hard limit of 256 threads per block.
-    """
+    def make_mtgp32_kernel_state(count):
+        result = np.empty((count, ), dtype=np.uint32)
+        _make_mtgp32_kernel_state(result, count)
+        return pycuda.gpuarray.to_gpu(result)
+
+
+if get_curand_version() >= (4, 1, 0):
+    class Mtgp32RandomNumberGenerator(_RandomNumberGeneratorBase):
+        """
+        Something completely different.
+
+        Hard limit of 256 threads per block.
+        """
 
 # }}}
 
