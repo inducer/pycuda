@@ -262,9 +262,9 @@ if get_curand_version() >= (4, 0, 0):
     _get_scramble_constants32 = _curand._get_scramble_constants32
     _get_scramble_constants64 = _curand._get_scramble_constants64
 
-if get_curand_version() >= (4, 0, 0):
+if get_curand_version() >= (4, 1, 0):
     _make_mtgp32_constants = _curand._make_mtgp32_constants
-    _make_mtgp32_kernel_state = curand._make_mtgp32_kernel_state
+    _make_mtgp32_kernel_state = _curand._make_mtgp32_kernel_state
 
 # {{{ Base class
 
@@ -285,6 +285,16 @@ __global__ void %(name)s(%(state_type)s *s, %(out_type)s *d, %(in_type)s mean, %
   const int delta = blockDim.x*gridDim.x;
   for (int idx = tidx; idx < n; idx += delta)
     d[idx] = curand_log%(suffix)s(&s[tidx], mean, stddev);
+}
+"""
+
+gen_poisson_template = """
+__global__ void %(name)s(%(state_type)s *s, %(out_type)s *d, double lambda, const int n)
+{
+  const int tidx = blockIdx.x*blockDim.x+threadIdx.x;
+  const int delta = blockDim.x*gridDim.x;
+  for (int idx = tidx; idx < n; idx += delta)
+    d[idx] = curand_poisson%(suffix)s(&s[tidx], lambda);
 }
 """
 
@@ -358,6 +368,10 @@ class _RandomNumberGeneratorBase(object):
         ("normal_log_double", "double", "double", "_normal_double"),
         ("normal_log_float2", "float", "float2", "_normal2"),
         ("normal_log_double2", "double", "double2", "_normal2_double"),
+        ]
+
+    gen_poisson_info = [
+        ("poisson_int", "unsigned int", ""),
         ]
 
     def __init__(self, state_type, vector_type, additional_source,
@@ -522,6 +536,23 @@ class _RandomNumberGeneratorBase(object):
             result = array.empty(shape, dtype)
             self.fill_log_normal(result, mean, stddev, stream)
             return result
+    if get_curand_version() >= (5, 0, 0):
+        def fill_poisson(self, data, lambda_value, stream=None):
+            if data.dtype == np.uint32:
+                func_name = "poisson_int"
+            else:
+                raise NotImplementedError
+
+            func = self.generators[func_name]
+
+            func.prepared_async_call(
+                    (self.block_count, 1), (self.generators_per_block, 1, 1), stream,
+                    self.state, data.gpudata, lambda_value, data_size)
+
+        def gen_poisson(self, shape, dtype, lambda_value, stream=None):
+            result = array.empty(shape, dtype)
+            self.fill_poisson(result, lambda_value, stream)
+            return result
 
     def call_skip_ahead(self, i, stream=None):
         self.skip_ahead.prepared_async_call(
@@ -538,8 +569,8 @@ class _RandomNumberGeneratorBase(object):
 # {{{ XORWOW RNG
 
 class _PseudoRandomNumberGeneratorBase(_RandomNumberGeneratorBase):
-    def __init__(self, seed_getter=None, offset=0,
-        state_type, vector_type, additional_source, scramble_type=None):
+    def __init__(self, seed_getter, offset, state_type, vector_type,
+        additional_source, scramble_type=None):
 
         super(_PseudoRandomNumberGeneratorBase, self).__init__(
             state_type, vector_type, additional_source)
@@ -986,6 +1017,16 @@ if get_curand_version() >= (4, 0, 0):
                 'curandStateScrambledSobol64', 'curandDirectionVectors64_t',
                 'unsigned long long',
                 scrambledsobol_random_source+random_skip_ahead64_source)
+
+# }}}
+
+# {{{ Poisson discrete distributions
+
+if get_curand_version() >= (5, 0, 0):
+    pass
+# curandCreatePoissonDistribution
+# curandDestroyDistribution
+# curand_discreete
 
 # }}}
 
