@@ -19,7 +19,7 @@ def get_nvcc_version(nvcc):
         warn("NVCC version could not be determined.")
         stdout = "nvcc unknown version"
 
-    return stdout
+    return stdout.decode("utf-8")
 
 def _new_md5(): 
     try:
@@ -59,11 +59,11 @@ def preprocess_source(source, options, nvcc):
         from pycuda.driver import CompileError
         raise CompileError("nvcc preprocessing of %s failed with ridiculously "
                 "small code output - likely unsupported compiler." % source_path,
-                cmdline, stderr=stderr)
+                cmdline, stderr=stderr.decode("utf-8"))
 
     unlink(source_path)
 
-    return stdout
+    return stdout.decode("utf-8")
 
 
 
@@ -74,13 +74,13 @@ def compile_plain(source, options, keep, nvcc, cache_dir):
         checksum = _new_md5()
 
         if '#include' in source:
-            checksum.update(preprocess_source(source, options, nvcc))
+            checksum.update(preprocess_source(source, options, nvcc).encode("utf-8"))
         else:
             checksum.update(source.encode("utf-8"))
 
         for option in options: 
             checksum.update(option.encode("utf-8"))
-        checksum.update(get_nvcc_version(nvcc))
+        checksum.update(get_nvcc_version(nvcc).encode("utf-8"))
         from pycuda.characterize import platform_bits
         checksum.update(str(platform_bits()).encode("utf-8"))
 
@@ -126,17 +126,17 @@ def compile_plain(source, options, keep, nvcc, cache_dir):
                     "encountered an error")
         from pycuda.driver import CompileError
         raise CompileError("nvcc compilation of %s failed" % cu_file_path,
-                cmdline, stdout=stdout, stderr=stderr)
+                cmdline, stdout=stdout.decode("utf-8"), stderr=stderr.decode("utf-8"))
 
     if stdout or stderr:
-        lcase_err_text = (stdout+stderr).lower()
+        lcase_err_text = (stdout+stderr).decode("utf-8").lower()
         from warnings import warn
         if "demoted" in lcase_err_text or "demoting" in lcase_err_text:
             warn("nvcc said it demoted types in source code it "
                 "compiled--this is likely not what you want.",
                 stacklevel=4)
         warn("The CUDA compiler suceeded, but said the following:\n"
-                +stdout+stderr, stacklevel=4)
+                +(stdout+stderr).decode("utf-8"), stacklevel=4)
 
     cubin = cubin_f.read()
     cubin_f.close()
