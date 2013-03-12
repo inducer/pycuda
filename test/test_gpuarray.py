@@ -308,6 +308,8 @@ class TestGPUArray:
                 assert (x_host <= 1).all()
 
             gen.gen_uniform(10000, np.uint32)
+            if get_curand_version() >= (5, 0, 0):
+                gen.gen_poisson(10000, np.uint32, 13.0)
 
 
 

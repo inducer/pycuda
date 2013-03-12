@@ -405,17 +405,31 @@ class _RandomNumberGeneratorBase(object):
                     for name, in_type, out_type, suffix in self.gen_log_info
                     if do_generate(out_type)]
 
+        if get_curand_version() >= (5, 0, 0):
+            my_poisson_generators = [
+                    (name, out_type, suffix)
+                    for name, out_type, suffix in self.gen_poisson_info
+                    if do_generate(out_type)]
+
         generator_sources = [
                 gen_template % {
                     "name": name, "out_type": out_type, "suffix": suffix,
                     "state_type": state_type, }
                 for name, out_type, suffix in my_generators]
         
-        generator_sources.extend([
-                gen_log_template % {
-                    "name": name, "in_type": in_type, "out_type": out_type,
-                    "suffix": suffix, "state_type": state_type, }
-                for name, in_type, out_type, suffix in my_log_generators])
+        if get_curand_version() >= (4, 0, 0):
+            generator_sources.extend([
+                    gen_log_template % {
+                        "name": name, "in_type": in_type, "out_type": out_type,
+                        "suffix": suffix, "state_type": state_type, }
+                    for name, in_type, out_type, suffix in my_log_generators])
+
+        if get_curand_version() >= (5, 0, 0):
+            generator_sources.extend([
+                    gen_poisson_template % {
+                        "name": name, "out_type": out_type, "suffix": suffix,
+                        "state_type": state_type, }
+                    for name, out_type, suffix in my_poisson_generators])
 
         source = (random_source + additional_source) % {
             "state_type": state_type,
@@ -431,13 +445,19 @@ class _RandomNumberGeneratorBase(object):
             gen_func = module.get_function(name)
             gen_func.prepare("PPi")
             self.generators[name] = gen_func
-        for name, in_type, out_type, suffix  in my_log_generators:
-            gen_func = module.get_function(name)
-            if in_type == "float":
-                gen_func.prepare("PPffi")
-            if in_type == "double":
-                gen_func.prepare("PPddi")
-            self.generators[name] = gen_func
+        if get_curand_version() >= (4, 0, 0):
+            for name, in_type, out_type, suffix  in my_log_generators:
+                gen_func = module.get_function(name)
+                if in_type == "float":
+                    gen_func.prepare("PPffi")
+                if in_type == "double":
+                    gen_func.prepare("PPddi")
+                self.generators[name] = gen_func
+        if get_curand_version() >= (5, 0, 0):
+            for name, out_type, suffix  in my_poisson_generators:
+                gen_func = module.get_function(name)
+                gen_func.prepare("PPdi")
+                self.generators[name] = gen_func
 
         self.skip_ahead = module.get_function("skip_ahead")
         self.skip_ahead.prepare("Pii")
@@ -536,6 +556,7 @@ class _RandomNumberGeneratorBase(object):
             result = array.empty(shape, dtype)
             self.fill_log_normal(result, mean, stddev, stream)
             return result
+
     if get_curand_version() >= (5, 0, 0):
         def fill_poisson(self, data, lambda_value, stream=None):
             if data.dtype == np.uint32:
@@ -547,7 +568,7 @@ class _RandomNumberGeneratorBase(object):
 
             func.prepared_async_call(
                     (self.block_count, 1), (self.generators_per_block, 1, 1), stream,
-                    self.state, data.gpudata, lambda_value, data_size)
+                    self.state, data.gpudata, lambda_value, data.size)
 
         def gen_poisson(self, shape, dtype, lambda_value, stream=None):
             result = array.empty(shape, dtype)
@@ -1017,16 +1038,6 @@ if get_curand_version() >= (4, 0, 0):
                 'curandStateScrambledSobol64', 'curandDirectionVectors64_t',
                 'unsigned long long',
                 scrambledsobol_random_source+random_skip_ahead64_source)
-
-# }}}
-
-# {{{ Poisson discrete distributions
-
-if get_curand_version() >= (5, 0, 0):
-    pass
-# curandCreatePoissonDistribution
-# curandDestroyDistribution
-# curand_discreete
 
 # }}}
 
