@@ -194,9 +194,12 @@ def main():
                     ),
                 ],
 
-            data_files=[
-                ("include/pycuda", glob.glob("src/cuda/*.hpp"))
-                ],
+            include_package_data=True,
+            package_data={
+                    "pycuda": [
+                        "cuda/*.hpp",
+                        ]
+                    },
 
             # 2to3 invocation
             cmdclass={'build_py': build_py})

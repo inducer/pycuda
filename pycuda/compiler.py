@@ -172,33 +172,8 @@ def _get_per_user_string():
 
 
 def _find_pycuda_include_path():
-    from imp import find_module
-    file, pathname, descr = find_module("pycuda")
-
-    # Who knew Python installation is so uniform and predictable?
-    from os.path import join, exists
-    possible_include_paths = [
-            join(pathname, "..", "include", "pycuda"),
-            join(pathname, "..", "src", "cuda"),
-            join(pathname, "..", "..", "..", "src", "cuda"),
-            join(pathname, "..", "..", "..", "..", "include", "pycuda"),
-            join(pathname, "..", "..", "..", "include", "pycuda"),
-            ]
-
-    if sys.platform in ("linux2", "darwin"):
-        possible_include_paths.extend([
-            join(sys.prefix, "include" , "pycuda"),
-            "/usr/include/pycuda",
-            "/usr/local/include/pycuda"
-            ])
-
-    for inc_path in possible_include_paths:
-        if exists(inc_path):
-            return inc_path
-
-    raise RuntimeError("could not find path to PyCUDA's C" 
-            " header files, searched in : %s" 
-            % '\n'.join(possible_include_paths))
+    from pkg_resources import Requirement, resource_filename
+    return resource_filename(Requirement.parse("pycuda"), "pycuda/cuda")
 
 
 
