@@ -85,17 +85,8 @@ class NumpyExtension(Extension):
 
 class PyUblasExtension(NumpyExtension):
     def get_module_include_path(self, name):
-        from imp import find_module
-        file, pathname, descr = find_module(name)
-        from os.path import join, exists
-        installed_path = join(pathname, "..", "include")
-        development_path = join(pathname, "..", "src", "cpp")
-        if exists(installed_path):
-            return installed_path
-        elif exists(development_path):
-            return development_path
-        else:
-            raise RuntimeError("could not find C include path for module '%s'" % name)
+        from pkg_resources import Requirement, resource_filename
+        return resource_filename(Requirement.parse(name), "%s/include" % name)
 
     @property
     def include_dirs(self):
