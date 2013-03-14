@@ -156,6 +156,10 @@ def main():
               'Natural Language :: English',
               'Programming Language :: C++',
               'Programming Language :: Python',
+              'Programming Language :: Python :: 2.4',
+              'Programming Language :: Python :: 2.5',
+              'Programming Language :: Python :: 2.6',
+              'Programming Language :: Python :: 2.7',
               'Topic :: Scientific/Engineering',
               'Topic :: Scientific/Engineering :: Mathematics',
               'Topic :: Scientific/Engineering :: Physics',
@@ -200,6 +204,8 @@ def main():
                         "cuda/*.hpp",
                         ]
                     },
+
+            zip_safe=False,
 
             # 2to3 invocation
             cmdclass={'build_py': build_py})
