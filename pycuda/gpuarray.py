@@ -487,7 +487,7 @@ class GPUArray(object):
         result = self._new_like_me(_get_common_dtype(self, other))
         return self._rdiv_scalar(other, result)
 
-    __rtruediv__ = __div__
+    __rtruediv__ = __rdiv__
 
     def __idiv__(self, other):
         """Divides an array by an array or a scalar::
