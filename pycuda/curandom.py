@@ -476,13 +476,13 @@ class _RandomNumberGeneratorBase(object):
         data_size = data.size
         if self.has_box_muller and data_size % 2 == 0:
             func_name += "2"
-            data_size /= 2
+            data_size //= 2
 
         func = self.generators[func_name]
 
         func.prepared_async_call(
                 (self.block_count, 1), (self.generators_per_block, 1, 1), stream,
-                self.state, data.gpudata, data_size)
+                self.state, data.gpudata, int(data_size))
 
     def gen_uniform(self, shape, dtype, stream=None):
         result = array.empty(shape, dtype)
@@ -506,13 +506,13 @@ class _RandomNumberGeneratorBase(object):
             data_size = data.size
             if self.has_box_muller and data_size % 2 == 0:
                 func_name += "2"
-                data_size /= 2
+                data_size //= 2
 
             func = self.generators[func_name]
 
             func.prepared_async_call(
                     (self.block_count, 1), (self.generators_per_block, 1, 1), stream,
-                    self.state, data.gpudata, mean, stddev, data_size)
+                    self.state, data.gpudata, mean, stddev, int(data_size))
 
         def gen_log_normal(self, shape, dtype, mean, stddev, stream=None):
             result = array.empty(shape, dtype)
