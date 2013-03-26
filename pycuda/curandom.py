@@ -354,7 +354,8 @@ class _RandomNumberGeneratorBase(object):
     """
 
     gen_info = [
-        ("uniform_int", "int", ""),
+        ("uniform_int", "unsigned int", ""),
+        ("uniform_long", "unsigned long long", ""),
         ("uniform_float", "float", "_uniform"),
         ("uniform_double", "double", "_uniform_double"),
         ("normal_float", "float", "_normal"),
@@ -374,8 +375,8 @@ class _RandomNumberGeneratorBase(object):
         ("poisson_int", "unsigned int", ""),
         ]
 
-    def __init__(self, state_type, vector_type, additional_source,
-        scramble_type=None):
+    def __init__(self, state_type, vector_type, generator_bits,
+        additional_source, scramble_type=None):
         if get_curand_version() < (3, 2, 0):
             raise EnvironmentError("Need at least CUDA 3.2")
 
@@ -459,13 +460,20 @@ class _RandomNumberGeneratorBase(object):
                 gen_func.prepare("PPdi")
                 self.generators[name] = gen_func
 
-        self.skip_ahead = module.get_function("skip_ahead")
-        self.skip_ahead.prepare("Pii")
-        self.skip_ahead_array = module.get_function("skip_ahead_array")
-        self.skip_ahead_array.prepare("PiP")
+        self.generator_bits = generator_bits
+        self._prepare_skipahead()
 
         self.state_type = state_type
         self._state = None
+
+    def _prepare_skipahead(self):
+        self.skip_ahead = self.module.get_function("skip_ahead")
+        if self.generator_bits == 32:
+            self.skip_ahead.prepare("PiI")
+        if self.generator_bits == 64:
+            self.skip_ahead.prepare("PiQ")
+        self.skip_ahead_array = self.module.get_function("skip_ahead_array")
+        self.skip_ahead_array.prepare("PiP")
 
     def _kernels(self):
         return (
@@ -496,6 +504,8 @@ class _RandomNumberGeneratorBase(object):
             func = self.generators["uniform_double"]
         elif data.dtype in [np.int, np.int32, np.uint32]:
             func = self.generators["uniform_int"]
+        elif data.dtype in [np.int64, np.uint64] and self.generator_bits >= 64:
+            func = self.generators["uniform_long"]
         else:
             raise NotImplementedError
 
@@ -591,10 +601,10 @@ class _RandomNumberGeneratorBase(object):
 
 class _PseudoRandomNumberGeneratorBase(_RandomNumberGeneratorBase):
     def __init__(self, seed_getter, offset, state_type, vector_type,
-        additional_source, scramble_type=None):
+        generator_bits, additional_source, scramble_type=None):
 
         super(_PseudoRandomNumberGeneratorBase, self).__init__(
-            state_type, vector_type, additional_source)
+            state_type, vector_type, generator_bits, additional_source)
 
         generator_count = self.generators_per_block * self.block_count
         if seed_getter is None:
@@ -613,10 +623,6 @@ class _PseudoRandomNumberGeneratorBase(_RandomNumberGeneratorBase):
 
         p = self.module.get_function("prepare")
         p.prepare("PiPi")
-        self.skip_ahead_sequence = self.module.get_function("skip_ahead_sequence")
-        self.skip_ahead_sequence.prepare("Pii")
-        self.skip_ahead_sequence_array = self.module.get_function("skip_ahead_sequence_array")
-        self.skip_ahead_sequence_array.prepare("PiP")
 
         from pycuda.characterize import has_stack
         has_stack = has_stack()
@@ -637,6 +643,16 @@ class _PseudoRandomNumberGeneratorBase(_RandomNumberGeneratorBase):
         finally:
             if has_stack:
                 drv.Context.set_limit(drv.limit.STACK_SIZE, prev_stack_size)
+
+    def _prepare_skipahead(self):
+        self.skip_ahead = self.module.get_function("skip_ahead")
+        self.skip_ahead.prepare("PiQ")
+        self.skip_ahead_array = self.module.get_function("skip_ahead_array")
+        self.skip_ahead_array.prepare("PiP")
+        self.skip_ahead_sequence = self.module.get_function("skip_ahead_sequence")
+        self.skip_ahead_sequence.prepare("PiQ")
+        self.skip_ahead_sequence_array = self.module.get_function("skip_ahead_sequence_array")
+        self.skip_ahead_sequence_array.prepare("PiP")
 
     def call_skip_ahead_sequence(self, i, stream=None):
         self.skip_ahead_sequence.prepared_async_call(
@@ -678,14 +694,14 @@ __global__ void prepare( %(state_type)s *s, const int n,
 
 xorwow_skip_ahead_sequence_source = """
 extern "C" {
-__global__ void skip_ahead_sequence(%(state_type)s *s, const int n, const unsigned int skip)
+__global__ void skip_ahead_sequence(%(state_type)s *s, const int n, const unsigned long long skip)
 {
   const int idx = blockIdx.x*blockDim.x+threadIdx.x;
   if (idx < n)
     skipahead_sequence(skip, &s[idx]);
 }
 
-__global__ void skip_ahead_sequence_array(%(state_type)s *s, const int n, const unsigned int *skip)
+__global__ void skip_ahead_sequence_array(%(state_type)s *s, const int n, const unsigned long long *skip)
 {
   const int idx = blockIdx.x*blockDim.x+threadIdx.x;
   if (idx < n)
@@ -706,7 +722,7 @@ if get_curand_version() >= (3, 2, 0):
 
             super(XORWOWRandomNumberGenerator, self).__init__(
                 seed_getter, offset,
-                'curandStateXORWOW', 'unsigned int', xorwow_random_source+
+                'curandStateXORWOW', 'unsigned int', 32, xorwow_random_source+
                 xorwow_skip_ahead_sequence_source+random_skip_ahead64_source)
 
 # }}}
@@ -727,28 +743,28 @@ __global__ void prepare( %(state_type)s *s, const int n,
 
 mrg32k3a_skip_ahead_sequence_source = """
 extern "C" {
-__global__ void skip_ahead_sequence(%(state_type)s *s, const int n, const unsigned int skip)
+__global__ void skip_ahead_sequence(%(state_type)s *s, const int n, const unsigned long long skip)
 {
   const int idx = blockIdx.x*blockDim.x+threadIdx.x;
   if (idx < n)
     skipahead_sequence(skip, &s[idx]);
 }
 
-__global__ void skip_ahead_sequence_array(%(state_type)s *s, const int n, const unsigned int *skip)
+__global__ void skip_ahead_sequence_array(%(state_type)s *s, const int n, const unsigned long long *skip)
 {
   const int idx = blockIdx.x*blockDim.x+threadIdx.x;
   if (idx < n)
       skipahead_sequence(skip[idx], &s[idx]);
 }
 
-__global__ void skip_ahead_subsequence(%(state_type)s *s, const int n, const unsigned int skip)
+__global__ void skip_ahead_subsequence(%(state_type)s *s, const int n, const unsigned long long skip)
 {
   const int idx = blockIdx.x*blockDim.x+threadIdx.x;
   if (idx < n)
     skipahead_subsequence(skip, &s[idx]);
 }
 
-__global__ void skip_ahead_subsequence_array(%(state_type)s *s, const int n, const unsigned int *skip)
+__global__ void skip_ahead_subsequence_array(%(state_type)s *s, const int n, const unsigned long long *skip)
 {
   const int idx = blockIdx.x*blockDim.x+threadIdx.x;
   if (idx < n)
@@ -769,11 +785,13 @@ if get_curand_version() >= (4, 1, 0):
 
             super(MRG32k3aRandomNumberGenerator, self).__init__(
                 seed_getter, offset,
-                'curandStateMRG32k3a', 'unsigned int', mrg32k3a_random_source+
+                'curandStateMRG32k3a', 'unsigned int', 32, mrg32k3a_random_source+
                 mrg32k3a_skip_ahead_sequence_source+random_skip_ahead64_source)
 
+        def _prepare_skipahead(self):
+            super(MRG32k3aRandomNumberGenerator, self)._prepare_skipahead()
             self.skip_ahead_subsequence = self.module.get_function("skip_ahead_subsequence")
-            self.skip_ahead_subsequence.prepare("Pii")
+            self.skip_ahead_subsequence.prepare("PiQ")
             self.skip_ahead_subsequence_array = self.module.get_function("skip_ahead_subsequence_array")
             self.skip_ahead_subsequence_array.prepare("PiP")
 
@@ -865,9 +883,10 @@ class _SobolRandomNumberGeneratorBase(_RandomNumberGeneratorBase):
     has_box_muller = False
 
     def __init__(self, dir_vector, dir_vector_dtype, dir_vector_size,
-        dir_vector_set, offset, state_type, vector_type, sobol_random_source):
+        dir_vector_set, offset, state_type, vector_type, generator_bits,
+        sobol_random_source):
         super(_SobolRandomNumberGeneratorBase, self).__init__(state_type,
-            vector_type, sobol_random_source)
+            vector_type, generator_bits, sobol_random_source)
 
         if dir_vector is None:
             dir_vector = generate_direction_vectors(
@@ -928,9 +947,10 @@ class _ScrambledSobolRandomNumberGeneratorBase(_RandomNumberGeneratorBase):
 
     def __init__(self, dir_vector, dir_vector_dtype, dir_vector_size,
         dir_vector_set, scramble_vector, scramble_vector_function,
-        offset, state_type, vector_type, scramble_type, sobol_random_source):
+        offset, state_type, vector_type, generator_bits, scramble_type,
+	sobol_random_source):
         super(_ScrambledSobolRandomNumberGeneratorBase, self).__init__(state_type,
-            vector_type, sobol_random_source, scramble_type)
+            vector_type, generator_bits, sobol_random_source, scramble_type)
 
         if dir_vector is None:
             dir_vector = generate_direction_vectors(
@@ -989,7 +1009,7 @@ if get_curand_version() >= (3, 2, 0):
         def __init__(self, dir_vector=None, offset=0):
             super(Sobol32RandomNumberGenerator, self).__init__(dir_vector,
                 np.uint32, 32, direction_vector_set.VECTOR_32, offset,
-                'curandStateSobol32', 'curandDirectionVectors32_t',
+                'curandStateSobol32', 'curandDirectionVectors32_t', 32,
                 sobol_random_source+random_skip_ahead32_source)
 
 
@@ -1006,7 +1026,7 @@ if get_curand_version() >= (4, 0, 0):
                 np.uint32, 32, direction_vector_set.SCRAMBLED_VECTOR_32,
                 scramble_vector, generate_scramble_constants32, offset,
                 'curandStateScrambledSobol32', 'curandDirectionVectors32_t',
-                'unsigned int',
+                32, 'unsigned int',
                 scrambledsobol_random_source+random_skip_ahead32_source)
 
 if get_curand_version() >= (4, 0, 0):
@@ -1020,7 +1040,7 @@ if get_curand_version() >= (4, 0, 0):
         def __init__(self, dir_vector=None, offset=0):
             super(Sobol64RandomNumberGenerator, self).__init__(dir_vector,
                 np.uint64, 64, direction_vector_set.VECTOR_64, offset,
-                'curandStateSobol64', 'curandDirectionVectors64_t',
+                'curandStateSobol64', 'curandDirectionVectors64_t', 64,
                  sobol_random_source+random_skip_ahead64_source)
 
 if get_curand_version() >= (4, 0, 0):
@@ -1036,7 +1056,7 @@ if get_curand_version() >= (4, 0, 0):
                 np.uint64, 64, direction_vector_set.SCRAMBLED_VECTOR_64,
                 scramble_vector, generate_scramble_constants64, offset,
                 'curandStateScrambledSobol64', 'curandDirectionVectors64_t',
-                'unsigned long long',
+                64, 'unsigned long long',
                 scrambledsobol_random_source+random_skip_ahead64_source)
 
 # }}}
