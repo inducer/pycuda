@@ -39,7 +39,6 @@ if not hasattr(setuptools, "_distribute"):
 
 def setup(*args, **kwargs):
     from setuptools import setup
-    import traceback
     try:
         setup(*args, **kwargs)
     except KeyboardInterrupt:
@@ -516,9 +515,16 @@ class Libraries(StringListOption):
                 % (human_name or humanize(lib_name))))
 
 class BoostLibraries(Libraries):
-    def __init__(self, lib_base_name):
+    def __init__(self, lib_base_name, default_lib_name=None):
+        if default_lib_name is None:
+            if lib_base_name == "python":
+                import sys
+                default_lib_name = "boost_python-py%d%d" % sys.version_info[:2]
+            else:
+                default_lib_name = "boost_%s" % lib_base_name
+
         Libraries.__init__(self, "BOOST_%s" % lib_base_name.upper(),
-                ["boost_%s" % lib_base_name],
+                [default_lib_name],
                 help="Library names for Boost C++ %s library (without lib or .so)"
                     % humanize(lib_base_name))
 
