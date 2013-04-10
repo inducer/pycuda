@@ -10,7 +10,9 @@
 #include <ctype.h>
 #include "numpy_init.hpp"
 
-// static PyTypeObject PyStructType;
+namespace {
+extern PyTypeObject PyStructType;
+}
 
 /* The translation function for each format character is table driven */
 typedef struct _formatdef {
@@ -1413,7 +1415,7 @@ static PyGetSetDef s_getsetlist[] = {
     {NULL} /* sentinel */
 };
 
-static
+namespace {
 PyTypeObject PyStructType = {
     PyVarObject_HEAD_INIT(NULL, 0)
     "Struct",
@@ -1455,6 +1457,7 @@ PyTypeObject PyStructType = {
     s_new,                              /* tp_new */
     PyObject_Del,               /* tp_free */
 };
+}
 
 
 /* ---- Standalone functions  ---- */
