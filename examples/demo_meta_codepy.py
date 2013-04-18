@@ -18,10 +18,10 @@ a_gpu = cuda.to_device(a)
 b_gpu = cuda.to_device(b)
 c_gpu = cuda.mem_alloc(a.nbytes)
 
-from codepy.cgen import FunctionBody, \
-        FunctionDeclaration, Typedef, POD, Value, \
+from cgen import FunctionBody, \
+        FunctionDeclaration, POD, Value, \
         Pointer, Module, Block, Initializer, Assign
-from codepy.cgen.cuda import CudaGlobal
+from cgen.cuda import CudaGlobal
 
 mod = Module([
     FunctionBody(
