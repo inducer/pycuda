@@ -1223,24 +1223,41 @@ s_pack_internal(PyStructObject *soself, PyObject *args, int offset, char* buf)
         if (e->format == 's') {
             int isstring;
             void *p;
-            isstring = PyBytes_Check(v);
-            if (!isstring && !PyByteArray_Check(v)) {
+            if (PyBytes_Check(v)) {
+                n = PyBytes_GET_SIZE(v);
+                p = PyBytes_AS_STRING(v);
+
+                if (n > code->size)
+                    n = code->size;
+                if (n > 0)
+                    memcpy(res, p, n);
+            } else if (PyByteArray_Check(v)) {
+                n = PyByteArray_GET_SIZE(v);
+                p = PyByteArray_AS_STRING(v);
+
+                if (n > code->size)
+                    n = code->size;
+                if (n > 0)
+                    memcpy(res, p, n);
+            } else if (PyObject_CheckBuffer(v)) {
+                Py_buffer view;
+                int gb_result = PyObject_GetBuffer(v, &view, PyBUF_SIMPLE);
+
+                if (gb_result == -1)
+                    return gb_result;
+
+                n = view.len;
+                if (n > code->size)
+                    n = code->size;
+                if (n > 0)
+                    memcpy(res, view.buf, n);
+
+                PyBuffer_Release(&view);
+            } else {
                 PyErr_SetString(StructError,
                                 "argument for 's' must be a bytes object");
                 return -1;
             }
-            if (isstring) {
-                n = PyBytes_GET_SIZE(v);
-                p = PyBytes_AS_STRING(v);
-            }
-            else {
-                n = PyByteArray_GET_SIZE(v);
-                p = PyByteArray_AS_STRING(v);
-            }
-            if (n > code->size)
-                n = code->size;
-            if (n > 0)
-                memcpy(res, p, n);
         } else if (e->format == 'p') {
             int isstring;
             void *p;
