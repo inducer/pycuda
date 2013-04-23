@@ -88,7 +88,12 @@ def compile_plain(source, options, keep, nvcc, cache_dir):
         cache_path = join(cache_dir, cache_file + ".cubin")
 
         try:
-            return open(cache_path, "rb").read()
+            cache_file = open(cache_path, "rb")
+            try:
+                return cache_file.read()
+            finally:
+                cache_file.close()
+
         except:
             pass
 
