@@ -556,7 +556,7 @@ class TestDriver:
             skip("register_host_memory is not supported on OS X")
 
         a = drv.aligned_empty((2**20,), np.float64, alignment=4096)
-        a2 = drv.register_host_memory(a)
+        drv.register_host_memory(a)
 
 
 def test_import_pyopencl_before_pycuda():

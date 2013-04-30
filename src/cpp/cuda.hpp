@@ -1767,7 +1767,7 @@ namespace pycuda
   }
 #endif
 
-  inline void *aligned_malloc(size_t size, size_t alignment)
+  inline void *aligned_malloc(size_t size, size_t alignment, void **original_pointer)
   {
     // alignment must be a power of two.
     if ((alignment & (alignment - 1)) != 0)
@@ -1783,7 +1783,10 @@ namespace pycuda
       throw pycuda::error("aligned_malloc", CUDA_ERROR_OUT_OF_MEMORY,
           "aligned malloc failed");
 
-    return (void *)((((ptrdiff_t)(p)) + (alignment-1)) & -alignment);
+    *original_pointer = p;
+
+    p = (void *)((((ptrdiff_t)(p)) + (alignment-1)) & -alignment);
+    return p;
   }
 
 
@@ -1866,9 +1869,11 @@ namespace pycuda
 
   struct aligned_host_allocation : public host_pointer
   {
+      void *m_original_pointer;
+
     public:
       aligned_host_allocation(size_t size, size_t alignment)
-        : host_pointer(aligned_malloc(size, alignment))
+        : host_pointer(aligned_malloc(size, alignment, &m_original_pointer))
       { }
 
       /* Don't try to be clever and coalesce these in the base class.
@@ -1884,7 +1889,8 @@ namespace pycuda
       {
         if (m_valid)
         {
-          ::free(m_data);
+          ::free(m_original_pointer);
+          m_valid = false;
         }
         else
           throw pycuda::error("aligned_host_allocation::free", CUDA_ERROR_INVALID_HANDLE);
