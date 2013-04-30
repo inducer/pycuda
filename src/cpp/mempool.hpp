@@ -85,7 +85,7 @@ namespace PYGPU_PACKAGE
         }
       }
 
-      ~memory_pool()
+      virtual ~memory_pool()
       { free_held(); }
 
       static const unsigned mantissa_bits = 2;
