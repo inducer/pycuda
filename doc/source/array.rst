@@ -132,6 +132,10 @@ The :class:`GPUArray` Array Class
         size (not necessarily shape) and dtype. If it is not given,
         a page-locked* array is newly allocated.
 
+    .. method :: copy()
+
+        .. versionadded :: 2013.1
+
     .. method :: mul_add(self, selffac, other, otherfac, add_timer=None, stream=None):
 
         Return `selffac*self + otherfac*other`. *add_timer*, if given,

@@ -274,6 +274,14 @@ class GPUArray(object):
             drv.memcpy_dtoh_async(ary, self.gpudata, stream)
         return ary
 
+    def copy(self):
+        if not self.flags.forc:
+            raise RuntimeError("only contiguous arrays may copied.")
+
+        new = GPUArray(self.shape, self.dtype)
+        drv.memcpy_dtod(new.gpudata,self.gpudata,self.nbytes)
+        return new
+
     def __str__(self):
         return str(self.get())
 
