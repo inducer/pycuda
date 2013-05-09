@@ -704,24 +704,40 @@ class GPUArray(object):
         if idx == ():
             return self
 
-        if len(self.shape) > 1:
+        if len(self.shape) == 2:
+            if not self.flags.c_contiguous:
+                raise NotImplementedError("slicing of non c-contiguous 2d "
+                                          "arrays is not supported yet")
+            if type(idx) is tuple:
+                raise NotImplementedError("slicing of columns is not "
+                                          "supported yet")
+
+            m, n = self.shape
+            start, stop, stride = idx.indices(m)
+
+            shape = ((stop-start)//stride, n)
+            gpudata = int(self.gpudata) + start*n*self.dtype.itemsize
+        elif len(self.shape) == 1:
+            l, = self.shape
+            start, stop, stride = idx.indices(l)
+
+            shape = ((stop-start)//stride,)
+            gpudata = int(self.gpudata) + start*n*self.dtype.itemsize
+        elif len(self.shape) > 2:
             raise NotImplementedError("multi-d slicing is not yet implemented")
 
         if not isinstance(idx, slice):
             raise ValueError("non-slice indexing not supported: %s" % (idx,))
 
-        l, = self.shape
-        start, stop, stride = idx.indices(l)
-
         if stride != 1:
             raise NotImplementedError("strided slicing is not yet implemented")
 
         return GPUArray(
-                shape=((stop-start)//stride,),
+                shape=shape,
                 dtype=self.dtype,
                 allocator=self.allocator,
                 base=self,
-                gpudata=int(self.gpudata) + start*self.dtype.itemsize)
+                gpudata=gpudata)
 
     # complex-valued business -------------------------------------------------
     @property
