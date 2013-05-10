@@ -722,7 +722,7 @@ class GPUArray(object):
             start, stop, stride = idx.indices(l)
 
             shape = ((stop-start)//stride,)
-            gpudata = int(self.gpudata) + start*n*self.dtype.itemsize
+            gpudata = int(self.gpudata) + start*self.dtype.itemsize
         elif len(self.shape) > 2:
             raise NotImplementedError("multi-d slicing is not yet implemented")
 

@@ -601,6 +601,25 @@ class TestGPUArray:
             assert la.norm(a_gpu_slice.get()-a_slice) == 0
 
     @mark_cuda_test
+    def test_2d_slice(self):
+        from pycuda.curandom import rand as curand
+
+        n = 20000
+        m = 10000
+        a_gpu = curand((n, m))
+        a = a_gpu.get()
+
+        from random import randrange
+        for i in range(200):
+            start = randrange(n)
+            end = randrange(start, n)
+
+            a_gpu_slice = a_gpu[start:end]
+            a_slice = a[start:end]
+
+            assert la.norm(a_gpu_slice.get()-a_slice) == 0
+
+    @mark_cuda_test
     def test_if_positive(self):
         from pycuda.curandom import rand as curand
 
