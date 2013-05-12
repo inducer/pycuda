@@ -601,11 +601,11 @@ class TestGPUArray:
             assert la.norm(a_gpu_slice.get()-a_slice) == 0
 
     @mark_cuda_test
-    def test_2d_slice(self):
+    def test_2d_slice_c(self):
         from pycuda.curandom import rand as curand
 
-        n = 20000
-        m = 10000
+        n = 1000
+        m = 300
         a_gpu = curand((n, m))
         a = a_gpu.get()
 
@@ -616,6 +616,29 @@ class TestGPUArray:
 
             a_gpu_slice = a_gpu[start:end]
             a_slice = a[start:end]
+
+            assert la.norm(a_gpu_slice.get()-a_slice) == 0
+
+    @mark_cuda_test
+    def test_2d_slice_f(self):
+        from pycuda.curandom import rand as curand
+        import pycuda.gpuarray as gpuarray
+
+        n = 1000
+        m = 300
+        a_gpu = curand((n, m))
+        a_gpu_f = gpuarray.GPUArray((m, n), np.float32,
+                                    gpudata=a_gpu.gpudata,
+                                    order="F")
+        a = a_gpu_f.get()
+
+        from random import randrange
+        for i in range(200):
+            start = randrange(n)
+            end = randrange(start, n)
+
+            a_gpu_slice = a_gpu_f[:,start:end]
+            a_slice = a[:,start:end]
 
             assert la.norm(a_gpu_slice.get()-a_slice) == 0
 

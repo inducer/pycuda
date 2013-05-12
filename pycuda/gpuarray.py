@@ -705,18 +705,41 @@ class GPUArray(object):
             return self
 
         if len(self.shape) == 2:
-            if not self.flags.c_contiguous:
-                raise NotImplementedError("slicing of non c-contiguous 2d "
-                                          "arrays is not supported yet")
-            if type(idx) is tuple:
-                raise NotImplementedError("slicing of columns is not "
-                                          "supported yet")
+            if self.flags.c_contiguous:
+                if type(idx) is tuple:
+                    raise NotImplementedError("slicing of columns in c-contiguous "
+                        "arrays is not supported yet")
 
-            m, n = self.shape
-            start, stop, stride = idx.indices(m)
+                m, n = self.shape
+                start, stop, stride = idx.indices(m)
 
-            shape = ((stop-start)//stride, n)
-            gpudata = int(self.gpudata) + start*n*self.dtype.itemsize
+                shape = ((stop-start)//stride, n)
+                gpudata = int(self.gpudata) + start*n*self.dtype.itemsize
+
+            if self.flags.f_contiguous:
+                if type(idx) is not tuple:
+                    raise NotImplementedError("f-contiguous arrays "
+                        "can only be splice by column")
+                if len(idx) != 2:
+                    raise ValueError("you must specify a splice for both "
+                        "rows and columns")
+    
+                m, n = self.shape
+
+                start_row, stop_row, stride_row = idx[0].indices(m)
+                if not (start_row == 0 and stop_row == m
+                        and stride_row == 0):
+                    raise ValueError("you can only splice f-contiguous "
+                        "arrays by column")
+
+                start, stop, stride = idx[0].indices(n)
+
+                shape = (m, (stop-start)//stride)
+                gpudata = int(self.gpudata) + start*m*self.dtype.itemsize
+            else:
+                raise ValueError("arrays must be either c-contiguous "
+                    "or f-contiguous")
+
         elif len(self.shape) == 1:
             l, = self.shape
             start, stop, stride = idx.indices(l)
