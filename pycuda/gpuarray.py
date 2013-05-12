@@ -704,24 +704,65 @@ class GPUArray(object):
         if idx == ():
             return self
 
-        if len(self.shape) > 1:
+        if len(self.shape) == 2:
+            if self.flags.c_contiguous:
+                if type(idx) is tuple:
+                    raise NotImplementedError("slicing of columns in c-contiguous "
+                        "arrays is not supported yet")
+
+                m, n = self.shape
+                start, stop, stride = idx.indices(m)
+
+                shape = ((stop-start)//stride, n)
+                gpudata = int(self.gpudata) + start*n*self.dtype.itemsize
+
+            elif self.flags.f_contiguous:
+                if type(idx) is not tuple:
+                    raise NotImplementedError("f-contiguous arrays "
+                        "can only be slice by column")
+                if len(idx) != 2:
+                    raise ValueError("you must specify a slice for both "
+                        "rows and columns")
+    
+                m, n = self.shape
+
+                start_row, stop_row, stride_row = idx[0].indices(m)
+                if not (start_row == 0 and stop_row == m
+                        and stride_row == 1):
+                    raise ValueError("you can only slice f-contiguous "
+                        "arrays by column")
+
+                start, stop, stride = idx[1].indices(n)
+
+                shape = (m, (stop-start)//stride)
+                gpudata = int(self.gpudata) + start*m*self.dtype.itemsize
+            else:
+                raise ValueError("arrays must be either c-contiguous "
+                    "or f-contiguous")
+
+        elif len(self.shape) == 1:
+            l, = self.shape
+            start, stop, stride = idx.indices(l)
+
+            shape = ((stop-start)//stride,)
+            gpudata = int(self.gpudata) + start*self.dtype.itemsize
+        elif len(self.shape) > 2:
             raise NotImplementedError("multi-d slicing is not yet implemented")
 
-        if not isinstance(idx, slice):
+        if (not isinstance(idx, slice) and not isinstance(idx, tuple)) or \
+          (isinstance(idx, tuple) and any([not isinstance(i, slice) for i in idx])):
             raise ValueError("non-slice indexing not supported: %s" % (idx,))
-
-        l, = self.shape
-        start, stop, stride = idx.indices(l)
 
         if stride != 1:
             raise NotImplementedError("strided slicing is not yet implemented")
 
         return GPUArray(
-                shape=((stop-start)//stride,),
+                shape=shape,
                 dtype=self.dtype,
                 allocator=self.allocator,
                 base=self,
-                gpudata=int(self.gpudata) + start*self.dtype.itemsize)
+                gpudata=gpudata,
+                order='C' if self.flags.c_contiguous else 'F')
 
     # complex-valued business -------------------------------------------------
     @property
