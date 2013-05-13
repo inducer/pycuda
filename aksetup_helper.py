@@ -809,3 +809,7 @@ def check_git_submodules():
             if not exists(".dirty-git-ok"):
                 count_down_delay(delay=10)
                 stdout, git_error = _run_git_command(["submodule", "update", "--init"])
+                if git_error is None:
+                    print("-------------------------------------------------------------------------")
+                    print("git submodules initialized successfully")
+                    print("-------------------------------------------------------------------------")
