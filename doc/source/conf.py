@@ -11,7 +11,7 @@
 # All configuration values have a default value; values that are commented out
 # serve to show the default value.
 
-import sys, os
+#import sys, os
 
 # If your extensions are in another directory, add it here. If the directory
 # is relative to the documentation root, use os.path.abspath to make it
@@ -94,8 +94,9 @@ else:
     # further.  For a list of options available for each theme, see the
     # documentation.
     html_theme_options = {
-            'navbar_fixed_top': "true",
-            'navbar_class': "navbar navbar-inverse",
+            "navbar_fixed_top": "true",
+            "navbar_class": "navbar navbar-inverse",
+            "navbar_site_name": "Contents",
             }
 
 # The style sheet to use for HTML and HTML Help pages. A file of that name
