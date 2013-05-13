@@ -800,7 +800,7 @@ def check_git_submodules():
             for w in pkg_warnings:
                 print("  %s" % w)
             print("")
-            print("I will try to continue after a short wait, fingers crossed.")
+            print("I will try to initialize the submodules for you after a short wait.")
             print("-------------------------------------------------------------------------")
             print("Hit Ctrl-C now if you'd like to think about the situation.")
             print("-------------------------------------------------------------------------")
@@ -808,3 +808,4 @@ def check_git_submodules():
             from os.path import exists
             if not exists(".dirty-git-ok"):
                 count_down_delay(delay=10)
+                stdout, git_error = _run_git_command(["submodule", "update", "--init"])
