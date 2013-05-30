@@ -51,3 +51,9 @@ h3 {
 a.headerlink:hover {
   text-decoration: none;
 }
+
+blockquote p {
+  font-size: 100%;
+  font-weight: normal;
+  line-height: normal;
+};
