@@ -753,6 +753,9 @@ def check_git_submodules():
     if not isdir(".git"):
         # not a git repository
         return
+    if isdir("../.repo"):
+        # assume repo is in charge and bail
+        return
 
     stdout, git_error = _run_git_command(["submodule", "status"])
     if git_error is not None:
