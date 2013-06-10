@@ -14,7 +14,6 @@ include doc/source/conf.py
 include doc/source/_static/*.css
 include doc/source/_templates/*.html
 
-include ez_setup.py
 include configure.py
 include Makefile.in
 include aksetup_helper.py

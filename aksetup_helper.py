@@ -1,12 +1,5 @@
-# {{{ dealings with ez_setup
-
-import ez_setup
-ez_setup.use_setuptools()
-
 import setuptools  # noqa
 from setuptools import Extension
-
-# }}}
 
 
 def count_down_delay(delay):
