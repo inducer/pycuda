@@ -397,6 +397,16 @@ Generating Arrays of Random Numbers
     Return an array of `shape` filled with random values of `dtype`
     in the range [0,1).
 
+    .. note::
+
+        The use case for this function is "I need some random numbers.
+        I don't care how good they are or how fast I get them." It uses
+        a pretty terrible MD5-based generator and doesn't even attempt
+        to cache generated code.
+
+        If you're interested in a non-toy random number generator, use the
+        CURAND-based functionality below.
+
 .. warning::
 
     The following classes are using random number generators that run on the GPU.
