@@ -140,7 +140,7 @@ def compile_plain(source, options, keep, nvcc, cache_dir):
             warn("nvcc said it demoted types in source code it "
                 "compiled--this is likely not what you want.",
                 stacklevel=4)
-        warn("The CUDA compiler suceeded, but said the following:\n"
+        warn("The CUDA compiler succeeded, but said the following:\n"
                 +(stdout+stderr).decode("utf-8"), stacklevel=4)
 
     cubin = cubin_f.read()
