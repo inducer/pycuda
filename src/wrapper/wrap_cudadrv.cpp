@@ -730,6 +730,14 @@ BOOST_PYTHON_MODULE(_driver)
     ;
 #endif
 
+#if CUDAPP_CUDA_VERSION >= 4020
+  py::enum_<CUsharedconfig_enum>("shared_config")
+    .value("DEFAULT_BANK_SIZE", CU_SHARED_MEM_CONFIG_DEFAULT_BANK_SIZE)
+    .value("FOUR_BYTE_BANK_SIZE", CU_SHARED_MEM_CONFIG_FOUR_BYTE_BANK_SIZE)
+    .value("EIGHT_BYTE_BANK_SIZE", CU_SHARED_MEM_CONFIG_EIGHT_BYTE_BANK_SIZE)
+    ;
+#endif
+
 #if CUDAPP_CUDA_VERSION >= 2020
   py::enum_<CUfunction_attribute>("function_attribute")
     .value("MAX_THREADS_PER_BLOCK", CU_FUNC_ATTRIBUTE_MAX_THREADS_PER_BLOCK)

@@ -363,6 +363,14 @@ Constants
 
         .. versionadded:: 2011.2
 
+.. class:: shared_config
+
+    See :meth:`Function.set_shared_config`. CUDA 4.2 and above.
+
+    .. attribute:: DEFAULT_BANK_SIZE
+    .. attribute:: FOUR_BYTE_BANK_SIZE
+    .. attribute:: EIGHT_BYTE_BANK_SIZE
+
 .. class:: array_format
 
     .. attribute:: UNSIGNED_INT8
@@ -683,6 +691,22 @@ Devices and Contexts
         CUDA 3.2 and above.
 
         .. versionadded:: 0.94
+
+    .. staticmethod:: set_shared_config(sc)
+
+        See :class:`shared_config` for possible values of *sc*.
+
+        CUDA 4.2 and above.
+
+        .. versionadded:: 2013.1
+
+    .. staticmethod:: get_shared_config()
+
+        Return a value from :class:`shared_config`.
+
+        CUDA 4.2 and above.
+
+        .. versionadded:: 2013.1
 
     .. method:: get_api_version()
 
@@ -1604,6 +1628,14 @@ Code on the Device: Modules and Functions
         CUDA 3.0 (post-beta) and newer.
 
         .. versionadded:: 0.94
+
+    .. attribute:: set_shared_config(sc)
+
+        See :class:`shared_config` for possible values of *sc*.
+
+        CUDA 4.2 and newer.
+
+        .. versionadded:: 2013.1
 
     .. attribute:: local_size_bytes
 
