@@ -262,10 +262,6 @@ if get_curand_version() >= (4, 0, 0):
     _get_scramble_constants32 = _curand._get_scramble_constants32
     _get_scramble_constants64 = _curand._get_scramble_constants64
 
-if get_curand_version() >= (4, 1, 0):
-    _make_mtgp32_constants = _curand._make_mtgp32_constants
-    _make_mtgp32_kernel_state = _curand._make_mtgp32_kernel_state
-
 # {{{ Base class
 
 gen_template = """
