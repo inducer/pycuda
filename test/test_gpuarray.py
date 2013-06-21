@@ -277,12 +277,8 @@ class TestGPUArray:
                     Sobol64RandomNumberGenerator,
                     ScrambledSobol64RandomNumberGenerator])
         if get_curand_version() >= (4, 1, 0):
-            from pycuda.curandom import (
-                    MRG32k3aRandomNumberGenerator,
-                    Mtpg32RandomNumberGenerator)
-            generator_types.extend([
-                    MRG32k3aRandomNumberGenerator,
-                    Mtpg32RandomNumberGenerator])
+            from pycuda.curandom import MRG32k3aRandomNumberGenerator
+            generator_types.extend([MRG32k3aRandomNumberGenerator])
 
         if has_double_support():
             dtypes = [np.float32, np.float64]

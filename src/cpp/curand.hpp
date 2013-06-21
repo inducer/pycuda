@@ -123,19 +123,6 @@ namespace pycuda { namespace curandom {
     }
   }
 #endif
-
-#if CUDAPP_CUDA_VERSION >= 4010
-  void py_curand_make_mtgp32_constants(py::object dst, int count)
-  {
-//    CURAND_CALL_GUARDED(curandMakeMTPG32Constants, (params, p));
-  }
-
-  void py_curand_make_mtgp32_kernel_state(py::object dst, int count)
-  {
-//    CURAND_CALL_GUARDED(curandMakeMTPG32KernelState, (s, params, k, n, seed));
-  }
-#endif
-
 } }
 
 #endif
