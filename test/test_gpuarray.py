@@ -285,6 +285,9 @@ class TestGPUArray:
                     ScrambledSobol32RandomNumberGenerator,
                     Sobol64RandomNumberGenerator,
                     ScrambledSobol64RandomNumberGenerator])
+        if get_curand_version() >= (4, 1, 0):
+            from pycuda.curandom import MRG32k3aRandomNumberGenerator
+            generator_types.extend([MRG32k3aRandomNumberGenerator])
 
         if has_double_support():
             dtypes = [np.float32, np.float64]
@@ -310,6 +313,8 @@ class TestGPUArray:
                 assert (x_host <= 1).all()
 
             gen.gen_uniform(10000, np.uint32)
+            if get_curand_version() >= (5, 0, 0):
+                gen.gen_poisson(10000, np.uint32, 13.0)
 
 
 

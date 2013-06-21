@@ -496,6 +496,116 @@ Quasirandom numbers are more expensive to generate.
 
         .. versionadded:: 2012.2
 
+    .. method:: fill_poisson(data, lambda_value, stream=None)
+
+        Fills in :class:`GPUArray` *data* with Poisson distributed
+	pseudorandom values with lambda *lambda_value*. *data* must
+	be of type 32-bit unsigned int.
+
+        CUDA 5.0 and above.
+
+        .. versionadded:: 2013.1
+
+    .. method:: gen_poisson(shape, dtype, lambda_value, stream=None)
+
+        Creates object of :class:`GPUArray` with given *shape* and *dtype*,
+        fills it in with Poisson distributed pseudorandom values
+	with lambda *lambda_value*, and returns newly created object.
+	*dtype* must be 32-bit unsigned int.
+
+        CUDA 5.0 and above.
+
+        .. versionadded:: 2013.1
+
+    .. method:: call_skip_ahead(i, stream=None)
+
+        Forces all generators to skip i values. Is equivalent to generating
+        i values and discarding results, but is much faster.
+
+    .. method::  call_skip_ahead_array(i, stream=None)
+
+        Accepts array i of integer values, telling each generator how many
+        values to skip.
+
+    .. method:: call_skip_ahead_sequence(i, stream=None)
+
+        Forces all generators to skip i subsequences. Is equivalent to
+        generating i * :math:`2^67` values and discarding results,
+        but is much faster.
+
+    .. method:: call_skip_ahead_sequence_array(i, stream=None)
+
+        Accepts array i of integer values, telling each generator how many
+        subsequences to skip.
+
+.. class:: MRG32k3aRandomNumberGenerator(seed_getter=None, offset=0)
+
+    :arg seed_getter: a function that, given an integer count, will yield an
+      `int32` :class:`GPUArray` of seeds.
+    :arg offset: Starting index into the XORWOW sequence, given seed.
+
+    Provides pseudorandom numbers. Generates sequences with period 
+    at least :math:`2^190`.
+
+    CUDA 4.1 and above.
+
+    .. versionadded:: 2013.1
+
+    .. method:: fill_uniform(data, stream=None)
+
+        Fills in :class:`GPUArray` *data* with uniformly distributed
+        pseudorandom values.
+
+    .. method:: gen_uniform(shape, dtype, stream=None)
+
+        Creates object of :class:`GPUArray` with given *shape* and *dtype*,
+        fills it in with uniformly distributed pseudorandom values,
+        and returns newly created object.
+
+    .. method:: fill_normal(data, stream=None)
+
+        Fills in :class:`GPUArray` *data* with normally distributed
+        pseudorandom values.
+
+    .. method:: gen_normal(shape, dtype, stream=None)
+
+        Creates object of :class:`GPUArray` with given *shape* and *dtype*,
+        fills it in with normally distributed pseudorandom values,
+        and returns newly created object.
+
+    .. method:: fill_log_normal(data, mean, stddev, stream=None)
+
+        Fills in :class:`GPUArray` *data* with log-normally distributed
+        pseudorandom values with mean *mean* and standard deviation *stddev*.
+
+    .. method:: gen_log_normal(shape, dtype, mean, stddev, stream=None)
+
+        Creates object of :class:`GPUArray` with given *shape* and *dtype*,
+        fills it in with log-normally distributed pseudorandom values
+        with mean *mean* and standard deviation *stddev*, and returns
+        newly created object.
+
+    .. method:: fill_poisson(data, lambda_value, stream=None)
+
+        Fills in :class:`GPUArray` *data* with Poisson distributed
+	pseudorandom values with lambda *lambda_value*. *data* must
+	be of type 32-bit unsigned int.
+
+        CUDA 5.0 and above.
+
+        .. versionadded:: 2013.1
+
+    .. method:: gen_poisson(shape, dtype, lambda_value, stream=None)
+
+        Creates object of :class:`GPUArray` with given *shape* and *dtype*,
+        fills it in with Poisson distributed pseudorandom values
+	with lambda *lambda_value*, and returns newly created object.
+	*dtype* must be 32-bit unsigned int.
+
+        CUDA 5.0 and above.
+
+        .. versionadded:: 2013.1
+
     .. method:: call_skip_ahead(i, stream=None)
 
         Forces all generators to skip i values. Is equivalent to generating
@@ -589,6 +699,27 @@ Quasirandom numbers are more expensive to generate.
 
         .. versionadded:: 2012.2
 
+    .. method:: fill_poisson(data, lambda_value, stream=None)
+
+        Fills in :class:`GPUArray` *data* with Poisson distributed
+	pseudorandom values with lambda *lambda_value*. *data* must
+	be of type 32-bit unsigned int.
+
+        CUDA 5.0 and above.
+
+        .. versionadded:: 2013.1
+
+    .. method:: gen_poisson(shape, dtype, lambda_value, stream=None)
+
+        Creates object of :class:`GPUArray` with given *shape* and *dtype*,
+        fills it in with Poisson distributed pseudorandom values
+	with lambda *lambda_value*, and returns newly created object.
+	*dtype* must be 32-bit unsigned int.
+
+        CUDA 5.0 and above.
+
+        .. versionadded:: 2013.1
+
     .. method:: call_skip_ahead(i, stream=None)
 
         Forces all generators to skip i values. Is equivalent to generating
@@ -659,6 +790,27 @@ Quasirandom numbers are more expensive to generate.
 
         .. versionadded:: 2012.2
 
+    .. method:: fill_poisson(data, lambda_value, stream=None)
+
+        Fills in :class:`GPUArray` *data* with Poisson distributed
+	pseudorandom values with lambda *lambda_value*. *data* must
+	be of type 32-bit unsigned int.
+
+        CUDA 5.0 and above.
+
+        .. versionadded:: 2013.1
+
+    .. method:: gen_poisson(shape, dtype, lambda_value, stream=None)
+
+        Creates object of :class:`GPUArray` with given *shape* and *dtype*,
+        fills it in with Poisson distributed pseudorandom values
+	with lambda *lambda_value*, and returns newly created object.
+	*dtype* must be 32-bit unsigned int.
+
+        CUDA 5.0 and above.
+
+        .. versionadded:: 2013.1
+
     .. method:: call_skip_ahead(i, stream=None)
 
         Forces all generators to skip i values. Is equivalent to generating
@@ -725,6 +877,27 @@ Quasirandom numbers are more expensive to generate.
         CUDA 4.0 and above.
 
         .. versionadded:: 2012.2
+
+    .. method:: fill_poisson(data, lambda_value, stream=None)
+
+        Fills in :class:`GPUArray` *data* with Poisson distributed
+	pseudorandom values with lambda *lambda_value*. *data* must
+	be of type 32-bit unsigned int.
+
+        CUDA 5.0 and above.
+
+        .. versionadded:: 2013.1
+
+    .. method:: gen_poisson(shape, dtype, lambda_value, stream=None)
+
+        Creates object of :class:`GPUArray` with given *shape* and *dtype*,
+        fills it in with Poisson distributed pseudorandom values
+	with lambda *lambda_value*, and returns newly created object.
+	*dtype* must be 32-bit unsigned int.
+
+        CUDA 5.0 and above.
+
+        .. versionadded:: 2013.1
 
     .. method:: call_skip_ahead(i, stream=None)
 
@@ -795,6 +968,27 @@ Quasirandom numbers are more expensive to generate.
         CUDA 4.0 and above.
 
         .. versionadded:: 2012.2
+
+    .. method:: fill_poisson(data, lambda_value, stream=None)
+
+        Fills in :class:`GPUArray` *data* with Poisson distributed
+	pseudorandom values with lambda *lambda_value*. *data* must
+	be of type 32-bit unsigned int.
+
+        CUDA 5.0 and above.
+
+        .. versionadded:: 2013.1
+
+    .. method:: gen_poisson(shape, dtype, lambda_value, stream=None)
+
+        Creates object of :class:`GPUArray` with given *shape* and *dtype*,
+        fills it in with Poisson distributed pseudorandom values
+	with lambda *lambda_value*, and returns newly created object.
+	*dtype* must be 32-bit unsigned int.
+
+        CUDA 5.0 and above.
+
+        .. versionadded:: 2013.1
 
     .. method:: call_skip_ahead(i, stream=None)
 
