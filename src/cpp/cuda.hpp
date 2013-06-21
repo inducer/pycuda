@@ -741,6 +741,20 @@ namespace pycuda
       }
 #endif
 
+#if CUDAPP_CUDA_VERSION >= 4020
+      static CUsharedconfig get_shared_config()
+      {
+        CUsharedconfig config;
+        CUDAPP_CALL_GUARDED(cuCtxGetSharedMemConfig, (&config));
+        return config;
+      }
+
+      static void set_shared_config(CUsharedconfig config)
+      {
+        CUDAPP_CALL_GUARDED(cuCtxSetSharedMemConfig, (config));
+      }
+#endif
+
       friend class device;
       friend void context_push(boost::shared_ptr<context> ctx);
       friend boost::shared_ptr<context>
@@ -1371,7 +1385,17 @@ namespace pycuda
               shared_mem_bytes, s_handle, 0, config
               ));
       }
+
 #endif
+
+#if CUDAPP_CUDA_VERSION >= 4020
+      void set_shared_config(CUsharedconfig config)
+      {
+        CUDAPP_CALL_GUARDED_WITH_TRACE_INFO(
+            cuFuncSetSharedMemConfig, (m_function, config), m_symbol);
+      }
+#endif
+
   };
 
   inline
