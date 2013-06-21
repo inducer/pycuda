@@ -284,6 +284,16 @@ __global__ void %(name)s(%(state_type)s *s, %(out_type)s *d, %(in_type)s mean, %
 }
 """
 
+gen_poisson_template = """
+__global__ void %(name)s(%(state_type)s *s, %(out_type)s *d, double lambda, const int n)
+{
+  const int tidx = blockIdx.x*blockDim.x+threadIdx.x;
+  const int delta = blockDim.x*gridDim.x;
+  for (int idx = tidx; idx < n; idx += delta)
+    d[idx] = curand_poisson%(suffix)s(&s[tidx], lambda);
+}
+"""
+
 random_source = """
 // Uses C++ features (templates); do not surround with extern C
 #include <curand_kernel.h>
@@ -340,7 +350,8 @@ class _RandomNumberGeneratorBase(object):
     """
 
     gen_info = [
-        ("uniform_int", "int", ""),
+        ("uniform_int", "unsigned int", ""),
+        ("uniform_long", "unsigned long long", ""),
         ("uniform_float", "float", "_uniform"),
         ("uniform_double", "double", "_uniform_double"),
         ("normal_float", "float", "_normal"),
@@ -356,8 +367,12 @@ class _RandomNumberGeneratorBase(object):
         ("normal_log_double2", "double", "double2", "_normal2_double"),
         ]
 
-    def __init__(self, state_type, vector_type, additional_source,
-        scramble_type=None):
+    gen_poisson_info = [
+        ("poisson_int", "unsigned int", ""),
+        ]
+
+    def __init__(self, state_type, vector_type, generator_bits,
+        additional_source, scramble_type=None):
         if get_curand_version() < (3, 2, 0):
             raise EnvironmentError("Need at least CUDA 3.2")
 
@@ -387,17 +402,31 @@ class _RandomNumberGeneratorBase(object):
                     for name, in_type, out_type, suffix in self.gen_log_info
                     if do_generate(out_type)]
 
+        if get_curand_version() >= (5, 0, 0):
+            my_poisson_generators = [
+                    (name, out_type, suffix)
+                    for name, out_type, suffix in self.gen_poisson_info
+                    if do_generate(out_type)]
+
         generator_sources = [
                 gen_template % {
                     "name": name, "out_type": out_type, "suffix": suffix,
                     "state_type": state_type, }
                 for name, out_type, suffix in my_generators]
         
-        generator_sources.extend([
-                gen_log_template % {
-                    "name": name, "in_type": in_type, "out_type": out_type,
-                    "suffix": suffix, "state_type": state_type, }
-                for name, in_type, out_type, suffix in my_log_generators])
+        if get_curand_version() >= (4, 0, 0):
+            generator_sources.extend([
+                    gen_log_template % {
+                        "name": name, "in_type": in_type, "out_type": out_type,
+                        "suffix": suffix, "state_type": state_type, }
+                    for name, in_type, out_type, suffix in my_log_generators])
+
+        if get_curand_version() >= (5, 0, 0):
+            generator_sources.extend([
+                    gen_poisson_template % {
+                        "name": name, "out_type": out_type, "suffix": suffix,
+                        "state_type": state_type, }
+                    for name, out_type, suffix in my_poisson_generators])
 
         source = (random_source + additional_source) % {
             "state_type": state_type,
@@ -413,21 +442,34 @@ class _RandomNumberGeneratorBase(object):
             gen_func = module.get_function(name)
             gen_func.prepare("PPi")
             self.generators[name] = gen_func
-        for name, in_type, out_type, suffix  in my_log_generators:
-            gen_func = module.get_function(name)
-            if in_type == "float":
-                gen_func.prepare("PPffi")
-            if in_type == "double":
-                gen_func.prepare("PPddi")
-            self.generators[name] = gen_func
+        if get_curand_version() >= (4, 0, 0):
+            for name, in_type, out_type, suffix  in my_log_generators:
+                gen_func = module.get_function(name)
+                if in_type == "float":
+                    gen_func.prepare("PPffi")
+                if in_type == "double":
+                    gen_func.prepare("PPddi")
+                self.generators[name] = gen_func
+        if get_curand_version() >= (5, 0, 0):
+            for name, out_type, suffix  in my_poisson_generators:
+                gen_func = module.get_function(name)
+                gen_func.prepare("PPdi")
+                self.generators[name] = gen_func
 
-        self.skip_ahead = module.get_function("skip_ahead")
-        self.skip_ahead.prepare("Pii")
-        self.skip_ahead_array = module.get_function("skip_ahead_array")
-        self.skip_ahead_array.prepare("PiP")
+        self.generator_bits = generator_bits
+        self._prepare_skipahead()
 
         self.state_type = state_type
         self._state = None
+
+    def _prepare_skipahead(self):
+        self.skip_ahead = self.module.get_function("skip_ahead")
+        if self.generator_bits == 32:
+            self.skip_ahead.prepare("PiI")
+        if self.generator_bits == 64:
+            self.skip_ahead.prepare("PiQ")
+        self.skip_ahead_array = self.module.get_function("skip_ahead_array")
+        self.skip_ahead_array.prepare("PiP")
 
     def _kernels(self):
         return (
@@ -458,6 +500,8 @@ class _RandomNumberGeneratorBase(object):
             func = self.generators["uniform_double"]
         elif data.dtype in [np.int, np.int32, np.uint32]:
             func = self.generators["uniform_int"]
+        elif data.dtype in [np.int64, np.uint64] and self.generator_bits >= 64:
+            func = self.generators["uniform_long"]
         else:
             raise NotImplementedError
 
@@ -519,6 +563,24 @@ class _RandomNumberGeneratorBase(object):
             self.fill_log_normal(result, mean, stddev, stream)
             return result
 
+    if get_curand_version() >= (5, 0, 0):
+        def fill_poisson(self, data, lambda_value, stream=None):
+            if data.dtype == np.uint32:
+                func_name = "poisson_int"
+            else:
+                raise NotImplementedError
+
+            func = self.generators[func_name]
+
+            func.prepared_async_call(
+                    (self.block_count, 1), (self.generators_per_block, 1, 1), stream,
+                    self.state, data.gpudata, lambda_value, data.size)
+
+        def gen_poisson(self, shape, dtype, lambda_value, stream=None):
+            result = array.empty(shape, dtype)
+            self.fill_poisson(result, lambda_value, stream)
+            return result
+
     def call_skip_ahead(self, i, stream=None):
         self.skip_ahead.prepared_async_call(
                 (self.block_count, 1), (self.generators_per_block, 1, 1), stream,
@@ -533,6 +595,78 @@ class _RandomNumberGeneratorBase(object):
 
 # {{{ XORWOW RNG
 
+class _PseudoRandomNumberGeneratorBase(_RandomNumberGeneratorBase):
+    def __init__(self, seed_getter, offset, state_type, vector_type,
+        generator_bits, additional_source, scramble_type=None):
+
+        super(_PseudoRandomNumberGeneratorBase, self).__init__(
+            state_type, vector_type, generator_bits, additional_source)
+
+        generator_count = self.generators_per_block * self.block_count
+        if seed_getter is None:
+            seed = array.to_gpu(
+                    np.asarray(
+                        np.random.random_integers(
+                            0, (1 << 31) - 2, generator_count),
+                        dtype=np.int32))
+        else:
+            seed = seed_getter(generator_count)
+
+        if not (isinstance(seed, pycuda.gpuarray.GPUArray)
+                and seed.dtype == np.int32
+                and seed.size == generator_count):
+            raise TypeError("seed must be GPUArray of integers of right length")
+
+        p = self.module.get_function("prepare")
+        p.prepare("PiPi")
+
+        from pycuda.characterize import has_stack
+        has_stack = has_stack()
+
+        if has_stack:
+            prev_stack_size = drv.Context.get_limit(drv.limit.STACK_SIZE)
+
+        try:
+            if has_stack:
+                drv.Context.set_limit(drv.limit.STACK_SIZE, 1<<14) # 16k
+            try:
+                p.prepared_call(
+                        (self.block_count, 1), (self.generators_per_block, 1, 1), self.state,
+                        generator_count, seed.gpudata, offset)
+            except drv.LaunchError:
+                raise ValueError("Initialisation failed. Decrease number of threads.")
+
+        finally:
+            if has_stack:
+                drv.Context.set_limit(drv.limit.STACK_SIZE, prev_stack_size)
+
+    def _prepare_skipahead(self):
+        self.skip_ahead = self.module.get_function("skip_ahead")
+        self.skip_ahead.prepare("PiQ")
+        self.skip_ahead_array = self.module.get_function("skip_ahead_array")
+        self.skip_ahead_array.prepare("PiP")
+        self.skip_ahead_sequence = self.module.get_function("skip_ahead_sequence")
+        self.skip_ahead_sequence.prepare("PiQ")
+        self.skip_ahead_sequence_array = self.module.get_function("skip_ahead_sequence_array")
+        self.skip_ahead_sequence_array.prepare("PiP")
+
+    def call_skip_ahead_sequence(self, i, stream=None):
+        self.skip_ahead_sequence.prepared_async_call(
+                (self.block_count, 1), (self.generators_per_block, 1, 1), stream,
+                self.state, self.generators_per_block * self.block_count, i)
+
+    def call_skip_ahead_sequence_array(self, i, stream=None):
+        self.skip_ahead_sequence_array.prepared_async_call(
+                (self.block_count, 1), (self.generators_per_block, 1, 1), stream,
+                self.state, self.generators_per_block * self.block_count, i.gpudata)
+
+    def _kernels(self):
+        return (_RandomNumberGeneratorBase._kernels(self)
+                + [self.module.get_function("prepare")]
+                + [self.module.get_function("skip_ahead_sequence"),
+                   self.module.get_function("skip_ahead_sequence_array")])
+
+
 def seed_getter_uniform(N):
     result = pycuda.gpuarray.empty([N], np.int32)
     import random
@@ -545,7 +679,7 @@ def seed_getter_unique(N):
 
 xorwow_random_source = """
 extern "C" {
-__global__ void prepare( %(state_type)s *s, const int n,
+__global__ void prepare(%(state_type)s *s, const int n,
     %(vector_type)s *v, const unsigned int o)
 {
   const int id = blockIdx.x*blockDim.x+threadIdx.x;
@@ -557,14 +691,14 @@ __global__ void prepare( %(state_type)s *s, const int n,
 
 xorwow_skip_ahead_sequence_source = """
 extern "C" {
-__global__ void skip_ahead_sequence(%(state_type)s *s, const int n, const unsigned int skip)
+__global__ void skip_ahead_sequence(%(state_type)s *s, const int n, const unsigned long long skip)
 {
   const int idx = blockIdx.x*blockDim.x+threadIdx.x;
   if (idx < n)
     skipahead_sequence(skip, &s[idx]);
 }
 
-__global__ void skip_ahead_sequence_array(%(state_type)s *s, const int n, const unsigned int *skip)
+__global__ void skip_ahead_sequence_array(%(state_type)s *s, const int n, const unsigned long long *skip)
 {
   const int idx = blockIdx.x*blockDim.x+threadIdx.x;
   if (idx < n)
@@ -574,7 +708,7 @@ __global__ void skip_ahead_sequence_array(%(state_type)s *s, const int n, const 
 """
 
 if get_curand_version() >= (3, 2, 0):
-    class XORWOWRandomNumberGenerator(_RandomNumberGeneratorBase):
+    class XORWOWRandomNumberGenerator(_PseudoRandomNumberGeneratorBase):
         has_box_muller = True
 
         def __init__(self, seed_getter=None, offset=0):
@@ -584,66 +718,94 @@ if get_curand_version() >= (3, 2, 0):
             """
 
             super(XORWOWRandomNumberGenerator, self).__init__(
-                'curandStateXORWOW', 'unsigned int', xorwow_random_source+
+                seed_getter, offset,
+                'curandStateXORWOW', 'unsigned int', 32, xorwow_random_source+
                 xorwow_skip_ahead_sequence_source+random_skip_ahead64_source)
 
-            generator_count = self.generators_per_block * self.block_count
-            if seed_getter is None:
-                seed = array.to_gpu(
-                        np.asarray(
-                            np.random.random_integers(
-                                0, (1 << 31) - 2, generator_count),
-                            dtype=np.int32))
-            else:
-                seed = seed_getter(generator_count)
+# }}}
 
-            if not (isinstance(seed, pycuda.gpuarray.GPUArray)
-                    and seed.dtype == np.int32
-                    and seed.size == generator_count):
-                raise TypeError("seed must be GPUArray of integers of right length")
+# {{{ MRG32k3a RNG
 
-            p = self.module.get_function("prepare")
-            p.prepare("PiPi")
-            self.skip_ahead_sequence = self.module.get_function("skip_ahead_sequence")
-            self.skip_ahead_sequence.prepare("Pii")
-            self.skip_ahead_sequence_array = self.module.get_function("skip_ahead_sequence_array")
-            self.skip_ahead_sequence_array.prepare("PiP")
+mrg32k3a_random_source = """
+extern "C" {
+__global__ void prepare(%(state_type)s *s, const int n,
+    %(vector_type)s *v, const unsigned int o)
+{
+  const int id = blockIdx.x*blockDim.x+threadIdx.x;
+  if (id < n)
+    curand_init(v[id], id, o, &s[id]);
+}
+}
+"""
 
-            from pycuda.characterize import has_stack
-            has_stack = has_stack()
+mrg32k3a_skip_ahead_sequence_source = """
+extern "C" {
+__global__ void skip_ahead_sequence(%(state_type)s *s, const int n, const unsigned long long skip)
+{
+  const int idx = blockIdx.x*blockDim.x+threadIdx.x;
+  if (idx < n)
+    skipahead_sequence(skip, &s[idx]);
+}
 
-            if has_stack:
-                prev_stack_size = drv.Context.get_limit(drv.limit.STACK_SIZE)
+__global__ void skip_ahead_sequence_array(%(state_type)s *s, const int n, const unsigned long long *skip)
+{
+  const int idx = blockIdx.x*blockDim.x+threadIdx.x;
+  if (idx < n)
+      skipahead_sequence(skip[idx], &s[idx]);
+}
 
-            try:
-                if has_stack:
-                    drv.Context.set_limit(drv.limit.STACK_SIZE, 1<<14) # 16k
-                try:
-                    p.prepared_call(
-                            (self.block_count, 1), (self.generators_per_block, 1, 1), self.state,
-                            generator_count, seed.gpudata, offset)
-                except drv.LaunchError:
-                    raise ValueError("Initialisation failed. Decrease number of threads.")
+__global__ void skip_ahead_subsequence(%(state_type)s *s, const int n, const unsigned long long skip)
+{
+  const int idx = blockIdx.x*blockDim.x+threadIdx.x;
+  if (idx < n)
+    skipahead_subsequence(skip, &s[idx]);
+}
 
-            finally:
-                if has_stack:
-                    drv.Context.set_limit(drv.limit.STACK_SIZE, prev_stack_size)
+__global__ void skip_ahead_subsequence_array(%(state_type)s *s, const int n, const unsigned long long *skip)
+{
+  const int idx = blockIdx.x*blockDim.x+threadIdx.x;
+  if (idx < n)
+      skipahead_subsequence(skip[idx], &s[idx]);
+}
+}
+"""
 
-        def call_skip_ahead_sequence(self, i, stream=None):
-            self.skip_ahead_sequence.prepared_async_call(
+if get_curand_version() >= (4, 1, 0):
+    class MRG32k3aRandomNumberGenerator(_PseudoRandomNumberGeneratorBase):
+        has_box_muller = True
+
+        def __init__(self, seed_getter=None, offset=0):
+            """
+            :arg seed_getter: a function that, given an integer count, will yield an `int32`
+              :class:`GPUArray` of seeds.
+            """
+
+            super(MRG32k3aRandomNumberGenerator, self).__init__(
+                seed_getter, offset,
+                'curandStateMRG32k3a', 'unsigned int', 32, mrg32k3a_random_source+
+                mrg32k3a_skip_ahead_sequence_source+random_skip_ahead64_source)
+
+        def _prepare_skipahead(self):
+            super(MRG32k3aRandomNumberGenerator, self)._prepare_skipahead()
+            self.skip_ahead_subsequence = self.module.get_function("skip_ahead_subsequence")
+            self.skip_ahead_subsequence.prepare("PiQ")
+            self.skip_ahead_subsequence_array = self.module.get_function("skip_ahead_subsequence_array")
+            self.skip_ahead_subsequence_array.prepare("PiP")
+
+        def call_skip_ahead_subsequence(self, i, stream=None):
+            self.skip_ahead_subsequence.prepared_async_call(
                     (self.block_count, 1), (self.generators_per_block, 1, 1), stream,
                     self.state, self.generators_per_block * self.block_count, i)
 
-        def call_skip_ahead_sequence_array(self, i, stream=None):
-            self.skip_ahead_sequence_array.prepared_async_call(
+        def call_skip_ahead_subsequence_array(self, i, stream=None):
+            self.skip_ahead_subsequence_array.prepared_async_call(
                     (self.block_count, 1), (self.generators_per_block, 1, 1), stream,
                     self.state, self.generators_per_block * self.block_count, i.gpudata)
 
         def _kernels(self):
-            return (_RandomNumberGeneratorBase._kernels(self)
-                    + [self.module.get_function("prepare")]
-                    + [self.module.get_function("skip_ahead_sequence"),
-                       self.module.get_function("skip_ahead_sequence_array")])
+            return (_PseudoRandomNumberGeneratorBase._kernels(self)
+                    + [self.module.get_function("skip_ahead_subsequence"),
+                       self.module.get_function("skip_ahead_subsequence_array")])
 
 # }}}
 
@@ -694,9 +856,10 @@ class _SobolRandomNumberGeneratorBase(_RandomNumberGeneratorBase):
     has_box_muller = False
 
     def __init__(self, dir_vector, dir_vector_dtype, dir_vector_size,
-        dir_vector_set, offset, state_type, vector_type, sobol_random_source):
+        dir_vector_set, offset, state_type, vector_type, generator_bits,
+        sobol_random_source):
         super(_SobolRandomNumberGeneratorBase, self).__init__(state_type,
-            vector_type, sobol_random_source)
+            vector_type, generator_bits, sobol_random_source)
 
         if dir_vector is None:
             dir_vector = generate_direction_vectors(
@@ -757,9 +920,10 @@ class _ScrambledSobolRandomNumberGeneratorBase(_RandomNumberGeneratorBase):
 
     def __init__(self, dir_vector, dir_vector_dtype, dir_vector_size,
         dir_vector_set, scramble_vector, scramble_vector_function,
-        offset, state_type, vector_type, scramble_type, sobol_random_source):
+        offset, state_type, vector_type, generator_bits, scramble_type,
+	sobol_random_source):
         super(_ScrambledSobolRandomNumberGeneratorBase, self).__init__(state_type,
-            vector_type, sobol_random_source, scramble_type)
+            vector_type, generator_bits, sobol_random_source, scramble_type)
 
         if dir_vector is None:
             dir_vector = generate_direction_vectors(
@@ -818,7 +982,7 @@ if get_curand_version() >= (3, 2, 0):
         def __init__(self, dir_vector=None, offset=0):
             super(Sobol32RandomNumberGenerator, self).__init__(dir_vector,
                 np.uint32, 32, direction_vector_set.VECTOR_32, offset,
-                'curandStateSobol32', 'curandDirectionVectors32_t',
+                'curandStateSobol32', 'curandDirectionVectors32_t', 32,
                 sobol_random_source+random_skip_ahead32_source)
 
 
@@ -835,7 +999,7 @@ if get_curand_version() >= (4, 0, 0):
                 np.uint32, 32, direction_vector_set.SCRAMBLED_VECTOR_32,
                 scramble_vector, generate_scramble_constants32, offset,
                 'curandStateScrambledSobol32', 'curandDirectionVectors32_t',
-                'unsigned int',
+                32, 'unsigned int',
                 scrambledsobol_random_source+random_skip_ahead32_source)
 
 if get_curand_version() >= (4, 0, 0):
@@ -849,7 +1013,7 @@ if get_curand_version() >= (4, 0, 0):
         def __init__(self, dir_vector=None, offset=0):
             super(Sobol64RandomNumberGenerator, self).__init__(dir_vector,
                 np.uint64, 64, direction_vector_set.VECTOR_64, offset,
-                'curandStateSobol64', 'curandDirectionVectors64_t',
+                'curandStateSobol64', 'curandDirectionVectors64_t', 64,
                  sobol_random_source+random_skip_ahead64_source)
 
 if get_curand_version() >= (4, 0, 0):
@@ -865,7 +1029,7 @@ if get_curand_version() >= (4, 0, 0):
                 np.uint64, 64, direction_vector_set.SCRAMBLED_VECTOR_64,
                 scramble_vector, generate_scramble_constants64, offset,
                 'curandStateScrambledSobol64', 'curandDirectionVectors64_t',
-                'unsigned long long',
+                64, 'unsigned long long',
                 scrambledsobol_random_source+random_skip_ahead64_source)
 
 # }}}
