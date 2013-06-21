@@ -939,6 +939,12 @@ BOOST_PYTHON_MODULE(_driver)
       .DEF_SIMPLE_METHOD(disable_peer_access)
       .staticmethod("disable_peer_access")
 #endif
+#if CUDAPP_CUDA_VERSION >= 4020
+      .DEF_SIMPLE_METHOD(get_shared_config)
+      .staticmethod("get_shared_config")
+      .DEF_SIMPLE_METHOD(set_shared_config)
+      .staticmethod("set_shared_config")
+#endif
       ;
   }
   // }}}
