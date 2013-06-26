@@ -163,8 +163,9 @@ template <class _Tp>
 __device__ 
 static complex<_Tp> expT(const complex<_Tp>& z) {
   _Tp expx = ::exp(z._M_re);
-  return complex<_Tp>(expx * ::cos(z._M_im),
-                      expx * ::sin(z._M_im));
+  _Tp s, c;
+  ::sincos(z._M_im, &s, &c);
+  return complex<_Tp>(expx * s, expx * c);
 }
 __device__ complex<float>  exp(const complex<float>& z)
 { return expT(z); }
