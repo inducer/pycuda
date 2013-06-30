@@ -219,7 +219,7 @@ struct _STLP_CLASS_DECLSPEC complex<float> {
   __device__ complex(const complex<float>& __z) 
     : _M_re(__z._M_re), _M_im(__z._M_im) {}
 
-  inline explicit complex(const complex<double>& __z);
+  inline explicit __device__ complex(const complex<double>& __z);
   // Element access.
   value_type __device__ real() const { return _M_re; }
   value_type __device__ imag() const { return _M_im; }
