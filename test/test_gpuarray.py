@@ -102,6 +102,17 @@ class TestGPUArray:
                     assert (a * scalar == a_doubled).all()
 
     @mark_cuda_test
+    def test_rmul_yields_right_type(self):
+        a = np.array([1, 2, 3, 4, 5]).astype(np.float32)
+        a_gpu = gpuarray.to_gpu(a)
+
+        two_a = 2*a_gpu
+        assert isinstance(two_a, gpuarray.GPUArray)
+
+        two_a = np.float32(2)*a_gpu
+        assert isinstance(two_a, gpuarray.GPUArray)
+
+    @mark_cuda_test
     def test_multiply_array(self):
         """Test the multiplication of two arrays."""
 

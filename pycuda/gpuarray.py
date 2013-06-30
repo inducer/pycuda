@@ -149,6 +149,8 @@ class GPUArray(object):
     work on an element-by-element basis, just like numpy.ndarray.
     """
 
+    __array_priority__ = 10
+
     def __init__(self, shape, dtype, allocator=drv.mem_alloc,
             base=None, gpudata=None, strides=None, order="C"):
         dtype = np.dtype(dtype)
@@ -556,7 +558,7 @@ class GPUArray(object):
         if len(self.shape):
             return self.shape[0]
         else:
-            return 1
+            return TypeError("scalar has no len()")
 
     def __abs__(self):
         """Return a `GPUArray` of the absolute values of the elements
@@ -699,72 +701,94 @@ class GPUArray(object):
                 base=self,
                 gpudata=int(self.gpudata))
 
-    # slicing -----------------------------------------------------------------
-    def __getitem__(self, idx):
-        if idx == ():
-            return self
+    # {{{ slicing
 
-        if len(self.shape) == 2:
-            if self.flags.c_contiguous:
-                if type(idx) is tuple:
-                    raise NotImplementedError("slicing of columns in c-contiguous "
-                        "arrays is not supported yet")
+    def __getitem__(self, index):
+        """
+        .. versionadded:: 2013.1
+        """
+        if not isinstance(index, tuple):
+            index = (index,)
 
-                m, n = self.shape
-                start, stop, stride = idx.indices(m)
+        new_shape = []
+        new_offset = 0
+        new_strides = []
 
-                shape = ((stop-start)//stride, n)
-                gpudata = int(self.gpudata) + start*n*self.dtype.itemsize
+        seen_ellipsis = False
 
-            elif self.flags.f_contiguous:
-                if type(idx) is not tuple:
-                    raise NotImplementedError("f-contiguous arrays "
-                        "can only be slice by column")
-                if len(idx) != 2:
-                    raise ValueError("you must specify a slice for both "
-                        "rows and columns")
-    
-                m, n = self.shape
+        index_axis = 0
+        array_axis = 0
+        while index_axis < len(index):
+            index_entry = index[index_axis]
 
-                start_row, stop_row, stride_row = idx[0].indices(m)
-                if not (start_row == 0 and stop_row == m
-                        and stride_row == 1):
-                    raise ValueError("you can only slice f-contiguous "
-                        "arrays by column")
+            if array_axis > len(self.shape):
+                raise IndexError("too many axes in index")
 
-                start, stop, stride = idx[1].indices(n)
+            if isinstance(index_entry, slice):
+                start, stop, idx_stride = index_entry.indices(
+                        self.shape[array_axis])
 
-                shape = (m, (stop-start)//stride)
-                gpudata = int(self.gpudata) + start*m*self.dtype.itemsize
+                array_stride = self.strides[array_axis]
+
+                new_shape.append((stop-start)//idx_stride)
+                new_strides.append(idx_stride*array_stride)
+                new_offset += array_stride*start
+
+                index_axis += 1
+                array_axis += 1
+
+            elif isinstance(index_entry, (int, np.integer)):
+                array_shape = self.shape[array_axis]
+                if index_entry < 0:
+                    index_entry += array_shape
+
+                if not (0 <= index_entry < array_shape):
+                    raise IndexError(
+                            "subindex in axis %d out of range" % index_axis)
+
+                new_offset += self.strides[array_axis]*index_entry
+
+                index_axis += 1
+                array_axis += 1
+
+            elif index_entry is Ellipsis:
+                index_axis += 1
+
+                remaining_index_count = len(index) - index_axis
+                new_array_axis = len(self.shape) - remaining_index_count
+                if new_array_axis < array_axis:
+                    raise IndexError("invalid use of ellipsis in index")
+                while array_axis < new_array_axis:
+                    new_shape.append(self.shape[array_axis])
+                    new_strides.append(self.strides[array_axis])
+                    array_axis += 1
+
+                if seen_ellipsis:
+                    raise IndexError(
+                            "more than one ellipsis not allowed in index")
+                seen_ellipsis = True
+
             else:
-                raise ValueError("arrays must be either c-contiguous "
-                    "or f-contiguous")
+                raise IndexError("invalid subindex in axis %d" % index_axis)
 
-        elif len(self.shape) == 1:
-            l, = self.shape
-            start, stop, stride = idx.indices(l)
+        while array_axis < len(self.shape):
+            new_shape.append(self.shape[array_axis])
+            new_strides.append(self.strides[array_axis])
 
-            shape = ((stop-start)//stride,)
-            gpudata = int(self.gpudata) + start*self.dtype.itemsize
-        elif len(self.shape) > 2:
-            raise NotImplementedError("multi-d slicing is not yet implemented")
-
-        if (not isinstance(idx, slice) and not isinstance(idx, tuple)) or \
-          (isinstance(idx, tuple) and any([not isinstance(i, slice) for i in idx])):
-            raise ValueError("non-slice indexing not supported: %s" % (idx,))
-
-        if stride != 1:
-            raise NotImplementedError("strided slicing is not yet implemented")
+            array_axis += 1
 
         return GPUArray(
-                shape=shape,
+                shape=tuple(new_shape),
                 dtype=self.dtype,
                 allocator=self.allocator,
                 base=self,
-                gpudata=gpudata,
-                order='C' if self.flags.c_contiguous else 'F')
+                gpudata=int(self.gpudata)+new_offset,
+                strides=tuple(new_strides))
 
-    # complex-valued business -------------------------------------------------
+    # }}}
+
+    # {{{ complex-valued business
+
     @property
     def real(self):
         dtype = self.dtype
@@ -823,13 +847,18 @@ class GPUArray(object):
         else:
             return self
 
-    # rich comparisons
+    # }}}
+
+    # {{{ rich comparisons
+
     __eq__ = _make_binary_op("==")
     __ne__ = _make_binary_op("!=")
     __le__ = _make_binary_op("<=")
     __ge__ = _make_binary_op(">=")
     __lt__ = _make_binary_op("<")
     __gt__ = _make_binary_op(">")
+
+    # }}}
 
 # }}}
 
