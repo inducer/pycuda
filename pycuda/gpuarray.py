@@ -5,25 +5,22 @@ from pytools import memoize, memoize_method
 import pycuda.driver as drv
 from pycuda.compyte.array import (
         as_strided as _as_strided,
-        f_contiguous_strides as _f_contiguous_strides, 
-        c_contiguous_strides as _c_contiguous_strides, 
+        f_contiguous_strides as _f_contiguous_strides,
+        c_contiguous_strides as _c_contiguous_strides,
         ArrayFlags as _ArrayFlags,
         get_common_dtype as _get_common_dtype_base)
 from pycuda.characterize import has_double_support
-
-
 
 
 def _get_common_dtype(obj1, obj2):
     return _get_common_dtype_base(obj1, obj2, has_double_support())
 
 
-
-
 # {{{ vector types
 
 class vec:
     pass
+
 
 def _create_vector_types():
     from pycuda.characterize import platform_bits
@@ -39,19 +36,19 @@ def _create_vector_types():
     from pycuda.tools import get_or_register_dtype
 
     for base_name, base_type, counts in [
-        ('char', np.int8, [1,2,3,4]),
-        ('uchar', np.uint8, [1,2,3,4]),
-        ('short', np.int16, [1,2,3,4]),
-        ('ushort', np.uint16, [1,2,3,4]),
-        ('int', np.int32, [1,2,3,4]),
-        ('uint', np.uint32, [1,2,3,4]),
-        ('long', long_dtype, [1,2,3,4]),
-        ('ulong', ulong_dtype, [1,2,3,4]),
-        ('longlong', np.int64, [1,2]),
-        ('ulonglong', np.uint64, [1,2]),
-        ('float', np.float32, [1,2,3,4]),
-        ('double', np.float64, [1,2]),
-        ]:
+            ('char', np.int8, [1, 2, 3, 4]),
+            ('uchar', np.uint8, [1, 2, 3, 4]),
+            ('short', np.int16, [1, 2, 3, 4]),
+            ('ushort', np.uint16, [1, 2, 3, 4]),
+            ('int', np.int32, [1, 2, 3, 4]),
+            ('uint', np.uint32, [1, 2, 3, 4]),
+            ('long', long_dtype, [1, 2, 3, 4]),
+            ('ulong', ulong_dtype, [1, 2, 3, 4]),
+            ('longlong', np.int64, [1, 2]),
+            ('ulonglong', np.uint64, [1, 2]),
+            ('float', np.float32, [1, 2, 3, 4]),
+            ('double', np.float64, [1, 2]),
+            ]:
         for count in counts:
             name = "%s%d" % (base_name, count)
             dtype = np.dtype([
@@ -72,6 +69,7 @@ def _create_vector_types():
 _create_vector_types()
 
 # }}}
+
 
 # {{{ helper functionality
 
@@ -95,7 +93,7 @@ def _splay_backend(n, dev):
     elif n < (max_blocks * max_threads):
         block_count = max_blocks
         grp = (n + min_threads - 1) // min_threads
-        threads_per_block = ((grp + max_blocks -1) // max_blocks) * min_threads
+        threads_per_block = ((grp + max_blocks - 1) // max_blocks) * min_threads
     else:
         block_count = max_blocks
         threads_per_block = max_threads
@@ -104,17 +102,13 @@ def _splay_backend(n, dev):
     return (block_count, 1), (threads_per_block, 1, 1)
 
 
-
-
 def splay(n, dev=None):
     if dev is None:
         dev = drv.Context.get_device()
     return _splay_backend(n, dev)
 
-
-
-
 # }}}
+
 
 # {{{ main GPUArray class
 
@@ -138,8 +132,6 @@ def _make_binary_op(operator):
         return result
 
     return func
-
-
 
 
 class GPUArray(object):
@@ -281,7 +273,7 @@ class GPUArray(object):
             raise RuntimeError("only contiguous arrays may copied.")
 
         new = GPUArray(self.shape, self.dtype)
-        drv.memcpy_dtod(new.gpudata,self.gpudata,self.nbytes)
+        drv.memcpy_dtod(new.gpudata, self.gpudata, self.nbytes)
         return new
 
     def __str__(self):
@@ -326,7 +318,7 @@ class GPUArray(object):
             raise RuntimeError("only contiguous arrays may "
                     "be used as arguments to this operation")
 
-        func = elementwise.get_axpbz_kernel(self.dtype,out.dtype)
+        func = elementwise.get_axpbz_kernel(self.dtype, out.dtype)
         func.prepared_async_call(self._grid, self._block, stream,
                 selffac, self.gpudata,
                 other, out.gpudata, self.mem_size)
@@ -338,7 +330,8 @@ class GPUArray(object):
             raise RuntimeError("only contiguous arrays may "
                     "be used as arguments to this operation")
 
-        func = elementwise.get_binary_op_kernel(self.dtype, other.dtype, out.dtype, "*")
+        func = elementwise.get_binary_op_kernel(self.dtype, other.dtype,
+                out.dtype, "*")
         func.prepared_async_call(self._grid, self._block, stream,
                 self.gpudata, other.gpudata,
                 out.gpudata, self.mem_size)
@@ -355,7 +348,7 @@ class GPUArray(object):
             raise RuntimeError("only contiguous arrays may "
                     "be used as arguments to this operation")
 
-        func = elementwise.get_rdivide_elwise_kernel(self.dtype,out.dtype)
+        func = elementwise.get_rdivide_elwise_kernel(self.dtype, out.dtype)
         func.prepared_async_call(self._grid, self._block, stream,
                 self.gpudata, other,
                 out.gpudata, self.mem_size)
@@ -371,7 +364,8 @@ class GPUArray(object):
 
         assert self.shape == other.shape
 
-        func = elementwise.get_binary_op_kernel(self.dtype, other.dtype, out.dtype, "/")
+        func = elementwise.get_binary_op_kernel(self.dtype, other.dtype,
+                out.dtype, "/")
         func.prepared_async_call(self._grid, self._block, stream,
                 self.gpudata, other.gpudata,
                 out.gpudata, self.mem_size)
@@ -545,7 +539,8 @@ class GPUArray(object):
             fmt = drv.dtype_to_array_format(self.dtype)
             read_as_int = np.integer in self.dtype.type.__mro__
 
-        offset = texref.set_address(self.gpudata, self.nbytes, allow_offset=allow_offset)
+        offset = texref.set_address(self.gpudata, self.nbytes,
+                allow_offset=allow_offset)
         texref.set_format(fmt, channels)
 
         if read_as_int:
@@ -585,7 +580,7 @@ class GPUArray(object):
                 out_dtype=out_dtype)
 
         func.prepared_async_call(self._grid, self._block, None,
-                self.gpudata,result.gpudata, self.mem_size)
+                self.gpudata, result.gpudata, self.mem_size)
 
         return result
 
@@ -862,6 +857,7 @@ class GPUArray(object):
 
 # }}}
 
+
 # {{{ creation helpers
 
 def to_gpu(ary, allocator=drv.mem_alloc):
@@ -870,13 +866,16 @@ def to_gpu(ary, allocator=drv.mem_alloc):
     result.set(ary)
     return result
 
+
 def to_gpu_async(ary, allocator=drv.mem_alloc, stream=None):
     """converts a numpy array to a GPUArray"""
     result = GPUArray(ary.shape, ary.dtype, allocator, strides=ary.strides)
     result.set_async(ary, stream)
     return result
 
+
 empty = GPUArray
+
 
 def zeros(shape, dtype, allocator=drv.mem_alloc, order="C"):
     """Returns an array of the given shape and dtype filled with 0's."""
@@ -886,10 +885,12 @@ def zeros(shape, dtype, allocator=drv.mem_alloc, order="C"):
     result.fill(zero)
     return result
 
+
 def empty_like(other_ary):
     result = GPUArray(
             other_ary.shape, other_ary.dtype, other_ary.allocator)
     return result
+
 
 def zeros_like(other_ary):
     result = GPUArray(
@@ -912,6 +913,7 @@ def arange(*args, **kwargs):
 
     # Yuck. Thanks, numpy developers. ;)
     from pytools import Record
+
     class Info(Record):
         pass
 
@@ -995,6 +997,7 @@ copy_reg.pickle(GPUArray,
 
 # }}}
 
+
 # {{{ take/put
 
 def take(a, indices, out=None, stream=None):
@@ -1010,8 +1013,6 @@ def take(a, indices, out=None, stream=None):
             indices.gpudata, out.gpudata, indices.size)
 
     return out
-
-
 
 
 def multi_take(arrays, indices, out=None, stream=None):
@@ -1056,8 +1057,6 @@ def multi_take(arrays, indices, out=None, stream=None):
                     + [indices.size]))
 
     return out
-
-
 
 
 def multi_take_put(arrays, dest_indices, src_indices, dest_shape=None,
@@ -1126,8 +1125,6 @@ def multi_take_put(arrays, dest_indices, src_indices, dest_shape=None,
     return out
 
 
-
-
 def multi_put(arrays, dest_indices, dest_shape=None, out=None, stream=None):
     if not len(arrays):
         return []
@@ -1174,6 +1171,7 @@ def multi_put(arrays, dest_indices, dest_shape=None, out=None, stream=None):
 
 # }}}
 
+
 # {{{ conditionals
 
 def if_positive(criterion, then_, else_, out=None, stream=None):
@@ -1196,8 +1194,6 @@ def if_positive(criterion, then_, else_, out=None, stream=None):
     return out
 
 
-
-
 def _make_binary_minmax_func(which):
     def f(a, b, out=None, stream=None):
         if out is None:
@@ -1213,30 +1209,33 @@ def _make_binary_minmax_func(which):
     return f
 
 
-
-
 minimum = _make_binary_minmax_func("min")
 maximum = _make_binary_minmax_func("max")
 
 # }}}
 
-# {{{ reductions ------------------------------------------------------------------
+
+# {{{ reductions
+
 def sum(a, dtype=None, stream=None):
     from pycuda.reduction import get_sum_kernel
     krnl = get_sum_kernel(dtype, a.dtype)
     return krnl(a, stream=stream)
 
+
 def dot(a, b, dtype=None, stream=None):
     from pycuda.reduction import get_dot_kernel
     if dtype is None:
-        dtype = _get_common_dtype(a,b)
+        dtype = _get_common_dtype(a, b)
     krnl = get_dot_kernel(dtype, a.dtype, b.dtype)
     return krnl(a, b, stream=stream)
+
 
 def subset_dot(subset, a, b, dtype=None, stream=None):
     from pycuda.reduction import get_subset_dot_kernel
     krnl = get_subset_dot_kernel(dtype, subset.dtype, a.dtype, b.dtype)
     return krnl(subset, a, b, stream=stream)
+
 
 def _make_minmax_kernel(what):
     def f(a, stream=None):
@@ -1251,10 +1250,10 @@ _builtin_max = max
 min = _make_minmax_kernel("min")
 max = _make_minmax_kernel("max")
 
+
 def _make_subset_minmax_kernel(what):
     def f(subset, a, stream=None):
         from pycuda.reduction import get_subset_minmax_kernel
-        import pycuda.reduction
         krnl = get_subset_minmax_kernel(what, a.dtype, subset.dtype)
         return krnl(subset, a,  stream=stream)
 
