@@ -311,6 +311,10 @@ Reductions
 
 .. function:: sum(a, dtype=None, stream=None)
 
+.. function:: subset_sum(subset, a, dtype=None, stream=None)
+
+    .. versionadded:: 2013.1
+
 .. function:: dot(a, b, dtype=None, stream=None)
 
 .. function:: subset_dot(subset, a, b, dtype=None, stream=None)

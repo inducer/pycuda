@@ -1223,6 +1223,12 @@ def sum(a, dtype=None, stream=None):
     return krnl(a, stream=stream)
 
 
+def subset_sum(subset, a, dtype=None, stream=None):
+    from pycuda.reduction import get_subset_sum_kernel
+    krnl = get_subset_sum_kernel(dtype, subset.dtype, a.dtype)
+    return krnl(subset, a, stream=stream)
+
+
 def dot(a, b, dtype=None, stream=None):
     from pycuda.reduction import get_dot_kernel
     if dtype is None:

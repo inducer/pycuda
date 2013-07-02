@@ -294,8 +294,23 @@ def get_sum_kernel(dtype_out, dtype_in):
         dtype_out = dtype_in
 
     return ReductionKernel(dtype_out, "0", "a+b",
-            arguments="const %(tp)s *in" % {"tp": dtype_to_ctype(dtype_in)},
-            keep=True)
+            arguments="const %(tp)s *in" % {"tp": dtype_to_ctype(dtype_in)})
+
+
+
+
+@context_dependent_memoize
+def get_subset_sum_kernel(dtype_out, dtype_subset, dtype_in):
+    if dtype_out is None:
+        dtype_out = dtype_in
+
+    return ReductionKernel(dtype_out, "0", "a+b",
+            map_expr="in[lookup_tbl[i]]",
+            arguments="const %(tp_lut)s *lookup_tbl, const %(tp)s *in"
+            % {
+                "tp": dtype_to_ctype(dtype_in),
+                "tp_lut": dtype_to_ctype(dtype_subset),
+                })
 
 
 
