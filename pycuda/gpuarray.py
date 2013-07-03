@@ -141,7 +141,7 @@ class GPUArray(object):
     work on an element-by-element basis, just like numpy.ndarray.
     """
 
-    __array_priority__ = 10
+    __array_priority__ = 100
 
     def __init__(self, shape, dtype, allocator=drv.mem_alloc,
             base=None, gpudata=None, strides=None, order="C"):
