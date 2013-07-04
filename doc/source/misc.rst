@@ -1,13 +1,16 @@
 User-visible Changes
 ====================
 
-Version 2013.1
+Version 2013.2
 --------------
 
 .. note::
 
     This version is the current development version. You can get it from
-    PyCUDA's version control repository.
+    `PyCUDA's version control repository <https://github.com/inducer/pycuda>`_.
+
+Version 2013.1
+--------------
 
 * Python 3 support (large parts contributed by Tomasz Rybak)
 * Add :meth:`pycuda.gpuarray.GPUArray.__getitem__`,
