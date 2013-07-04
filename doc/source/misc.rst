@@ -9,10 +9,11 @@ Version 2013.1
     This version is the current development version. You can get it from
     PyCUDA's version control repository.
 
+* Python 3 support
 * Add :meth:`pycuda.gpuarray.GPUArray.__getitem__`,
   supporting generic slicing.
 
-  It is *possible* to create non-contiguous arrays using tis functionality.
+  It is *possible* to create non-contiguous arrays using this functionality.
   Most operations (elementwise etc.) will not work on such arrays.
 * More generators in :mod:`pycuda.curandom`. (Tomasz Rybak)
 * Many bug fixes
