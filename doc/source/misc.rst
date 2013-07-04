@@ -1,12 +1,50 @@
 User-visible Changes
 ====================
 
-Version 2012.2
+Version 2013.1
 --------------
+
 .. note::
 
     This version is the current development version. You can get it from
     PyCUDA's version control repository.
+
+* Add :meth:`pycuda.gpuarray.GPUArray.__getitem__`,
+  supporting generic slicing.
+
+  It is *possible* to create non-contiguous arrays using tis functionality.
+  Most operations (elementwise etc.) will not work on such arrays.
+* More generators in :mod:`pycuda.curandom`. (Tomasz Rybak)
+* Many bug fixes
+
+.. note::
+
+    The addition of :meth:`pyopencl.array.Array.__getitem__` has an unintended
+    consequence due to `numpy bug 3375
+    <https://github.com/numpy/numpy/issues/3375>`_.  For instance, this
+    expression::
+
+        numpy.float32(5) * some_gpu_array
+
+    may take a very long time to execute. This is because :mod:`numpy` first
+    builds an object array of (compute-device) scalars (!) before it decided that
+    that's probably not such a bright idea and finally calls
+    :meth:`pycuda.gpuarray.GPUArray.__rmul__`.
+
+    Note that only left arithmetic operations of :class:`pycuda.gpuarray.GPUArray`
+    by :mod:`numpy` scalars are affected. Python's number types (:class:`float` etc.)
+    are unaffected, as are right multiplications.
+
+    If a program that used to run fast suddenly runs extremely slowly, it is
+    likely that this bug is to blame.
+
+    Here's what you can do:
+
+    * Use Python scalars instead of :mod:`numpy` scalars.
+    * Switch to right multiplications if possible.
+    * Use a patched :mod:`numpy`. See the bug report linked above for a pull
+      request with a fix.
+    * Switch to a fixed version of :mod:`numpy` when available.
 
 Version 2012.1
 --------------
