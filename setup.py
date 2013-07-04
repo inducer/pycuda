@@ -18,6 +18,7 @@ def search_on_path(filenames):
             if exists(join(path, filename)):
                 return abspath(join(path, filename))
 
+
 def get_config_schema():
     from aksetup_helper import ConfigSchema, Option, \
             IncludeDir, LibraryDir, Libraries, BoostLibraries, \
@@ -37,8 +38,10 @@ def get_config_schema():
         BoostLibraries("thread"),
 
         Switch("CUDA_TRACE", False, "Enable CUDA API tracing"),
-        Option("CUDA_ROOT", default=cuda_root_default, help="Path to the CUDA toolkit"),
-        Option("CUDA_PRETEND_VERSION", help="Assumed CUDA version, in the form 3010 for 3.1."),
+        Option("CUDA_ROOT", default=cuda_root_default,
+            help="Path to the CUDA toolkit"),
+        Option("CUDA_PRETEND_VERSION",
+            help="Assumed CUDA version, in the form 3010 for 3.1."),
         IncludeDir("CUDA", None),
 
         Switch("CUDA_ENABLE_GL", False, "Enable CUDA GL interoperability"),
@@ -60,14 +63,10 @@ def get_config_schema():
         ])
 
 
-
-
-
 def main():
-    import glob
     import sys
 
-    from aksetup_helper import (hack_distutils, get_config, setup, \
+    from aksetup_helper import (hack_distutils, get_config, setup,
             NumpyExtension, set_up_shipped_boost_if_requested,
             check_git_submodules)
 
@@ -123,7 +122,8 @@ def main():
         LIBRARY_DIRS.extend(conf["CURAND_LIB_DIR"])
 
     ver_dic = {}
-    exec(compile(open("pycuda/__init__.py").read(), "pycuda/__init__.py", 'exec'), ver_dic)
+    exec(compile(open("pycuda/__init__.py").read(), "pycuda/__init__.py", 'exec'),
+            ver_dic)
 
     try:
         from distutils.command.build_py import build_py_2to3 as build_py
@@ -144,30 +144,30 @@ def main():
             long_description=open("README.rst", "rt").read(),
             author="Andreas Kloeckner",
             author_email="inform@tiker.net",
-            license = "MIT",
+            license="MIT",
             url="http://mathema.tician.de/software/pycuda",
             classifiers=[
-              'Environment :: Console',
-              'Development Status :: 5 - Production/Stable',
-              'Intended Audience :: Developers',
-              'Intended Audience :: Other Audience',
-              'Intended Audience :: Science/Research',
-              'License :: OSI Approved :: MIT License',
-              'Natural Language :: English',
-              'Programming Language :: C++',
-              'Programming Language :: Python',
-              'Programming Language :: Python :: 3',
-              'Programming Language :: Python :: 2.4',
-              'Programming Language :: Python :: 2.5',
-              'Programming Language :: Python :: 2.6',
-              'Programming Language :: Python :: 2.7',
-              'Programming Language :: Python :: 3.2',
-              'Programming Language :: Python :: 3.3',
-              'Topic :: Scientific/Engineering',
-              'Topic :: Scientific/Engineering :: Mathematics',
-              'Topic :: Scientific/Engineering :: Physics',
-              'Topic :: Scientific/Engineering :: Visualization',
-              ],
+                'Environment :: Console',
+                'Development Status :: 5 - Production/Stable',
+                'Intended Audience :: Developers',
+                'Intended Audience :: Other Audience',
+                'Intended Audience :: Science/Research',
+                'License :: OSI Approved :: MIT License',
+                'Natural Language :: English',
+                'Programming Language :: C++',
+                'Programming Language :: Python',
+                'Programming Language :: Python :: 3',
+                'Programming Language :: Python :: 2.4',
+                'Programming Language :: Python :: 2.5',
+                'Programming Language :: Python :: 2.6',
+                'Programming Language :: Python :: 2.7',
+                'Programming Language :: Python :: 3.2',
+                'Programming Language :: Python :: 3.3',
+                'Topic :: Scientific/Engineering',
+                'Topic :: Scientific/Engineering :: Mathematics',
+                'Topic :: Scientific/Engineering :: Physics',
+                'Topic :: Scientific/Engineering :: Visualization',
+                ],
 
             # build info
             packages=["pycuda", "pycuda.gl", "pycuda.sparse", "pycuda.compyte"],
