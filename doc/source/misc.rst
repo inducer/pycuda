@@ -31,7 +31,7 @@ Version 2013.1
         numpy.float32(5) * some_gpu_array
 
     may take a very long time to execute. This is because :mod:`numpy` first
-    builds an object array of (compute-device) scalars (!) before it decided that
+    builds an object array of (compute-device) scalars (!) before it decides that
     that's probably not such a bright idea and finally calls
     :meth:`pycuda.gpuarray.GPUArray.__rmul__`.
 
@@ -53,7 +53,6 @@ Version 2013.1
 Version 2012.1
 --------------
 
-* Support fo
 * Numerous bug fixes. (including shipped-boost compilation on gcc 4.7)
 
 Version 2011.2
