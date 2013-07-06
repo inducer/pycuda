@@ -9,6 +9,11 @@ Version 2013.2
     This version is the current development version. You can get it from
     `PyCUDA's version control repository <https://github.com/inducer/pycuda>`_.
 
+Version 2013.1.1
+----------------
+
+* Windows fix for PyCUDA on Python 3 (Thanks, Christoph Gohlke)
+
 Version 2013.1
 --------------
 
