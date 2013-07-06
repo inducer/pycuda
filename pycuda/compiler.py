@@ -168,7 +168,7 @@ def _get_per_user_string():
     except ImportError:
         checksum = _new_md5()
         from os import environ
-        checksum.update(environ["USERNAME"])
+        checksum.update(environ["USERNAME"].encode("utf-8"))
         return checksum.hexdigest()
     else:
         return "uid%d" % getuid()
