@@ -926,7 +926,7 @@ def arange(*args, **kwargs):
     inf.dtype = None
 
     if isinstance(args[-1], np.dtype):
-        dtype = args[-1]
+        inf.dtype = args[-1]
         args = args[:-1]
         explicit_dtype = True
 
