@@ -22,6 +22,7 @@ if have_pycuda():
 
 sizes = [10, 128, 1024, 1<<10, 1<<13]
 dtypes = [np.float32, np.float64]
+complex_dtypes = [np.complex64, np.complex128]
 
 
 
@@ -34,16 +35,25 @@ numpy_func_names = {
 
 
 
-def make_unary_function_test(name, a=0, b=1, threshold=0):
+def make_unary_function_test(name, a=0, b=1, threshold=0, complex=False):
     def test():
         gpu_func = getattr(cumath, name)
         cpu_func = getattr(np, numpy_func_names.get(name, name))
-
+        if complex:
+            _dtypes = complex_dtypes
+        else:
+            _dtypes = dtypes
+        
         for s in sizes:
-            for dtype in dtypes:
-                args = gpuarray.arange(a, b, (b-a)/s, dtype=np.float32)
+            for dtype in _dtypes:
+                np.random.seed(1)
+                A = (np.random.random(s)*(b-a) + a).astype(dtype)
+                if complex:
+                    A += (np.random.random(s)*(b-a) + a)*1j
+                    
+                args = gpuarray.to_gpu(A)
                 gpu_results = gpu_func(args).get()
-                cpu_results = cpu_func(args.get())
+                cpu_results = cpu_func(A)
 
                 max_err = np.max(np.abs(cpu_results - gpu_results))
                 assert (max_err <= threshold).all(), \
@@ -59,21 +69,32 @@ if have_pycuda():
     test_floor = make_unary_function_test("ceil", -10, 10)
     test_fabs = make_unary_function_test("fabs", -10, 10)
     test_exp = make_unary_function_test("exp", -3, 3, 1e-5)
+    test_exp_c = make_unary_function_test("exp", -3, 3, 1e-5, complex=True)
     test_log = make_unary_function_test("log", 1e-5, 1, 5e-7)
     test_log10 = make_unary_function_test("log10", 1e-5, 1, 3e-7)
     test_sqrt = make_unary_function_test("sqrt", 1e-5, 1, 2e-7)
 
     test_sin = make_unary_function_test("sin", -10, 10, 1e-7)
+    test_sin_c = make_unary_function_test("sin", -3, 3, 2e-6, complex=True)
     test_cos = make_unary_function_test("cos", -10, 10, 1e-7)
+    test_cos_c = make_unary_function_test("cos", -3, 3, 2e-6, complex=True)
     test_asin = make_unary_function_test("asin", -0.9, 0.9, 5e-7)
+    #test_sin_c = make_unary_function_test("sin", -0.9, 0.9, 2e-6, complex=True)
     test_acos = make_unary_function_test("acos", -0.9, 0.9, 5e-7)
+    #test_acos_c = make_unary_function_test("acos", -0.9, 0.9, 2e-6, complex=True)
     test_tan = make_unary_function_test("tan", 
             -math.pi/2 + 0.1, math.pi/2 - 0.1, 1e-5)
+    test_tan_c = make_unary_function_test("tan", 
+            -math.pi/2 + 0.1, math.pi/2 - 0.1, 3e-5, complex=True)
     test_atan = make_unary_function_test("atan", -10, 10, 2e-7)
 
     test_sinh = make_unary_function_test("sinh", -3, 3, 1e-6)
+    test_sinh_c = make_unary_function_test("sinh", -3, 3, 2e-6, complex=True)
     test_cosh = make_unary_function_test("cosh", -3, 3, 1e-6)
+    test_cosh_c = make_unary_function_test("cosh", -3, 3, 2e-6, complex=True)
     test_tanh = make_unary_function_test("tanh", -3, 3, 2e-6)
+    test_tanh_c = make_unary_function_test("tanh", 
+            -math.pi/2 + 0.1, math.pi/2 - 0.1, 3e-5, complex=True)
 
 
 
