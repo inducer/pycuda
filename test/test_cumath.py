@@ -3,9 +3,10 @@ import math
 import numpy as np
 from pycuda.tools import mark_cuda_test
 
+
 def have_pycuda():
     try:
-        import pycuda
+        import pycuda  # noqa
         return True
     except:
         return False
@@ -13,17 +14,13 @@ def have_pycuda():
 
 if have_pycuda():
     import pycuda.gpuarray as gpuarray
-    import pycuda.driver as drv
+    import pycuda.driver as drv  # noqa
     import pycuda.cumath as cumath
-    from pycuda.compiler import SourceModule
 
 
-
-
-sizes = [10, 128, 1024, 1<<10, 1<<13]
+sizes = [10, 128, 1024, 1 << 10, 1 << 13]
 dtypes = [np.float32, np.float64]
 complex_dtypes = [np.complex64, np.complex128]
-
 
 
 numpy_func_names = {
@@ -31,8 +28,6 @@ numpy_func_names = {
         "acos": "arccos",
         "atan": "arctan",
         }
-
-
 
 
 def make_unary_function_test(name, a=0, b=1, threshold=0, complex=False):
@@ -43,14 +38,14 @@ def make_unary_function_test(name, a=0, b=1, threshold=0, complex=False):
             _dtypes = complex_dtypes
         else:
             _dtypes = dtypes
-        
+
         for s in sizes:
             for dtype in _dtypes:
                 np.random.seed(1)
                 A = (np.random.random(s)*(b-a) + a).astype(dtype)
                 if complex:
                     A += (np.random.random(s)*(b-a) + a)*1j
-                    
+
                 args = gpuarray.to_gpu(A)
                 gpu_results = gpu_func(args).get()
                 cpu_results = cpu_func(A)
@@ -60,8 +55,6 @@ def make_unary_function_test(name, a=0, b=1, threshold=0, complex=False):
                         (max_err, name, dtype)
 
     return mark_cuda_test(test)
-
-
 
 
 if have_pycuda():
@@ -82,9 +75,9 @@ if have_pycuda():
     #test_sin_c = make_unary_function_test("sin", -0.9, 0.9, 2e-6, complex=True)
     test_acos = make_unary_function_test("acos", -0.9, 0.9, 5e-7)
     #test_acos_c = make_unary_function_test("acos", -0.9, 0.9, 2e-6, complex=True)
-    test_tan = make_unary_function_test("tan", 
+    test_tan = make_unary_function_test("tan",
             -math.pi/2 + 0.1, math.pi/2 - 0.1, 1e-5)
-    test_tan_c = make_unary_function_test("tan", 
+    test_tan_c = make_unary_function_test("tan",
             -math.pi/2 + 0.1, math.pi/2 - 0.1, 3e-5, complex=True)
     test_atan = make_unary_function_test("atan", -10, 10, 2e-7)
 
@@ -93,10 +86,8 @@ if have_pycuda():
     test_cosh = make_unary_function_test("cosh", -3, 3, 1e-6)
     test_cosh_c = make_unary_function_test("cosh", -3, 3, 2e-6, complex=True)
     test_tanh = make_unary_function_test("tanh", -3, 3, 2e-6)
-    test_tanh_c = make_unary_function_test("tanh", 
+    test_tanh_c = make_unary_function_test("tanh",
             -math.pi/2 + 0.1, math.pi/2 - 0.1, 3e-5, complex=True)
-
-
 
 
 class TestMath:
@@ -123,7 +114,7 @@ class TestMath:
         for s in sizes:
             a = gpuarray.arange(s, dtype=np.float32)
             a2 = gpuarray.arange(s, dtype=np.float32)*1e-3
-            b = cumath.ldexp(a,a2)
+            b = cumath.ldexp(a, a2)
 
             a = a.get()
             a2 = a2.get()
@@ -168,7 +159,7 @@ class TestMath:
 
 if __name__ == "__main__":
     # make sure that import failures get reported, instead of skipping the tests.
-    import pycuda.autoinit
+    import pycuda.autoinit  # noqa
 
     import sys
     if len(sys.argv) > 1:
