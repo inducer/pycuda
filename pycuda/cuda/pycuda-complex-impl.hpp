@@ -165,7 +165,7 @@ static complex<_Tp> expT(const complex<_Tp>& z) {
   _Tp expx = ::exp(z._M_re);
   _Tp s, c;
   ::sincos(z._M_im, &s, &c);
-  return complex<_Tp>(expx * s, expx * c);
+  return complex<_Tp>(expx * c, expx * s);
 }
 __device__ complex<float>  exp(const complex<float>& z)
 { return expT(z); }
