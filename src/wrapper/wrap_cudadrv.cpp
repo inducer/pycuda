@@ -155,7 +155,7 @@ namespace
     if (PyObject_AsReadBuffer(src.ptr(), &buf, &len))
       throw py::error_already_set();
 
-    CUDAPP_CALL_GUARDED(cuMemcpyHtoD, (dst, buf, len));
+    CUDAPP_CALL_GUARDED_THREADED(cuMemcpyHtoD, (dst, buf, len));
   }
 
 
@@ -170,7 +170,7 @@ namespace
 
     PYCUDA_PARSE_STREAM_PY;
 
-    CUDAPP_CALL_GUARDED(cuMemcpyHtoDAsync, (dst, buf, len, s_handle));
+    CUDAPP_CALL_GUARDED_THREADED(cuMemcpyHtoDAsync, (dst, buf, len, s_handle));
   }
 
 
@@ -183,7 +183,7 @@ namespace
     if (PyObject_AsWriteBuffer(dest.ptr(), &buf, &len))
       throw py::error_already_set();
 
-    CUDAPP_CALL_GUARDED(cuMemcpyDtoH, (buf, src, len));
+    CUDAPP_CALL_GUARDED_THREADED(cuMemcpyDtoH, (buf, src, len));
   }
 
 
@@ -198,7 +198,7 @@ namespace
 
     PYCUDA_PARSE_STREAM_PY;
 
-    CUDAPP_CALL_GUARDED(cuMemcpyDtoHAsync, (buf, src, len, s_handle));
+    CUDAPP_CALL_GUARDED_THREADED(cuMemcpyDtoHAsync, (buf, src, len, s_handle));
   }
 
 
@@ -211,7 +211,7 @@ namespace
     if (PyObject_AsReadBuffer(src.ptr(), &buf, &len))
       throw py::error_already_set();
 
-    CUDAPP_CALL_GUARDED(cuMemcpyHtoA, (ary.handle(), index, buf, len));
+    CUDAPP_CALL_GUARDED_THREADED(cuMemcpyHtoA, (ary.handle(), index, buf, len));
   }
 
 
@@ -224,7 +224,7 @@ namespace
     if (PyObject_AsWriteBuffer(dest.ptr(), &buf, &len))
       throw py::error_already_set();
 
-    CUDAPP_CALL_GUARDED(cuMemcpyAtoH, (buf, ary.handle(), index, len));
+    CUDAPP_CALL_GUARDED_THREADED(cuMemcpyAtoH, (buf, ary.handle(), index, len));
   }
 
 
