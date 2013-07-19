@@ -81,9 +81,9 @@ if have_pycuda():
             -math.pi/2 + 0.1, math.pi/2 - 0.1, 3e-5, complex=True)
     test_atan = make_unary_function_test("atan", -10, 10, 2e-7)
 
-    test_sinh = make_unary_function_test("sinh", -3, 3, 1e-6)
+    test_sinh = make_unary_function_test("sinh", -3, 3, 2e-6)
     test_sinh_c = make_unary_function_test("sinh", -3, 3, 2e-6, complex=True)
-    test_cosh = make_unary_function_test("cosh", -3, 3, 1e-6)
+    test_cosh = make_unary_function_test("cosh", -3, 3, 2e-6)
     test_cosh_c = make_unary_function_test("cosh", -3, 3, 2e-6, complex=True)
     test_tanh = make_unary_function_test("tanh", -3, 3, 2e-6)
     test_tanh_c = make_unary_function_test("tanh",
