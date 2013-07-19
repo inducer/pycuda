@@ -28,14 +28,10 @@ OTHER DEALINGS IN THE SOFTWARE.
 """
 
 
-
-
 from pycuda.tools import context_dependent_memoize
 import numpy as np
 from pycuda.tools import dtype_to_ctype, VectorArg, ScalarArg
 from pytools import memoize_method
-
-
 
 
 def get_elwise_module(arguments, operation,
@@ -75,8 +71,6 @@ def get_elwise_module(arguments, operation,
         options=options, keep=keep)
 
 
-
-
 def get_elwise_range_module(arguments, operation,
         name="kernel", keep=False, options=None,
         preamble="", loop_prep="", after_loop=""):
@@ -105,7 +99,7 @@ def get_elwise_range_module(arguments, operation,
           }
           else
           {
-            for (i = start + (cta_start + tid)*step; 
+            for (i = start + (cta_start + tid)*step;
               i < stop; i += total_threads*step)
             {
               %(operation)s;
@@ -123,8 +117,6 @@ def get_elwise_range_module(arguments, operation,
             "after_loop": after_loop,
             },
         options=options, keep=keep)
-
-
 
 
 def get_elwise_kernel_and_types(arguments, operation,
@@ -150,11 +142,11 @@ def get_elwise_kernel_and_types(arguments, operation,
     mod = module_builder(arguments, operation, name,
             keep, options, **kwargs)
 
-    from pycuda.tools import get_arg_type
     func = mod.get_function(name)
     func.prepare("".join(arg.struct_char for arg in arguments))
 
     return func, arguments
+
 
 def get_elwise_kernel(arguments, operation,
         name="kernel", keep=False, options=None, **kwargs):
@@ -167,8 +159,6 @@ def get_elwise_kernel(arguments, operation,
     return func
 
 
-
-
 class ElementwiseKernel:
     def __init__(self, arguments, operation,
             name="kernel", keep=False, options=None, **kwargs):
@@ -179,13 +169,13 @@ class ElementwiseKernel:
 
     @memoize_method
     def generate_stride_kernel_and_types(self, use_range):
-        knl, arguments = get_elwise_kernel_and_types(use_range=use_range, 
+        knl, arguments = get_elwise_kernel_and_types(use_range=use_range,
                 **self.gen_kwargs)
 
         assert [i for i, arg in enumerate(arguments)
                 if isinstance(arg, VectorArg)], \
-                "ElementwiseKernel can only be used with functions that have at least one " \
-                "vector argument"
+                "ElementwiseKernel can only be used with functions that " \
+                "have at least one vector argument"
 
         return knl, arguments
 
@@ -242,8 +232,6 @@ class ElementwiseKernel:
         func.prepared_async_call(grid, block, stream, *invocation_args)
 
 
-
-
 @context_dependent_memoize
 def get_take_kernel(dtype, idx_dtype, vec_count=1):
     ctx = {
@@ -254,23 +242,22 @@ def get_take_kernel(dtype, idx_dtype, vec_count=1):
 
     args = [VectorArg(idx_dtype, "idx")] + [
             VectorArg(dtype, "dest"+str(i))for i in range(vec_count)] + [
-            ScalarArg(np.intp, "n")]
+                ScalarArg(np.intp, "n")
+            ]
     preamble = "#include <pycuda-helpers.hpp>\n\n" + "\n".join(
         "texture <%s, 1, cudaReadModeElementType> tex_src%d;" % (ctx["tex_tp"], i)
         for i in range(vec_count))
     body = (
             ("%(idx_tp)s src_idx = idx[i];\n" % ctx)
             + "\n".join(
-            "dest%d[i] = fp_tex1Dfetch(tex_src%d, src_idx);" % (i, i)
-            for i in range(vec_count)))
+                "dest%d[i] = fp_tex1Dfetch(tex_src%d, src_idx);" % (i, i)
+                for i in range(vec_count)))
 
     mod = get_elwise_module(args, body, "take", preamble=preamble)
     func = mod.get_function("take")
     tex_src = [mod.get_texref("tex_src%d" % i) for i in range(vec_count)]
     func.prepare("P"+(vec_count*"P")+np.dtype(np.uintp).char, texrefs=tex_src)
     return func, tex_src
-
-
 
 
 @context_dependent_memoize
@@ -282,14 +269,14 @@ def get_take_put_kernel(dtype, idx_dtype, with_offsets, vec_count=1):
             }
 
     args = [
-            VectorArg(idx_dtype, "gmem_dest_idx"),
-            VectorArg(idx_dtype, "gmem_src_idx"),
+                VectorArg(idx_dtype, "gmem_dest_idx"),
+                VectorArg(idx_dtype, "gmem_src_idx"),
             ] + [
-            VectorArg(dtype, "dest%d" % i)
-                for i in range(vec_count)
+                VectorArg(dtype, "dest%d" % i)
+                    for i in range(vec_count)
             ] + [
-            ScalarArg(idx_dtype, "offset%d" % i)
-                for i in range(vec_count) if with_offsets
+                ScalarArg(idx_dtype, "offset%d" % i)
+                    for i in range(vec_count) if with_offsets
             ] + [ScalarArg(np.intp, "n")]
 
     preamble = "#include <pycuda-helpers.hpp>\n\n" + "\n".join(
@@ -316,12 +303,10 @@ def get_take_put_kernel(dtype, idx_dtype, with_offsets, vec_count=1):
 
     func.prepare(
             "PP"+(vec_count*"P")
-            +(bool(with_offsets)*vec_count*idx_dtype.char)
-            +np.dtype(np.uintp).char,
+            + (bool(with_offsets)*vec_count*idx_dtype.char)
+            + np.dtype(np.uintp).char,
             texrefs=tex_src)
     return func, tex_src
-
-
 
 
 @context_dependent_memoize
@@ -334,11 +319,11 @@ def get_put_kernel(dtype, idx_dtype, vec_count=1):
     args = [
             VectorArg(idx_dtype, "gmem_dest_idx"),
             ] + [
-            VectorArg(dtype, "dest%d" % i)
-                for i in range(vec_count)
+                VectorArg(dtype, "dest%d" % i)
+                    for i in range(vec_count)
             ] + [
-            VectorArg(dtype, "src%d" % i)
-                for i in range(vec_count)
+                VectorArg(dtype, "src%d" % i)
+                    for i in range(vec_count)
             ] + [ScalarArg(np.intp, "n")]
 
     body = (
@@ -349,8 +334,6 @@ def get_put_kernel(dtype, idx_dtype, vec_count=1):
     func = get_elwise_module(args, body, "put").get_function("put")
     func.prepare("P"+(2*vec_count*"P")+np.dtype(np.uintp).char)
     return func
-
-
 
 
 @context_dependent_memoize
@@ -364,7 +347,6 @@ def get_copy_kernel(dtype_dest, dtype_src):
             "copy")
 
 
-
 @context_dependent_memoize
 def get_linear_combination_kernel(summand_descriptors,
         dtype_z):
@@ -373,7 +355,7 @@ def get_linear_combination_kernel(summand_descriptors,
             VectorArg, ScalarArg, get_elwise_module
 
     args = []
-    preamble = [ "#include <pycuda-helpers.hpp>\n\n" ]
+    preamble = ["#include <pycuda-helpers.hpp>\n\n"]
     loop_prep = []
     summands = []
     tex_names = []
@@ -412,8 +394,6 @@ def get_linear_combination_kernel(summand_descriptors,
     return func, tex_src
 
 
-
-
 @context_dependent_memoize
 def get_axpbyz_kernel(dtype_x, dtype_y, dtype_z):
     return get_elwise_kernel(
@@ -425,6 +405,7 @@ def get_axpbyz_kernel(dtype_x, dtype_y, dtype_z):
             "z[i] = a*x[i] + b*y[i]",
             "axpbyz")
 
+
 @context_dependent_memoize
 def get_axpbz_kernel(dtype_x, dtype_z):
     return get_elwise_kernel(
@@ -434,6 +415,7 @@ def get_axpbz_kernel(dtype_x, dtype_z):
                 },
             "z[i] = a * x[i] + b",
             "axpb")
+
 
 @context_dependent_memoize
 def get_binary_op_kernel(dtype_x, dtype_y, dtype_z, operator):
@@ -446,6 +428,7 @@ def get_binary_op_kernel(dtype_x, dtype_y, dtype_z, operator):
             "z[i] = x[i] %s y[i]" % operator,
             "multiply")
 
+
 @context_dependent_memoize
 def get_rdivide_elwise_kernel(dtype_x, dtype_z):
     return get_elwise_kernel(
@@ -455,6 +438,7 @@ def get_rdivide_elwise_kernel(dtype_x, dtype_z):
                 },
             "z[i] = y / x[i]",
             "divide_r")
+
 
 @context_dependent_memoize
 def get_binary_func_kernel(func, dtype_x, dtype_y, dtype_z):
@@ -467,15 +451,17 @@ def get_binary_func_kernel(func, dtype_x, dtype_y, dtype_z):
             "z[i] = %s(x[i], y[i])" % func,
             func+"_kernel")
 
+
 def get_binary_minmax_kernel(func, dtype_x, dtype_y, dtype_z):
     if not np.float64 in [dtype_x, dtype_y]:
-        func = func +"f"
+        func = func + "f"
 
     from pytools import any
     if any(dt.kind == "f" for dt in [dtype_x, dtype_y, dtype_z]):
         func = "f"+func
 
     return get_binary_func_kernel(func, dtype_x, dtype_y, dtype_z)
+
 
 @context_dependent_memoize
 def get_fill_kernel(dtype):
@@ -486,6 +472,7 @@ def get_fill_kernel(dtype):
             "z[i] = a",
             "fill")
 
+
 @context_dependent_memoize
 def get_reverse_kernel(dtype):
     return get_elwise_kernel(
@@ -494,6 +481,7 @@ def get_reverse_kernel(dtype):
                 },
             "z[i] = y[n-1-i]",
             "reverse")
+
 
 @context_dependent_memoize
 def get_real_kernel(dtype, real_dtype):
@@ -505,6 +493,7 @@ def get_real_kernel(dtype, real_dtype):
             "z[i] = real(y[i])",
             "real")
 
+
 @context_dependent_memoize
 def get_imag_kernel(dtype, real_dtype):
     return get_elwise_kernel(
@@ -515,6 +504,7 @@ def get_imag_kernel(dtype, real_dtype):
             "z[i] = imag(y[i])",
             "imag")
 
+
 @context_dependent_memoize
 def get_conj_kernel(dtype):
     return get_elwise_kernel(
@@ -523,6 +513,7 @@ def get_conj_kernel(dtype):
                 },
             "z[i] = pycuda::conj(y[i])",
             "conj")
+
 
 @context_dependent_memoize
 def get_arange_kernel(dtype):
@@ -548,6 +539,7 @@ def get_pow_kernel(dtype):
             "z[i] = %s(y[i], value)" % func,
             "pow_method")
 
+
 @context_dependent_memoize
 def get_pow_array_kernel(dtype_x, dtype_y, dtype_z):
     if np.float64 in [dtype_x, dtype_y]:
@@ -564,6 +556,7 @@ def get_pow_array_kernel(dtype_x, dtype_y, dtype_z):
             "z[i] = %s(x[i], y[i])" % func,
             "pow_method")
 
+
 @context_dependent_memoize
 def get_fmod_kernel():
     return get_elwise_kernel(
@@ -571,12 +564,14 @@ def get_fmod_kernel():
             "z[i] = fmod(arg[i], mod[i])",
             "fmod_kernel")
 
+
 @context_dependent_memoize
 def get_modf_kernel():
     return get_elwise_kernel(
             "float *x, float *intpart ,float *fracpart",
             "fracpart[i] = modf(x[i], &intpart[i])",
             "modf_kernel")
+
 
 @context_dependent_memoize
 def get_frexp_kernel():
@@ -589,12 +584,14 @@ def get_frexp_kernel():
             """,
             "frexp_kernel")
 
+
 @context_dependent_memoize
 def get_ldexp_kernel():
     return get_elwise_kernel(
             "float *sig, float *expt, float *z",
             "z[i] = ldexp(sig[i], int(expt[i]))",
             "ldexp_kernel")
+
 
 @context_dependent_memoize
 def get_unary_func_kernel(func_name, in_dtype, out_dtype=None):
@@ -608,8 +605,6 @@ def get_unary_func_kernel(func_name, in_dtype, out_dtype=None):
                 },
             "z[i] = %s(y[i])" % func_name,
             "%s_kernel" % func_name)
-
-
 
 
 @context_dependent_memoize
