@@ -1,3 +1,5 @@
+#include <pycuda-complex.hpp>
+
 #ifndef _AFJKDASLFSADHF_HEADER_SEEN_PYCUDA_HELPERS_HPP
 #define _AFJKDASLFSADHF_HEADER_SEEN_PYCUDA_HELPERS_HPP
 
@@ -7,6 +9,23 @@ extern "C++" {
 
   typedef float fp_tex_float;
   typedef int2 fp_tex_double;
+  typedef uint2 fp_tex_cfloat;
+  typedef int4 fp_tex_cdouble;
+
+   template <enum cudaTextureReadMode read_mode>
+  __device__ pycuda::complex<float> fp_tex1Dfetch(texture<fp_tex_cfloat, 1, read_mode> tex, int i)
+  {
+    fp_tex_cfloat v = tex1Dfetch(tex, i);
+    pycuda::complex<float> out;
+    return pycuda::complex<float>(__int_as_float(v.x), __int_as_float(v.y));
+  }
+
+  template <enum cudaTextureReadMode read_mode>
+  __device__ pycuda::complex<double> fp_tex1Dfetch(texture<fp_tex_cdouble, 1, read_mode> tex, int i)
+  {
+    fp_tex_cdouble v = tex1Dfetch(tex, i);
+    return pycuda::complex<double>(__hiloint2double(v.y, v.x), __hiloint2double(v.w, v.z));
+  }
 
   template <enum cudaTextureReadMode read_mode>
   __device__ double fp_tex1Dfetch(texture<fp_tex_double, 1, read_mode> tex, int i)
@@ -55,7 +74,6 @@ extern "C++" {
   PYCUDA_GENERATE_FP_TEX_FUNCS(unsigned short int)
   PYCUDA_GENERATE_FP_TEX_FUNCS(char)
   PYCUDA_GENERATE_FP_TEX_FUNCS(unsigned char)
-
 }
 
 #endif

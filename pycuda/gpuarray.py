@@ -521,7 +521,7 @@ class GPUArray(object):
                 allow_offset=allow_offset) / self.dtype.itemsize
 
     def bind_to_texref_ext(self, texref, channels=1, allow_double_hack=False,
-            allow_offset=False):
+            allow_complex_hack=False, allow_offset=False):
         if not self.flags.forc:
             raise RuntimeError("only contiguous arrays may "
                     "be used as arguments to this operation")
@@ -533,6 +533,24 @@ class GPUArray(object):
                         "only have one channel")
 
             channels = 2
+            fmt = drv.array_format.SIGNED_INT32
+            read_as_int = True
+        elif self.dtype == np.complex64 and allow_complex_hack:
+            if channels != 1:
+                raise ValueError(
+                        "'fake' complex64 textures can "
+                        "only have one channel")
+
+            channels = 2
+            fmt = drv.array_format.UNSIGNED_INT32
+            read_as_int = True
+        elif self.dtype == np.complex128 and allow_complex_hack:
+            if channels != 1:
+                raise ValueError(
+                        "'fake' complex128 textures can "
+                        "only have one channel")
+
+            channels = 4
             fmt = drv.array_format.SIGNED_INT32
             read_as_int = True
         else:
@@ -1007,7 +1025,7 @@ def take(a, indices, out=None, stream=None):
     assert len(indices.shape) == 1
 
     func, tex_src = elementwise.get_take_kernel(a.dtype, indices.dtype)
-    a.bind_to_texref_ext(tex_src[0], allow_double_hack=True)
+    a.bind_to_texref_ext(tex_src[0], allow_double_hack=True, allow_complex_hack=True)
 
     func.prepared_async_call(out._grid, out._block, stream,
             indices.gpudata, out.gpudata, indices.size)
