@@ -41,7 +41,7 @@ PageLockedMemoryPool = _drv.PageLockedMemoryPool
 
 from pycuda.compyte.dtypes import (
         register_dtype, get_or_register_dtype, _fill_dtype_registry,
-        dtype_to_ctype)
+        dtype_to_ctype as base_dtype_to_ctype)
 
 _fill_dtype_registry(respect_windows=True)
 get_or_register_dtype("pycuda::complex<float>", np.complex64)
@@ -347,6 +347,25 @@ class Argument:
                 self.__class__.__name__,
                 self.name,
                 self.dtype)
+
+
+def dtype_to_ctype(dtype, with_fp_tex_hack=False):
+    if dtype is None:
+        raise ValueError("dtype may not be None")
+
+    dtype = np.dtype(dtype)
+    if with_fp_tex_hack:
+        if dtype == np.float32:
+            return "fp_tex_float"
+        elif dtype == np.float64:
+            return "fp_tex_double"
+        elif dtype == np.complex64:
+            return "fp_tex_cfloat"
+        elif dtype == np.complex128:
+            return "fp_tex_cdouble"
+
+    return base_dtype_to_ctype(dtype)
+
 
 class VectorArg(Argument):
     def declarator(self):

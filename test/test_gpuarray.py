@@ -487,10 +487,13 @@ class TestGPUArray:
 
     @mark_cuda_test
     def test_take(self):
-        idx = gpuarray.arange(0, 200000, 2, dtype=np.uint32)
-        a = gpuarray.arange(0, 600000, 3, dtype=np.float32)
-        result = gpuarray.take(a, idx)
-        assert ((3*idx).get() == result.get()).all()
+        idx = gpuarray.arange(0, 10000, 2, dtype=np.uint32)
+        for dtype in [np.float32, np.complex64]:
+            a = gpuarray.arange(0, 600000, dtype=np.uint32).astype(dtype)
+            a_host = a.get()
+            result = gpuarray.take(a, idx)
+
+            assert (a_host[idx.get()] == result.get()).all()
 
 
 
