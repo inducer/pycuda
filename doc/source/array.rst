@@ -1166,9 +1166,9 @@ know about them using this function:
 
     .. versionadded: 2011.2
 
-Fast Fourier Transforms
------------------------
+GPGPU Algorithms
+----------------
 
-Bogdan Opanchuk's `pyfft <http://pypi.python.org/pypi/pyfft>`_ offers a
-variety of GPU-based FFT implementations designed to work with
+Bogdan Opanchuk's `reikna <http://pypi.python.org/pypi/reikna>`_ offers a
+variety of GPU-based algorithms (FFT, RNG, matrix multiplication) designed to work with
 :class:`pycuda.gpuarray.GPUArray` objects.
