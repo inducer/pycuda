@@ -4,6 +4,7 @@ import numpy.linalg as la
 import sys
 from pycuda.tools import mark_cuda_test
 from pycuda.characterize import has_double_support
+import pytest
 
 
 def have_pycuda():
@@ -839,6 +840,20 @@ class TestGPUArray:
 
         assert minmax["cur_min"] == np.min(a)
         assert minmax["cur_max"] == np.max(a)
+
+    @mark_cuda_test
+    def test_view_and_strides(self):
+        from pycuda.curandom import rand as curand
+
+        X = curand((5, 10), dtype=np.float32)
+        Y = X[:3, :5]
+        y = Y.view()
+
+        assert y.shape == Y.shape
+        assert y.strides == Y.strides
+
+        with pytest.raises(AssertionError):
+            assert (y.get() == X.get()[:3, :5]).all()
 
 
 if __name__ == "__main__":

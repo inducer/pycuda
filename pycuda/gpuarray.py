@@ -702,15 +702,28 @@ class GPUArray(object):
         old_itemsize = self.dtype.itemsize
         itemsize = np.dtype(dtype).itemsize
 
-        if self.shape[-1] * old_itemsize % itemsize != 0:
+        from pytools import argmin2
+        min_stride_axis = argmin2(
+                (axis, abs(stride))
+                for axis, stride in enumerate(self.strides))
+
+        if self.shape[min_stride_axis] * old_itemsize % itemsize != 0:
             raise ValueError("new type not compatible with array")
 
-        shape = self.shape[:-1] + (self.shape[-1] * old_itemsize // itemsize,)
+        new_shape = (
+                self.shape[:min_stride_axis]
+                + (self.shape[min_stride_axis] * old_itemsize // itemsize,)
+                + self.shape[min_stride_axis+1:])
+        new_strides = (
+                self.strides[:min_stride_axis]
+                + (self.strides[min_stride_axis] * itemsize // old_itemsize,)
+                + self.strides[min_stride_axis+1:])
 
         return GPUArray(
-                shape=shape,
+                shape=new_shape,
                 dtype=dtype,
                 allocator=self.allocator,
+                strides=new_strides,
                 base=self,
                 gpudata=int(self.gpudata))
 
