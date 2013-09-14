@@ -18,42 +18,42 @@ typedef %(packed_index_type)s packed_index_type;
 
 template <typename IndexType, typename ValueType>
 __device__ void memcpy_device(
-  ValueType *dest, const ValueType *src, 
+  ValueType *dest, const ValueType *src,
   const IndexType num_values)
-{ 
+{
   for(unsigned int i = threadIdx.x; i < num_values; i += blockDim.x)
   {
-    dest[i] = src[i];       
+    dest[i] = src[i];
   }
 }
 
-#define pkt_unpack_row_index(packed_index) ( packed_index >> 16  )  
+#define pkt_unpack_row_index(packed_index) ( packed_index >> 16  )
 #define pkt_unpack_col_index(packed_index) (packed_index & 0xFFFF)
 
 extern "C" {
 __global__ void
 spmv_pkt_kernel(const index_type *row_ptr,
-                const index_type *pos_start, 
-                const index_type *pos_end, 
-                const packed_index_type *index_array, 
+                const index_type *pos_start,
+                const index_type *pos_end,
+                const packed_index_type *index_array,
                 const value_type *data_array,
-                const value_type *x, 
+                const value_type *x,
                       value_type *y)
 {
   __shared__ value_type s_x[ROWS_PER_PACKET]; // input x-values
   __shared__ value_type s_y[ROWS_PER_PACKET]; // output y-values
 
-  const index_type thread_id = 
+  const index_type thread_id =
     __umul24(THREADS_PER_PACKET, blockIdx.x) + threadIdx.x;
 
   // base index of the submatrix corresponding to this packet
-  const index_type packet_base_row = row_ptr[blockIdx.x]; 
+  const index_type packet_base_row = row_ptr[blockIdx.x];
   const index_type packet_num_rows = row_ptr[blockIdx.x+1] - packet_base_row;
-  
+
   // copy local x and y values from global memory into shared memory
   memcpy_device(s_x, x + packet_base_row, packet_num_rows);
   memcpy_device(s_y, y + packet_base_row, packet_num_rows);
-  
+
   __syncthreads();
 
   // process packet
@@ -63,22 +63,22 @@ spmv_pkt_kernel(const index_type *row_ptr,
 
   for(index_type pos = packet_start; pos != packet_end; pos += THREADS_PER_PACKET)
   {
-    // row and column indices are stored in the same 32-bit word        
+    // row and column indices are stored in the same 32-bit word
 
-    const index_type packed_index = index_array[pos];  
+    const index_type packed_index = index_array[pos];
 
     const index_type row = pkt_unpack_row_index(packed_index);
     const index_type col = pkt_unpack_col_index(packed_index);
-    const value_type val = data_array[pos];  
+    const value_type val = data_array[pos];
 
-    s_y[row] += val * s_x[col]; 
+    s_y[row] += val * s_x[col];
   }
 
   __syncthreads();
 
   // copy y-values from shared memory to global array
 
-  memcpy_device(y + packet_base_row, s_y, packet_num_rows);   
+  memcpy_device(y + packet_base_row, s_y, packet_num_rows);
 }
 }
 """
@@ -146,7 +146,7 @@ class PacketedSpMV:
                 old_block_count = self.block_count
                 self.block_count = int(2+1.05*self.block_count)
                 print ("Metis produced a big block at block count "
-                        "%d--retrying with %d" 
+                        "%d--retrying with %d"
                         % (old_block_count, self.block_count))
                 continue
 
@@ -198,7 +198,7 @@ class PacketedSpMV:
                 self.shape[0], dtype=self.index_dtype)
 
         packet_base_rows = np.zeros(
-                self.block_count+1, 
+                self.block_count+1,
                 dtype=self.index_dtype)
 
         row_start = 0
