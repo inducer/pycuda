@@ -305,7 +305,7 @@ class PacketedSpMV:
                     "rows_per_packet": self.rows_per_packet,
                     }, no_extern_c=True)
         func = mod.get_function("spmv_pkt_kernel")
-        func.prepare("PPPPPPP", (self.threads_per_packet, 1, 1))
+        func.prepare("PPPPPPP")
         return func
 
     def permute(self, x):
@@ -321,6 +321,7 @@ class PacketedSpMV:
 
         self.get_kernel().prepared_call(
                 (self.block_count, 1),
+                (self.threads_per_packet, 1, 1),
                 self.packet_base_rows.gpudata,
                 self.thread_starts.gpudata,
                 self.thread_ends.gpudata,

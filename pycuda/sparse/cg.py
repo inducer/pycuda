@@ -67,8 +67,7 @@ class CGStateContainer:
         args.append(out.gpudata)
         args.append(x.mem_size)
 
-        kernel.set_block_shape(*x._block)
-        kernel.prepared_call(x._grid, *args)
+        kernel.prepared_call(x._grid, x._block, *args)
 
         return out
 
@@ -92,8 +91,7 @@ class CGStateContainer:
         assert a.shape == b.shape
 
         func = self.guarded_div_kernel(a.dtype, b.dtype, result.dtype)
-        func.set_block_shape(*a._block)
-        func.prepared_async_call(a._grid, None,
+        func.prepared_async_call(a._grid, a._block, None,
                 a.gpudata, b.gpudata,
                 result.gpudata, a.mem_size)
 
