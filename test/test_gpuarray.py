@@ -4,7 +4,6 @@ import numpy.linalg as la
 import sys
 from pycuda.tools import mark_cuda_test
 from pycuda.characterize import has_double_support
-import pytest
 
 
 def have_pycuda():
@@ -852,6 +851,7 @@ class TestGPUArray:
         assert y.shape == Y.shape
         assert y.strides == Y.strides
 
+        import pytest
         with pytest.raises(AssertionError):
             assert (y.get() == X.get()[:3, :5]).all()
 
