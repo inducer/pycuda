@@ -547,7 +547,7 @@ def set_up_shipped_boost_if_requested(project_name, conf):
             source_files += glob(
                     "bpl-subset/bpl_subset/libs/thread/src/win32/*.cpp")
             source_files += glob(
-                    "bpl-subset/bpl_subset/libs/thread/src/*.cpp")
+                    "bpl-subset/bpl_subset/libs/thread/src/tss_null.cpp")
         else:
             source_files += glob(
                     "bpl-subset/bpl_subset/libs/thread/src/pthread/*.cpp")
