@@ -7,8 +7,6 @@ from os import unlink
 from pytools.prefork import call_capture_output
 
 
-
-
 @memoize
 def get_nvcc_version(nvcc):
     cmdline = [nvcc, "--version"]
@@ -21,7 +19,8 @@ def get_nvcc_version(nvcc):
 
     return stdout.decode("utf-8")
 
-def _new_md5(): 
+
+def _new_md5():
     try:
         import hashlib
         return hashlib.md5()
@@ -29,8 +28,6 @@ def _new_md5():
         # for Python << 2.5
         import md5
         return md5.new()
-
-
 
 
 def preprocess_source(source, options, nvcc):
@@ -66,7 +63,6 @@ def preprocess_source(source, options, nvcc):
     return stdout.decode("utf-8")
 
 
-
 def compile_plain(source, options, keep, nvcc, cache_dir):
     from os.path import join
 
@@ -78,7 +74,7 @@ def compile_plain(source, options, keep, nvcc, cache_dir):
         else:
             checksum.update(source.encode("utf-8"))
 
-        for option in options: 
+        for option in options:
             checksum.update(option.encode("utf-8"))
         checksum.update(get_nvcc_version(nvcc).encode("utf-8"))
         from pycuda.characterize import platform_bits
@@ -115,7 +111,8 @@ def compile_plain(source, options, keep, nvcc, cache_dir):
         print "*** compiler output in %s" % file_dir
 
     cmdline = [nvcc, "--cubin"] + options + [cu_file_name]
-    result, stdout, stderr = call_capture_output(cmdline, cwd=file_dir, error_on_nonzero=False)
+    result, stdout, stderr = call_capture_output(cmdline,
+            cwd=file_dir, error_on_nonzero=False)
 
     try:
         cubin_f = open(join(file_dir, file_root + ".cubin"), "rb")
@@ -131,7 +128,8 @@ def compile_plain(source, options, keep, nvcc, cache_dir):
                     "encountered an error")
         from pycuda.driver import CompileError
         raise CompileError("nvcc compilation of %s failed" % cu_file_path,
-                cmdline, stdout=stdout.decode("utf-8"), stderr=stderr.decode("utf-8"))
+                cmdline, stdout=stdout.decode("utf-8"),
+                stderr=stderr.decode("utf-8"))
 
     if stdout or stderr:
         lcase_err_text = (stdout+stderr).decode("utf-8").lower()
@@ -141,7 +139,7 @@ def compile_plain(source, options, keep, nvcc, cache_dir):
                 "compiled--this is likely not what you want.",
                 stacklevel=4)
         warn("The CUDA compiler succeeded, but said the following:\n"
-                +(stdout+stderr).decode("utf-8"), stacklevel=4)
+                + (stdout+stderr).decode("utf-8"), stacklevel=4)
 
     cubin = cubin_f.read()
     cubin_f.close()
@@ -160,8 +158,6 @@ def compile_plain(source, options, keep, nvcc, cache_dir):
     return cubin
 
 
-
-
 def _get_per_user_string():
     try:
         from os import getuid
@@ -174,13 +170,9 @@ def _get_per_user_string():
         return "uid%d" % getuid()
 
 
-
-
 def _find_pycuda_include_path():
     from pkg_resources import Requirement, resource_filename
     return resource_filename(Requirement.parse("pycuda"), "pycuda/cuda")
-
-
 
 
 import os
@@ -188,8 +180,6 @@ DEFAULT_NVCC_FLAGS = [
         _flag.strip() for _flag in
         os.environ.get("PYCUDA_DEFAULT_NVCC_FLAGS", "").split()
         if _flag.strip()]
-
-
 
 
 def compile(source, nvcc="nvcc", options=None, keep=False,
@@ -219,7 +209,7 @@ def compile(source, nvcc="nvcc", options=None, keep=False,
     if cache_dir is None:
         from os.path import join
         from tempfile import gettempdir
-        cache_dir = join(gettempdir(), 
+        cache_dir = join(gettempdir(),
                 "pycuda-compiler-cache-v1-%s" % _get_per_user_string())
 
         from os import mkdir
@@ -242,7 +232,6 @@ def compile(source, nvcc="nvcc", options=None, keep=False,
         options.append('-m64')
     elif 'win32' in sys.platform and sys.maxsize == 2147483647:
         options.append('-m32')
-        
 
     include_dirs = include_dirs + [_find_pycuda_include_path()]
 
@@ -258,7 +247,7 @@ class SourceModule(object):
             include_dirs=[]):
         self._check_arch(arch)
 
-        cubin = compile(source, nvcc, options, keep, no_extern_c, 
+        cubin = compile(source, nvcc, options, keep, no_extern_c,
                 arch, code, cache_dir, include_dirs)
 
         from pycuda.driver import module_from_buffer
@@ -270,7 +259,8 @@ class SourceModule(object):
             self.get_surfref = self.module.get_surfref
 
     def _check_arch(self, arch):
-        if arch is None: return
+        if arch is None:
+            return
         try:
             from pycuda.driver import Context
             capability = Context.get_device().compute_capability()
