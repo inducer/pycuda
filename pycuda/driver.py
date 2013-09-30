@@ -698,7 +698,6 @@ def bind_array_to_texref(ary, texref):
     texref.set_address_mode(0, address_mode.CLAMP)
     texref.set_address_mode(1, address_mode.CLAMP)
     texref.set_filter_mode(filter_mode.POINT)
-    assert texref.get_flags() == 0
 
 # }}}
 
