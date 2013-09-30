@@ -1,5 +1,5 @@
 try:
-    from pycuda._driver import *
+    from pycuda._driver import *  # noqa
 except ImportError, e:
     if "_v2" in str(e):
         from warnings import warn
@@ -11,18 +11,12 @@ except ImportError, e:
 import numpy as np
 
 
-
-
 CUDA_DEBUGGING = False
-
-
 
 
 def set_debugging(flag=True):
     global CUDA_DEBUGGING
     CUDA_DEBUGGING = flag
-
-
 
 
 class CompileError(Error):
@@ -47,8 +41,6 @@ class CompileError(Error):
         return result
 
 
-
-
 class ArgumentHandler(object):
     def __init__(self, ary):
         self.array = ary
@@ -62,12 +54,14 @@ class ArgumentHandler(object):
     def pre_call(self, stream):
         pass
 
+
 class In(ArgumentHandler):
     def pre_call(self, stream):
         if stream is not None:
             memcpy_htod(self.get_device_alloc(), self.array)
         else:
             memcpy_htod(self.get_device_alloc(), self.array)
+
 
 class Out(ArgumentHandler):
     def post_call(self, stream):
@@ -76,11 +70,9 @@ class Out(ArgumentHandler):
         else:
             memcpy_dtoh(self.array, self.get_device_alloc())
 
+
 class InOut(In, Out):
     pass
-
-
-
 
 
 def _add_functionality():
@@ -152,9 +144,8 @@ def _add_functionality():
 
         return handlers
 
-
     def function_call_pre_v4(func, *args, **kwargs):
-        grid = kwargs.pop("grid", (1,1))
+        grid = kwargs.pop("grid", (1, 1))
         stream = kwargs.pop("stream", None)
         block = kwargs.pop("block", None)
         shared = kwargs.pop("shared", None)
@@ -167,7 +158,7 @@ def _add_functionality():
                     % (",".join(kwargs.iterkeys())))
 
         if block is None:
-            raise ValueError, "must specify block size"
+            raise ValueError("must specify block size")
 
         func._set_block_shape(*block)
         handlers = func._param_set(*args)
@@ -203,14 +194,16 @@ def _add_functionality():
                 if time_kernel:
                     return run_time
         else:
-            assert not time_kernel, "Can't time the kernel on an asynchronous invocation"
+            assert not time_kernel, \
+                    "Can't time the kernel on an asynchronous invocation"
             func._launch_grid_async(grid[0], grid[1], stream)
 
             if post_handlers:
                 for handler in post_handlers:
                     handler.post_call(stream)
 
-    def function_prepare_pre_v4(func, arg_types, block=None, shared=None, texrefs=[]):
+    def function_prepare_pre_v4(func, arg_types, block=None,
+            shared=None, texrefs=[]):
         from warnings import warn
         if block is not None:
             warn("setting the block size in Function.prepare is deprecated",
@@ -225,10 +218,10 @@ def _add_functionality():
         func.texrefs = texrefs
 
         func.arg_format = ""
-        param_size = 0
 
         for i, arg_type in enumerate(arg_types):
-            if isinstance(arg_type, type) and np is not None and np.number in arg_type.__mro__:
+            if (isinstance(arg_type, type)
+                    and np is not None and np.number in arg_type.__mro__):
                 func.arg_format += np.dtype(arg_type).char
             elif isinstance(arg_type, str):
                 func.arg_format += arg_type
@@ -270,8 +263,9 @@ def _add_functionality():
             func._set_block_shape(*block)
         else:
             from warnings import warn
-            warn("Not passing the block size to prepared_timed_call is deprecated as of "
-                    "version 2011.1.", DeprecationWarning, stacklevel=2)
+            warn("Not passing the block size to prepared_timed_call is "
+                    "deprecated as of version 2011.1.",
+                    DeprecationWarning, stacklevel=2)
             args = (block,) + args
 
         shared_size = kwargs.pop("shared_size", None)
@@ -301,13 +295,15 @@ def _add_functionality():
 
         return get_call_time
 
-    def function_prepared_async_call_pre_v4(func, grid, block, stream, *args, **kwargs):
+    def function_prepared_async_call_pre_v4(func, grid, block, stream,
+            *args, **kwargs):
         if isinstance(block, tuple):
             func._set_block_shape(*block)
         else:
             from warnings import warn
-            warn("Not passing the block size to prepared_async_call is deprecated as of "
-                    "version 2011.1.", DeprecationWarning, stacklevel=2)
+            warn("Not passing the block size to prepared_async_call is "
+                    "deprecated as of version 2011.1.",
+                    DeprecationWarning, stacklevel=2)
             args = (stream,) + args
             stream = block
 
@@ -336,7 +332,7 @@ def _add_functionality():
     # {{{ CUDA 4+ call interface (stateless)
 
     def function_call(func, *args, **kwargs):
-        grid = kwargs.pop("grid", (1,1))
+        grid = kwargs.pop("grid", (1, 1))
         stream = kwargs.pop("stream", None)
         block = kwargs.pop("block", None)
         shared = kwargs.pop("shared", 0)
@@ -349,7 +345,7 @@ def _add_functionality():
                     % (",".join(kwargs.iterkeys())))
 
         if block is None:
-            raise ValueError, "must specify block size"
+            raise ValueError("must specify block size")
 
         func._set_block_shape(*block)
         handlers, arg_buf = _build_arg_buf(args)
@@ -385,7 +381,8 @@ def _add_functionality():
                 if time_kernel:
                     return run_time
         else:
-            assert not time_kernel, "Can't time the kernel on an asynchronous invocation"
+            assert not time_kernel, \
+                    "Can't time the kernel on an asynchronous invocation"
             func._launch_kernel(grid, block, arg_buf, shared, stream)
 
             if post_handlers:
@@ -398,7 +395,8 @@ def _add_functionality():
         func.arg_format = ""
 
         for i, arg_type in enumerate(arg_types):
-            if isinstance(arg_type, type) and np is not None and np.number in arg_type.__mro__:
+            if (isinstance(arg_type, type)
+                    and np is not None and np.number in arg_type.__mro__):
                 func.arg_format += np.dtype(arg_type).char
             elif isinstance(arg_type, str):
                 func.arg_format += arg_type
@@ -460,8 +458,9 @@ def _add_functionality():
             func._set_block_shape(*block)
         else:
             from warnings import warn
-            warn("Not passing the block size to prepared_async_call is deprecated as of "
-                    "version 2011.1.", DeprecationWarning, stacklevel=2)
+            warn("Not passing the block size to prepared_async_call is "
+                    "deprecated as of version 2011.1.",
+                    DeprecationWarning, stacklevel=2)
             args = (stream,) + args
             stream = block
 
@@ -482,12 +481,15 @@ def _add_functionality():
     # }}}
 
     def function___getattr__(self, name):
-        if get_version() >= (2,2):
+        if get_version() >= (2, 2):
             return self.get_attribute(getattr(function_attribute, name.upper()))
         else:
-            if name == "num_regs": return self._hacky_registers
-            elif name == "shared_size_bytes": return self._hacky_smem
-            elif name == "local_size_bytes": return self._hacky_lmem
+            if name == "num_regs":
+                return self._hacky_registers
+            elif name == "shared_size_bytes":
+                return self._hacky_smem
+            elif name == "local_size_bytes":
+                return self._hacky_lmem
             else:
                 raise AttributeError("no attribute '%s' in Function" % name)
 
@@ -530,7 +532,8 @@ def _add_functionality():
         Function.prepared_async_call = function_prepared_async_call_pre_v4
 
         for meth_name in ["set_block_shape", "set_shared_size",
-                "param_set_size", "param_set", "param_seti", "param_setf", "param_setv",
+                "param_set_size", "param_set", "param_seti", "param_setf",
+                "param_setv",
                 "launch", "launch_grid", "launch_grid_async"]:
             setattr(Function, meth_name, mark_func_method_deprecated(
                     getattr(Function, "_"+meth_name)))
@@ -538,11 +541,8 @@ def _add_functionality():
     Function.__getattr__ = function___getattr__
 
 
-
-
-
-
 _add_functionality()
+
 
 # {{{ pagelocked numpy arrays
 
@@ -550,8 +550,6 @@ def pagelocked_zeros(shape, dtype, order="C", mem_flags=0):
     result = pagelocked_empty(shape, dtype, order, mem_flags)
     result.fill(0)
     return result
-
-
 
 
 def pagelocked_empty_like(array, mem_flags=0):
@@ -565,8 +563,6 @@ def pagelocked_empty_like(array, mem_flags=0):
     return pagelocked_empty(array.shape, array.dtype, order, mem_flags)
 
 
-
-
 def pagelocked_zeros_like(array, mem_flags=0):
     result = pagelocked_empty_like(array, mem_flags)
     result.fill(0)
@@ -574,14 +570,13 @@ def pagelocked_zeros_like(array, mem_flags=0):
 
 # }}}
 
+
 # {{{ aligned numpy arrays
 
 def aligned_zeros(shape, dtype, order="C", alignment=4096):
     result = aligned_empty(shape, dtype, order, alignment)
     result.fill(0)
     return result
-
-
 
 
 def aligned_empty_like(array, alignment=4096):
@@ -595,8 +590,6 @@ def aligned_empty_like(array, alignment=4096):
     return aligned_empty(array.shape, array.dtype, order, alignment)
 
 
-
-
 def aligned_zeros_like(array, alignment=4096):
     result = aligned_empty_like(array, alignment)
     result.fill(0)
@@ -604,8 +597,10 @@ def aligned_zeros_like(array, alignment=4096):
 
 # }}}
 
+
 def mem_alloc_like(ary):
     return mem_alloc(ary.nbytes)
+
 
 # {{{ array handling
 
@@ -630,8 +625,6 @@ def dtype_to_array_format(dtype):
                 % dtype)
 
 
-
-
 def matrix_to_array(matrix, order, allow_double_hack=False):
     if order.upper() == "C":
         h, w = matrix.shape
@@ -640,7 +633,7 @@ def matrix_to_array(matrix, order, allow_double_hack=False):
         w, h = matrix.shape
         stride = -1
     else:
-        raise LogicError, "order must be either F or C"
+        raise LogicError("order must be either F or C")
 
     matrix = np.asarray(matrix, order=order)
     descr = ArrayDescriptor()
@@ -668,8 +661,6 @@ def matrix_to_array(matrix, order, allow_double_hack=False):
     return ary
 
 
-
-
 def make_multichannel_2d_array(ndarray, order):
     """Channel count has to be the first dimension of the C{ndarray}."""
 
@@ -682,7 +673,7 @@ def make_multichannel_2d_array(ndarray, order):
         num_channels, w, h = ndarray.shape
         stride = 2
     else:
-        raise LogicError, "order must be either F or C"
+        raise LogicError("order must be either F or C")
 
     descr.width = w
     descr.height = h
@@ -702,8 +693,6 @@ def make_multichannel_2d_array(ndarray, order):
     return ary
 
 
-
-
 def bind_array_to_texref(ary, texref):
     texref.set_array(ary)
     texref.set_address_mode(0, address_mode.CLAMP)
@@ -713,8 +702,10 @@ def bind_array_to_texref(ary, texref):
 
 # }}}
 
+
 def matrix_to_texref(matrix, texref, order):
     bind_array_to_texref(matrix_to_array(matrix, order), texref)
+
 
 # {{{ device copies
 
@@ -733,8 +724,6 @@ def from_device(devptr, shape, dtype, order="C"):
     result = np.empty(shape, dtype, order)
     memcpy_dtoh(result, devptr)
     return result
-
-
 
 
 def from_device_like(devptr, other_ary):
