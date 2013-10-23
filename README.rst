@@ -3,6 +3,9 @@ PyCUDA lets you access `Nvidia <http://nvidia.com>`_'s `CUDA
 Several wrappers of the CUDA API already exist-so what's so special
 about PyCUDA?
 
+.. image:: https://badge.fury.io/py/pycuda.png
+    :target: http://pypi.python.org/pypi/pycuda
+
 * Object cleanup tied to lifetime of objects. This idiom, often
   called
   `RAII <http://en.wikipedia.org/wiki/Resource_Acquisition_Is_Initialization>`_
