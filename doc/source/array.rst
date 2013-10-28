@@ -1,5 +1,5 @@
-Multi-dimensional arrays on the GPU
-===================================
+GPU Arrays
+==========
 
 .. module:: pycuda.gpuarray
 

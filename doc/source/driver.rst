@@ -1,7 +1,7 @@
 .. _reference-doc:
 
-Device Interface Reference Documentation
-========================================
+Device Interface
+================
 
 .. module:: pycuda
 .. moduleauthor:: Andreas Kloeckner <inform@tiker.net>

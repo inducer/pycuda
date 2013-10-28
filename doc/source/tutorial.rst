@@ -1,5 +1,5 @@
-Tutorial Introduction
-=====================
+Tutorial
+========
 
 Getting started
 ---------------

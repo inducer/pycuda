@@ -1,7 +1,7 @@
 .. _gl-interop:
 
-GL Interoperability
-===================
+OpenGL
+======
 
 .. module:: pycuda.gl
 

@@ -1,7 +1,7 @@
 .. _metaprog:
 
-Metaprogramming with PyCUDA
-===========================
+Metaprogramming
+===============
 
 In 'conventional' programming, one writes a program that accomplishes a
 task. In *metaprogramming*, one writes a program *that writes a program*

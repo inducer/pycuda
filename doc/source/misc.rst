@@ -1,5 +1,5 @@
-User-visible Changes
-====================
+Changes
+=======
 
 Version 2013.2
 --------------
