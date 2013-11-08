@@ -592,7 +592,7 @@ Devices and Contexts
 
         .. versionadded:: 2011.2
 
-    .. method:: compute_cabability()
+    .. method:: compute_capability()
 
         Return a 2-tuple indicating the compute capability version of this device.
 
