@@ -97,6 +97,8 @@ else:
             "navbar_fixed_top": "true",
             "navbar_class": "navbar navbar-inverse",
             "navbar_site_name": "Contents",
+            'bootstrap_version': '3',
+            'source_link_position': 'footer',
             }
 
 # The style sheet to use for HTML and HTML Help pages. A file of that name
