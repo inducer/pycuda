@@ -63,7 +63,7 @@ number of kernel invocations on data of identical size, you may want
 to consider compiling data size into your code as a constant. This can
 have significant performance benefits, resulting mainly from decreased
 fetch times and less register pressure. In particular, multiplications 
-by constans are much more efficiently carried out that general
+by constants are much more efficiently carried out than general
 variable-variable multiplications.
 
 Loop Unrolling
