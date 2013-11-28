@@ -396,8 +396,13 @@ def _add_functionality():
 
         for i, arg_type in enumerate(arg_types):
             if (isinstance(arg_type, type)
-                    and np is not None and np.number in arg_type.__mro__):
+                    and np.number in arg_type.__mro__):
                 func.arg_format += np.dtype(arg_type).char
+            elif isinstance(arg_type, np.dtype):
+                if arg_type.char == "V":
+                    func.arg_format += "%ds" % arg_type.itemsize
+                else:
+                    func.arg_format += arg_type.char
             elif isinstance(arg_type, str):
                 func.arg_format += arg_type
             else:

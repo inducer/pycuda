@@ -477,6 +477,23 @@ class TestDriver:
         assert la.norm(a_quadrupled[1:]-4*a[1:]) == 0
 
     @mark_cuda_test
+    def test_prepared_with_vector(self):
+        cuda_source = r'''
+        __global__ void cuda_function(float3 input)
+        {
+        float3 result = make_float3(input.x, input.y, input.z);
+        }
+        '''
+
+        mod = SourceModule(cuda_source, cache_dir=False, keep=False)
+
+        kernel = mod.get_function("cuda_function")
+        arg_types = [pycuda.gpuarray.vec.float3]
+
+        kernel.prepare(arg_types)
+        kernel.prepared_call((1, 1, 1), (1, 1, 1), pycuda.gpuarray.vec.make_float3(0.0, 1.0, 2.0))
+
+    @mark_cuda_test
     def test_fp_textures(self):
         if drv.Context.get_device().compute_capability() < (1, 3):
             return
