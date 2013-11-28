@@ -5,7 +5,7 @@
 
 /* Compared with vanilla Python's struct module, this adds support
  * for packing complex values and only supports native packing.
- * (the minimum that's needed for PyCUDA.) */
+ * (the minimum that's needed for PyOpenCL/PyCUDA.) */
 
 #define PY_SSIZE_T_CLEAN
 
@@ -755,7 +755,21 @@ np_complex_float(char *p, PyObject *v, const formatdef *f)
 	else {
 		float re = 0.0f;
 		float im = 0.0f;
-		Py_complex cplx = PyComplex_AsCComplex(v);
+		Py_complex cplx;
+#if (PY_VERSION_HEX < 0x02060000)
+			if (PyComplex_Check(v))
+				cplx = PyComplex_AsCComplex(v);
+			else if (PyObject_HasAttrString(v, "__complex__"))
+			{
+				PyObject *v2 = PyObject_CallMethod(v, "__complex__", "");
+				cplx = PyComplex_AsCComplex(v2);
+				Py_DECREF(v2);
+			}
+			else
+				cplx = PyComplex_AsCComplex(v);
+#else
+			cplx = PyComplex_AsCComplex(v);
+#endif
 		if (PyErr_Occurred()) {
 			PyErr_SetString(StructError,
 					"required argument is not a complex");
@@ -785,7 +799,21 @@ np_complex_double(char *p, PyObject *v, const formatdef *f)
 	else {
 		double re = 0.0;
 		double im = 0.0;
-		Py_complex cplx = PyComplex_AsCComplex(v);
+		Py_complex cplx;
+#if (PY_VERSION_HEX < 0x02060000)
+			if (PyComplex_Check(v))
+				cplx = PyComplex_AsCComplex(v);
+			else if (PyObject_HasAttrString(v, "__complex__"))
+			{
+				PyObject *v2 = PyObject_CallMethod(v, "__complex__", "");
+				cplx = PyComplex_AsCComplex(v2);
+				Py_DECREF(v2);
+			}
+			else
+				cplx = PyComplex_AsCComplex(v);
+#else
+			cplx = PyComplex_AsCComplex(v);
+#endif
 		if (PyErr_Occurred()) {
 			PyErr_SetString(StructError,
 					"required argument is not a complex");
