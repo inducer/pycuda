@@ -492,7 +492,7 @@ class TestDriver:
 
         kernel.prepare(arg_types)
         kernel.prepared_call((1, 1, 1), (1, 1, 1),
-                pycuda.gpuarray.vec.make_float3(0.0, 1.0, 2.0))
+                gpuarray.vec.make_float3(0.0, 1.0, 2.0))
 
     @mark_cuda_test
     def test_fp_textures(self):
