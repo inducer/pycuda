@@ -17,7 +17,7 @@ def get_nvcc_version(nvcc):
         warn("NVCC version could not be determined.")
         stdout = "nvcc unknown version"
 
-    return stdout.decode("utf-8", errors="replace")
+    return stdout.decode("utf-8", "replace")
 
 
 def _new_md5():
@@ -56,11 +56,11 @@ def preprocess_source(source, options, nvcc):
         from pycuda.driver import CompileError
         raise CompileError("nvcc preprocessing of %s failed with ridiculously "
                 "small code output - likely unsupported compiler." % source_path,
-                cmdline, stderr=stderr.decode("utf-8", errors="replace"))
+                cmdline, stderr=stderr.decode("utf-8", "replace"))
 
     unlink(source_path)
 
-    return stdout.decode("utf-8", errors="replace")
+    return stdout.decode("utf-8", "replace")
 
 
 def compile_plain(source, options, keep, nvcc, cache_dir):
@@ -128,18 +128,18 @@ def compile_plain(source, options, keep, nvcc, cache_dir):
                     "encountered an error")
         from pycuda.driver import CompileError
         raise CompileError("nvcc compilation of %s failed" % cu_file_path,
-                cmdline, stdout=stdout.decode("utf-8", errors="replace"),
-                stderr=stderr.decode("utf-8", errors="replace"))
+                cmdline, stdout=stdout.decode("utf-8", "replace"),
+                stderr=stderr.decode("utf-8", "replace"))
 
     if stdout or stderr:
-        lcase_err_text = (stdout+stderr).decode("utf-8", errors="replace").lower()
+        lcase_err_text = (stdout+stderr).decode("utf-8", "replace").lower()
         from warnings import warn
         if "demoted" in lcase_err_text or "demoting" in lcase_err_text:
             warn("nvcc said it demoted types in source code it "
                 "compiled--this is likely not what you want.",
                 stacklevel=4)
         warn("The CUDA compiler succeeded, but said the following:\n"
-                + (stdout+stderr).decode("utf-8", errors="replace"), stacklevel=4)
+                + (stdout+stderr).decode("utf-8", "replace"), stacklevel=4)
 
     cubin = cubin_f.read()
     cubin_f.close()
