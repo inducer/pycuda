@@ -95,7 +95,6 @@ else:
     # documentation.
     html_theme_options = {
             "navbar_fixed_top": "true",
-            "navbar_class": "navbar navbar-inverse",
             "navbar_site_name": "Contents",
             'bootstrap_version': '3',
             'source_link_position': 'footer',

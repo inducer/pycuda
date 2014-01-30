@@ -23,17 +23,17 @@ code {
 }
 
 h1 {
-  padding-bottom:5px;
+  padding-bottom:7px;
   border-bottom: 1px solid #ccc;
 }
 
 h2 {
-  padding-bottom:1px;
+  padding-bottom:5px;
   border-bottom: 1px solid #ccc;
 }
 
 h3 {
-  padding-bottom:1px;
+  padding-bottom:5px;
   border-bottom: 1px solid #ccc;
 }
 
