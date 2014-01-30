@@ -859,6 +859,13 @@ Global Device Memory
         becomes unreachable. Any further use of the object is an error
         and will lead to undefined behavior.
 
+    .. method:: as_buffer(size, offset=0)
+
+        Return the pointer encapsulated by *self* as a Python buffer
+        object, with the given *size* and, optionally, *offset*.
+
+        .. versionadded:: 2014.1
+
 .. function:: mem_get_ipc_handle(devptr)
 
     Return an opaque :class:`bytes` object representing an IPC handle to the
@@ -890,6 +897,13 @@ Global Device Memory
     .. method:: get_pointer()
 
         Return the pointer encapsulated by *self*.
+
+    .. method:: as_buffer(size, offset=0)
+
+        Return the pointer encapsulated by *self* as a Python buffer
+        object, with the given *size* and, optionally, *offset*.
+
+        .. versionadded:: 2014.1
 
 .. _pagelocked_memory :
 

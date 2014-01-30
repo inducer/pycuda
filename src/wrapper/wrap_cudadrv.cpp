@@ -1032,6 +1032,8 @@ BOOST_PYTHON_MODULE(_driver)
     py::class_<pointer_holder_base_wrap, boost::noncopyable>(
         "PointerHolderBase")
       .def("get_pointer", py::pure_virtual(&cl::get_pointer))
+      .def("as_buffer", &cl::as_buffer,
+          (py::arg("size"), py::arg("offset")=0))
       ;
 
     py::implicitly_convertible<pointer_holder_base, CUdeviceptr>();
@@ -1043,6 +1045,8 @@ BOOST_PYTHON_MODULE(_driver)
       .def("__int__", &cl::operator CUdeviceptr)
       .def("__long__", mem_obj_to_long<device_allocation>)
       .def("__index__", mem_obj_to_long<device_allocation>)
+      .def("as_buffer", &cl::as_buffer,
+          (py::arg("size"), py::arg("offset")=0))
       .DEF_SIMPLE_METHOD(free)
       ;
 

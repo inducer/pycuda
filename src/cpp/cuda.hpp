@@ -1439,8 +1439,16 @@ namespace pycuda
     public:
       virtual ~pointer_holder_base() { }
       virtual CUdeviceptr get_pointer() = 0;
+
       operator CUdeviceptr()
       { return get_pointer(); }
+
+      py::object as_buffer(size_t size, size_t offset)
+      {
+        return py::object(
+            py::handle<>(
+              PyBuffer_FromMemory((void *) (get_pointer() + size), size)));
+      }
   };
 
   class device_allocation : public boost::noncopyable, public context_dependent
@@ -1482,6 +1490,13 @@ namespace pycuda
 
       operator CUdeviceptr() const
       { return m_devptr; }
+
+      py::object as_buffer(size_t size, size_t offset)
+      {
+        return py::object(
+            py::handle<>(
+              PyBuffer_FromMemory((void *) (m_devptr + size), size)));
+      }
   };
 
   inline Py_ssize_t mem_alloc_pitch(
