@@ -1,13 +1,15 @@
 Changes
 =======
 
-Version 2013.2
+Version 2014.1
 --------------
 
 .. note::
 
     This version is the current development version. You can get it from
     `PyCUDA's version control repository <https://github.com/inducer/pycuda>`_.
+
+* Add :meth:`PointerHolderBase.as_buffer` and :meth:`DeviceAllocation.as_buffer`.
 
 Version 2013.1.1
 ----------------
