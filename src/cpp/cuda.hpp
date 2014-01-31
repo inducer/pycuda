@@ -1452,7 +1452,7 @@ namespace pycuda
         return py::object(
             py::handle<>(
 #if PY_VERSION_HEX >= 0x03030000
-              PyMemoryView_FromMemory((void *) (get_pointer() + offset), size,
+              PyMemoryView_FromMemory((char *) (get_pointer() + offset), size,
                 PyBUF_READ | PyBUF_WRITE)
 #else /* Py2 */
               PyBuffer_FromReadWriteMemory((void *) (get_pointer() + offset), size)
@@ -1506,7 +1506,7 @@ namespace pycuda
         return py::object(
             py::handle<>(
 #if PY_VERSION_HEX >= 0x03030000
-              PyMemoryView_FromMemory((void *) (m_devptr + offset), size,
+              PyMemoryView_FromMemory((char *) (m_devptr + offset), size,
                 PyBUF_READ | PyBUF_WRITE)
 #else /* Py2 */
               PyBuffer_FromReadWriteMemory((void *) (m_devptr + offset), size)
