@@ -61,6 +61,10 @@
 
 
 
+#if (PY_VERSION_HEX >= 0x03000000) && (PY_VERSION_HEX < 0x03030000)
+  #error PyCUDA does not support Python 3 versions earlier than 3.3.
+#endif
+
 #if PY_VERSION_HEX >= 0x02050000
   typedef Py_ssize_t PYCUDA_BUFFER_SIZE_T;
 #else
@@ -1447,7 +1451,13 @@ namespace pycuda
       {
         return py::object(
             py::handle<>(
-              PyBuffer_FromMemory((void *) (get_pointer() + size), size)));
+#if PY_VERSION_HEX >= 0x03030000
+              PyMemoryView_FromMemory((void *) (get_pointer() + offset), size,
+                PyBUF_READ | PyBUF_WRITE)
+#else /* Py2 */
+              PyBuffer_FromReadWriteMemory((void *) (get_pointer() + offset), size)
+#endif
+              ));
       }
   };
 
@@ -1495,7 +1505,13 @@ namespace pycuda
       {
         return py::object(
             py::handle<>(
-              PyBuffer_FromMemory((void *) (m_devptr + size), size)));
+#if PY_VERSION_HEX >= 0x03030000
+              PyMemoryView_FromMemory((void *) (m_devptr + offset), size,
+                PyBUF_READ | PyBUF_WRITE)
+#else /* Py2 */
+              PyBuffer_FromReadWriteMemory((void *) (m_devptr + offset), size)
+#endif
+              ));
       }
   };
 
