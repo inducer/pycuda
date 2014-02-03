@@ -617,3 +617,15 @@ def get_if_positive_kernel(crit_dtype, dtype):
             ],
             "result[i] = crit[i] > 0 ? then_[i] : else_[i]",
             "if_positive")
+
+
+@context_dependent_memoize
+def get_scalar_op_kernel(dtype_x, dtype_y, operator):
+    return get_elwise_kernel(
+            "%(tp_x)s *x, %(tp_a)s a, %(tp_y)s *y" % {
+                "tp_x": dtype_to_ctype(dtype_x),
+                "tp_y": dtype_to_ctype(dtype_y),
+                "tp_a": dtype_to_ctype(dtype_x),
+                },
+            "y[i] = x[i] %s a" % operator,
+            "scalarop_kernel")
