@@ -114,22 +114,34 @@ def splay(n, dev=None):
 
 def _make_binary_op(operator):
     def func(self, other):
-        assert self.shape == other.shape
-
-        if not self.flags.forc or not other.flags.forc:
+        if not self.flags.forc:
             raise RuntimeError("only contiguous arrays may "
                     "be used as arguments to this operation")
+        
+        if isinstance(other, GPUArray):
+            assert self.shape == other.shape
 
-        result = self._new_like_me()
+            if not other.flags.forc:
+                raise RuntimeError("only contiguous arrays may "
+                        "be used as arguments to this operation")
 
-        func = elementwise.get_binary_op_kernel(
-                self.dtype, other.dtype, result.dtype,
-                operator)
-        func.prepared_async_call(self._grid, self._block, None,
-                self.gpudata, other.gpudata, result.gpudata,
-                self.mem_size)
+            result = self._new_like_me()
+            func = elementwise.get_binary_op_kernel(
+                    self.dtype, other.dtype, result.dtype,
+                    operator)
+            func.prepared_async_call(self._grid, self._block, None,
+                    self.gpudata, other.gpudata, result.gpudata,
+                    self.mem_size)
 
-        return result
+            return result
+        else:  # scalar operator
+            result = self._new_like_me()
+            func = elementwise.get_scalar_op_kernel(
+                    self.dtype, result.dtype, operator)
+            func.prepared_async_call(self._grid, self._block, None,
+                    self.gpudata, other, result.gpudata,
+                    self.mem_size)
+            return result             
 
     return func
 

@@ -855,6 +855,29 @@ class TestGPUArray:
         with pytest.raises(AssertionError):
             assert (y.get() == X.get()[:3, :5]).all()
 
+    @mark_cuda_test
+    def test_scalar_comparisons(self):
+        a = np.array([1.0, 0.25, 0.1, -0.1, 0.0])
+        a_gpu = gpuarray.to_gpu(a)
+        
+        x_gpu = a_gpu > 0.25
+        x = (a > 0.25).astype(a.dtype)
+        assert (x == x_gpu.get()).all()
+
+        x_gpu = a_gpu <= 0.25
+        x = (a <= 0.25).astype(a.dtype)
+        assert (x == x_gpu.get()).all()
+
+        x_gpu = a_gpu == 0.25
+        x = (a == 0.25).astype(a.dtype)
+        assert (x == x_gpu.get()).all()
+
+        x_gpu = a_gpu == 1  # using an integer scalar
+        x = (a == 1).astype(a.dtype)
+        assert (x == x_gpu.get()).all()
+
+        
+
 
 if __name__ == "__main__":
     # make sure that import failures get reported, instead of skipping the tests.
