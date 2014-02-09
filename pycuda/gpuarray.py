@@ -117,7 +117,7 @@ def _make_binary_op(operator):
         if not self.flags.forc:
             raise RuntimeError("only contiguous arrays may "
                     "be used as arguments to this operation")
-        
+
         if isinstance(other, GPUArray):
             assert self.shape == other.shape
 
@@ -141,7 +141,7 @@ def _make_binary_op(operator):
             func.prepared_async_call(self._grid, self._block, None,
                     self.gpudata, other, result.gpudata,
                     self.mem_size)
-            return result             
+            return result
 
     return func
 
@@ -412,7 +412,7 @@ class GPUArray(object):
         else:
             # add a scalar
             if other == 0:
-                return self
+                return self.copy()
             else:
                 result = self._new_like_me(_get_common_dtype(self, other))
                 return self._axpbz(1, other, result)
@@ -427,7 +427,7 @@ class GPUArray(object):
             return self._axpbyz(1, other, -1, result)
         else:
             if other == 0:
-                return self
+                return self.copy()
             else:
                 # create a new array for the result
                 result = self._new_like_me(_get_common_dtype(self, other))
@@ -486,7 +486,7 @@ class GPUArray(object):
             return self._div(other, result)
         else:
             if other == 1:
-                return self
+                return self.copy()
             else:
                 # create a new array for the result
                 result = self._new_like_me(_get_common_dtype(self, other))
@@ -678,7 +678,7 @@ class GPUArray(object):
                     "be used as arguments to this operation")
 
         if dtype == self.dtype:
-            return self
+            return self.copy()
 
         result = self._new_like_me(dtype=dtype)
 
