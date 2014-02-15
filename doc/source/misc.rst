@@ -10,6 +10,7 @@ Version 2014.1
     `PyCUDA's version control repository <https://github.com/inducer/pycuda>`_.
 
 * Add :meth:`PointerHolderBase.as_buffer` and :meth:`DeviceAllocation.as_buffer`.
+* Support for :class:`device_attribute` values added in CUDA 5.0, 5.5, and 6.0.
 
 Version 2013.1.1
 ----------------

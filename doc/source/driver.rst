@@ -305,6 +305,34 @@ Constants
 
         .. versionadded:: 2011.2
 
+    .. attribute :: MAXIMUM_TEXTURE2D_MIPMAPPED_WIDTH
+        MAXIMUM_TEXTURE2D_MIPMAPPED_HEIGHT
+        COMPUTE_CAPABILITY_MAJOR
+        COMPUTE_CAPABILITY_MINOR
+        MAXIMUM_TEXTURE1D_MIPMAPPED_WIDTH
+
+        CUDA 5.0 and above.
+
+        .. versionadded:: 2014.1
+
+    .. attribute :: STREAM_PRIORITIES_SUPPORTED
+
+        CUDA 5.5 and above.
+
+        .. versionadded:: 2014.1
+
+    .. attribute :: GLOBAL_L1_CACHE_SUPPORTED
+        LOCAL_L1_CACHE_SUPPORTED
+        MAX_SHARED_MEMORY_PER_MULTIPROCESSOR
+        MAX_REGISTERS_PER_MULTIPROCESSOR
+        MANAGED_MEMORY
+        MULTI_GPU_BOARD
+        MULTI_GPU_BOARD_GROUP_ID
+
+        CUDA 6.0 and above.
+
+        .. versionadded:: 2014.1
+
 .. class:: pointer_attribute
 
     .. attribute:: CONTEXT
