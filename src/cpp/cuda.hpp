@@ -1967,48 +1967,20 @@ namespace pycuda
   };
 
 #if CUDAPP_CUDA_VERSION >= 6000
-  struct managed_host_allocation : public boost::noncopyable, public context_dependent
+  struct managed_allocation : public device_allocation
   {
-    protected:
-      bool m_valid;
-      CUdeviceptr m_data;
-
     public:
-      managed_host_allocation(size_t bytesize, unsigned flags=0)
-        : m_valid(true), m_data(mem_managed_alloc(bytesize, flags))
+      managed_allocation(size_t bytesize, unsigned flags=0)
+        : device_allocation(mem_managed_alloc(bytesize, flags))
       { }
-
-      ~managed_host_allocation()
-      {
-        if (m_valid)
-          free();
-      }
-
-      void free()
-      {
-        if (m_valid)
-        {
-          try
-          {
-            scoped_context_activation ca(get_context());
-            mem_free(m_data); // same as device memory
-          }
-          CUDAPP_CATCH_CLEANUP_ON_DEAD_CONTEXT(managed_host_allocation);
-
-          release_context();
-          m_valid = false;
-        }
-        else
-          throw pycuda::error("managed_host_allocation::free", CUDA_ERROR_INVALID_HANDLE);
-      }
 
       // The device pointer is also valid on the host
       void *data()
-      { return (void *) m_data; }
+      { return (void *) m_devptr; }
 
       CUdeviceptr get_device_pointer()
       {
-        return m_data;
+        return m_devptr;
       }
   };
 #endif

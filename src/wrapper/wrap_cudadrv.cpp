@@ -1135,12 +1135,11 @@ BOOST_PYTHON_MODULE(_driver)
 
 #if CUDAPP_CUDA_VERSION >= 6000
   {
-    typedef managed_host_allocation cl;
-    py::class_<cl, boost::noncopyable> wrp(
-        "ManagedHostAllocation", py::no_init);
+    typedef managed_allocation cl;
+    py::class_<cl, boost::noncopyable, py::bases<device_allocation> > wrp(
+        "ManagedAllocation", py::no_init);
 
     wrp
-      .DEF_SIMPLE_METHOD(free)
       .DEF_SIMPLE_METHOD(get_device_pointer)
       ;
   }
@@ -1165,7 +1164,7 @@ BOOST_PYTHON_MODULE(_driver)
        py::arg("order")="C", py::arg("alignment")=4096));
 
 #if CUDAPP_CUDA_VERSION >= 6000
-  py::def("managed_empty", numpy_empty<managed_host_allocation>,
+  py::def("managed_empty", numpy_empty<managed_allocation>,
       (py::arg("shape"), py::arg("dtype"), py::arg("order")="C",
        py::arg("mem_flags")=0));
 #endif
