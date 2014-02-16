@@ -326,6 +326,11 @@ namespace pycuda
              return "host memory not registered";
 #endif
 
+#if CUDAPP_CUDA_VERSION >= 5000
+          case CUDA_ERROR_NOT_SUPPORTED:
+             return "operation not supported on current system or device";
+#endif
+
           case CUDA_ERROR_UNKNOWN: return "unknown";
 
           default: return "invalid/unknown error code";
@@ -1809,6 +1814,15 @@ namespace pycuda
     CUDAPP_CALL_GUARDED_CLEANUP(cuMemFreeHost, (ptr));
   }
 
+#if CUDAPP_CUDA_VERSION >= 6000
+  inline CUdeviceptr mem_managed_alloc(size_t size, unsigned flags=0)
+  {
+    CUdeviceptr m_data;
+    CUDAPP_CALL_GUARDED(cuMemAllocManaged, (&m_data, size, flags));
+    return m_data;
+  }
+#endif
+
 #if CUDAPP_CUDA_VERSION >= 4000
   inline void *mem_host_register(void *ptr, size_t bytes, unsigned int flags=0)
   {
@@ -1951,6 +1965,54 @@ namespace pycuda
           throw pycuda::error("aligned_host_allocation::free", CUDA_ERROR_INVALID_HANDLE);
       }
   };
+
+#if CUDAPP_CUDA_VERSION >= 6000
+  struct managed_host_allocation : public boost::noncopyable, public context_dependent
+  {
+    protected:
+      bool m_valid;
+      CUdeviceptr m_data;
+
+    public:
+      managed_host_allocation(size_t bytesize, unsigned flags=0)
+        : m_valid(true), m_data(mem_managed_alloc(bytesize, flags))
+      { }
+
+      ~managed_host_allocation()
+      {
+        if (m_valid)
+          free();
+      }
+
+      void free()
+      {
+        if (m_valid)
+        {
+          try
+          {
+            scoped_context_activation ca(get_context());
+            mem_free(m_data); // same as device memory
+          }
+          CUDAPP_CATCH_CLEANUP_ON_DEAD_CONTEXT(managed_host_allocation);
+
+          release_context();
+          m_valid = false;
+        }
+        else
+          throw pycuda::error("managed_host_allocation::free", CUDA_ERROR_INVALID_HANDLE);
+      }
+
+      // The device pointer is also valid on the host
+      void *data()
+      { return (void *) m_data; }
+
+      CUdeviceptr get_device_pointer()
+      {
+        return m_data;
+      }
+  };
+#endif
+
 
 #if CUDAPP_CUDA_VERSION >= 4000
   struct registered_host_memory : public host_pointer

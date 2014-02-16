@@ -603,6 +603,33 @@ def aligned_zeros_like(array, alignment=4096):
 # }}}
 
 
+# {{{ managed numpy arrays (CUDA Unified Memory)
+
+def managed_zeros(shape, dtype, order="C", mem_flags=0):
+    result = managed_empty(shape, dtype, order, mem_flags)
+    result.fill(0)
+    return result
+
+
+def managed_empty_like(array, mem_flags=0):
+    if array.flags.c_contiguous:
+        order = "C"
+    elif array.flags.f_contiguous:
+        order = "F"
+    else:
+        raise ValueError("could not detect array order")
+
+    return managed_empty(array.shape, array.dtype, order, mem_flags)
+
+
+def managed_zeros_like(array, mem_flags=0):
+    result = pagelocked_empty_like(array, mem_flags)
+    result.fill(0)
+    return result
+
+# }}}
+
+
 def mem_alloc_like(ary):
     return mem_alloc(ary.nbytes)
 
