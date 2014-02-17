@@ -117,8 +117,12 @@ def _add_functionality():
                 arg_data.append(int(arg.get_device_alloc()))
                 format += "P"
             elif isinstance(arg, np.ndarray):
-                arg_data.append(arg)
-                format += "%ds" % arg.nbytes
+                if isinstance(arg.base, (ManagedAllocation,)):
+                    arg_data.append(int(arg.base))
+                    format += "P"
+                else:
+                    arg_data.append(arg)
+                    format += "%ds" % arg.nbytes
             else:
                 try:
                     gpudata = np.intp(arg.gpudata)
