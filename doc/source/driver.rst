@@ -1119,7 +1119,7 @@ Managed Memory Allocation
 
     Allocate a managed :class:`numpy.ndarray` of *shape*, *dtype* and *order*.
 
-    *mem_flags* may be one of the values in :class:`host_alloc_flags`.
+    *mem_flags* may be one of the values in :class:`mem_attach_flags`.
 
     For the meaning of the other parameters, please refer to the :mod:`numpy`
     documentation.
@@ -1169,6 +1169,17 @@ have an attribute *base* that references an object of type
         Return a device pointer that indicates the address at which
         this memory is mapped into the device's address space.  For
         managed memory, this is also the host pointer.
+
+    .. method:: attach(mem_flags, stream=None)
+
+        Alter the visibility of the managed allocation to be one of the values
+        in :class:`mem_attach_flags`.  A managed array can be made visible to
+        the host CPU and the entire CUDA context with
+        *mem_attach_flags.GLOBAL*, or limited to the CPU only with
+        *mem_attach_flags.HOST*.  If *mem_attach_flags.SINGLE* is selected,
+        then the array will only be visible to CPU and the provided instance
+        of :class:`Stream`.
+
 
 Managed Memory Usage
 ~~~~~~~~~~~~~~~~~~~~

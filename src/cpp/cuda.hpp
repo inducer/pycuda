@@ -1983,7 +1983,7 @@ namespace pycuda
         return m_devptr;
       }
 
-      void attach(py::object stream_py, unsigned flags)
+      void attach(unsigned flags, py::object stream_py)
       {
         PYCUDA_PARSE_STREAM_PY;
 
