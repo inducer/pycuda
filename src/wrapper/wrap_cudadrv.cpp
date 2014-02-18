@@ -857,7 +857,7 @@ BOOST_PYTHON_MODULE(_driver)
   py::enum_<CUmemAttach_flags>("mem_attach_flags")
     .value("GLOBAL", CU_MEM_ATTACH_GLOBAL)
     .value("HOST", CU_MEM_ATTACH_HOST)
-    .value("STREAM", CU_MEM_ATTACH_SINGLE)
+    .value("SINGLE", CU_MEM_ATTACH_SINGLE)
     ;
 #endif
 
