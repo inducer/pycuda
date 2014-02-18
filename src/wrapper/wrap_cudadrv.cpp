@@ -1141,6 +1141,8 @@ BOOST_PYTHON_MODULE(_driver)
 
     wrp
       .DEF_SIMPLE_METHOD(get_device_pointer)
+      .def("attach", &cl::attach, 
+        (py::arg("stream"), py::arg("mem_flags")))
       ;
   }
 #endif

@@ -1982,6 +1982,14 @@ namespace pycuda
       {
         return m_devptr;
       }
+
+      void attach(py::object stream_py, unsigned flags)
+      {
+        PYCUDA_PARSE_STREAM_PY;
+
+        CUDAPP_CALL_GUARDED(cuStreamAttachMemAsync, (s_handle, m_devptr, 0, flags));
+      }
+
   };
 #endif
 
