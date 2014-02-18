@@ -522,6 +522,16 @@ Constants
     .. attribute:: DEVICEMAP
     .. attribute:: WRITECOMBINED
 
+.. class:: mem_attach_flags
+
+    Flags to be used to allocate :ref:`managed_memory`.
+
+    ..versionadded:: 2014.1
+
+    .. attribute:: GLOBAL
+    .. attribute:: HOST
+    .. attribute:: SINGLE
+
 .. class:: mem_host_register_flags
 
     .. attribute:: PORTABLE
@@ -1083,6 +1093,126 @@ Post-Allocation Pagelocking
         this memory is mapped into the device's address space.
 
         Only available on CUDA 2.2 and newer.
+
+.. _managed_memory :
+
+Managed Memory
+^^^^^^^^^^^^^^
+
+CUDA 6.0 adds support for a "Unified Memory" model, which creates a managed
+virtual memory space that is visible to both CPUs and GPUs.  The OS will
+migrate the physical pages associated with managed memory between the CPU and
+GPU as needed.  This allows a numpy array on the host to be passed to kernels
+without first creating a DeviceAllocation and manually copying the host data 
+to and from the device.
+
+.. note::
+
+    Managed memory is only available for some combinations of CUDA device,
+    operating system, and host compiler target architecture.  Check the CUDA
+    C Programming Guide and CUDA release notes for details.
+
+Managed Memory Allocation
+~~~~~~~~~~~~~~~~~~~~~~~~~
+
+.. function:: managed_empty(shape, dtype, order="C", mem_flags=0)
+
+    Allocate a managed :class:`numpy.ndarray` of *shape*, *dtype* and *order*.
+
+    *mem_flags* may be one of the values in :class:`host_alloc_flags`.
+
+    For the meaning of the other parameters, please refer to the :mod:`numpy`
+    documentation.
+
+    Only available on CUDA 6.0 and newer.
+
+    .. versionadded:: 2014.1
+
+.. function:: managed_zeros(shape, dtype, order="C", mem_flags=0)
+
+    Like :func:`managed_empty`, but initialized to zero.
+
+    Only available on CUDA 6.0 and newer.
+
+    .. versionadded:: 2014.1
+
+.. function:: managed_empty_like(array, mem_flags=0)
+
+    Only available on CUDA 6.0 and newer.
+
+    .. versionadded:: 2014.1
+
+.. function:: managed_zeros_like(array, mem_flags=0)
+
+    Only available on CUDA 6.0 and newer.
+
+    .. versionadded:: 2014.1
+
+The :class:`numpy.ndarray` instances returned by these functions
+have an attribute *base* that references an object of type
+
+.. class:: ManagedAllocation
+
+    An object representing an allocation of managed
+    host memory.  Once this object is deleted, its associated
+    CUDA managed memory is freed.
+
+    .. method:: free()
+
+        Release the held memory now instead of when this object
+        becomes unreachable. Any further use of the object (or its
+        associated :mod:`numpy` array) is an error
+        and will lead to undefined behavior.
+
+    .. method:: get_device_pointer()
+
+        Return a device pointer that indicates the address at which
+        this memory is mapped into the device's address space.  For
+        managed memory, this is also the host pointer.
+
+Managed Memory Usage
+~~~~~~~~~~~~~~~~~~~~
+
+A managed numpy array is constructed and used on the host in a similar manner
+to a pagelocked array::
+
+    from pycuda.autoinit import context
+    import pycuda.driver as cuda
+    import numpy as np
+
+    a = cuda.managed_empty(shape=10, dtype=np.float32, mem_flags=cuda.mem_attach_flags.GLOBAL)
+    a[:] = np.linspace(0, 9, len(a)) # Fill array on host
+
+It can be passed to a GPU kernel, and used again on the host without
+an explicit copy::
+
+    from pycuda.compiler import SourceModule
+    mod = SourceModule("""
+    __global__ void doublify(float *a)
+    {
+        a[threadIdx.x] *= 2;
+    }
+    """)
+    doublify = mod.get_function("doublify")
+
+    doublify(a, grid=(1,1), block=(len(a),1,1))
+    context.synchronize() # Wait for kernel completion before host access
+
+    median = np.median(a) # Computed on host!
+
+.. warning::
+    
+    The CUDA Unified Memory model has very specific rules regarding concurrent
+    access of managed memory allocations.  Host access to any managed array
+    is not allowed while the GPU is executing a kernel, regardless of whether
+    the array is in use by the running kernel.  Failure to follow the 
+    concurrency rules will generate a segmentation fault, *causing the Python
+    interpreter to terminate immediately*.
+
+    Users of managed numpy arrays should read the "Unified Memory Programming"
+    appendix of the CUDA C Programming Guide for further details on the
+    concurrency restrictions.
+
 
 Arrays and Textures
 ^^^^^^^^^^^^^^^^^^^
