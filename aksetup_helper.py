@@ -495,21 +495,28 @@ class BoostLibraries(Libraries):
                     % humanize(lib_base_name))
 
 
-def set_up_shipped_boost_if_requested(project_name, conf):
+def set_up_shipped_boost_if_requested(project_name, conf, source_path=None,
+        boost_chrono=False):
     """Set up the package to use a shipped version of Boost.
 
     Return a tuple of a list of extra C files to build and extra
     defines to be used.
+
+    :arg boost_chrono: one of *False* and ``"header_only"``
+        (only relevant in shipped mode)
     """
     from os.path import exists
     import sys
 
+    if source_path is None:
+        source_path = "bpl-subset/bpl_subset"
+
     if conf["USE_SHIPPED_BOOST"]:
-        if not exists("bpl-subset/bpl_subset/boost/version.hpp"):
+        if not exists("%s/boost/version.hpp" % source_path):
             print(DASH_SEPARATOR)
             print("The shipped Boost library was not found, but "
                     "USE_SHIPPED_BOOST is True.")
-            print("(The files should be under bpl-subset/.)")
+            print("(The files should be under %s/.)" % source_path)
             print(DASH_SEPARATOR)
             print("If you got this package from git, you probably want to do")
             print("")
@@ -527,34 +534,37 @@ def set_up_shipped_boost_if_requested(project_name, conf):
             count_down_delay(delay=10)
 
     if conf["USE_SHIPPED_BOOST"]:
-        conf["BOOST_INC_DIR"] = ["bpl-subset/bpl_subset"]
+        conf["BOOST_INC_DIR"] = [source_path]
         conf["BOOST_LIB_DIR"] = []
         conf["BOOST_PYTHON_LIBNAME"] = []
         conf["BOOST_THREAD_LIBNAME"] = []
 
         from glob import glob
-        source_files = (glob("bpl-subset/bpl_subset/libs/*/*/*/*.cpp")
-                + glob("bpl-subset/bpl_subset/libs/*/*/*.cpp")
-                + glob("bpl-subset/bpl_subset/libs/*/*.cpp"))
+        source_files = (glob(source_path + "/libs/*/*/*/*.cpp")
+                + glob(source_path + "/libs/*/*/*.cpp")
+                + glob(source_path + "/libs/*/*.cpp"))
 
         # make sure next line succeeds even on Windows
         source_files = [f.replace("\\", "/") for f in source_files]
 
         source_files = [f for f in source_files
-                if not f.startswith("bpl-subset/bpl_subset/libs/thread/src")]
+                if not f.startswith(source_path + "/libs/thread/src")]
 
         if sys.platform == "win32":
             source_files += glob(
-                    "bpl-subset/bpl_subset/libs/thread/src/win32/*.cpp")
+                    source_path + "/libs/thread/src/win32/*.cpp")
             source_files += glob(
-                    "bpl-subset/bpl_subset/libs/thread/src/tss_null.cpp")
+                    source_path + "/libs/thread/src/tss_null.cpp")
         else:
             source_files += glob(
-                    "bpl-subset/bpl_subset/libs/thread/src/pthread/*.cpp")
+                    source_path + "/libs/thread/src/pthread/*.cpp")
+
+        source_files = [f for f in source_files
+                if not f.endswith("once_atomic.cpp")]
 
         from os.path import isdir
-        main_boost_inc = "bpl-subset/bpl_subset/boost"
-        bpl_project_boost_inc = "bpl-subset/bpl_subset/%sboost" % project_name
+        main_boost_inc = source_path + "/boost"
+        bpl_project_boost_inc = source_path + "/%sboost" % project_name
 
         if not isdir(bpl_project_boost_inc):
             try:
@@ -565,18 +575,24 @@ def set_up_shipped_boost_if_requested(project_name, conf):
                 print("Copying files, hang on... (do not interrupt)")
                 copytree(main_boost_inc, bpl_project_boost_inc)
 
-        return (source_files,
-                {
-                    # do not pick up libboost link dependency on windows
-                    "BOOST_ALL_NO_LIB": 1,
-                    "BOOST_THREAD_BUILD_DLL": 1,
+        defines = {
+                # do not pick up libboost link dependency on windows
+                "BOOST_ALL_NO_LIB": 1,
+                "BOOST_THREAD_BUILD_DLL": 1,
 
-                    "BOOST_MULTI_INDEX_DISABLE_SERIALIZATION": 1,
-                    "BOOST_THREAD_DONT_USE_CHRONO": 1,
-                    "BOOST_PYTHON_SOURCE": 1,
-                    "boost": '%sboost' % project_name
-                    }
-                )
+                "BOOST_MULTI_INDEX_DISABLE_SERIALIZATION": 1,
+                "BOOST_PYTHON_SOURCE": 1,
+                "boost": '%sboost' % project_name,
+                }
+
+        if boost_chrono is False:
+            defines["BOOST_THREAD_DONT_USE_CHRONO"] = 1
+        elif boost_chrono == "header_only":
+            defines["BOOST_CHRONO_HEADER_ONLY"] = 1
+        else:
+            raise ValueError("invalid value of 'boost_chrono'")
+
+        return (source_files, defines)
     else:
         return [], {}
 
@@ -733,7 +749,8 @@ def check_git_submodules():
         status = l[0]
         sha, package = l[1:].split(" ", 1)
 
-        if package == "bpl-subset":
+        if package == "bpl-subset" or (
+                package.startswith("boost") and package.endswith("subset")):
             # treated separately
             continue
 
