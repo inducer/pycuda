@@ -54,6 +54,14 @@ def make_unary_function_test(name, a=0, b=1, threshold=0, complex=False):
                 assert (max_err <= threshold).all(), \
                         (max_err, name, dtype)
 
+                gpu_results2 = gpuarray.empty_like(args)
+                gr2 = gpu_func(args, out=gpu_results2)
+                assert gpu_results2 is gr2
+                gr2 = gr2.get()
+                max_err = np.max(np.abs(cpu_results - gr2))
+                assert (max_err <= threshold).all(), \
+                        (max_err, name, dtype)
+
     return mark_cuda_test(test)
 
 

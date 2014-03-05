@@ -338,34 +338,34 @@ workalikes for the functions contained in :mod:`math`.
 Rounding and Absolute Value
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-.. function:: fabs(array, stream=None)
-.. function:: ceil(array, stream=None)
-.. function:: floor(array, stream=None)
+.. function:: fabs(array, out=None, stream=None)
+.. function:: ceil(array, out=None, stream=None)
+.. function:: floor(array, out=None, stream=None)
 
 Exponentials, Logarithms and Roots
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-.. function:: exp(array, stream=None)
-.. function:: log(array, stream=None)
-.. function:: log10(array, stream=None)
-.. function:: sqrt(array, stream=None)
+.. function:: exp(array, out=None, stream=None)
+.. function:: log(array, out=None, stream=None)
+.. function:: log10(array, out=None, stream=None)
+.. function:: sqrt(array, out=None, stream=None)
 
 Trigonometric Functions
 ^^^^^^^^^^^^^^^^^^^^^^^
 
-.. function:: sin(array, stream=None)
-.. function:: cos(array, stream=None)
-.. function:: tan(array, stream=None)
-.. function:: asin(array, stream=None)
-.. function:: acos(array, stream=None)
-.. function:: atan(array, stream=None)
+.. function:: sin(array, out=None, stream=None)
+.. function:: cos(array, out=None, stream=None)
+.. function:: tan(array, out=None, stream=None)
+.. function:: asin(array, out=None, stream=None)
+.. function:: acos(array, out=None, stream=None)
+.. function:: atan(array, out=None, stream=None)
 
 Hyperbolic Functions
 ^^^^^^^^^^^^^^^^^^^^
 
-.. function:: sinh(array, stream=None)
-.. function:: cosh(array, stream=None)
-.. function:: tanh(array, stream=None)
+.. function:: sinh(array, out=None, stream=None)
+.. function:: cosh(array, out=None, stream=None)
+.. function:: tanh(array, out=None, stream=None)
 
 Floating Point Decomposition and Assembly
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^

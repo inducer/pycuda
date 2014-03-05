@@ -3,8 +3,7 @@ import pycuda.elementwise as elementwise
 import numpy as np
 
 def _make_unary_array_func(name):
-    def f(array, stream=None):
-        result = array._new_like_me()
+    def f(array, out=None, stream=None):
 
         if array.dtype == np.float32:
             func_name = name + "f"
@@ -15,11 +14,18 @@ def _make_unary_array_func(name):
             raise RuntimeError("only contiguous arrays may "
                     "be used as arguments to this operation")
 
+        if out is None:
+            out = array._new_like_me()
+        else:
+            assert out.dtype == array.dtype
+            assert out.strides == array.strides
+            assert out.shape == array.shape
+
         func = elementwise.get_unary_func_kernel(func_name, array.dtype)
         func.prepared_async_call(array._grid, array._block, stream,
-                array.gpudata, result.gpudata, array.mem_size)
+                array.gpudata, out.gpudata, array.mem_size)
 
-        return result
+        return out
     return f
 
 fabs = _make_unary_array_func("fabs")
