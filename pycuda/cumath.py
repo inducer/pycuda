@@ -1,9 +1,27 @@
 import pycuda.gpuarray as gpuarray
 import pycuda.elementwise as elementwise
 import numpy as np
+import warnings
+from pycuda.driver import Stream
+
 
 def _make_unary_array_func(name):
-    def f(array, out=None, stream=None):
+    def f(array, stream_or_out=None, **kwargs):
+
+        if stream_or_out is not None:
+            warnings.warn("please use 'out' or 'stream' keyword arguments", DeprecationWarning)
+            if isinstance(stream_or_out, Stream):
+                stream = stream_or_out
+                out = None
+            else:
+                stream = None
+                out = stream_or_out
+
+        out, stream = None, None
+        if 'out' in kwargs:
+            out = kwargs['out']
+        if 'stream' in kwargs:
+            stream = kwargs['stream']
 
         if array.dtype == np.float32:
             func_name = name + "f"
