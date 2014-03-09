@@ -11,6 +11,7 @@ Version 2014.1
 
 * Add :meth:`PointerHolderBase.as_buffer` and :meth:`DeviceAllocation.as_buffer`.
 * Support for :class:`device_attribute` values added in CUDA 5.0, 5.5, and 6.0.
+* Support for :ref:`managed_memory`. (contributed by Stan Seibert)
 
 Version 2013.1.1
 ----------------

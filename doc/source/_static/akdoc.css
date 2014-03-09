@@ -11,7 +11,7 @@ body > div.container {
 }
 
 dd {
-  margin-left: 40px;
+  margin-left: 40px !important;
 }
 
 tt.descname {

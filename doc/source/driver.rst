@@ -1112,6 +1112,12 @@ to and from the device.
     operating system, and host compiler target architecture.  Check the CUDA
     C Programming Guide and CUDA release notes for details.
 
+.. warning::
+
+    This interface to managed memory should be considered experimental. It is
+    provided as a preview, but for now the same interface stability guarantees
+    as for the rest of PyCUDA do not apply.
+
 Managed Memory Allocation
 ~~~~~~~~~~~~~~~~~~~~~~~~~
 
@@ -1212,7 +1218,7 @@ an explicit copy::
     median = np.median(a) # Computed on host!
 
 .. warning::
-    
+
     The CUDA Unified Memory model has very specific rules regarding concurrent
     access of managed memory allocations.  Host access to any managed array
     is not allowed while the GPU is executing a kernel, regardless of whether
@@ -1224,6 +1230,10 @@ an explicit copy::
     appendix of the CUDA C Programming Guide for further details on the
     concurrency restrictions.
 
+    If you are encountering interpreter terminations due to concurrency issues,
+    the `faulthandler <http://pypi.python.org/pypi/faulthandler>` module may be
+    helpful in locating the location in your Python program where the faulty
+    access is occurring.
 
 Arrays and Textures
 ^^^^^^^^^^^^^^^^^^^
