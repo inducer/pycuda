@@ -11,6 +11,16 @@ except ImportError, e:
 import numpy as np
 
 
+try:
+    ManagedAllocationOrStub = ManagedAllocation
+except NameError:
+    # Provide ManagedAllocationOrStub if not on CUDA 6.
+    # This avoids having to do a version check in a high-traffic code path below.
+
+    class ManagedAllocationOrStub(object):
+        pass
+
+
 CUDA_DEBUGGING = False
 
 
@@ -117,7 +127,7 @@ def _add_functionality():
                 arg_data.append(int(arg.get_device_alloc()))
                 format += "P"
             elif isinstance(arg, np.ndarray):
-                if isinstance(arg.base, (ManagedAllocation,)):
+                if isinstance(arg.base, ManagedAllocationOrStub):
                     arg_data.append(int(arg.base))
                     format += "P"
                 else:
