@@ -117,8 +117,12 @@ def _add_functionality():
                 arg_data.append(int(arg.get_device_alloc()))
                 format += "P"
             elif isinstance(arg, np.ndarray):
-                arg_data.append(arg)
-                format += "%ds" % arg.nbytes
+                if isinstance(arg.base, (ManagedAllocation,)):
+                    arg_data.append(int(arg.base))
+                    format += "P"
+                else:
+                    arg_data.append(arg)
+                    format += "%ds" % arg.nbytes
             else:
                 try:
                     gpudata = np.intp(arg.gpudata)
@@ -597,6 +601,33 @@ def aligned_empty_like(array, alignment=4096):
 
 def aligned_zeros_like(array, alignment=4096):
     result = aligned_empty_like(array, alignment)
+    result.fill(0)
+    return result
+
+# }}}
+
+
+# {{{ managed numpy arrays (CUDA Unified Memory)
+
+def managed_zeros(shape, dtype, order="C", mem_flags=0):
+    result = managed_empty(shape, dtype, order, mem_flags)
+    result.fill(0)
+    return result
+
+
+def managed_empty_like(array, mem_flags=0):
+    if array.flags.c_contiguous:
+        order = "C"
+    elif array.flags.f_contiguous:
+        order = "F"
+    else:
+        raise ValueError("could not detect array order")
+
+    return managed_empty(array.shape, array.dtype, order, mem_flags)
+
+
+def managed_zeros_like(array, mem_flags=0):
+    result = pagelocked_empty_like(array, mem_flags)
     result.fill(0)
     return result
 

@@ -853,6 +853,13 @@ BOOST_PYTHON_MODULE(_driver)
     ;
 #endif
 
+#if CUDAPP_CUDA_VERSION >= 6000
+  py::enum_<CUmemAttach_flags>("mem_attach_flags")
+    .value("GLOBAL", CU_MEM_ATTACH_GLOBAL)
+    .value("HOST", CU_MEM_ATTACH_HOST)
+    .value("SINGLE", CU_MEM_ATTACH_SINGLE)
+    ;
+#endif
 
   // graphics enums -----------------------------------------------------------
 #if CUDAPP_CUDA_VERSION >= 3000
@@ -1126,6 +1133,20 @@ BOOST_PYTHON_MODULE(_driver)
       ;
   }
 
+#if CUDAPP_CUDA_VERSION >= 6000
+  {
+    typedef managed_allocation cl;
+    py::class_<cl, boost::noncopyable, py::bases<device_allocation> > wrp(
+        "ManagedAllocation", py::no_init);
+
+    wrp
+      .DEF_SIMPLE_METHOD(get_device_pointer)
+      .def("attach", &cl::attach, 
+        (py::arg("mem_flags"), py::arg("stream")=py::object()))
+      ;
+  }
+#endif
+
 #if CUDAPP_CUDA_VERSION >= 4000
   {
     typedef registered_host_memory cl;
@@ -1143,6 +1164,12 @@ BOOST_PYTHON_MODULE(_driver)
   py::def("aligned_empty", numpy_empty<aligned_host_allocation>,
       (py::arg("shape"), py::arg("dtype"),
        py::arg("order")="C", py::arg("alignment")=4096));
+
+#if CUDAPP_CUDA_VERSION >= 6000
+  py::def("managed_empty", numpy_empty<managed_allocation>,
+      (py::arg("shape"), py::arg("dtype"), py::arg("order")="C",
+       py::arg("mem_flags")=0));
+#endif
 
 #if CUDAPP_CUDA_VERSION >= 4000
   py::def("register_host_memory", register_host_memory,
