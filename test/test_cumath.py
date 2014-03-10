@@ -54,6 +54,14 @@ def make_unary_function_test(name, a=0, b=1, threshold=0, complex=False):
                 assert (max_err <= threshold).all(), \
                         (max_err, name, dtype)
 
+                gpu_results2 = gpuarray.empty_like(args)
+                gr2 = gpu_func(args, out=gpu_results2)
+                assert gpu_results2 is gr2
+                gr2 = gr2.get()
+                max_err = np.max(np.abs(cpu_results - gr2))
+                assert (max_err <= threshold).all(), \
+                        (max_err, name, dtype)
+
     return mark_cuda_test(test)
 
 
@@ -156,6 +164,73 @@ class TestMath:
 
                 assert sig_true == significands[i]
                 assert ex_true == exponents[i]
+
+    @mark_cuda_test
+    def test_unary_func_kwargs(self):
+        """tests if the kwargs to the unary functions work"""
+        from pycuda.driver import Stream
+
+        name, a, b, threshold = ("exp", -3, 3, 1e-5)
+        gpu_func = getattr(cumath, name)
+        cpu_func = getattr(np, numpy_func_names.get(name, name))
+        for s in sizes:
+            for dtype in dtypes:
+                np.random.seed(1)
+                A = (np.random.random(s)*(b-a) + a).astype(dtype)
+                if complex:
+                    A += (np.random.random(s)*(b-a) + a)*1j
+
+                np.random.seed(1)
+                A = (np.random.random(s)*(b-a) + a).astype(dtype)
+                args = gpuarray.to_gpu(A)
+
+                # 'out' kw
+                gpu_results = gpuarray.empty_like(args)
+                gpu_results = gpu_func(args, out=gpu_results).get()
+                cpu_results = cpu_func(A)
+                max_err = np.max(np.abs(cpu_results - gpu_results))
+                assert (max_err <= threshold).all(), (max_err, name, dtype)
+
+                # 'out' position
+                gpu_results = gpuarray.empty_like(args)
+                gpu_results = gpu_func(args, gpu_results).get()
+                cpu_results = cpu_func(A)
+                max_err = np.max(np.abs(cpu_results - gpu_results))
+                assert (max_err <= threshold).all(), (max_err, name, dtype)
+
+                # 'stream' kw
+                mystream = Stream()
+                np.random.seed(1)
+                A = (np.random.random(s)*(b-a) + a).astype(dtype)
+                args = gpuarray.to_gpu(A)
+                gpu_results = gpuarray.empty_like(args)
+                gpu_results = gpu_func(args, stream=mystream).get()
+                cpu_results = cpu_func(A)
+                max_err = np.max(np.abs(cpu_results - gpu_results))
+                assert (max_err <= threshold).all(), (max_err, name, dtype)
+
+                # 'stream' position
+                mystream = Stream()
+                np.random.seed(1)
+                A = (np.random.random(s)*(b-a) + a).astype(dtype)
+                args = gpuarray.to_gpu(A)
+                gpu_results = gpuarray.empty_like(args)
+                gpu_results = gpu_func(args, mystream).get()
+                cpu_results = cpu_func(A)
+                max_err = np.max(np.abs(cpu_results - gpu_results))
+                assert (max_err <= threshold).all(), (max_err, name, dtype)
+
+                # 'out' and 'stream' kw
+                mystream = Stream()
+                np.random.seed(1)
+                A = (np.random.random(s)*(b-a) + a).astype(dtype)
+                args = gpuarray.to_gpu(A)
+                gpu_results = gpuarray.empty_like(args)
+                gpu_results = gpu_func(args, stream=mystream, out=gpu_results).get()
+                cpu_results = cpu_func(A)
+                max_err = np.max(np.abs(cpu_results - gpu_results))
+                assert (max_err <= threshold).all(), (max_err, name, dtype)
+
 
 if __name__ == "__main__":
     # make sure that import failures get reported, instead of skipping the tests.

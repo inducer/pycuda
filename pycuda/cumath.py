@@ -1,10 +1,27 @@
 import pycuda.gpuarray as gpuarray
 import pycuda.elementwise as elementwise
 import numpy as np
+import warnings
+from pycuda.driver import Stream
+
 
 def _make_unary_array_func(name):
-    def f(array, stream=None):
-        result = array._new_like_me()
+    def f(array, stream_or_out=None, **kwargs):
+
+        if stream_or_out is not None:
+            warnings.warn("please use 'out' or 'stream' keyword arguments", DeprecationWarning)
+            if isinstance(stream_or_out, Stream):
+                stream = stream_or_out
+                out = None
+            else:
+                stream = None
+                out = stream_or_out
+
+        out, stream = None, None
+        if 'out' in kwargs:
+            out = kwargs['out']
+        if 'stream' in kwargs:
+            stream = kwargs['stream']
 
         if array.dtype == np.float32:
             func_name = name + "f"
@@ -15,11 +32,18 @@ def _make_unary_array_func(name):
             raise RuntimeError("only contiguous arrays may "
                     "be used as arguments to this operation")
 
+        if out is None:
+            out = array._new_like_me()
+        else:
+            assert out.dtype == array.dtype
+            assert out.strides == array.strides
+            assert out.shape == array.shape
+
         func = elementwise.get_unary_func_kernel(func_name, array.dtype)
         func.prepared_async_call(array._grid, array._block, stream,
-                array.gpudata, result.gpudata, array.mem_size)
+                array.gpudata, out.gpudata, array.mem_size)
 
-        return result
+        return out
     return f
 
 fabs = _make_unary_array_func("fabs")
