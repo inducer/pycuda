@@ -42,7 +42,7 @@ extern "C++" {
   }
 
   template <enum cudaTextureReadMode read_mode>
-  __device__ double fp_tex3D(texture<fp_tex_double, 2, read_mode> tex, int i, int j, int k)
+  __device__ double fp_tex3D(texture<fp_tex_double, 3, read_mode> tex, int i, int j, int k)
   {
     fp_tex_double v = tex3D(tex, i, j, k);
     return __hiloint2double(v.y, v.x);
