@@ -723,7 +723,7 @@ def _run_git_command(cmd):
         print("Hit Ctrl-C now if you'd like to think about the situation.")
         print(DASH_SEPARATOR)
         count_down_delay(delay=5)
-    return stdout.decode("ascii"), git_error
+    return stdout.decode("utf-8"), git_error
 
 
 def check_git_submodules():
