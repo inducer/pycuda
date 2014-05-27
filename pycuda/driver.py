@@ -9,6 +9,13 @@ except ImportError, e:
     raise
 
 import numpy as np
+import sys
+
+
+if sys.version_info >= (3,):
+    _memoryview = memoryview
+else:
+    _memoryview = buffer
 
 
 try:
@@ -134,7 +141,7 @@ def _add_functionality():
                     arg_data.append(arg)
                     format += "%ds" % arg.nbytes
             elif isinstance(arg, np.void):
-                arg_data.append(str(buffer(arg)))
+                arg_data.append(str(_memoryview(arg)))
                 format += "%ds" % arg.itemsize
             else:
                 try:
