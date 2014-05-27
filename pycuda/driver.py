@@ -14,8 +14,10 @@ import sys
 
 if sys.version_info >= (3,):
     _memoryview = memoryview
+    _my_bytes = bytes
 else:
     _memoryview = buffer
+    _my_bytes = str
 
 
 try:
@@ -141,7 +143,7 @@ def _add_functionality():
                     arg_data.append(arg)
                     format += "%ds" % arg.nbytes
             elif isinstance(arg, np.void):
-                arg_data.append(str(_memoryview(arg)))
+                arg_data.append(_my_bytes(_memoryview(arg)))
                 format += "%ds" % arg.itemsize
             else:
                 try:
