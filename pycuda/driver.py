@@ -116,7 +116,7 @@ def _add_functionality():
         arg_data = []
         format = ""
         for i, arg in enumerate(args):
-            if isinstance(arg, np.number):
+            if isinstance(arg, (np.number, np.void)):
                 arg_data.append(arg)
                 format += arg.dtype.char
             elif isinstance(arg, (DeviceAllocation, PooledDeviceAllocation)):
