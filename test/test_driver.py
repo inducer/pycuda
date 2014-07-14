@@ -554,7 +554,7 @@ class TestDriver:
         drv.memcpy_htod(const_array, host_array)
 
         copy_constant_into_global(
-                global_result_array,  
+                global_result_array,
                 grid=(1, 1), block=(32, 1, 1))
 
         host_result_array = np.zeros_like(host_array)
@@ -575,6 +575,74 @@ class TestDriver:
 
         a = drv.aligned_empty((2**20,), np.float64, alignment=4096)
         drv.register_host_memory(a)
+
+    @mark_cuda_test
+    def test_recursive_launch(self):
+        # Test contributed by Aditya Avinash Atluri
+
+        if drv.Context.get_device().compute_capability() < (3, 5):
+            from pytest import skip
+            skip("need compute capability 3.5 or higher for dynamic parallelism")
+
+        cuda_string = """__device__ void  saxpy(double* s, float a, long* p, int b, long* q){
+        int tx = threadIdx.x;
+        s[tx] = a*p[tx]+b*q[tx];
+        }
+        __global__ void  sub(long* p, long* q, long* d){
+        int tx = threadIdx.x;
+        p[tx] = 2*p[tx];
+        d[tx] = p[tx]-q[tx];
+        }
+        __device__ long add(long p, long q){
+        p = p+1;
+        return p+q;
+        }
+        __global__ void math( long* a, long* b, long* c, long* d, long* e, double* f){
+        int tx = threadIdx.x;
+        __shared__ long x[100];
+        x[tx] = a[tx + 0];
+        __shared__ long y[100];
+        y[tx] = b[tx + 0];
+        c[tx]=add(x[tx],y[tx]);
+        dim3 dimGrid_sub(1,1,1);
+        dim3 dimBlock_sub(100,1,1);
+        sub<<<dimGrid_sub,dimBlock_sub>>>(a,b,d);
+        saxpy(f,1.0345,x,-2,y);
+        }
+        """
+
+        def math(a,b,c,d,e,f):
+            a_gpu = drv.mem_alloc(a.nbytes)
+            b_gpu = drv.mem_alloc(b.nbytes)
+            c_gpu = drv.mem_alloc(c.nbytes)
+            d_gpu = drv.mem_alloc(d.nbytes)
+            e_gpu = drv.mem_alloc(e.nbytes)
+            f_gpu = drv.mem_alloc(f.nbytes)
+
+            drv.memcpy_htod(a_gpu,a)
+            drv.memcpy_htod(b_gpu,b)
+
+            mod = SourceModule(cuda_string,
+                    options=['-rdc=true','-lcudadevrt'],
+                    keep=True)
+            func = mod.get_function("math")
+            func(a_gpu,b_gpu,c_gpu,d_gpu,e_gpu,f_gpu,block=(100,1,1),grid=(1,1,1))
+
+            drv.memcpy_dtoh(c,c_gpu)
+            drv.memcpy_dtoh(d,d_gpu)
+            drv.memcpy_dtoh(e,e_gpu)
+            drv.memcpy_dtoh(f,f_gpu)
+
+            print c,d,e,f
+
+        a = np.random.randint(10, size = 100)
+        b = np.random.randint(10, size = 100)
+        c = np.empty_like(a)
+        d = np.empty_like(a)
+        e = np.empty_like(a)
+        f = np.array(a, dtype = 'd')
+
+        math(a,b,c,d,e,f)
 
 
 def test_import_pyopencl_before_pycuda():
