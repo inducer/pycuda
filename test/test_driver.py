@@ -4,11 +4,9 @@ import numpy.linalg as la
 from pycuda.tools import mark_cuda_test
 
 
-
-
 def have_pycuda():
     try:
-        import pycuda
+        import pycuda  # noqa
         return True
     except:
         return False
@@ -18,8 +16,6 @@ if have_pycuda():
     import pycuda.gpuarray as gpuarray
     import pycuda.driver as drv
     from pycuda.compiler import SourceModule
-
-
 
 
 class TestDriver:
@@ -49,7 +45,7 @@ class TestDriver:
         dest = np.zeros_like(a)
         multiply_them(
                 drv.Out(dest), drv.In(a), drv.In(b),
-                block=(400,1,1))
+                block=(400, 1, 1))
         assert la.norm(dest-a*b) == 0
 
     @mark_cuda_test
@@ -72,7 +68,7 @@ class TestDriver:
         dest = np.zeros_like(a)
         multiply_them(
                 drv.Out(dest), a_gpu, b_gpu,
-                block=(400,1,1))
+                block=(400, 1, 1))
         assert la.norm(dest-a*b) == 0
 
         drv.Context.synchronize()
@@ -80,7 +76,7 @@ class TestDriver:
         dest = np.zeros_like(a)
         multiply_them(
                 drv.Out(dest), np.intp(a_gpu)+a.itemsize, b_gpu,
-                block=(399,1,1))
+                block=(399, 1, 1))
 
         assert la.norm((dest[:-1]-a[1:]*b[:-1])) == 0
 
@@ -101,8 +97,6 @@ class TestDriver:
         set_them(drv.Out(dest), a, block=(400,1,1))
         assert (dest == a).all()
 
-    from py.test import mark as mark_test
-
     @mark_cuda_test
     def test_streamed_kernel(self):
         # this differs from the "simple_kernel" case in that *all* computation
@@ -119,7 +113,7 @@ class TestDriver:
 
         multiply_them = mod.get_function("multiply_them")
 
-        shape = (32,8)
+        shape = (32, 8)
         a = drv.pagelocked_zeros(shape, dtype=np.float32)
         b = drv.pagelocked_zeros(shape, dtype=np.float32)
         a[:] = np.random.randn(*shape)
@@ -159,8 +153,8 @@ class TestDriver:
         assert la.norm(diff) == 0
 
     @mark_cuda_test
-    def donottest_cublas_mixing():
-        test_streamed_kernel()
+    def donottest_cublas_mixing(self):
+        self.test_streamed_kernel()
 
         import pycuda.blas as blas
 
@@ -169,7 +163,7 @@ class TestDriver:
         b = 33*blas.ones(shape, dtype=np.float32)
         assert ((-a+b).from_gpu() == 32).all()
 
-        test_streamed_kernel()
+        self.test_streamed_kernel()
 
     @mark_cuda_test
     def test_2d_texture(self):
@@ -188,12 +182,13 @@ class TestDriver:
         copy_texture = mod.get_function("copy_texture")
         mtx_tex = mod.get_texref("mtx_tex")
 
-        shape = (3,4)
+        shape = (3, 4)
         a = np.random.randn(*shape).astype(np.float32)
         drv.matrix_to_texref(a, mtx_tex, order="F")
 
         dest = np.zeros(shape, dtype=np.float32)
-        copy_texture(drv.Out(dest),
+        copy_texture(
+                drv.Out(dest),
                 block=shape+(1,),
                 texrefs=[mtx_tex]
                 )
@@ -256,7 +251,7 @@ class TestDriver:
         copy_texture = mod.get_function("copy_texture")
         mtx_tex = mod.get_texref("mtx_tex")
 
-        shape = (5,6)
+        shape = (5, 6)
         channels = 4
         a = np.asarray(
                 np.random.randn(*((channels,)+shape)),
@@ -265,11 +260,12 @@ class TestDriver:
             drv.make_multichannel_2d_array(a, order="F"), mtx_tex)
 
         dest = np.zeros(shape+(channels,), dtype=np.float32)
-        copy_texture(drv.Out(dest),
+        copy_texture(
+                drv.Out(dest),
                 block=shape+(1,),
                 texrefs=[mtx_tex]
                 )
-        reshaped_a = a.transpose(1,2,0)
+        reshaped_a = a.transpose(1, 2, 0)
         #print reshaped_a
         #print dest
         assert la.norm(dest-reshaped_a) == 0
@@ -584,34 +580,42 @@ class TestDriver:
             from pytest import skip
             skip("need compute capability 3.5 or higher for dynamic parallelism")
 
-        cuda_string = """__device__ void  saxpy(double* s, float a, long* p, int b, long* q){
-        int tx = threadIdx.x;
-        s[tx] = a*p[tx]+b*q[tx];
+        cuda_string = """
+        __device__ void  saxpy(double* s, float a, long* p, int b, long* q)
+        {
+            int tx = threadIdx.x;
+            s[tx] = a*p[tx]+b*q[tx];
         }
-        __global__ void  sub(long* p, long* q, long* d){
-        int tx = threadIdx.x;
-        p[tx] = 2*p[tx];
-        d[tx] = p[tx]-q[tx];
+
+        __global__ void  sub(long* p, long* q, long* d)
+        {
+            int tx = threadIdx.x;
+            p[tx] = 2*p[tx];
+            d[tx] = p[tx]-q[tx];
         }
-        __device__ long add(long p, long q){
-        p = p+1;
-        return p+q;
+
+        __device__ long add(long p, long q)
+        {
+            p = p+1;
+            return p+q;
         }
-        __global__ void math( long* a, long* b, long* c, long* d, long* e, double* f){
-        int tx = threadIdx.x;
-        __shared__ long x[100];
-        x[tx] = a[tx + 0];
-        __shared__ long y[100];
-        y[tx] = b[tx + 0];
-        c[tx]=add(x[tx],y[tx]);
-        dim3 dimGrid_sub(1,1,1);
-        dim3 dimBlock_sub(100,1,1);
-        sub<<<dimGrid_sub,dimBlock_sub>>>(a,b,d);
-        saxpy(f,1.0345,x,-2,y);
+
+        __global__ void math(long* a, long* b, long* c, long* d, long* e, double* f)
+        {
+            int tx = threadIdx.x;
+            __shared__ long x[100];
+            x[tx] = a[tx + 0];
+            __shared__ long y[100];
+            y[tx] = b[tx + 0];
+            c[tx]=add(x[tx],y[tx]);
+            dim3 dimGrid_sub(1,1,1);
+            dim3 dimBlock_sub(100,1,1);
+            sub<<<dimGrid_sub,dimBlock_sub>>>(a,b,d);
+            saxpy(f,1.0345,x,-2,y);
         }
         """
 
-        def math(a,b,c,d,e,f):
+        def math(a, b, c, d, e, f):
             a_gpu = drv.mem_alloc(a.nbytes)
             b_gpu = drv.mem_alloc(b.nbytes)
             c_gpu = drv.mem_alloc(c.nbytes)
@@ -619,43 +623,45 @@ class TestDriver:
             e_gpu = drv.mem_alloc(e.nbytes)
             f_gpu = drv.mem_alloc(f.nbytes)
 
-            drv.memcpy_htod(a_gpu,a)
-            drv.memcpy_htod(b_gpu,b)
+            drv.memcpy_htod(a_gpu, a)
+            drv.memcpy_htod(b_gpu, b)
 
             mod = SourceModule(cuda_string,
-                    options=['-rdc=true','-lcudadevrt'],
+                    options=['-rdc=true', '-lcudadevrt'],
                     keep=True)
+
             func = mod.get_function("math")
-            func(a_gpu,b_gpu,c_gpu,d_gpu,e_gpu,f_gpu,block=(100,1,1),grid=(1,1,1))
+            func(a_gpu, b_gpu, c_gpu, d_gpu, e_gpu, f_gpu,
+                    block=(100, 1, 1), grid=(1, 1, 1))
 
-            drv.memcpy_dtoh(c,c_gpu)
-            drv.memcpy_dtoh(d,d_gpu)
-            drv.memcpy_dtoh(e,e_gpu)
-            drv.memcpy_dtoh(f,f_gpu)
+            drv.memcpy_dtoh(c, c_gpu)
+            drv.memcpy_dtoh(d, d_gpu)
+            drv.memcpy_dtoh(e, e_gpu)
+            drv.memcpy_dtoh(f, f_gpu)
 
-            print c,d,e,f
+            #print(c,d,e,f)
 
-        a = np.random.randint(10, size = 100)
-        b = np.random.randint(10, size = 100)
+        a = np.random.randint(10, size=100)
+        b = np.random.randint(10, size=100)
         c = np.empty_like(a)
         d = np.empty_like(a)
         e = np.empty_like(a)
-        f = np.array(a, dtype = 'd')
+        f = np.array(a, dtype='d')
 
-        math(a,b,c,d,e,f)
+        math(a, b, c, d, e, f)
 
 
 def test_import_pyopencl_before_pycuda():
     try:
-        import pyopencl
+        import pyopencl  # noqa
     except ImportError:
         return
-    import pycuda.driver
+    import pycuda.driver  # noqa
 
 
 if __name__ == "__main__":
     # make sure that import failures get reported, instead of skipping the tests.
-    import pycuda.autoinit
+    import pycuda.autoinit  # noqa
 
     import sys
     if len(sys.argv) > 1:
