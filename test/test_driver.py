@@ -1,7 +1,7 @@
 from __future__ import division
 import numpy as np
 import numpy.linalg as la
-from pycuda.tools import mark_cuda_test
+import pytest
 
 
 def have_pycuda():
@@ -21,13 +21,13 @@ if have_pycuda():
 class TestDriver:
     disabled = not have_pycuda()
 
-    @mark_cuda_test
+    @pytest.mark.cuda
     def test_memory(self):
         z = np.random.randn(400).astype(np.float32)
         new_z = drv.from_device_like(drv.to_device(z), z)
         assert la.norm(new_z-z) == 0
 
-    @mark_cuda_test
+    @pytest.mark.cuda
     def test_simple_kernel(self):
         mod = SourceModule("""
         __global__ void multiply_them(float *dest, float *a, float *b)
@@ -48,7 +48,7 @@ class TestDriver:
                 block=(400, 1, 1))
         assert la.norm(dest-a*b) == 0
 
-    @mark_cuda_test
+    @pytest.mark.cuda
     def test_simple_kernel_2(self):
         mod = SourceModule("""
         __global__ void multiply_them(float *dest, float *a, float *b)
@@ -80,7 +80,7 @@ class TestDriver:
 
         assert la.norm((dest[:-1]-a[1:]*b[:-1])) == 0
 
-    @mark_cuda_test
+    @pytest.mark.cuda
     def test_vector_types(self):
         mod = SourceModule("""
         __global__ void set_them(float3 *dest, float3 x)
@@ -97,7 +97,7 @@ class TestDriver:
         set_them(drv.Out(dest), a, block=(400,1,1))
         assert (dest == a).all()
 
-    @mark_cuda_test
+    @pytest.mark.cuda
     def test_streamed_kernel(self):
         # this differs from the "simple_kernel" case in that *all* computation
         # and data copying is asynchronous. Observe how this necessitates the
@@ -139,7 +139,7 @@ class TestDriver:
 
         assert la.norm(dest-a*b) == 0
 
-    @mark_cuda_test
+    @pytest.mark.cuda
     def test_gpuarray(self):
         a = np.arange(200000, dtype=np.float32)
         b = a + 17
@@ -152,7 +152,7 @@ class TestDriver:
         diff = ((a_g*b_g).get()-a*b)
         assert la.norm(diff) == 0
 
-    @mark_cuda_test
+    @pytest.mark.cuda
     def donottest_cublas_mixing(self):
         self.test_streamed_kernel()
 
@@ -165,7 +165,7 @@ class TestDriver:
 
         self.test_streamed_kernel()
 
-    @mark_cuda_test
+    @pytest.mark.cuda
     def test_2d_texture(self):
         mod = SourceModule("""
         texture<float, 2, cudaReadModeElementType> mtx_tex;
@@ -194,7 +194,7 @@ class TestDriver:
                 )
         assert la.norm(dest-a) == 0
 
-    @mark_cuda_test
+    @pytest.mark.cuda
     def test_multiple_2d_textures(self):
         mod = SourceModule("""
         texture<float, 2, cudaReadModeElementType> mtx_tex;
@@ -229,7 +229,7 @@ class TestDriver:
                 )
         assert la.norm(dest-a-b) < 1e-6
 
-    @mark_cuda_test
+    @pytest.mark.cuda
     def test_multichannel_2d_texture(self):
         mod = SourceModule("""
         #define CHANNELS 4
@@ -270,7 +270,7 @@ class TestDriver:
         #print dest
         assert la.norm(dest-reshaped_a) == 0
 
-    @mark_cuda_test
+    @pytest.mark.cuda
     def test_multichannel_linear_texture(self):
         mod = SourceModule("""
         #define CHANNELS 4
@@ -306,7 +306,7 @@ class TestDriver:
         #print dest
         assert la.norm(dest-a) == 0
 
-    @mark_cuda_test
+    @pytest.mark.cuda
     def test_large_smem(self):
         n = 4000
         mod = SourceModule("""
@@ -327,7 +327,7 @@ class TestDriver:
 
         kernel(arg, block=(1,1,1,), )
 
-    @mark_cuda_test
+    @pytest.mark.cuda
     def test_bitlog(self):
         from pycuda.tools import bitlog2
         assert bitlog2(17) == 4
@@ -335,7 +335,7 @@ class TestDriver:
         assert bitlog2(0x3affe) == 17
         assert bitlog2(0xcc3affe) == 27
 
-    @mark_cuda_test
+    @pytest.mark.cuda
     def test_mempool_2(self):
         from pycuda.tools import DeviceMemoryPool as DMP
         from random import randrange
@@ -349,7 +349,7 @@ class TestDriver:
             assert DMP.bin_number(asize) == bin_nr, s
             assert asize < asize*(1+1/8)
 
-    @mark_cuda_test
+    @pytest.mark.cuda
     def test_mempool(self):
         from pycuda.tools import bitlog2
         from pycuda.tools import DeviceMemoryPool
@@ -369,7 +369,7 @@ class TestDriver:
         del queue
         pool.stop_holding()
 
-    @mark_cuda_test
+    @pytest.mark.cuda
     def test_multi_context(self):
         if drv.get_version() < (2,0,0):
             return
@@ -385,7 +385,7 @@ class TestDriver:
         del mem_b
         ctx2.detach()
 
-    @mark_cuda_test
+    @pytest.mark.cuda
     def test_3d_texture(self):
         # adapted from code by Nicolas Pinto
         w = 2
@@ -441,7 +441,7 @@ class TestDriver:
         copy_texture(drv.Out(dest), block=shape, texrefs=[mtx_tex])
         assert la.norm(dest-a) == 0
 
-    @mark_cuda_test
+    @pytest.mark.cuda
     def test_prepared_invocation(self):
         a = np.random.randn(4,4).astype(np.float32)
         a_gpu = drv.mem_alloc(a.size * a.dtype.itemsize)
@@ -472,7 +472,7 @@ class TestDriver:
         drv.memcpy_dtoh(a_quadrupled, a_gpu)
         assert la.norm(a_quadrupled[1:]-4*a[1:]) == 0
 
-    @mark_cuda_test
+    @pytest.mark.cuda
     def test_prepared_with_vector(self):
         cuda_source = r'''
         __global__ void cuda_function(float3 input)
@@ -490,7 +490,7 @@ class TestDriver:
         kernel.prepared_call((1, 1, 1), (1, 1, 1),
                 gpuarray.vec.make_float3(0.0, 1.0, 2.0))
 
-    @mark_cuda_test
+    @pytest.mark.cuda
     def test_fp_textures(self):
         if drv.Context.get_device().compute_capability() < (1, 3):
             return
@@ -528,7 +528,7 @@ class TestDriver:
 
             assert la.norm(dest-a) == 0
 
-    @mark_cuda_test
+    @pytest.mark.cuda
     def test_constant_memory(self):
         # contributed by Andrew Wagner
 
@@ -558,7 +558,7 @@ class TestDriver:
 
         assert (host_result_array == host_array).all
 
-    @mark_cuda_test
+    @pytest.mark.cuda
     def test_register_host_memory(self):
         if drv.get_version() < (4,):
             from py.test import skip
@@ -572,7 +572,9 @@ class TestDriver:
         a = drv.aligned_empty((2**20,), np.float64, alignment=4096)
         drv.register_host_memory(a)
 
-    @mark_cuda_test
+    @pytest.mark.cuda
+    # https://github.com/inducer/pycuda/issues/45
+    @pytest.mark.xfail
     def test_recursive_launch(self):
         # Test contributed by Aditya Avinash Atluri
 
