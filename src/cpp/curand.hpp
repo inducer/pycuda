@@ -46,12 +46,14 @@ namespace pycuda { namespace curandom {
   void py_curand_get_direction_vectors(
       curandDirectionVectorSet_t set, py::object dst, int count)
   {
-    void *buf;
-    PYCUDA_BUFFER_SIZE_T len;
     int n = 0;
 
-    if (PyObject_AsWriteBuffer(dst.ptr(), &buf, &len))
-      throw py::error_already_set();
+    py_buffer_wrapper buf_wrapper;
+    buf_wrapper.get(dst.ptr(), PyBUF_ANY_CONTIGUOUS | PyBUF_WRITABLE);
+
+    void *buf = buf_wrapper.m_buf.buf;
+    PYCUDA_BUFFER_SIZE_T len = buf_wrapper.m_buf.len;
+
     if (CURAND_DIRECTION_VECTORS_32_JOEKUO6 == set
 #if CUDAPP_CUDA_VERSION >= 4000
       || CURAND_SCRAMBLED_DIRECTION_VECTORS_32_JOEKUO6 == set
@@ -85,12 +87,14 @@ namespace pycuda { namespace curandom {
 #if CUDAPP_CUDA_VERSION >= 4000
   void py_curand_get_scramble_constants32(py::object dst, int count)
   {
-    void *buf;
-    PYCUDA_BUFFER_SIZE_T len;
     int n = 0;
 
-    if (PyObject_AsWriteBuffer(dst.ptr(), &buf, &len))
-      throw py::error_already_set();
+    py_buffer_wrapper buf_wrapper;
+    buf_wrapper.get(dst.ptr(), PyBUF_ANY_CONTIGUOUS | PyBUF_WRITABLE);
+
+    void *buf = buf_wrapper.m_buf.buf;
+    PYCUDA_BUFFER_SIZE_T len = buf_wrapper.m_buf.len;
+
     unsigned int *vectors;
     CURAND_CALL_GUARDED(curandGetScrambleConstants32, (&vectors));
 // Documentation does not mention number of dimensions
@@ -105,12 +109,14 @@ namespace pycuda { namespace curandom {
 
   void py_curand_get_scramble_constants64(py::object dst, int count)
   {
-    void *buf;
-    PYCUDA_BUFFER_SIZE_T len;
     int n = 0;
 
-    if (PyObject_AsWriteBuffer(dst.ptr(), &buf, &len))
-      throw py::error_already_set();
+    py_buffer_wrapper buf_wrapper;
+    buf_wrapper.get(dst.ptr(), PyBUF_ANY_CONTIGUOUS | PyBUF_WRITABLE);
+
+    void *buf = buf_wrapper.m_buf.buf;
+    PYCUDA_BUFFER_SIZE_T len = buf_wrapper.m_buf.len;
+
     unsigned long long *vectors;
     CURAND_CALL_GUARDED(curandGetScrambleConstants64, (&vectors));
 // Documentation does not mention number of dimensions

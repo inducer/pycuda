@@ -9,6 +9,8 @@
 
 
 
+// {{{ includes, configuration
+
 #include <cuda.h>
 
 #ifdef CUDAPP_PRETEND_CUDA_VERSION
@@ -43,7 +45,7 @@
 #endif
 
 // MAYBE? cuMemcpy, cuPointerGetAttribute
-// TODO: cuCtxSetCurrent, cuCtxGetCurrent 
+// TODO: cuCtxSetCurrent, cuCtxGetCurrent
 // (use once the old, deprecated functions have been removed from CUDA)
 
 
@@ -61,16 +63,16 @@
 
 
 
+#if (PY_VERSION_HEX < 0x02060000)
+  #error PyCUDA does not support Python 2 versions earlier than 2.6.
+#endif
 #if (PY_VERSION_HEX >= 0x03000000) && (PY_VERSION_HEX < 0x03030000)
   #error PyCUDA does not support Python 3 versions earlier than 3.3.
 #endif
 
-#if PY_VERSION_HEX >= 0x02050000
-  typedef Py_ssize_t PYCUDA_BUFFER_SIZE_T;
-#else
-  typedef int PYCUDA_BUFFER_SIZE_T;
-#endif
+typedef Py_ssize_t PYCUDA_BUFFER_SIZE_T;
 
+// }}}
 
 
 #define PYCUDA_PARSE_STREAM_PY \
@@ -181,11 +183,11 @@ namespace pycuda
 #if CUDAPP_CUDA_VERSION >= 3020
         size_t
 #else
-        unsigned int 
+        unsigned int
 #endif
         pycuda_size_t;
 
-  typedef 
+  typedef
 #if defined(_WIN32) && defined(_WIN64)
     long long
 #else
@@ -353,6 +355,38 @@ namespace pycuda
   };
 
   // }}}
+
+  // {{{ buffer interface helper
+
+  class py_buffer_wrapper : public boost::noncopyable
+  {
+    private:
+      bool m_initialized;
+
+    public:
+      Py_buffer m_buf;
+
+      py_buffer_wrapper()
+        : m_initialized(false)
+      {}
+
+      void get(PyObject *obj, int flags)
+      {
+        if (PyObject_GetBuffer(obj, &m_buf, flags))
+          throw py::error_already_set();
+
+        m_initialized = true;
+      }
+
+      virtual ~py_buffer_wrapper()
+      {
+        if (m_initialized)
+          PyBuffer_Release(&m_buf);
+      }
+  };
+
+  // }}}
+
 
   // {{{ version query ------------------------------------------------------------
 #if CUDAPP_CUDA_VERSION >= 2020
@@ -1375,20 +1409,18 @@ namespace pycuda
 
         PYCUDA_PARSE_STREAM_PY;
 
-        const void *par_buf;
-        PYCUDA_BUFFER_SIZE_T py_par_len;
-        if (PyObject_AsReadBuffer(parameter_buffer.ptr(), &par_buf, &py_par_len))
-          throw py::error_already_set();
-        size_t par_len = py_par_len;
+        py_buffer_wrapper par_buf_wrapper;
+        par_buf_wrapper.get(parameter_buffer.ptr(), PyBUF_ANY_CONTIGUOUS);
+        size_t par_len = par_buf_wrapper.m_buf.len;
 
         void *config[] = {
-          CU_LAUNCH_PARAM_BUFFER_POINTER, const_cast<void *>(par_buf),
+          CU_LAUNCH_PARAM_BUFFER_POINTER, const_cast<void *>(par_buf_wrapper.m_buf.buf),
           CU_LAUNCH_PARAM_BUFFER_SIZE, &par_len,
           CU_LAUNCH_PARAM_END
         };
 
         CUDAPP_CALL_GUARDED(
-            cuLaunchKernel, (m_function, 
+            cuLaunchKernel, (m_function,
               grid_dim[0], grid_dim[1], grid_dim[2],
               block_dim[0], block_dim[1], block_dim[2],
               shared_mem_bytes, s_handle, 0, config
@@ -1633,9 +1665,9 @@ namespace pycuda
     void set_src_host(py::object buf_py) \
     { \
       srcMemoryType = CU_MEMORYTYPE_HOST; \
-      PYCUDA_BUFFER_SIZE_T len; \
-      if (PyObject_AsReadBuffer(buf_py.ptr(), &srcHost, &len)) \
-        throw py::error_already_set(); \
+      py_buffer_wrapper buf_wrapper; \
+      buf_wrapper.get(buf_py.ptr(), PyBUF_ANY_CONTIGUOUS); \
+      srcHost = buf_wrapper.m_buf.buf; \
     } \
     \
     void set_src_array(array const &ary)  \
@@ -1653,9 +1685,9 @@ namespace pycuda
     void set_dst_host(py::object buf_py) \
     { \
       dstMemoryType = CU_MEMORYTYPE_HOST; \
-      PYCUDA_BUFFER_SIZE_T len; \
-      if (PyObject_AsWriteBuffer(buf_py.ptr(), &dstHost, &len)) \
-        throw py::error_already_set(); \
+      py_buffer_wrapper buf_wrapper; \
+      buf_wrapper.get(buf_py.ptr(), PyBUF_ANY_CONTIGUOUS | PyBUF_WRITABLE); \
+      dstHost = buf_wrapper.m_buf.buf; \
     } \
     \
     void set_dst_array(array const &ary) \
@@ -1675,17 +1707,17 @@ namespace pycuda
     void set_src_unified(py::object buf_py) \
     { \
       srcMemoryType = CU_MEMORYTYPE_UNIFIED; \
-      PYCUDA_BUFFER_SIZE_T len; \
-      if (PyObject_AsReadBuffer(buf_py.ptr(), &srcHost, &len)) \
-        throw py::error_already_set(); \
+      py_buffer_wrapper buf_wrapper; \
+      buf_wrapper.get(buf_py.ptr(), PyBUF_ANY_CONTIGUOUS); \
+      srcHost = buf_wrapper.m_buf.buf; \
     } \
     \
     void set_dst_unified(py::object buf_py) \
     { \
       dstMemoryType = CU_MEMORYTYPE_UNIFIED; \
-      PYCUDA_BUFFER_SIZE_T len; \
-      if (PyObject_AsWriteBuffer(buf_py.ptr(), &dstHost, &len)) \
-        throw py::error_already_set(); \
+      py_buffer_wrapper buf_wrapper; \
+      buf_wrapper.get(buf_py.ptr(), PyBUF_ANY_CONTIGUOUS | PyBUF_WRITABLE); \
+      dstHost = buf_wrapper.m_buf.buf; \
     }
 #else
 #define MEMCPY_SETTERS_UNIFIED /* empty */
@@ -2001,7 +2033,7 @@ namespace pycuda
       py::object m_base;
 
     public:
-      registered_host_memory(void *p, size_t bytes, unsigned int flags=0, 
+      registered_host_memory(void *p, size_t bytes, unsigned int flags=0,
           py::object base=py::object())
         : host_pointer(mem_host_register(p, bytes, flags)), m_base(base)
       {

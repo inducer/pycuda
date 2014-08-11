@@ -150,12 +150,11 @@ namespace
 
   void py_memcpy_htod(CUdeviceptr dst, py::object src)
   {
-    const void *buf;
-    PYCUDA_BUFFER_SIZE_T len;
-    if (PyObject_AsReadBuffer(src.ptr(), &buf, &len))
-      throw py::error_already_set();
+    py_buffer_wrapper buf_wrapper;
+    buf_wrapper.get(src.ptr(), PyBUF_ANY_CONTIGUOUS);
 
-    CUDAPP_CALL_GUARDED_THREADED(cuMemcpyHtoD, (dst, buf, len));
+    CUDAPP_CALL_GUARDED_THREADED(cuMemcpyHtoD,
+        (dst, buf_wrapper.m_buf.buf, buf_wrapper.m_buf.len));
   }
 
 
@@ -163,14 +162,13 @@ namespace
 
   void py_memcpy_htod_async(CUdeviceptr dst, py::object src, py::object stream_py)
   {
-    const void *buf;
-    PYCUDA_BUFFER_SIZE_T len;
-    if (PyObject_AsReadBuffer(src.ptr(), &buf, &len))
-      throw py::error_already_set();
+    py_buffer_wrapper buf_wrapper;
+    buf_wrapper.get(src.ptr(), PyBUF_ANY_CONTIGUOUS);
 
     PYCUDA_PARSE_STREAM_PY;
 
-    CUDAPP_CALL_GUARDED_THREADED(cuMemcpyHtoDAsync, (dst, buf, len, s_handle));
+    CUDAPP_CALL_GUARDED_THREADED(cuMemcpyHtoDAsync,
+        (dst, buf_wrapper.m_buf.buf, buf_wrapper.m_buf.len, s_handle));
   }
 
 
@@ -178,12 +176,11 @@ namespace
 
   void py_memcpy_dtoh(py::object dest, CUdeviceptr src)
   {
-    void *buf;
-    PYCUDA_BUFFER_SIZE_T len;
-    if (PyObject_AsWriteBuffer(dest.ptr(), &buf, &len))
-      throw py::error_already_set();
+    py_buffer_wrapper buf_wrapper;
+    buf_wrapper.get(dest.ptr(), PyBUF_ANY_CONTIGUOUS | PyBUF_WRITABLE);
 
-    CUDAPP_CALL_GUARDED_THREADED(cuMemcpyDtoH, (buf, src, len));
+    CUDAPP_CALL_GUARDED_THREADED(cuMemcpyDtoH,
+        (buf_wrapper.m_buf.buf, src, buf_wrapper.m_buf.len));
   }
 
 
@@ -191,14 +188,13 @@ namespace
 
   void py_memcpy_dtoh_async(py::object dest, CUdeviceptr src, py::object stream_py)
   {
-    void *buf;
-    PYCUDA_BUFFER_SIZE_T len;
-    if (PyObject_AsWriteBuffer(dest.ptr(), &buf, &len))
-      throw py::error_already_set();
+    py_buffer_wrapper buf_wrapper;
+    buf_wrapper.get(dest.ptr(), PyBUF_ANY_CONTIGUOUS | PyBUF_WRITABLE);
 
     PYCUDA_PARSE_STREAM_PY;
 
-    CUDAPP_CALL_GUARDED_THREADED(cuMemcpyDtoHAsync, (buf, src, len, s_handle));
+    CUDAPP_CALL_GUARDED_THREADED(cuMemcpyDtoHAsync,
+        (buf_wrapper.m_buf.buf, src, buf_wrapper.m_buf.len, s_handle));
   }
 
 
@@ -206,12 +202,11 @@ namespace
 
   void py_memcpy_htoa(array const &ary, unsigned int index, py::object src)
   {
-    const void *buf;
-    PYCUDA_BUFFER_SIZE_T len;
-    if (PyObject_AsReadBuffer(src.ptr(), &buf, &len))
-      throw py::error_already_set();
+    py_buffer_wrapper buf_wrapper;
+    buf_wrapper.get(src.ptr(), PyBUF_ANY_CONTIGUOUS);
 
-    CUDAPP_CALL_GUARDED_THREADED(cuMemcpyHtoA, (ary.handle(), index, buf, len));
+    CUDAPP_CALL_GUARDED_THREADED(cuMemcpyHtoA,
+        (ary.handle(), index, buf_wrapper.m_buf.buf, buf_wrapper.m_buf.len));
   }
 
 
@@ -219,12 +214,11 @@ namespace
 
   void py_memcpy_atoh(py::object dest, array const &ary, unsigned int index)
   {
-    void *buf;
-    PYCUDA_BUFFER_SIZE_T len;
-    if (PyObject_AsWriteBuffer(dest.ptr(), &buf, &len))
-      throw py::error_already_set();
+    py_buffer_wrapper buf_wrapper;
+    buf_wrapper.get(dest.ptr(), PyBUF_ANY_CONTIGUOUS | PyBUF_WRITABLE);
 
-    CUDAPP_CALL_GUARDED_THREADED(cuMemcpyAtoH, (buf, ary.handle(), index, len));
+    CUDAPP_CALL_GUARDED_THREADED(cuMemcpyAtoH, 
+        (buf_wrapper.m_buf.buf, ary.handle(), index, buf_wrapper.m_buf.len));
   }
 
 
@@ -298,11 +292,13 @@ namespace
 
   void function_param_setv(function &f, int offset, py::object buffer)
   {
-    const void *buf;
-    PYCUDA_BUFFER_SIZE_T len;
-    if (PyObject_AsReadBuffer(buffer.ptr(), &buf, &len))
-      throw py::error_already_set();
-    f.param_setv(offset, const_cast<void *>(buf), len);
+    py_buffer_wrapper buf_wrapper;
+    buf_wrapper.get(buffer.ptr(), PyBUF_ANY_CONTIGUOUS);
+
+    f.param_setv(
+        offset,
+        const_cast<void *>(buf_wrapper.m_buf.buf),
+        buf_wrapper.m_buf.len);
   }
 
 
