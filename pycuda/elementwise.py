@@ -451,8 +451,18 @@ def get_binary_func_kernel(func, dtype_x, dtype_y, dtype_z):
             "z[i] = %s(x[i], y[i])" % func,
             func+"_kernel")
 
+@context_dependent_memoize
+def get_binary_func_scalar_kernel(func, dtype_x, dtype_y, dtype_z):
+    return get_elwise_kernel(
+            "%(tp_x)s *x, %(tp_y)s y, %(tp_z)s *z" % {
+                "tp_x": dtype_to_ctype(dtype_x),
+                "tp_y": dtype_to_ctype(dtype_y),
+                "tp_z": dtype_to_ctype(dtype_z),
+                },
+            "z[i] = %s(x[i], y)" % func,
+            func+"_kernel")
 
-def get_binary_minmax_kernel(func, dtype_x, dtype_y, dtype_z):
+def get_binary_minmax_kernel(func, dtype_x, dtype_y, dtype_z, use_scalar):
     if not np.float64 in [dtype_x, dtype_y]:
         func = func + "f"
 
@@ -460,7 +470,10 @@ def get_binary_minmax_kernel(func, dtype_x, dtype_y, dtype_z):
     if any(dt.kind == "f" for dt in [dtype_x, dtype_y, dtype_z]):
         func = "f"+func
 
-    return get_binary_func_kernel(func, dtype_x, dtype_y, dtype_z)
+    if use_scalar:
+        return get_binary_func_scalar_kernel(func, dtype_x, dtype_y, dtype_z)
+    else:
+        return get_binary_func_kernel(func, dtype_x, dtype_y, dtype_z)
 
 
 @context_dependent_memoize
