@@ -1243,15 +1243,29 @@ def if_positive(criterion, then_, else_, out=None, stream=None):
 
 def _make_binary_minmax_func(which):
     def f(a, b, out=None, stream=None):
-        if out is None:
-            out = empty_like(a)
+        if isinstance(a, GPUArray) and isinstance(b, GPUArray):
+            if out is None:
+                out = empty_like(a)
+            func = elementwise.get_binary_minmax_kernel(which,
+                    a.dtype, b.dtype, out.dtype, use_scalar=False)
 
-        func = elementwise.get_binary_minmax_kernel(which,
-                a.dtype, b.dtype, out.dtype)
-
-        func.prepared_async_call(a._grid, a._block, stream,
-                a.gpudata, b.gpudata, out.gpudata, a.size)
-
+            func.prepared_async_call(a._grid, a._block, stream,
+                    a.gpudata, b.gpudata, out.gpudata, a.size)
+        elif isinstance(a, GPUArray):
+            if out is None:
+                out = empty_like(a)
+            func = elementwise.get_binary_minmax_kernel(which,
+                    a.dtype, a.dtype, out.dtype, use_scalar=True)
+            func.prepared_async_call(a._grid, a._block, stream,
+                    a.gpudata, b, out.gpudata, a.size)
+        else:  # assuming b is a GPUArray
+            if out is None:
+                out = empty_like(b)
+            func = elementwise.get_binary_minmax_kernel(which,
+                    b.dtype, b.dtype, out.dtype, use_scalar=True)
+            # NOTE: we switch the order of a and b here!
+            func.prepared_async_call(b._grid, b._block, stream,
+                    b.gpudata, a, out.gpudata, b.size)
         return out
     return f
 

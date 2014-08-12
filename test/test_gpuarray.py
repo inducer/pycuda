@@ -859,7 +859,7 @@ class TestGPUArray:
     def test_scalar_comparisons(self):
         a = np.array([1.0, 0.25, 0.1, -0.1, 0.0])
         a_gpu = gpuarray.to_gpu(a)
-        
+
         x_gpu = a_gpu > 0.25
         x = (a > 0.25).astype(a.dtype)
         assert (x == x_gpu.get()).all()
@@ -876,7 +876,21 @@ class TestGPUArray:
         x = (a == 1).astype(a.dtype)
         assert (x == x_gpu.get()).all()
 
-        
+    @mark_cuda_test
+    def test_minimum_maximum_scalar(self):
+        from pycuda.curandom import rand as curand
+
+        l = 20
+        a_gpu = curand((l,))
+        a = a_gpu.get()
+
+        import pycuda.gpuarray as gpuarray
+
+        max_a0_gpu = gpuarray.maximum(a_gpu, 0)
+        min_a0_gpu = gpuarray.minimum(0, a_gpu)
+
+        assert la.norm(max_a0_gpu.get() - np.maximum(a, 0)) == 0
+        assert la.norm(min_a0_gpu.get() - np.minimum(0, a)) == 0
 
 
 if __name__ == "__main__":
