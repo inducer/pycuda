@@ -286,6 +286,7 @@ void pycuda_expose_tools()
       .DEF_SIMPLE_METHOD(free)
       .def("__int__", &cl::ptr)
       .def("__long__", pooled_device_allocation_to_long)
+      .def("__index__", pooled_device_allocation_to_long)
       .def("__len__", &cl::size)
       ;
 
