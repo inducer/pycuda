@@ -1739,7 +1739,7 @@ Code on the Device: Modules and Functions
 
         Make the :class:`TextureReference` texref available to the function.
 
-    .. method:: prepare(arg_types, block=None, shared=None, texrefs=[])
+    .. method:: prepare(arg_types, shared=None, texrefs=[])
 
         Prepare the invocation of this function by
 
@@ -1750,8 +1750,6 @@ Code on the Device: Modules and Functions
           (In addition, PyCUDA understands *'F'* and *'D'* for single- and
           double precision floating point numbers.)
 
-        * setting the thread block shape for this function to `block`.
-
         * Registering the texture references `texrefs` for use with this functions.
           The :class:`TextureReference` objects in `texrefs` will be retained,
           and whatever these references are bound to at invocation time will
@@ -1759,9 +1757,6 @@ Code on the Device: Modules and Functions
           kernel.
 
         Return `self`.
-
-        .. warning:: Passing *block* or *shared* not equal to *None* is
-            djprecated as of version 2011.1.
 
     .. method:: prepared_call(grid, block, *args, shared_size=0)
 
