@@ -127,9 +127,9 @@ def get_elwise_kernel_and_types(arguments, operation,
 
     if use_range:
         arguments.extend([
-            ScalarArg(np.uintp, "start"),
-            ScalarArg(np.uintp, "stop"),
-            ScalarArg(np.uintp, "step"),
+            ScalarArg(np.intp, "start"),
+            ScalarArg(np.intp, "stop"),
+            ScalarArg(np.intp, "step"),
             ])
     else:
         arguments.append(ScalarArg(np.uintp, "n"))
@@ -242,7 +242,7 @@ def get_take_kernel(dtype, idx_dtype, vec_count=1):
 
     args = [VectorArg(idx_dtype, "idx")] + [
             VectorArg(dtype, "dest"+str(i))for i in range(vec_count)] + [
-                ScalarArg(np.uintp, "n")
+                ScalarArg(np.intp, "n")
             ]
     preamble = "#include <pycuda-helpers.hpp>\n\n" + "\n".join(
         "texture <%s, 1, cudaReadModeElementType> tex_src%d;" % (ctx["tex_tp"], i)
@@ -273,11 +273,11 @@ def get_take_put_kernel(dtype, idx_dtype, with_offsets, vec_count=1):
                 VectorArg(idx_dtype, "gmem_src_idx"),
             ] + [
                 VectorArg(dtype, "dest%d" % i)
-                for i in range(vec_count)
+                    for i in range(vec_count)
             ] + [
                 ScalarArg(idx_dtype, "offset%d" % i)
-                for i in range(vec_count) if with_offsets
-            ] + [ScalarArg(np.uintp, "n")]
+                    for i in range(vec_count) if with_offsets
+            ] + [ScalarArg(np.intp, "n")]
 
     preamble = "#include <pycuda-helpers.hpp>\n\n" + "\n".join(
         "texture <%s, 1, cudaReadModeElementType> tex_src%d;" % (ctx["tex_tp"], i)
@@ -320,11 +320,11 @@ def get_put_kernel(dtype, idx_dtype, vec_count=1):
             VectorArg(idx_dtype, "gmem_dest_idx"),
             ] + [
                 VectorArg(dtype, "dest%d" % i)
-                for i in range(vec_count)
+                    for i in range(vec_count)
             ] + [
                 VectorArg(dtype, "src%d" % i)
-                for i in range(vec_count)
-            ] + [ScalarArg(np.uintp, "n")]
+                    for i in range(vec_count)
+            ] + [ScalarArg(np.intp, "n")]
 
     body = (
             "%(idx_tp)s dest_idx = gmem_dest_idx[i];\n" % ctx
@@ -451,7 +451,6 @@ def get_binary_func_kernel(func, dtype_x, dtype_y, dtype_z):
             "z[i] = %s(x[i], y[i])" % func,
             func+"_kernel")
 
-
 @context_dependent_memoize
 def get_binary_func_scalar_kernel(func, dtype_x, dtype_y, dtype_z):
     return get_elwise_kernel(
@@ -463,9 +462,8 @@ def get_binary_func_scalar_kernel(func, dtype_x, dtype_y, dtype_z):
             "z[i] = %s(x[i], y)" % func,
             func+"_kernel")
 
-
 def get_binary_minmax_kernel(func, dtype_x, dtype_y, dtype_z, use_scalar):
-    if np.float64 not in [dtype_x, dtype_y]:
+    if not np.float64 in [dtype_x, dtype_y]:
         func = func + "f"
 
     from pytools import any

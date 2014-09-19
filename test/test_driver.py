@@ -76,7 +76,7 @@ class TestDriver:
         # now try with offsets
         dest = np.zeros_like(a)
         multiply_them(
-                drv.Out(dest), np.uintp(a_gpu)+a.itemsize, b_gpu,
+                drv.Out(dest), np.intp(a_gpu)+a.itemsize, b_gpu,
                 block=(399, 1, 1))
 
         assert la.norm((dest[:-1]-a[1:]*b[:-1])) == 0
@@ -95,7 +95,7 @@ class TestDriver:
         a = gpuarray.vec.make_float3(1, 2, 3)
         dest = np.empty((400), gpuarray.vec.float3)
 
-        set_them(drv.Out(dest), a, block=(400, 1, 1))
+        set_them(drv.Out(dest), a, block=(400,1,1))
         assert (dest == a).all()
 
     @mark_cuda_test
@@ -217,15 +217,14 @@ class TestDriver:
         mtx_tex = mod.get_texref("mtx_tex")
         mtx2_tex = mod.get_texref("mtx2_tex")
 
-        shape = (3, 4)
+        shape = (3,4)
         a = np.random.randn(*shape).astype(np.float32)
         b = np.random.randn(*shape).astype(np.float32)
         drv.matrix_to_texref(a, mtx_tex, order="F")
         drv.matrix_to_texref(b, mtx2_tex, order="F")
 
         dest = np.zeros(shape, dtype=np.float32)
-        copy_texture(
-                drv.Out(dest),
+        copy_texture(drv.Out(dest),
                 block=shape+(1,),
                 texrefs=[mtx_tex, mtx2_tex]
                 )
@@ -268,8 +267,8 @@ class TestDriver:
                 texrefs=[mtx_tex]
                 )
         reshaped_a = a.transpose(1, 2, 0)
-        # print reshaped_a
-        # print dest
+        #print reshaped_a
+        #print dest
         assert la.norm(dest-reshaped_a) == 0
 
     @mark_cuda_test
@@ -300,13 +299,12 @@ class TestDriver:
         mtx_tex.set_format(drv.array_format.FLOAT, 4)
 
         dest = np.zeros(shape+(channels,), dtype=np.float32)
-        copy_texture(
-                drv.Out(dest),
+        copy_texture(drv.Out(dest),
                 block=shape+(1,),
                 texrefs=[mtx_tex]
                 )
-        # print a
-        # print dest
+        #print a
+        #print dest
         assert la.norm(dest-a) == 0
 
     @mark_cuda_test
@@ -328,7 +326,7 @@ class TestDriver:
         import pycuda.gpuarray as gpuarray
         arg = gpuarray.zeros((n,), dtype=np.float32)
 
-        kernel(arg, block=(1, 1, 1,), )
+        kernel(arg, block=(1,1,1,), )
 
     @mark_cuda_test
     def test_bitlog(self):
