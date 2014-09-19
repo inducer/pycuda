@@ -147,7 +147,7 @@ def _add_functionality():
                 format += "%ds" % arg.itemsize
             else:
                 try:
-                    gpudata = np.intp(arg.gpudata)
+                    gpudata = np.uintp(arg.gpudata)
                 except AttributeError:
                     raise TypeError("invalid type on parameter #%d (0-based)" % i)
                 else:
@@ -252,7 +252,7 @@ def _add_functionality():
             elif isinstance(arg_type, str):
                 func.arg_format += arg_type
             else:
-                func.arg_format += np.dtype(np.intp).char
+                func.arg_format += np.dtype(np.uintp).char
 
         from pycuda._pvt_struct import calcsize
         func._param_set_size(calcsize(func.arg_format))
@@ -432,7 +432,7 @@ def _add_functionality():
             elif isinstance(arg_type, str):
                 func.arg_format += arg_type
             else:
-                func.arg_format += np.dtype(np.intp).char
+                func.arg_format += np.dtype(np.uintp).char
 
         return func
 
