@@ -76,7 +76,7 @@ class TestDriver:
         # now try with offsets
         dest = np.zeros_like(a)
         multiply_them(
-                drv.Out(dest), np.uintp(a_gpu)+a.itemsize, b_gpu,
+                drv.Out(dest), np.intp(a_gpu)+a.itemsize, b_gpu,
                 block=(399, 1, 1))
 
         assert la.norm((dest[:-1]-a[1:]*b[:-1])) == 0
