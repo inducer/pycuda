@@ -273,10 +273,10 @@ def get_take_put_kernel(dtype, idx_dtype, with_offsets, vec_count=1):
                 VectorArg(idx_dtype, "gmem_src_idx"),
             ] + [
                 VectorArg(dtype, "dest%d" % i)
-                    for i in range(vec_count)
+                for i in range(vec_count)
             ] + [
                 ScalarArg(idx_dtype, "offset%d" % i)
-                    for i in range(vec_count) if with_offsets
+                for i in range(vec_count) if with_offsets
             ] + [ScalarArg(np.intp, "n")]
 
     preamble = "#include <pycuda-helpers.hpp>\n\n" + "\n".join(
@@ -320,10 +320,10 @@ def get_put_kernel(dtype, idx_dtype, vec_count=1):
             VectorArg(idx_dtype, "gmem_dest_idx"),
             ] + [
                 VectorArg(dtype, "dest%d" % i)
-                    for i in range(vec_count)
+                for i in range(vec_count)
             ] + [
                 VectorArg(dtype, "src%d" % i)
-                    for i in range(vec_count)
+                for i in range(vec_count)
             ] + [ScalarArg(np.intp, "n")]
 
     body = (
@@ -451,6 +451,7 @@ def get_binary_func_kernel(func, dtype_x, dtype_y, dtype_z):
             "z[i] = %s(x[i], y[i])" % func,
             func+"_kernel")
 
+
 @context_dependent_memoize
 def get_binary_func_scalar_kernel(func, dtype_x, dtype_y, dtype_z):
     return get_elwise_kernel(
@@ -462,8 +463,9 @@ def get_binary_func_scalar_kernel(func, dtype_x, dtype_y, dtype_z):
             "z[i] = %s(x[i], y)" % func,
             func+"_kernel")
 
+
 def get_binary_minmax_kernel(func, dtype_x, dtype_y, dtype_z, use_scalar):
-    if not np.float64 in [dtype_x, dtype_y]:
+    if np.float64 not in [dtype_x, dtype_y]:
         func = func + "f"
 
     from pytools import any
