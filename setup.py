@@ -26,7 +26,10 @@ def get_config_schema():
 
     nvcc_path = search_on_path(["nvcc", "nvcc.exe"])
     if nvcc_path is None:
+        print("***************************************************************")
         print("*** WARNING: nvcc not in path.")
+        print("*** May need to set CUDA_INC_DIR for installation to succeed.")
+        print("***************************************************************")
         cuda_root_default = None
     else:
         cuda_root_default = normpath(join(dirname(nvcc_path), ".."))
@@ -84,7 +87,7 @@ def main():
     LIBRARIES = (conf["BOOST_PYTHON_LIBNAME"] + conf["BOOST_THREAD_LIBNAME"]
             + conf["CUDADRV_LIBNAME"])
 
-    if not conf["CUDA_INC_DIR"]:
+    if not conf["CUDA_INC_DIR"] and conf["CUDA_ROOT"]:
         conf["CUDA_INC_DIR"] = [join(conf["CUDA_ROOT"], "include")]
 
     if conf["CUDA_TRACE"]:
@@ -93,7 +96,10 @@ def main():
     if conf["CUDA_PRETEND_VERSION"]:
         EXTRA_DEFINES["CUDAPP_PRETEND_CUDA_VERSION"] = conf["CUDA_PRETEND_VERSION"]
 
-    INCLUDE_DIRS = ['src/cpp'] + conf["BOOST_INC_DIR"] + conf["CUDA_INC_DIR"]
+    INCLUDE_DIRS = ['src/cpp'] + conf["BOOST_INC_DIR"]
+    if conf["CUDA_INC_DIR"]:
+        INCLUDE_DIRS += conf["CUDA_INC_DIR"]
+
     conf["USE_CUDA"] = True
 
     if 'darwin' in sys.platform and sys.maxsize == 2147483647:
