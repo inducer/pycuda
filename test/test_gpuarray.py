@@ -841,6 +841,52 @@ class TestGPUArray:
         assert minmax["cur_max"] == np.max(a)
 
     @mark_cuda_test
+    def test_sum_allocator(self):
+        import pycuda.tools
+        pool = pycuda.tools.DeviceMemoryPool()
+
+        rng = np.random.randint(low=512,high=1024)
+
+        a = gpuarray.arange(rng,dtype=np.int32)
+        b = gpuarray.sum(a)
+        c = gpuarray.sum(a, allocator=pool.allocate)
+
+        # Test that we get the correct results
+        assert b.get() == rng*(rng-1)//2
+        assert c.get() == rng*(rng-1)//2
+
+        # Test that result arrays were allocated with the appropriate allocator
+        assert b.allocator == a.allocator
+        assert c.allocator == pool.allocate
+
+    @mark_cuda_test
+    def test_dot_allocator(self):
+        import pycuda.tools
+        pool = pycuda.tools.DeviceMemoryPool()
+
+        a_cpu = np.random.randint(low=512,high=1024,size=1024)
+        b_cpu = np.random.randint(low=512,high=1024,size=1024)
+
+        # Compute the result on the CPU
+        dot_cpu_1 = np.dot(a_cpu, b_cpu)
+
+        a_gpu = gpuarray.to_gpu(a_cpu)
+        b_gpu = gpuarray.to_gpu(b_cpu)
+
+        # Compute the result on the GPU using different allocators
+        dot_gpu_1 = gpuarray.dot(a_gpu, b_gpu)
+        dot_gpu_2 = gpuarray.dot(a_gpu, b_gpu, allocator=pool.allocate)
+
+        # Test that we get the correct results
+        assert dot_cpu_1 == dot_gpu_1.get()
+        assert dot_cpu_1 == dot_gpu_2.get()
+
+        # Test that result arrays were allocated with the appropriate allocator
+        assert dot_gpu_1.allocator == a_gpu.allocator
+        assert dot_gpu_2.allocator == pool.allocate
+
+
+    @mark_cuda_test
     def test_view_and_strides(self):
         from pycuda.curandom import rand as curand
 

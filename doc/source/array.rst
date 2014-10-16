@@ -1079,7 +1079,7 @@ Custom Reductions
 
 .. module:: pycuda.reduction
 
-.. class:: ReductionKernel(dtype_out, neutral, reduce_expr, map_expr=None, arguments=None, name="reduce_kernel", keep=False, options=[], preamble="")
+.. class:: ReductionKernel(dtype_out, neutral, reduce_expr, map_expr=None, arguments=None, name="reduce_kernel", keep=False, options=[], preamble="", allocator=None)
 
     Generate a kernel that takes a number of scalar or vector *arguments*
     (at least one vector argument), performs the *map_expr* on each entry of

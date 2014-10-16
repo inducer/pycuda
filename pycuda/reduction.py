@@ -58,14 +58,9 @@ Consistent with 48 C.F.R.12.212 and 48 C.F.R. 227.7202-1 through
 source code with only those rights set forth herein.
 """
 
-
-
-
 from pycuda.tools import context_dependent_memoize
 from pycuda.tools import dtype_to_ctype
 import numpy as np
-
-
 
 
 def get_reduction_module(out_type, block_size,
@@ -257,6 +252,10 @@ class ReductionKernel:
             repr_vec = vectors[0]
             sz = repr_vec.size
 
+            allocator = kwargs.get("allocator", None)
+            if allocator is None:
+                allocator = repr_vec.allocator
+
             if sz <= self.block_size*SMALL_SEQ_COUNT*MAX_BLOCK_COUNT:
                 total_block_size = SMALL_SEQ_COUNT*self.block_size
                 block_count = (sz + total_block_size - 1) // total_block_size
@@ -267,13 +266,13 @@ class ReductionKernel:
                 seq_count = (sz + macroblock_size - 1) // macroblock_size
 
             if block_count == 1:
-                result = empty((), self.dtype_out, repr_vec.allocator)
+                result = empty((), self.dtype_out, allocator=allocator)
             else:
-                result = empty((block_count,), self.dtype_out, repr_vec.allocator)
+                result = empty((block_count,), self.dtype_out, allocator=allocator)
 
             kwargs = dict(shared_size=self.block_size*self.dtype_out.itemsize)
 
-            #print block_count, seq_count, self.block_size, sz
+            # print block_count, seq_count, self.block_size, sz
             f((block_count, 1), (self.block_size, 1, 1), stream,
                     *([result.gpudata]+invocation_args+[seq_count, sz]),
                     **kwargs)

@@ -98,7 +98,7 @@ def _splay_backend(n, dev):
         block_count = max_blocks
         threads_per_block = max_threads
 
-    #print "n:%d bc:%d tpb:%d" % (n, block_count, threads_per_block)
+    # print "n:%d bc:%d tpb:%d" % (n, block_count, threads_per_block)
     return (block_count, 1), (threads_per_block, 1, 1)
 
 
@@ -1278,30 +1278,30 @@ maximum = _make_binary_minmax_func("max")
 
 # {{{ reductions
 
-def sum(a, dtype=None, stream=None):
+def sum(a, dtype=None, stream=None, allocator=None):
     from pycuda.reduction import get_sum_kernel
     krnl = get_sum_kernel(dtype, a.dtype)
-    return krnl(a, stream=stream)
+    return krnl(a, stream=stream, allocator=allocator)
 
 
-def subset_sum(subset, a, dtype=None, stream=None):
+def subset_sum(subset, a, dtype=None, stream=None, allocator=None):
     from pycuda.reduction import get_subset_sum_kernel
     krnl = get_subset_sum_kernel(dtype, subset.dtype, a.dtype)
     return krnl(subset, a, stream=stream)
 
 
-def dot(a, b, dtype=None, stream=None):
+def dot(a, b, dtype=None, stream=None, allocator=None):
     from pycuda.reduction import get_dot_kernel
     if dtype is None:
         dtype = _get_common_dtype(a, b)
     krnl = get_dot_kernel(dtype, a.dtype, b.dtype)
-    return krnl(a, b, stream=stream)
+    return krnl(a, b, stream=stream, allocator=allocator)
 
 
-def subset_dot(subset, a, b, dtype=None, stream=None):
+def subset_dot(subset, a, b, dtype=None, stream=None, allocator=None):
     from pycuda.reduction import get_subset_dot_kernel
     krnl = get_subset_dot_kernel(dtype, subset.dtype, a.dtype, b.dtype)
-    return krnl(subset, a, b, stream=stream)
+    return krnl(subset, a, b, stream=stream, allocator=allocator)
 
 
 def _make_minmax_kernel(what):
