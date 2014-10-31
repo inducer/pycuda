@@ -117,7 +117,7 @@ The :class:`GPUArray` Array Class
 
         *ary* must have the same dtype and size (not necessarily shape) as *self*.
 
-    .. method :: get(ary=None, stream=None, pagelocked=False)
+    .. method :: get(ary=None, pagelocked=False)
 
         Transfer the contents of *self* into *ary* or a newly allocated
         :mod:`numpy.ndarray`. If *ary* is given, it must have the right
@@ -125,12 +125,12 @@ The :class:`GPUArray` Array Class
         a *pagelocked* specifies whether the new array is allocated
         page-locked.
 
-    .. method :: get_async(ary=None, stream=None)
+    .. method :: get_async(stream=None, ary=None)
 
         Transfer the contents of *self* into *ary* or a newly allocated
         :mod:`numpy.ndarray`. If *ary* is given, it must have the right
         size (not necessarily shape) and dtype. If it is not given,
-        a page-locked* array is newly allocated.
+        a *page-locked* array is newly allocated.
 
     .. method :: copy()
 
