@@ -208,13 +208,13 @@ def compile(source, nvcc="nvcc", options=None, keep=False,
 
     if cache_dir is None:
         from os.path import join
-        from tempfile import gettempdir
-        cache_dir = join(gettempdir(),
-                "pycuda-compiler-cache-v1-%s" % _get_per_user_string())
+        import appdirs
+        cache_dir = os.path.join(appdirs.user_cache_dir("pycuda", "pycuda"),
+                "compiler-cache-v1")
 
-        from os import mkdir
+        from os import makedirs
         try:
-            mkdir(cache_dir)
+            makedirs(cache_dir)
         except OSError, e:
             from errno import EEXIST
             if e.errno != EEXIST:
