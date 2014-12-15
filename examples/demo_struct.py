@@ -10,8 +10,10 @@ class DoubleOpStruct:
     def __init__(self, array, struct_arr_ptr):
         self.data = cuda.to_device(array)
         self.shape, self.dtype = array.shape, array.dtype
-        cuda.memcpy_htod(int(struct_arr_ptr), numpy.int32(array.size))
-        cuda.memcpy_htod(int(struct_arr_ptr) + 8, numpy.intp(int(self.data)))
+        cuda.memcpy_htod(int(struct_arr_ptr),
+                         numpy.getbuffer(numpy.int32(array.size)))
+        cuda.memcpy_htod(int(struct_arr_ptr) + 8,
+                         numpy.getbuffer(numpy.intp(int(self.data))))
 
     def __str__(self):
         return str(cuda.from_device(self.data, self.shape, self.dtype))
@@ -33,10 +35,10 @@ mod = SourceModule("""
     };
 
 
-    __global__ void double_array(DoubleOperation *a) 
+    __global__ void double_array(DoubleOperation *a)
     {
         a = a + blockIdx.x;
-        for (int idx = threadIdx.x; idx < a->datalen; idx += blockDim.x) 
+        for (int idx = threadIdx.x; idx < a->datalen; idx += blockDim.x)
         {
             float *a_ptr = a->ptr;
             a_ptr[idx] *= 2;
@@ -44,25 +46,35 @@ mod = SourceModule("""
     }
     """)
 func = mod.get_function("double_array")
-func(struct_arr, block = (32, 1, 1), grid=(2, 1))
+func(struct_arr, block=(32, 1, 1), grid=(2, 1))
 
 print "doubled arrays"
 print array1
 print array2
 
-func(numpy.intp(do2_ptr), block = (32, 1, 1), grid=(1, 1))
+func(numpy.intp(do2_ptr), block=(32, 1, 1), grid=(1, 1))
 print "doubled second only"
 print array1
 print array2
 
-func.prepare("P", block=(32, 1, 1))
-func.prepared_call((2, 1), struct_arr)
+if cuda.get_version() < (4, ):
+    func.prepare("P", block=(32, 1, 1))
+    func.prepared_call((2, 1), struct_arr)
+else:
+    func.prepare("P")
+    block = (32, 1, 1)
+    func.prepared_call((2, 1), block, struct_arr)
+
 
 print "doubled again"
 print array1
 print array2
 
-func.prepared_call((1, 1), do2_ptr)
+if cuda.get_version() < (4, 0):
+    func.prepared_call((1, 1), do2_ptr)
+else:
+    func.prepared_call((1, 1), block, do2_ptr)
+
 
 print "doubled second only again"
 print array1
