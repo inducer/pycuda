@@ -10,6 +10,12 @@ class DoubleOpStruct:
     def __init__(self, array, struct_arr_ptr):
         self.data = cuda.to_device(array)
         self.shape, self.dtype = array.shape, array.dtype
+        """
+        numpy.getbuffer() needed due to lack of new-style buffer interface for
+        scalar numpy arrays as of numpy version 1.9.1
+
+        see: https://github.com/inducer/pycuda/pull/60
+        """
         cuda.memcpy_htod(int(struct_arr_ptr),
                          numpy.getbuffer(numpy.int32(array.size)))
         cuda.memcpy_htod(int(struct_arr_ptr) + 8,
@@ -70,7 +76,7 @@ print "doubled again"
 print array1
 print array2
 
-if cuda.get_version() < (4, 0):
+if cuda.get_version() < (4, ):
     func.prepared_call((1, 1), do2_ptr)
 else:
     func.prepared_call((1, 1), block, do2_ptr)
