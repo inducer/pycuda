@@ -758,6 +758,18 @@ class TestGPUArray:
         a_gpu.reshape((4, 32))
         a_gpu.reshape([4, 32])
 
+        # using -1 as unknown dimension
+        assert a_gpu.reshape(-1, 32).shape == (4, 32)
+        assert a_gpu.reshape((32, -1)).shape == (32, 4)
+        assert a_gpu.reshape(((8, -1, 4))).shape == (8, 4, 4)
+
+        throws_exception = False
+        try:
+            a_gpu.reshape(-1, -1, 4)
+        except ValueError:
+            throws_exception = True
+        assert throws_exception
+
     @mark_cuda_test
     def test_view(self):
         a = np.arange(128).reshape(8, 16).astype(np.float32)
