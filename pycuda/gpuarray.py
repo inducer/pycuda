@@ -697,6 +697,15 @@ class GPUArray(object):
         if shape == self.shape:
             return self
 
+        if -1 in shape:
+            shape = list(shape)
+            idx = shape.index(-1)
+            size = -reduce(lambda x, y: x * y, shape, 1)
+            shape[idx] = self.size // size
+            if -1 in shape[idx:]:
+                raise ValueError("can only specify one unknown dimension")
+            shape = tuple(shape)
+
         size = reduce(lambda x, y: x * y, shape, 1)
         if size != self.size:
             raise ValueError("total size of new array must be unchanged")
