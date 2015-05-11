@@ -1624,7 +1624,6 @@ namespace pycuda
           {
             scoped_context_activation ca(get_context());
             CUDAPP_CALL_GUARDED_CLEANUP(cuIpcCloseMemHandle, (m_devptr));
-            mem_free(m_devptr);
           }
           CUDAPP_CATCH_CLEANUP_ON_DEAD_CONTEXT(ipc_mem_handle);
 
