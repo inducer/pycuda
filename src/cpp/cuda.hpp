@@ -240,6 +240,11 @@ namespace pycuda
 
       static const char *curesult_to_str(CUresult e)
       {
+#if CUDAPP_CUDA_VERSION >= 6000
+        const char* errstr;
+        cuGetErrorString(e, &errstr);
+        return errstr;
+#else
         switch (e)
         {
           case CUDA_SUCCESS: return "success";
@@ -337,6 +342,7 @@ namespace pycuda
 
           default: return "invalid/unknown error code";
         }
+#endif
       }
   };
 
