@@ -1238,7 +1238,7 @@ BOOST_PYTHON_MODULE(_driver)
       (py::args("dest", "data", "size"), py::arg("stream")=py::object()));
   py::def("memset_d16_async", py_memset_d16_async,
       (py::args("dest", "data", "size"), py::arg("stream")=py::object()));
-  py::def("memset_d32", py_memset_d32_async,
+  py::def("memset_d32_async", py_memset_d32_async,
       (py::args("dest", "data", "size"), py::arg("stream")=py::object()));
 
   py::def("memset_d2d8_async", py_memset_d2d8_async,
