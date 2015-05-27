@@ -146,6 +146,47 @@ namespace
 
   // }}}
 
+  // {{{ memory set async
+
+  void  py_memset_d8_async(CUdeviceptr dst, unsigned char uc, unsigned int n, py::object stream_py )
+  {
+      PYCUDA_PARSE_STREAM_PY;
+      CUDAPP_CALL_GUARDED_THREADED(cuMemsetD8Async, (dst, uc, n, s_handle));
+  }
+  void  py_memset_d16_async(CUdeviceptr dst, unsigned short us, unsigned int n, py::object stream_py )
+  {
+      PYCUDA_PARSE_STREAM_PY;
+      CUDAPP_CALL_GUARDED_THREADED(cuMemsetD16Async, (dst, us, n, s_handle));
+  }
+  void  py_memset_d32_async(CUdeviceptr dst, unsigned int ui, unsigned int n, py::object stream_py )
+  {
+      PYCUDA_PARSE_STREAM_PY;
+      CUDAPP_CALL_GUARDED_THREADED(cuMemsetD32Async, (dst, ui, n, s_handle));
+  }
+
+  void  py_memset_d2d8_async(CUdeviceptr dst, unsigned int dst_pitch,
+      unsigned char uc, unsigned int width, unsigned int height, py::object stream_py )
+  {
+      PYCUDA_PARSE_STREAM_PY;
+      CUDAPP_CALL_GUARDED_THREADED(cuMemsetD2D8Async, (dst, dst_pitch, uc, width, height, s_handle));
+  }
+
+  void  py_memset_d2d16_async(CUdeviceptr dst, unsigned int dst_pitch,
+      unsigned short us, unsigned int width, unsigned int height, py::object stream_py )
+  {
+      PYCUDA_PARSE_STREAM_PY;
+      CUDAPP_CALL_GUARDED_THREADED(cuMemsetD2D16Async, (dst, dst_pitch, us, width, height, s_handle));
+  }
+
+  void  py_memset_d2d32_async(CUdeviceptr dst, unsigned int dst_pitch,
+      unsigned int ui, unsigned int width, unsigned int height, py::object stream_py )
+  {
+      PYCUDA_PARSE_STREAM_PY;
+      CUDAPP_CALL_GUARDED_THREADED(cuMemsetD2D32Async, (dst, dst_pitch, ui, width, height, s_handle));
+  }
+
+  // }}}
+
   // {{{ memory copies
 
   void py_memcpy_htod(CUdeviceptr dst, py::object src)
@@ -1193,6 +1234,23 @@ BOOST_PYTHON_MODULE(_driver)
   py::def("memset_d2d32", py_memset_d2d32,
       py::args("dest", "pitch", "data", "width", "height"));
 
+  py::def("memset_d8_async",  py_memset_d8_async,
+      (py::args("dest", "data", "size"), py::arg("stream")=py::object()));
+  py::def("memset_d16_async", py_memset_d16_async,
+      (py::args("dest", "data", "size"), py::arg("stream")=py::object()));
+  py::def("memset_d32_async", py_memset_d32_async,
+      (py::args("dest", "data", "size"), py::arg("stream")=py::object()));
+
+  py::def("memset_d2d8_async", py_memset_d2d8_async,
+      (py::args("dest", "pitch", "data", "width", "height"),
+       py::arg("stream")=py::object()));
+  py::def("memset_d2d16_async", py_memset_d2d16_async,
+      (py::args("dest", "pitch", "data", "width", "height"),
+       py::arg("stream")=py::object()));
+  py::def("memset_d2d32_async", py_memset_d2d32_async,
+      (py::args("dest", "pitch", "data", "width", "height"),
+       py::arg("stream")=py::object()));
+
   py::def("memcpy_htod", py_memcpy_htod,
       (py::args("dest"), py::arg("src")));
   py::def("memcpy_htod_async", py_memcpy_htod_async,
@@ -1213,13 +1271,11 @@ BOOST_PYTHON_MODULE(_driver)
        py::arg("dest_context")=py::object(),
        py::arg("src_context")=py::object()));
 
-  /*
   py::def("memcpy_peer_async", py_memcpy_peer_async,
       (py::args("dest", "src", "size"),
        py::arg("dest_context")=py::object(),
        py::arg("src_context")=py::object(),
        py::arg("stream")=py::object()));
-       */
 #endif
 
   DEF_SIMPLE_FUNCTION_WITH_ARGS(memcpy_dtoa,
