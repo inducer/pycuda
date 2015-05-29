@@ -30,9 +30,9 @@ do2_ptr = int(struct_arr) + DoubleOpStruct.mem_size
 array1 = DoubleOpStruct(numpy.array([1, 2, 3], dtype=numpy.float32), struct_arr)
 array2 = DoubleOpStruct(numpy.array([0, 4], dtype=numpy.float32), do2_ptr)
 
-print "original arrays"
-print array1
-print array2
+print("original arrays")
+print(array1)
+print(array2)
 
 mod = SourceModule("""
     struct DoubleOperation {
@@ -54,14 +54,14 @@ mod = SourceModule("""
 func = mod.get_function("double_array")
 func(struct_arr, block=(32, 1, 1), grid=(2, 1))
 
-print "doubled arrays"
-print array1
-print array2
+print("doubled arrays")
+print(array1)
+print(array2)
 
 func(numpy.intp(do2_ptr), block=(32, 1, 1), grid=(1, 1))
-print "doubled second only"
-print array1
-print array2
+print("doubled second only")
+print(array1)
+print(array2)
 
 if cuda.get_version() < (4, ):
     func.prepare("P", block=(32, 1, 1))
@@ -72,9 +72,9 @@ else:
     func.prepared_call((2, 1), block, struct_arr)
 
 
-print "doubled again"
-print array1
-print array2
+print("doubled again")
+print(array1)
+print(array2)
 
 if cuda.get_version() < (4, ):
     func.prepared_call((1, 1), do2_ptr)
@@ -82,6 +82,6 @@ else:
     func.prepared_call((1, 1), block, do2_ptr)
 
 
-print "doubled second only again"
-print array1
-print array2
+print("doubled second only again")
+print(array1)
+print(array2)
