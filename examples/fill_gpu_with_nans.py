@@ -1,3 +1,4 @@
+from __future__ import print_function
 import pycuda.autoinit
 import pycuda.gpuarray as gpuarray
 import pycuda.driver as cuda
