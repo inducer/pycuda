@@ -1,7 +1,11 @@
 #! /usr/bin/env python
 
-import xmlrpc.client
-destwiki = xmlrpc.client.ServerProxy("http://wiki.tiker.net?action=xmlrpc2")
+try:
+    import xmlrpclib
+except:
+    import xmlrpc.client as xmlrpclib
+
+destwiki = xmlrpclib.ServerProxy("http://wiki.tiker.net?action=xmlrpc2")
 
 import os
 try:
