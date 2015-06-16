@@ -1,6 +1,10 @@
 """Elementwise functionality."""
 
 from __future__ import division
+from __future__ import absolute_import
+import six
+from six.moves import range
+from six.moves import zip
 
 __copyright__ = "Copyright (C) 2009 Andreas Kloeckner"
 
@@ -188,7 +192,7 @@ class ElementwiseKernel:
 
         if kwargs:
             raise TypeError("invalid keyword arguments specified: "
-                    + ", ".join(kwargs.iterkeys()))
+                    + ", ".join(six.iterkeys(kwargs)))
 
         invocation_args = []
         func, arguments = self.generate_stride_kernel_and_types(

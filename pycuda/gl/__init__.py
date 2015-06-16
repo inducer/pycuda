@@ -1,3 +1,4 @@
+from __future__ import absolute_import
 import pycuda._driver as _drv
 
 if not _drv.have_gl_ext(): 

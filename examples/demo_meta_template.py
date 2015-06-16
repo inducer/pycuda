@@ -1,3 +1,4 @@
+from __future__ import absolute_import
 import pycuda.driver as cuda
 import pycuda.autoinit
 import numpy

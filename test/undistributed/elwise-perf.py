@@ -1,8 +1,11 @@
+from __future__ import absolute_import
+from __future__ import print_function
 #! /usr/bin/env python
 import pycuda.driver as drv
 import pycuda.autoinit
 import numpy
 import numpy.linalg as la
+from six.moves import range
 
 
 
@@ -17,7 +20,7 @@ def main():
     # they're floats, i.e. 4 bytes each
     for power in range(10, 28):
         size = 1<<power
-        print size
+        print(size)
 
         a = gpuarray.empty((size,), dtype=numpy.float32)
         b = gpuarray.empty_like(a)
@@ -42,7 +45,7 @@ def main():
 
         tbl.add_row((a.nbytes/(1<<20), elapsed[0]/count, bytes/elapsed[0]/1e9))
 
-    print tbl
+    print(tbl)
         
 
 

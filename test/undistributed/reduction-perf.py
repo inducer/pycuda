@@ -1,8 +1,11 @@
 from __future__ import division
+from __future__ import absolute_import
+from __future__ import print_function
 import pycuda.autoinit
 import pycuda.gpuarray as gpuarray
 import pycuda.driver as cuda
 import numpy
+from six.moves import range
 
 
 
@@ -15,7 +18,7 @@ def main():
     for dtype_out in [numpy.float32, numpy.float64]:
         for ex in range(15,27):
             sz = 1 << ex
-            print sz
+            print(sz)
 
             from pycuda.curandom import rand as curand
             a_gpu = curand((sz,))
@@ -56,7 +59,7 @@ def main():
 
             tbl.add_row((str(dtype_out), a_gpu.nbytes/(1<<20), elapsed[0]/cnt, bytes/secs/1e9))
 
-    print tbl
+    print(tbl)
 
 if __name__ == "__main__":
     main()

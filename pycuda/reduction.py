@@ -1,6 +1,8 @@
 """Computation of reductions on vectors."""
 
 from __future__ import division
+from __future__ import absolute_import
+from six.moves import zip
 
 __copyright__ = "Copyright (C) 2009 Andreas Kloeckner"
 
@@ -227,7 +229,7 @@ class ReductionKernel:
 
         stream = kwargs.get("stream")
 
-        from gpuarray import empty
+        from .gpuarray import empty
 
         f = s1_func
         arg_types = self.stage1_arg_types

@@ -1,3 +1,5 @@
+from __future__ import absolute_import
+from __future__ import print_function
 from pytools import memoize
 # don't import pycuda.driver here--you'll create an import loop
 import sys
@@ -5,6 +7,7 @@ from tempfile import mkstemp
 from os import unlink
 
 from pytools.prefork import call_capture_output
+from six.moves import map
 
 
 @memoize
@@ -108,7 +111,7 @@ def compile_plain(source, options, keep, nvcc, cache_dir):
         options = options[:]
         options.append("--keep")
 
-        print "*** compiler output in %s" % file_dir
+        print("*** compiler output in %s" % file_dir)
 
     cmdline = [nvcc, "--cubin"] + options + [cu_file_name]
     result, stdout, stderr = call_capture_output(cmdline,
@@ -215,7 +218,7 @@ def compile(source, nvcc="nvcc", options=None, keep=False,
         from os import makedirs
         try:
             makedirs(cache_dir)
-        except OSError, e:
+        except OSError as e:
             from errno import EEXIST
             if e.errno != EEXIST:
                 raise

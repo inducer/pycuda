@@ -1,4 +1,5 @@
 from __future__ import division
+from __future__ import absolute_import
 import numpy as np
 import pycuda.elementwise as elementwise
 from pytools import memoize, memoize_method
@@ -10,6 +11,10 @@ from pycuda.compyte.array import (
         ArrayFlags as _ArrayFlags,
         get_common_dtype as _get_common_dtype_base)
 from pycuda.characterize import has_double_support
+import six
+from six.moves import range
+from six.moves import zip
+from functools import reduce
 
 
 def _get_common_dtype(obj1, obj2):
@@ -164,7 +169,7 @@ class GPUArray(object):
             for dim in shape:
                 s *= dim
         except TypeError:
-            assert isinstance(shape, (int, long, np.integer))
+            assert isinstance(shape, (int, int, np.integer))
             s = shape
             shape = (shape,)
 
@@ -1002,7 +1007,7 @@ def arange(*args, **kwargs):
         raise ValueError("too many arguments")
 
     admissible_names = ["start", "stop", "step", "dtype"]
-    for k, v in kwargs.iteritems():
+    for k, v in six.iteritems(kwargs):
         if k in admissible_names:
             if getattr(inf, k) is None:
                 setattr(inf, k, v)
@@ -1046,8 +1051,8 @@ def arange(*args, **kwargs):
 
 # {{{ pickle support
 
-import copy_reg
-copy_reg.pickle(GPUArray,
+import six.moves.copyreg
+six.moves.copyreg.pickle(GPUArray,
                 lambda data: (to_gpu, (data.get(),)),
                 to_gpu)
 

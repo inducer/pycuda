@@ -1,6 +1,9 @@
+from __future__ import absolute_import
+from __future__ import print_function
+import six
 try:
     from pycuda._driver import *  # noqa
-except ImportError, e:
+except ImportError as e:
     if "_v2" in str(e):
         from warnings import warn
         warn("Failed to import the CUDA driver interface, with an error "
@@ -50,8 +53,8 @@ class CompileError(Error):
         if self.command_line:
             try:
                 result += "\n[command: %s]" % (" ".join(self.command_line))
-            except Exception, e:
-                print e
+            except Exception as e:
+                print(e)
         if self.stdout:
             result += "\n[stdout:\n%s]" % self.stdout
         if self.stderr:
@@ -107,7 +110,7 @@ def _add_functionality():
 
             try:
                 att_value = dev.get_attribute(att_id)
-            except LogicError, e:
+            except LogicError as e:
                 from warnings import warn
                 warn("CUDA driver raised '%s' when querying '%s' on '%s'"
                         % (e, att_name, dev))
@@ -181,7 +184,7 @@ def _add_functionality():
         if kwargs:
             raise ValueError(
                     "extra keyword arguments: %s"
-                    % (",".join(kwargs.iterkeys())))
+                    % (",".join(six.iterkeys(kwargs))))
 
         if block is None:
             raise ValueError("must specify block size")
@@ -274,7 +277,7 @@ def _add_functionality():
 
         if kwargs:
             raise TypeError("unknown keyword arguments: "
-                    + ", ".join(kwargs.iterkeys()))
+                    + ", ".join(six.iterkeys(kwargs)))
 
         from pycuda._pvt_struct import pack
         func._param_setv(0, pack(func.arg_format, *args))
@@ -300,7 +303,7 @@ def _add_functionality():
 
         if kwargs:
             raise TypeError("unknown keyword arguments: "
-                    + ", ".join(kwargs.iterkeys()))
+                    + ", ".join(six.iterkeys(kwargs)))
 
         from pycuda._pvt_struct import pack
         func._param_setv(0, pack(func.arg_format, *args))
@@ -339,7 +342,7 @@ def _add_functionality():
 
         if kwargs:
             raise TypeError("unknown keyword arguments: "
-                    + ", ".join(kwargs.iterkeys()))
+                    + ", ".join(six.iterkeys(kwargs)))
 
         from pycuda._pvt_struct import pack
         func._param_setv(0, pack(func.arg_format, *args))
@@ -368,7 +371,7 @@ def _add_functionality():
         if kwargs:
             raise ValueError(
                     "extra keyword arguments: %s"
-                    % (",".join(kwargs.iterkeys())))
+                    % (",".join(six.iterkeys(kwargs))))
 
         if block is None:
             raise ValueError("must specify block size")
@@ -449,7 +452,7 @@ def _add_functionality():
 
         if kwargs:
             raise TypeError("unknown keyword arguments: "
-                    + ", ".join(kwargs.iterkeys()))
+                    + ", ".join(six.iterkeys(kwargs)))
 
         from pycuda._pvt_struct import pack
         arg_buf = pack(func.arg_format, *args)
@@ -463,7 +466,7 @@ def _add_functionality():
         shared_size = kwargs.pop("shared_size", 0)
         if kwargs:
             raise TypeError("unknown keyword arguments: "
-                    + ", ".join(kwargs.iterkeys()))
+                    + ", ".join(six.iterkeys(kwargs)))
 
         from pycuda._pvt_struct import pack
         arg_buf = pack(func.arg_format, *args)
@@ -499,7 +502,7 @@ def _add_functionality():
 
         if kwargs:
             raise TypeError("unknown keyword arguments: "
-                    + ", ".join(kwargs.iterkeys()))
+                    + ", ".join(six.iterkeys(kwargs)))
 
         from pycuda._pvt_struct import pack
         arg_buf = pack(func.arg_format, *args)

@@ -1,6 +1,10 @@
 """Miscallenous helper functionality."""
 
-from __future__ import division
+from __future__ import division, print_function
+from __future__ import absolute_import
+import six
+from six.moves import range
+from six.moves import input
 
 __copyright__ = "Copyright (C) 2008 Andreas Kloeckner"
 
@@ -33,8 +37,6 @@ import pycuda._driver as _drv
 import numpy as np
 
 
-
-
 bitlog2 = _drv.bitlog2
 DeviceMemoryPool = _drv.DeviceMemoryPool
 PageLockedMemoryPool = _drv.PageLockedMemoryPool
@@ -46,8 +48,6 @@ from pycuda.compyte.dtypes import (
 _fill_dtype_registry(respect_windows=True)
 get_or_register_dtype("pycuda::complex<float>", np.complex64)
 get_or_register_dtype("pycuda::complex<double>", np.complex128)
-
-
 
 
 # {{{ debug memory pool
@@ -77,28 +77,28 @@ class DebugMemoryPool(DeviceMemoryPool):
         description = self.describe(stack, size)
 
         histogram = {}
-        for bsize, descr in self.blocks.itervalues():
+        for bsize, descr in six.itervalues(self.blocks):
             histogram[bsize, descr] = histogram.get((bsize, descr), 0) + 1
 
         from pytools import common_prefix
         cpfx = common_prefix(descr for bsize, descr in histogram)
 
-        print >> self.logfile, \
-                "\n  Allocation of size %d occurring " \
-                "(mem: last_free:%d, free: %d, total:%d) (pool: held:%d, active:%d):" \
+        print(
+                "\n  Allocation of size %d occurring "
+                "(mem: last_free:%d, free: %d, total:%d) (pool: held:%d, active:%d):"
                 "\n      at: %s" % (
-                (size, self.last_free)
-                + cuda.mem_get_info()
-                + (self.held_blocks, self.active_blocks,
-                    description))
+                    (size, self.last_free) + cuda.mem_get_info()
+                    + (self.held_blocks, self.active_blocks,
+                    description)),
+                file=self.logfile)
 
-        hist_items = sorted(list(histogram.iteritems()))
+        hist_items = sorted(list(six.iteritems(histogram)))
         for (bsize, descr), count in hist_items:
-            print >> self.logfile, \
-                    "  %s (%d bytes): %dx" % (descr[len(cpfx):], bsize, count)
+            print("  %s (%d bytes): %dx" % (descr[len(cpfx):], bsize, count),
+                    file=self.logfile)
 
         if self.interactive:
-            raw_input("  [Enter]")
+            input("  [Enter]")
 
         result = DeviceMemoryPool.allocate(self, size)
         self.blocks[result] = size, description
@@ -112,9 +112,9 @@ class DebugMemoryPool(DeviceMemoryPool):
             try:
                 return self.stacktrace_mnemonics[stack, size]
             except KeyError:
-                print size, stack
+                print(size, stack)
                 while True:
-                    mnemonic = raw_input("Enter mnemonic or [Enter] for more info:")
+                    mnemonic = input("Enter mnemonic or [Enter] for more info:")
                     if mnemonic == '':
                         from traceback import print_stack
                         print_stack()
@@ -124,6 +124,7 @@ class DebugMemoryPool(DeviceMemoryPool):
                 return mnemonic
 
 # }}}
+
 
 # {{{ default device/context
 
@@ -149,11 +150,10 @@ def get_default_device(default=0):
     try:
         dev = int(dev)
     except TypeError:
-        raise TypeError("CUDA device number (CUDA_DEVICE or ~/.cuda-device) must be an integer")
+        raise TypeError("CUDA device number (CUDA_DEVICE or ~/.cuda-device) "
+                "must be an integer")
 
     return Device(dev)
-
-
 
 
 def make_default_context(ctx_maker=None):
@@ -193,7 +193,7 @@ def make_default_context(ctx_maker=None):
 
     # Otherwise, try to use any available device
     else:
-        for devn in xrange(ndevices):
+        for devn in range(ndevices):
             dev = cuda.Device(devn)
             try:
                 return ctx_maker(dev)
@@ -205,6 +205,7 @@ def make_default_context(ctx_maker=None):
 
 # }}}
 
+
 # {{{ rounding helpers
 
 def _exact_div(dividend, divisor):
@@ -212,12 +213,14 @@ def _exact_div(dividend, divisor):
     assert rem == 0
     return quot
 
+
 def _int_ceiling(value, multiple_of=1):
     """Round C{value} up to be a C{multiple_of} something."""
     # Mimicks the Excel "floor" function (for code stolen from occupancy calculator)
 
     from math import ceil
     return int(ceil(value/multiple_of))*multiple_of
+
 
 def _int_floor(value, multiple_of=1):
     """Round C{value} down to be a C{multiple_of} something."""
@@ -228,6 +231,7 @@ def _int_floor(value, multiple_of=1):
 
 # }}}
 
+
 # {{{ device data
 
 class DeviceData:
@@ -237,28 +241,31 @@ class DeviceData:
         if dev is None:
             dev = cuda.Context.get_device()
 
-        self.max_threads = dev.get_attribute(drv.device_attribute.MAX_THREADS_PER_BLOCK)
+        self.max_threads = dev.get_attribute(
+                drv.device_attribute.MAX_THREADS_PER_BLOCK)
         self.warp_size = dev.get_attribute(drv.device_attribute.WARP_SIZE)
 
-        if dev.compute_capability() >= (2,0):
+        if dev.compute_capability() >= (2, 0):
             self.warps_per_mp = 48
-        elif dev.compute_capability() >= (1,2):
+        elif dev.compute_capability() >= (1, 2):
             self.warps_per_mp = 32
         else:
             self.warps_per_mp = 24
 
         self.thread_blocks_per_mp = 8
-        self.registers = dev.get_attribute(drv.device_attribute.MAX_REGISTERS_PER_BLOCK)
-        self.shared_memory = dev.get_attribute(drv.device_attribute.MAX_SHARED_MEMORY_PER_BLOCK)
+        self.registers = dev.get_attribute(
+                drv.device_attribute.MAX_REGISTERS_PER_BLOCK)
+        self.shared_memory = dev.get_attribute(
+                drv.device_attribute.MAX_SHARED_MEMORY_PER_BLOCK)
 
-        if dev.compute_capability() >= (2,0):
+        if dev.compute_capability() >= (2, 0):
             self.smem_alloc_granularity = 128
             self.smem_granularity = 32
         else:
             self.smem_alloc_granularity = 512
             self.smem_granularity = 16
 
-        if dev.compute_capability() >= (2,0):
+        if dev.compute_capability() >= (2, 0):
             self.register_allocation_unit = "warp"
         else:
             self.register_allocation_unit = "block"
@@ -281,7 +288,7 @@ class DeviceData:
         elif word_size == 16:
             return 128
         else:
-            raise ValueError, "no alignment possible for fetches of size %d" % word_size
+            raise ValueError("no alignment possible for fetches of size %d" % word_size)
 
     def coalesce(self, thread_count):
         return _int_ceiling(thread_count, 16)
@@ -293,7 +300,7 @@ class DeviceData:
             if size <= vs:
                 return vs
 
-        raise ValueError, "could not enlarge argument to valid channel count"
+        raise ValueError("could not enlarge argument to valid channel count")
 
 # }}}
 

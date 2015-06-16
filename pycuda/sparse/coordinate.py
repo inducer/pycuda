@@ -1,4 +1,5 @@
 from __future__ import division
+from __future__ import absolute_import
 from pytools import memoize_method
 import pycuda.driver as drv
 import pycuda.gpuarray as gpuarray

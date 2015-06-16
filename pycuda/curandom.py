@@ -1,10 +1,12 @@
 from __future__ import division
+from __future__ import absolute_import
 
 import numpy as np
 import pycuda.compiler
 import pycuda.driver as drv
 import pycuda.gpuarray as array
 from pytools import memoize_method
+import six
 
 
 
@@ -473,7 +475,7 @@ class _RandomNumberGeneratorBase(object):
 
     def _kernels(self):
         return (
-                list(self.generators.itervalues())
+                list(six.itervalues(self.generators))
                 + [self.skip_ahead, self.skip_ahead_array])
 
     @property

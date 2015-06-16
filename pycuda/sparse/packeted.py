@@ -1,9 +1,12 @@
 from __future__ import division
+from __future__ import absolute_import
+from __future__ import print_function
 from pytools import memoize_method
 import pycuda.driver as drv
 import pycuda.gpuarray as gpuarray
 from pycuda.compiler import SourceModule
 import numpy as np
+from six.moves import range
 
 
 
@@ -145,9 +148,9 @@ class PacketedSpMV:
             if too_big:
                 old_block_count = self.block_count
                 self.block_count = int(2+1.05*self.block_count)
-                print ("Metis produced a big block at block count "
+                print(("Metis produced a big block at block count "
                         "%d--retrying with %d"
-                        % (old_block_count, self.block_count))
+                        % (old_block_count, self.block_count)))
                 continue
 
             break
@@ -176,7 +179,7 @@ class PacketedSpMV:
         max_thread_costs = np.max(thread_costs)
 
         # build data structure ------------------------------------------------
-        from pkt_build import build_pkt_data_structure
+        from .pkt_build import build_pkt_data_structure
         build_pkt_data_structure(self, packet_nr_to_dofs, max_thread_costs,
             old2new_fetch_indices, csr_mat, thread_count, thread_assignments,
             local_row_costs)
@@ -187,7 +190,7 @@ class PacketedSpMV:
         self.old2new_fetch_indices = gpuarray.to_gpu(
                 old2new_fetch_indices)
 
-        from coordinate import CoordinateSpMV
+        from .coordinate import CoordinateSpMV
         self.remaining_coo_gpu = CoordinateSpMV(
                 remaining_coo, dtype)
 
@@ -231,8 +234,8 @@ class PacketedSpMV:
         indices = csr_mat.indices
         data = csr_mat.data
 
-        for i in xrange(h):
-            for idx in xrange(iptr[i], iptr[i+1]):
+        for i in range(h):
+            for idx in range(iptr[i], iptr[i+1]):
                 j = indices[idx]
 
                 if dof_to_packet_nr[i] == dof_to_packet_nr[j]:
@@ -283,7 +286,7 @@ class PacketedSpMV:
             local_row_costs):
         # these arrays will likely be too long, but that's ok
 
-        from pkt_build import build_pkt_structure
+        from .pkt_build import build_pkt_structure
         build_pkt_structure(self, packet_nr_to_dofs, thread_assignments,
                 thread_starts, thread_ends, index_array, data_array)
 

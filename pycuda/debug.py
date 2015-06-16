@@ -1,3 +1,5 @@
+from __future__ import absolute_import
+from __future__ import print_function
 import pycuda.driver
 pycuda.driver.set_debugging()
 
@@ -17,9 +19,9 @@ if len(args) < 1:
 mainpyfile =  args[0]
 from os.path import exists
 if not exists(mainpyfile):
-    print 'Error:', mainpyfile, 'does not exist'
+    print('Error:', mainpyfile, 'does not exist')
     sys.exit(1)
 
 sys.argv = args
 
-execfile(mainpyfile)
+exec(compile(open(mainpyfile).read(), mainpyfile, 'exec'))

@@ -1,3 +1,4 @@
+from __future__ import absolute_import
 import pycuda.gpuarray as gpuarray
 import pycuda.autoinit
 import numpy

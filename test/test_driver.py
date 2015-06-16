@@ -1,8 +1,11 @@
 from __future__ import division
+from __future__ import absolute_import
+from __future__ import print_function
 import numpy as np
 import numpy.linalg as la
 from pycuda.tools import mark_cuda_test
 import pytest
+from six.moves import range
 
 
 def have_pycuda():

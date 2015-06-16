@@ -1,9 +1,12 @@
+from __future__ import absolute_import
+from __future__ import print_function
 #! /usr/bin/env python
 import numpy as np
 import numpy.linalg as la
 import sys
 from pycuda.tools import mark_cuda_test
 from pycuda.characterize import has_double_support
+from six.moves import range
 
 
 def have_pycuda():
@@ -613,7 +616,7 @@ class TestGPUArray:
         min_a_b_gpu = gpuarray.minimum(a_gpu, b_gpu)
 
         print (max_a_b_gpu)
-        print (np.maximum(a, b))
+        print((np.maximum(a, b)))
 
         assert la.norm(max_a_b_gpu.get() - np.maximum(a, b)) == 0
         assert la.norm(min_a_b_gpu.get() - np.minimum(a, b)) == 0
@@ -732,9 +735,9 @@ class TestGPUArray:
     def test_stride_preservation(self):
         A = np.random.rand(3, 3)
         AT = A.T
-        print (AT.flags.f_contiguous, AT.flags.c_contiguous)
+        print((AT.flags.f_contiguous, AT.flags.c_contiguous))
         AT_GPU = gpuarray.to_gpu(AT)
-        print (AT_GPU.flags.f_contiguous, AT_GPU.flags.c_contiguous)
+        print((AT_GPU.flags.f_contiguous, AT_GPU.flags.c_contiguous))
         assert np.allclose(AT_GPU.get(), AT)
 
     @mark_cuda_test

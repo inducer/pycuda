@@ -1,3 +1,5 @@
+from __future__ import absolute_import
+from __future__ import print_function
 import setuptools  # noqa
 from setuptools import Extension
 
@@ -220,7 +222,7 @@ def expand_value(v, options):
 
 def expand_options(options):
     return dict(
-            (k, expand_value(v, options)) for k, v in options.items())
+            (k, expand_value(v, options)) for k, v in list(options.items()))
 
 
 class ConfigSchema:
@@ -260,7 +262,7 @@ class ConfigSchema:
 
         exec(compile(contents, filename, "exec"), filevars)
 
-        for key, value in filevars.items():
+        for key, value in list(filevars.items()):
             if key in self.optdict:
                 result[key] = value
 
@@ -278,11 +280,11 @@ class ConfigSchema:
         if "__builtins__" in filevars:
             del filevars["__builtins__"]
 
-        for key, value in config.items():
+        for key, value in list(config.items()):
             if value is not None:
                 filevars[key] = value
 
-        keys = filevars.keys()
+        keys = list(filevars.keys())
         keys.sort()
 
         outf = open(filename, "w")
@@ -337,7 +339,7 @@ class ConfigSchema:
             filevars = {}
             exec(compile(open(cfile, "r").read(), cfile, "exec"), filevars)
 
-            for key, value in filevars.items():
+            for key, value in list(filevars.items()):
                 if key in self.optdict:
                     result[key] = value
                 elif key == "__builtins__":
@@ -516,7 +518,7 @@ def set_up_shipped_boost_if_requested(project_name, conf, source_path=None,
             print(DASH_SEPARATOR)
             print("The shipped Boost library was not found, but "
                     "USE_SHIPPED_BOOST is True.")
-            print("(The files should be under %s/.)" % source_path)
+            print(("(The files should be under %s/.)" % source_path))
             print(DASH_SEPARATOR)
             print("If you got this package from git, you probably want to do")
             print("")
@@ -616,7 +618,7 @@ def configure_frontend():
         print("*** I have detected that you have already run configure.")
         print("*** I'm taking the configured values as defaults for this")
         print("*** configure run. If you don't want this, delete the file")
-        print("*** %s." % schema.get_conf_file())
+        print(("*** %s." % schema.get_conf_file()))
         print("************************************************************")
 
     import sys
@@ -783,7 +785,7 @@ def check_git_submodules():
             print("")
             print("These issues were found:")
             for w in pkg_warnings:
-                print("  %s" % w)
+                print(("  %s" % w))
             print("")
             print("I will try to initialize the submodules for you "
                     "after a short wait.")

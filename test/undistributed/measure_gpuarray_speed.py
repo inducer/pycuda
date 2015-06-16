@@ -1,8 +1,12 @@
+from __future__ import absolute_import
+from __future__ import print_function
 #! /usr/bin/env python
 import pycuda.driver as drv
 import pycuda.autoinit
 import numpy
 import numpy.linalg as la
+from six.moves import range
+from six.moves import zip
 
 
 
@@ -21,7 +25,7 @@ def main():
     # they're floats, i.e. 4 bytes each
     for power in range(10, max_power):
         size = 1<<power
-        print size
+        print(size)
         sizes.append(size)
         a = gpuarray.zeros((size,), dtype=numpy.float32)
         b = gpuarray.zeros((size,), dtype=numpy.float32)
@@ -75,7 +79,7 @@ def main():
         "Time CPU","Size/Time CPU","GPU vs CPU speedup"))
     for s, t, f, t_cpu, f_cpu in zip(sizes, times_gpu, flops_gpu, times_cpu, flops_cpu):
         tbl.add_row((s, t, f, t_cpu, f_cpu, f/f_cpu))
-    print tbl
+    print(tbl)
 
 
 

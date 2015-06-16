@@ -1,3 +1,4 @@
+from __future__ import absolute_import
 # -*- coding: utf-8 -*-
 #
 # PyCUDA documentation build configuration file, created by
@@ -46,7 +47,7 @@ copyright = '2008, Andreas Kloeckner'
 #
 # The short X.Y version.
 ver_dic = {}
-execfile("../../pycuda/__init__.py", ver_dic)
+exec(compile(open("../../pycuda/__init__.py").read(), "../../pycuda/__init__.py", 'exec'), ver_dic)
 version = ".".join(str(x) for x in ver_dic["VERSION"])
 # The full version, including alpha/beta/rc tags.
 release = ver_dic["VERSION_TEXT"]

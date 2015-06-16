@@ -1,11 +1,12 @@
 #! /usr/bin/env python
 from __future__ import print_function
+from __future__ import absolute_import
 try:
-    import xmlrpclib
+    import six.moves.xmlrpc_client
 except:
     import xmlrpc.client as xmlrpclib
 
-destwiki = xmlrpclib.ServerProxy("http://wiki.tiker.net?action=xmlrpc2")
+destwiki = six.moves.xmlrpc_client.ServerProxy("http://wiki.tiker.net?action=xmlrpc2")
 
 import os
 try:
