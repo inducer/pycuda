@@ -66,8 +66,10 @@ def preprocess_source(source, options, nvcc):
     return stdout.decode("utf-8", "replace")
 
 
-def compile_plain(source, options, keep, nvcc, cache_dir):
+def compile_plain(source, options, keep, nvcc, cache_dir, target="cubin"):
     from os.path import join
+
+    assert target in ["cubin", "ptx"]
 
     if cache_dir:
         checksum = _new_md5()
@@ -84,7 +86,7 @@ def compile_plain(source, options, keep, nvcc, cache_dir):
         checksum.update(str(platform_bits()).encode("utf-8"))
 
         cache_file = checksum.hexdigest()
-        cache_path = join(cache_dir, cache_file + ".cubin")
+        cache_path = join(cache_dir, cache_file + "." + target)
 
         try:
             cache_file = open(cache_path, "rb")
@@ -113,12 +115,12 @@ def compile_plain(source, options, keep, nvcc, cache_dir):
 
         print("*** compiler output in %s" % file_dir)
 
-    cmdline = [nvcc, "--cubin"] + options + [cu_file_name]
+    cmdline = [nvcc, "--" + target] + options + [cu_file_name]
     result, stdout, stderr = call_capture_output(cmdline,
             cwd=file_dir, error_on_nonzero=False)
 
     try:
-        cubin_f = open(join(file_dir, file_root + ".cubin"), "rb")
+        result_f = open(join(file_dir, file_root + "." + target), "rb")
     except IOError:
         no_output = True
     else:
@@ -144,12 +146,12 @@ def compile_plain(source, options, keep, nvcc, cache_dir):
         warn("The CUDA compiler succeeded, but said the following:\n"
                 + (stdout+stderr).decode("utf-8", "replace"), stacklevel=4)
 
-    cubin = cubin_f.read()
-    cubin_f.close()
+    result_data = result_f.read()
+    result_f.close()
 
     if cache_dir:
         outf = open(cache_path, "wb")
-        outf.write(cubin)
+        outf.write(result_data)
         outf.close()
 
     if not keep:
@@ -158,7 +160,7 @@ def compile_plain(source, options, keep, nvcc, cache_dir):
             unlink(join(file_dir, name))
         rmdir(file_dir)
 
-    return cubin
+    return result_data
 
 
 def _get_per_user_string():
@@ -187,7 +189,9 @@ DEFAULT_NVCC_FLAGS = [
 
 def compile(source, nvcc="nvcc", options=None, keep=False,
         no_extern_c=False, arch=None, code=None, cache_dir=None,
-        include_dirs=[]):
+        include_dirs=[], target="cubin"):
+
+    assert target in ["cubin", "ptx"]
 
     if not no_extern_c:
         source = 'extern "C" {\n%s\n}\n' % source
@@ -241,7 +245,7 @@ def compile(source, nvcc="nvcc", options=None, keep=False,
     for i in include_dirs:
         options.append("-I"+i)
 
-    return compile_plain(source, options, keep, nvcc, cache_dir)
+    return compile_plain(source, options, keep, nvcc, cache_dir, target)
 
 
 class SourceModule(object):
