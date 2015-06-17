@@ -69,7 +69,7 @@ def preprocess_source(source, options, nvcc):
 def compile_plain(source, options, keep, nvcc, cache_dir, target="cubin"):
     from os.path import join
 
-    assert target in ["cubin", "ptx"]
+    assert target in ["cubin", "ptx", "fatbin"]
 
     if cache_dir:
         checksum = _new_md5()
@@ -191,7 +191,7 @@ def compile(source, nvcc="nvcc", options=None, keep=False,
         no_extern_c=False, arch=None, code=None, cache_dir=None,
         include_dirs=[], target="cubin"):
 
-    assert target in ["cubin", "ptx"]
+    assert target in ["cubin", "ptx", "fatbin"]
 
     if not no_extern_c:
         source = 'extern "C" {\n%s\n}\n' % source
