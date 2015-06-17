@@ -201,10 +201,11 @@ def compile(source, nvcc="nvcc", options=None, keep=False,
 
     options = options[:]
     if arch is None:
+        from pycuda.driver import Error
         try:
             from pycuda.driver import Context
             arch = "sm_%d%d" % Context.get_device().compute_capability()
-        except RuntimeError:
+        except Error:
             pass
 
     from pycuda.driver import CUDA_DEBUGGING
