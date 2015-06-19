@@ -2,6 +2,7 @@ Python 2.7:
   script:
   - py_version=2.7
   - EXTRA_INSTALL="numpy mako"
+  - echo "CUDADRV_LIB_DIR = ['/usr/lib/x86_64-linux-gnu/nvidia/current']" > siteconf.py
   - curl -L -O -k https://gitlab.tiker.net/inducer/ci-support/raw/master/build-and-test-py-project.sh
   - ". ./build-and-test-py-project.sh"
   tags:
@@ -13,6 +14,7 @@ Python 3.4:
   script:
   - py_version=3.4
   - EXTRA_INSTALL="numpy mako"
+  - echo "CUDADRV_LIB_DIR = ['/usr/lib/x86_64-linux-gnu/nvidia/current']" > siteconf.py
   - curl -L -O -k https://gitlab.tiker.net/inducer/ci-support/raw/master/build-and-test-py-project.sh
   - ". ./build-and-test-py-project.sh"
   tags:
