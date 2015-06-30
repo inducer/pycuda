@@ -1,7 +1,7 @@
-from __future__ import absolute_import
-from __future__ import print_function
 #!/usr/bin/env python
-# -*- coding: latin-1 -*-
+# -*- coding: utf-8 -*-
+
+from __future__ import absolute_import, print_function
 from os.path import dirname, join, normpath
 
 
