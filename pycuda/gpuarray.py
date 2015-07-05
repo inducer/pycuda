@@ -786,7 +786,7 @@ class GPUArray(object):
 
                 array_stride = self.strides[array_axis]
 
-                new_shape.append((stop-start)//idx_stride)
+                new_shape.append((stop-start-1)//idx_stride+1)
                 new_strides.append(idx_stride*array_stride)
                 new_offset += array_stride*start
 
