@@ -269,6 +269,20 @@ class GPUArray(object):
             drv.memcpy_dtoh(ary, self.gpudata)
         return ary
 
+    def get2(self, ary=None, pagelocked=False):
+        if ary is None:
+            if pagelocked:
+                ary = drv.pagelocked_empty(self.shape, self.dtype)
+            else:
+                ary = np.empty(self.shape, self.dtype)
+        else:
+            assert ary.shape == self.shape
+            assert ary.dtype == self.dtype
+
+        if self.size:
+            _copy(ary, self)
+        return ary
+
     def get_async(self, stream=None, ary=None):
         if ary is None:
             ary = drv.pagelocked_empty(self.shape, self.dtype)
@@ -286,18 +300,15 @@ class GPUArray(object):
         return ary
 
     def copy(self):
-        if not self.flags.forc:
-            raise RuntimeError("only contiguous arrays may copied.")
-
         new = GPUArray(self.shape, self.dtype)
-        drv.memcpy_dtod(new.gpudata, self.gpudata, self.nbytes)
+        _copy(new, self)
         return new
 
     def __str__(self):
-        return str(self.get())
+        return str(self.get2())
 
     def __repr__(self):
-        return repr(self.get())
+        return repr(self.get2())
 
     def __hash__(self):
         raise TypeError("GPUArrays are not hashable.")
@@ -841,6 +852,9 @@ class GPUArray(object):
                 gpudata=int(self.gpudata)+new_offset,
                 strides=tuple(new_strides))
 
+    def __setitem__(self, index, value):
+        _copy(self[index], value)
+
     # }}}
 
     # {{{ complex-valued business
@@ -1048,6 +1062,109 @@ def arange(*args, **kwargs):
     return result
 
 # }}}
+
+def _copy(dst, src):
+    """Copy the contents of src into dst."""
+    if not (isinstance(src, GPUArray) or isinstance(src, np.ndarray)):
+        raise RuntimeError("src must be GPUArray or ndarray")
+    if not (isinstance(dst, GPUArray) or isinstance(dst, np.ndarray)):
+        raise RuntimeError("dst must be GPUArray or ndarray")
+    if src.shape != dst.shape:
+        raise RuntimeError("src and dst must be same shape")
+    if src.dtype != dst.dtype:
+        raise RuntimeError("src and dst must have same dtype")
+
+    if isinstance(src, np.ndarray) and isinstance(dst, np.ndarray):
+        dst[...] = src
+        return
+
+    if len(src.shape) == 1:
+        if isinstance(src, GPUArray):
+            if isinstance(dst, GPUArray):
+                drv.memcpy_dtod(dst.gpudata, src.gpudata, src.nbytes)
+            else:
+                drv.memcpy_dtoh(dst, src.gpudata)
+        else:
+            drv.memcpy_htod(dst.gpudata, src)
+        return
+
+    if len(src.shape) == 2:
+        height, width = src.shape
+        ss0, ss1 = src.strides
+        ds0, ds1 = dst.strides
+        if ss0 < ss1 and ds0 < ds1:
+            ss0, ss1 = ss1, ss0
+            ds0, ds1 = ds1, ds0
+            height, width = width, height
+        elif not (ss0 > ss1 and ds0 > ds1):
+            raise RuntimeError("src and dst must have same order")
+        if ss1 != src.dtype.itemsize:
+            raise RuntimeError("src's minor axis must be contiguous")
+        if ds1 != dst.dtype.itemsize:
+            raise RuntimeError("dst's minor axis must be contiguous")
+
+        copy = drv.Memcpy2D()
+
+        if isinstance(src, GPUArray):
+            copy.set_src_device(src.gpudata)
+        else:
+            copy.set_src_host(src)
+        copy.src_pitch = ss0
+
+        if isinstance(dst, GPUArray):
+            copy.set_dst_device(dst.gpudata)
+        else:
+            copy.set_dst_host(dst)
+        copy.dst_pitch = ds0
+
+        copy.width_in_bytes = ss1*width
+        copy.height = height
+
+        copy(aligned=True)
+
+    elif len(src.shape) == 3:
+        depth, height, width = src.shape
+        ss0, ss1, ss2 = src.strides
+        ds0, ds1, ds2 = dst.strides
+        if ss0 < ss1 < ss2 and ds0 < ds1 < ds2:
+            ss0, ss2 = ss2, ss0
+            ds0, ds2 = ds2, ds0
+            depth, width = width, depth
+        elif not (ss0 > ss1 > ss2 and ds0 > ds1 > ds2):
+            raise RuntimeError("src and dst must have same order")
+        if ss2 != src.dtype.itemsize:
+            raise RuntimeError("src's minor axis must be contiguous")
+        if ds2 != dst.dtype.itemsize:
+            raise RuntimeError("dst's minor axis must be contiguous")
+        if ss0 % ss1 != 0:
+            raise RuntimeError("src major stride must be a multiple of middle stride")
+        if ds0 % ds1 != 0:
+            raise RuntimeError("dst major stride must be a multiple of middle stride")
+
+        copy = drv.Memcpy3D()
+
+        if isinstance(src, GPUArray):
+            copy.set_src_device(src.gpudata)
+        else:
+            copy.set_src_host(src)
+        copy.src_pitch = ss1
+        copy.src_height = ss0 // ss1
+
+        if isinstance(dst, GPUArray):
+            copy.set_dst_device(dst.gpudata)
+        else:
+            copy.set_dst_host(dst)
+        copy.dst_pitch = ds1
+        copy.dst_height = ds0 // ds1
+
+        copy.width_in_bytes = ss2*width
+        copy.height = height
+        copy.depth = depth
+
+        copy()
+
+    else:
+        raise RuntimeError("can only copy arrays with 3 or fewer dims")
 
 # {{{ pickle support
 
