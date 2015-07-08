@@ -271,10 +271,11 @@ class GPUArray(object):
 
     def get2(self, ary=None, pagelocked=False):
         if ary is None:
+            order = _discontiguous_order(self) or 'C'
             if pagelocked:
-                ary = drv.pagelocked_empty(self.shape, self.dtype)
+                ary = drv.pagelocked_empty(self.shape, self.dtype, order=order)
             else:
-                ary = np.empty(self.shape, self.dtype)
+                ary = np.empty(self.shape, self.dtype, order=order)
         else:
             assert ary.shape == self.shape
             assert ary.dtype == self.dtype
@@ -1063,6 +1064,28 @@ def arange(*args, **kwargs):
 
 # }}}
 
+def _discontiguous_order(ary):
+    if isinstance(ary, GPUArray):
+        if ary.flags.c_contiguous: return 'C'
+        elif ary.flags.f_contiguous: return 'F'
+    elif isinstance(ary, np.ndarray):
+        if ary.flags['C_CONTIGUOUS']: return 'C'
+        elif ary.flags['F_CONTIGUOUS']: return 'F'
+
+    order = None
+    prev_stride = None
+    for stride in ary.strides:
+        if prev_stride:
+            if not order and stride > prev_stride:
+                order = 'F'
+            elif not order and stride < prev_stride:
+                order = 'C'
+            elif ((order == 'F' and stride < prev_stride) or
+                  (order == 'C' and stride > prev_stride)):
+                raise TypeError("Array must have row- or column-major layout")
+        prev_stride = stride
+    return order
+
 def _copy(dst, src):
     """Copy the contents of src into dst."""
     if not (isinstance(src, GPUArray) or isinstance(src, np.ndarray)):
@@ -1078,7 +1101,7 @@ def _copy(dst, src):
         dst[...] = src
         return
 
-    if len(src.shape) == 1:
+    if len(src.shape) <= 1:
         if isinstance(src, GPUArray):
             if isinstance(dst, GPUArray):
                 drv.memcpy_dtod(dst.gpudata, src.gpudata, src.nbytes)
@@ -1088,83 +1111,64 @@ def _copy(dst, src):
             drv.memcpy_htod(dst.gpudata, src)
         return
 
+    if len(src.shape) > 3:
+        raise RuntimeError("can only copy arrays with 3 or fewer dims")
+
+    src_order = _discontiguous_order(src)
+    dst_order = _discontiguous_order(dst)
+    if src_order == 'F' and dst_order == 'F':
+        shape = tuple(reversed(src.shape))
+        src_strides = tuple(reversed(src.strides))
+        dst_strides = tuple(reversed(dst.strides))
+    elif src_order == 'F' or dst_order == 'F':
+        raise RuntimeError("src and dst must have same order")
+    else:
+        shape = src.shape
+        src_strides = src.strides
+        dst_strides = dst.strides
+
+    if src_strides[-1] != src.dtype.itemsize:
+        raise RuntimeError("src's minor axis must be contiguous")
+    if dst_strides[-1] != dst.dtype.itemsize:
+        raise RuntimeError("dst's minor axis must be contiguous")
+        
     if len(src.shape) == 2:
-        height, width = src.shape
-        ss0, ss1 = src.strides
-        ds0, ds1 = dst.strides
-        if ss0 < ss1 and ds0 < ds1:
-            ss0, ss1 = ss1, ss0
-            ds0, ds1 = ds1, ds0
-            height, width = width, height
-        elif not (ss0 > ss1 and ds0 > ds1):
-            raise RuntimeError("src and dst must have same order")
-        if ss1 != src.dtype.itemsize:
-            raise RuntimeError("src's minor axis must be contiguous")
-        if ds1 != dst.dtype.itemsize:
-            raise RuntimeError("dst's minor axis must be contiguous")
-
         copy = drv.Memcpy2D()
-
-        if isinstance(src, GPUArray):
-            copy.set_src_device(src.gpudata)
-        else:
-            copy.set_src_host(src)
-        copy.src_pitch = ss0
-
-        if isinstance(dst, GPUArray):
-            copy.set_dst_device(dst.gpudata)
-        else:
-            copy.set_dst_host(dst)
-        copy.dst_pitch = ds0
-
-        copy.width_in_bytes = ss1*width
-        copy.height = height
-
-        copy(aligned=True)
-
-    elif len(src.shape) == 3:
-        depth, height, width = src.shape
-        ss0, ss1, ss2 = src.strides
-        ds0, ds1, ds2 = dst.strides
-        if ss0 < ss1 < ss2 and ds0 < ds1 < ds2:
-            ss0, ss2 = ss2, ss0
-            ds0, ds2 = ds2, ds0
-            depth, width = width, depth
-        elif not (ss0 > ss1 > ss2 and ds0 > ds1 > ds2):
-            raise RuntimeError("src and dst must have same order")
-        if ss2 != src.dtype.itemsize:
-            raise RuntimeError("src's minor axis must be contiguous")
-        if ds2 != dst.dtype.itemsize:
-            raise RuntimeError("dst's minor axis must be contiguous")
-        if ss0 % ss1 != 0:
-            raise RuntimeError("src major stride must be a multiple of middle stride")
-        if ds0 % ds1 != 0:
-            raise RuntimeError("dst major stride must be a multiple of middle stride")
-
+    else: # len(src.shape) == 3
         copy = drv.Memcpy3D()
 
-        if isinstance(src, GPUArray):
-            copy.set_src_device(src.gpudata)
-        else:
-            copy.set_src_host(src)
-        copy.src_pitch = ss1
-        copy.src_height = ss0 // ss1
+    if isinstance(src, GPUArray):
+        copy.set_src_device(src.gpudata)
+    else:
+        copy.set_src_host(src)
 
-        if isinstance(dst, GPUArray):
-            copy.set_dst_device(dst.gpudata)
-        else:
-            copy.set_dst_host(dst)
-        copy.dst_pitch = ds1
-        copy.dst_height = ds0 // ds1
+    if isinstance(dst, GPUArray):
+        copy.set_dst_device(dst.gpudata)
+    else:
+        copy.set_dst_host(dst)
 
-        copy.width_in_bytes = ss2*width
-        copy.height = height
-        copy.depth = depth
+    copy.width_in_bytes = src_strides[-1]*shape[-1]
 
+    copy.src_pitch = src_strides[-2]
+    copy.dst_pitch = dst_strides[-2]
+    copy.height = shape[-2]
+    
+    if len(src.shape) == 2:
+        copy(aligned=True)
+
+    else: # len(src.shape) == 3
+
+        if src_strides[0] % src_strides[1] != 0:
+            raise RuntimeError("src's major stride must be a multiple of middle stride")
+        copy.src_height = src_strides[0] // src_strides[1]
+
+        if dst_strides[0] % dst_strides[1] != 0:
+            raise RuntimeError("dst's major stride must be a multiple of middle stride")
+        copy.dst_height = dst_strides[0] // dst_strides[1]
+
+        copy.depth = shape[0]
         copy()
 
-    else:
-        raise RuntimeError("can only copy arrays with 3 or fewer dims")
 
 # {{{ pickle support
 
