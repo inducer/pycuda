@@ -953,6 +953,30 @@ class TestGPUArray:
         assert la.norm(max_a0_gpu.get() - np.maximum(a, 0)) == 0
         assert la.norm(min_a0_gpu.get() - np.minimum(0, a)) == 0
 
+    @mark_cuda_test
+    def test_transpose(self):
+        import pycuda.gpuarray as gpuarray
+        from pycuda.curandom import rand as curand
+
+        a_gpu = curand((10,20,30))
+        a = a_gpu.get()
+
+        #assert np.allclose(a_gpu.transpose((1,2,0)).get(), a.transpose((1,2,0))) # not contiguous
+        assert np.allclose(a_gpu.T.get(), a.T)
+
+    @mark_cuda_test
+    def test_newaxis(self):
+        import pycuda.gpuarray as gpuarray
+        from pycuda.curandom import rand as curand
+
+        a_gpu = curand((10,20,30))
+        a = a_gpu.get()
+
+        b_gpu = a_gpu[:,np.newaxis]
+        b = a[:,np.newaxis]
+
+        assert b_gpu.shape == b.shape
+        assert b_gpu.strides == b.strides
 
 if __name__ == "__main__":
     # make sure that import failures get reported, instead of skipping the tests.
