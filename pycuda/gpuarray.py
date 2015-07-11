@@ -23,7 +23,7 @@ def _get_common_dtype(obj1, obj2):
 
 # {{{ vector types
 
-class vec:
+class vec:  # noqa
     pass
 
 
@@ -770,16 +770,11 @@ class GPUArray(object):
     def transpose(self, axes=None):
         """Permute the dimensions of an array.
 
-        Parameters
-        ----------
-        axes : list of ints, optional
+        :arg axes: list of ints, optional.
             By default, reverse the dimensions, otherwise permute the axes
             according to the values given.
 
-        Returns
-        -------
-        p : GPUArray
-            A view of the array with its axes permuted.
+        :returns: :class:`GPUArray` A view of the array with its axes permuted.
         """
 
         if axes is None:
@@ -794,8 +789,10 @@ class GPUArray(object):
                         base=self.base or self,
                         gpudata=self.gpudata,
                         strides=tuple(new_strides))
+
     @property
-    def T(self): return self.transpose()
+    def T(self):  # noqa
+        return self.transpose()
 
     # {{{ slicing
 
@@ -1277,24 +1274,21 @@ def multi_put(arrays, dest_indices, dest_shape=None, out=None, stream=None):
 
 # }}}
 
+
 # {{{ shape manipulation
 
 def transpose(a, axes=None):
     """Permute the dimensions of an array.
-    
-    Parameters
-    ----------
-    a : GPUArray
-    axes : list of ints, optional
+
+    :arg a: :class:`GPUArray`
+    :arg axes: list of ints, optional.
         By default, reverse the dimensions, otherwise permute the axes
         according to the values given.
 
-    Returns
-    -------
-    p : GPUArray
-        A view of the array with its axes permuted.
+    :returns: :class:`GPUArray` A view of the array with its axes permuted.
     """
     return a.transpose(axes)
+
 
 def reshape(a, shape):
     """Gives a new shape to an array without changing its data."""
@@ -1302,6 +1296,7 @@ def reshape(a, shape):
     return a.reshape(shape)
 
 # }}}
+
 
 # {{{ conditionals
 
