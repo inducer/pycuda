@@ -1,5 +1,5 @@
-from __future__ import division
-from __future__ import absolute_import
+from __future__ import division, absolute_import
+
 import numpy as np
 import pycuda.elementwise as elementwise
 from pytools import memoize, memoize_method
@@ -12,9 +12,7 @@ from pycuda.compyte.array import (
         get_common_dtype as _get_common_dtype_base)
 from pycuda.characterize import has_double_support
 import six
-from six.moves import range
-from six.moves import zip
-from functools import reduce
+from six.moves import range, zip, reduce
 
 
 def _get_common_dtype(obj1, obj2):
@@ -267,6 +265,12 @@ class GPUArray(object):
             assert ary.dtype == self.dtype
             assert ary.flags.forc
 
+            if self.shape != ary.shape:
+                from warnings import warn
+                warn("get() between arrays of different shape is deprecated "
+                        "and will be removed in PyCUDA 2017.x",
+                        DeprecationWarning, stacklevel=2)
+
         assert self.flags.forc, "Array in get() must be contiguous"
 
         if self.size:
@@ -297,6 +301,12 @@ class GPUArray(object):
             assert ary.size == self.size
             assert ary.dtype == self.dtype
             assert ary.flags.forc
+
+            if self.shape != ary.shape:
+                from warnings import warn
+                warn("get() between arrays of different shape is deprecated "
+                        "and will be removed in PyCUDA 2017.x",
+                        DeprecationWarning, stacklevel=2)
 
         assert self.flags.forc, "Array in get() must be contiguous"
 
@@ -787,14 +797,16 @@ class GPUArray(object):
             according to the values given.
 
         :returns: :class:`GPUArray` A view of the array with its axes permuted.
+
+        .. versionadded:: 2015.2
         """
 
         if axes is None:
             axes = range(self.ndim-1, -1, -1)
         if len(axes) != len(self.shape):
             raise ValueError("axes don't match array")
-        new_shape = [self.shape[axes[i]] for i in xrange(len(axes))]
-        new_strides = [self.strides[axes[i]] for i in xrange(len(axes))]
+        new_shape = [self.shape[axes[i]] for i in range(len(axes))]
+        new_strides = [self.strides[axes[i]] for i in range(len(axes))]
         return GPUArray(shape=tuple(new_shape),
                         dtype=self.dtype,
                         allocator=self.allocator,
@@ -804,6 +816,9 @@ class GPUArray(object):
 
     @property
     def T(self):  # noqa
+        """
+        .. versionadded:: 2015.2
+        """
         return self.transpose()
 
     # {{{ slicing
@@ -1407,12 +1422,17 @@ def transpose(a, axes=None):
         according to the values given.
 
     :returns: :class:`GPUArray` A view of the array with its axes permuted.
+
+    .. versionadded:: 2015.2
     """
     return a.transpose(axes)
 
 
 def reshape(a, shape):
-    """Gives a new shape to an array without changing its data."""
+    """Gives a new shape to an array without changing its data.
+
+    .. versionadded:: 2015.2
+    """
 
     return a.reshape(shape)
 

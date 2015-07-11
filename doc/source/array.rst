@@ -120,10 +120,14 @@ The :class:`GPUArray` Array Class
     .. method :: get(ary=None, pagelocked=False)
 
         Transfer the contents of *self* into *ary* or a newly allocated
-        :mod:`numpy.ndarray`. If *ary* is given, it must have the right
-        size (not necessarily shape) and dtype. If it is not given,
+        :mod:`numpy.ndarray`. If *ary* is given, it must have the same
+        shape and dtype. If it is not given,
         a *pagelocked* specifies whether the new array is allocated
         page-locked.
+
+        .. versionchanged:: 2015.2
+
+            *ary* with different shape was deprecated.
 
     .. method :: get_async(stream=None, ary=None)
 
