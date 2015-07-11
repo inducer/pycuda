@@ -783,8 +783,8 @@ class GPUArray(object):
             axes = range(self.ndim-1, -1, -1)
         if len(axes) != len(self.shape):
             raise ValueError("axes don't match array")
-        new_shape = [self.shape[axes[i]] for i in xrange(len(axes))]
-        new_strides = [self.strides[axes[i]] for i in xrange(len(axes))]
+        new_shape = [self.shape[axes[i]] for i in range(len(axes))]
+        new_strides = [self.strides[axes[i]] for i in range(len(axes))]
         return GPUArray(shape=tuple(new_shape),
                         dtype=self.dtype,
                         allocator=self.allocator,
