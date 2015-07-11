@@ -265,6 +265,12 @@ class GPUArray(object):
             assert ary.dtype == self.dtype
             assert ary.flags.forc
 
+            if self.shape != ary.shape:
+                from warnings import warn
+                warn("get() between arrays of different shape is deprecated "
+                        "and will be removed in PyCUDA 2017.x",
+                        DeprecationWarning, stacklevel=2)
+
         assert self.flags.forc, "Array in get() must be contiguous"
 
         if self.size:
@@ -280,6 +286,12 @@ class GPUArray(object):
             assert ary.size == self.size
             assert ary.dtype == self.dtype
             assert ary.flags.forc
+
+            if self.shape != ary.shape:
+                from warnings import warn
+                warn("get() between arrays of different shape is deprecated "
+                        "and will be removed in PyCUDA 2017.x",
+                        DeprecationWarning, stacklevel=2)
 
         assert self.flags.forc, "Array in get() must be contiguous"
 
