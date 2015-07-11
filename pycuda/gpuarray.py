@@ -775,6 +775,8 @@ class GPUArray(object):
             according to the values given.
 
         :returns: :class:`GPUArray` A view of the array with its axes permuted.
+
+        .. versionadded:: 2015.2
         """
 
         if axes is None:
@@ -792,6 +794,9 @@ class GPUArray(object):
 
     @property
     def T(self):  # noqa
+        """
+        .. versionadded:: 2015.2
+        """
         return self.transpose()
 
     # {{{ slicing
@@ -1286,12 +1291,17 @@ def transpose(a, axes=None):
         according to the values given.
 
     :returns: :class:`GPUArray` A view of the array with its axes permuted.
+
+    .. versionadded:: 2015.2
     """
     return a.transpose(axes)
 
 
 def reshape(a, shape):
-    """Gives a new shape to an array without changing its data."""
+    """Gives a new shape to an array without changing its data.
+
+    .. versionadded:: 2015.2
+    """
 
     return a.reshape(shape)
 
