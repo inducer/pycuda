@@ -23,7 +23,7 @@ def _get_common_dtype(obj1, obj2):
 
 # {{{ vector types
 
-class vec:
+class vec:  # noqa
     pass
 
 
@@ -192,7 +192,7 @@ class GPUArray(object):
 
             strides = tuple(strides)
 
-        self.shape = shape
+        self.shape = tuple(shape)
         self.dtype = dtype
         self.strides = strides
         self.mem_size = self.size = s
@@ -212,6 +212,10 @@ class GPUArray(object):
         self.base = base
 
         self._grid, self._block = splay(self.mem_size)
+
+    @property
+    def ndim(self):
+        return len(self.shape)
 
     @property
     @memoize_method
@@ -707,7 +711,13 @@ class GPUArray(object):
         return result
 
     def reshape(self, *shape):
+        """Gives a new shape to an array without changing its data."""
+
         # TODO: add more error-checking, perhaps
+        if not self.flags.forc:
+            raise RuntimeError("only contiguous arrays may "
+                    "be used as arguments to this operation")
+
         if isinstance(shape[0], tuple) or isinstance(shape[0], list):
             shape = tuple(shape[0])
 
@@ -768,6 +778,33 @@ class GPUArray(object):
                 strides=new_strides,
                 base=self,
                 gpudata=int(self.gpudata))
+
+    def transpose(self, axes=None):
+        """Permute the dimensions of an array.
+
+        :arg axes: list of ints, optional.
+            By default, reverse the dimensions, otherwise permute the axes
+            according to the values given.
+
+        :returns: :class:`GPUArray` A view of the array with its axes permuted.
+        """
+
+        if axes is None:
+            axes = range(self.ndim-1, -1, -1)
+        if len(axes) != len(self.shape):
+            raise ValueError("axes don't match array")
+        new_shape = [self.shape[axes[i]] for i in xrange(len(axes))]
+        new_strides = [self.strides[axes[i]] for i in xrange(len(axes))]
+        return GPUArray(shape=tuple(new_shape),
+                        dtype=self.dtype,
+                        allocator=self.allocator,
+                        base=self.base or self,
+                        gpudata=self.gpudata,
+                        strides=tuple(new_strides))
+
+    @property
+    def T(self):  # noqa
+        return self.transpose()
 
     # {{{ slicing
 
@@ -835,6 +872,11 @@ class GPUArray(object):
                     raise IndexError(
                             "more than one ellipsis not allowed in index")
                 seen_ellipsis = True
+
+            elif index_entry is np.newaxis:
+                new_shape.append(1)
+                new_strides.append(0)
+                index_axis += 1
 
             else:
                 raise IndexError("invalid subindex in axis %d" % index_axis)
@@ -1350,6 +1392,29 @@ def multi_put(arrays, dest_indices, dest_shape=None, out=None, stream=None):
                     + [dest_indices.size]))
 
     return out
+
+# }}}
+
+
+# {{{ shape manipulation
+
+def transpose(a, axes=None):
+    """Permute the dimensions of an array.
+
+    :arg a: :class:`GPUArray`
+    :arg axes: list of ints, optional.
+        By default, reverse the dimensions, otherwise permute the axes
+        according to the values given.
+
+    :returns: :class:`GPUArray` A view of the array with its axes permuted.
+    """
+    return a.transpose(axes)
+
+
+def reshape(a, shape):
+    """Gives a new shape to an array without changing its data."""
+
+    return a.reshape(shape)
 
 # }}}
 
