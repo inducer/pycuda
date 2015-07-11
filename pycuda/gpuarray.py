@@ -1,5 +1,5 @@
-from __future__ import division
-from __future__ import absolute_import
+from __future__ import division, absolute_import
+
 import numpy as np
 import pycuda.elementwise as elementwise
 from pytools import memoize, memoize_method
@@ -12,9 +12,7 @@ from pycuda.compyte.array import (
         get_common_dtype as _get_common_dtype_base)
 from pycuda.characterize import has_double_support
 import six
-from six.moves import range
-from six.moves import zip
-from functools import reduce
+from six.moves import range, zip, reduce
 
 
 def _get_common_dtype(obj1, obj2):
