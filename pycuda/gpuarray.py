@@ -260,8 +260,7 @@ class GPUArray(object):
                 ary = np.empty(self.shape, self.dtype)
 
             # Compute strides to have same order as self, but packed
-            info = [(self.strides[axis], self.shape[axis], axis) for axis in xrange(len(self.shape))]
-            info.sort()
+            info = sorted((self.strides[axis], self.shape[axis], axis) for axis in xrange(len(self.shape)))
 
             dst_info = []
             stride = self.dtype.itemsize
@@ -1103,12 +1102,10 @@ def _memcpy_discontig(dst, src, async=False, stream=None):
     """Copy the contents of src into dst.
     
     The two arrays should have the same dtype, shape, and order, but
-    not necessarily the same strides. One of the following two
-    conditions should hold:
-    - both src and dst are contiguous
-    - both src and dst have <= 3 axes and are contiguous in their minor axes
-
+    not necessarily the same strides. There may be up to _two_
+    axes along which either `src` or `dst` is not contiguous.
     """
+
     if not isinstance(src, (GPUArray, np.ndarray)):
         raise TypeError("src must be GPUArray or ndarray")
     if not isinstance(dst, (GPUArray, np.ndarray)):
@@ -1118,12 +1115,46 @@ def _memcpy_discontig(dst, src, async=False, stream=None):
     if src.dtype != dst.dtype:
         raise TypeError("src and dst must have same dtype")
 
+    # ndarray -> ndarray
     if isinstance(src, np.ndarray) and isinstance(dst, np.ndarray):
         dst[...] = src
         return
 
-    # Contiguous case (includes 1-d case)
     if src.flags.forc and dst.flags.forc:
+        shape = [src.size]
+        src_strides = dst_strides = [src.dtype.itemsize]
+    else:
+        # put src in Fortran order (which should put dst in Fortran order too)
+        # and remove singleton axes
+        src_info = sorted((src.strides[axis], axis) for axis in xrange(len(src.shape)) if src.shape[axis] > 1)
+        axes = [axis for _, axis in src_info]
+        shape = [src.shape[axis] for axis in axes]
+        src_strides = [src.strides[axis] for axis in axes]
+        dst_strides = [dst.strides[axis] for axis in axes]
+
+        # copy functions require contiguity in minor axis, so add new axis if needed
+        if len(shape) == 0 or src_strides[0] != src.dtype.itemsize or dst_strides[0] != dst.dtype.itemsize:
+            shape[0:0] = [1]
+            src_strides[0:0] = [0]
+            dst_strides[0:0] = [0]
+            axes[0:0] = [np.newaxis]
+
+        # collapse contiguous dimensions
+        # and check that dst is in same order as src
+        i = 1
+        while i < len(shape):
+            if dst_strides[i] < dst_strides[i-1]:
+                raise ValueError("src and dst must have same order")
+            if (src_strides[i-1] * shape[i-1] == src_strides[i] and
+                dst_strides[i-1] * shape[i-1] == dst_strides[i]):
+                shape[i-1:i+1] = [shape[i-1] * shape[i]]
+                del src_strides[i]
+                del dst_strides[i]
+                del axes[i]
+            else:
+                i += 1
+
+    if len(shape) <= 1:
         if isinstance(src, GPUArray):
             if isinstance(dst, GPUArray):
                 if async:
@@ -1131,33 +1162,30 @@ def _memcpy_discontig(dst, src, async=False, stream=None):
                 else:
                     drv.memcpy_dtod(dst.gpudata, src.gpudata, src.nbytes)
             else:
+                # The arrays might be contiguous in the sense of
+                # having no gaps, but the axes could be transposed
+                # so that the order is neither Fortran or C.
+                # So, we attempt to get a contiguous view of dst.
+                dst_flat = dst.ravel(order='K')
+                assert np.byte_bounds(dst) == np.byte_bounds(dst_flat)
                 if async:
-                    drv.memcpy_dtoh_async(dst, src.gpudata, stream=stream)
+                    drv.memcpy_dtoh_async(dst_flat, src.gpudata, stream=stream)
                 else:
-                    drv.memcpy_dtoh(dst, src.gpudata)
+                    drv.memcpy_dtoh(dst_flat, src.gpudata)
         else:
+            src = src.ravel(order='K')
             if async:
                 drv.memcpy_htod(dst.gpudata, src, stream=stream)
             else:
                 drv.memcpy_htod(dst.gpudata, src)
         return
 
-    src_info = [(src.strides[axis], src.shape[axis], axis) for axis in xrange(len(src.shape))]
-    src_info.sort()
-    stride, dim, axis = src_info[0]
-    if stride != src.dtype.itemsize:
-        raise ValueError("src must be contiguous in minor axis")
-    if dst.strides[axis] != dst.dtype.itemsize:
-        raise ValueError("dst must be contiguous in minor axis (dst.strides=%s, axis=%s)" % (dst.strides, axis))
-    src_strides, shape, axes = zip(*src_info)
-    dst_strides = [dst.strides[axis] for axis in axes]
-    if dst_strides != sorted(dst_strides):
-        raise ValueError("src and dst must have same order")
-
-    if len(src.shape) == 2:
+    if len(shape) == 2:
         copy = drv.Memcpy2D()
-    else: # len(src.shape) == 3
+    elif len(shape) == 3:
         copy = drv.Memcpy3D()
+    else:
+        raise ValueError("more than 2 discontiguous axes not supported %s" % (tuple(sorted(axes)),))
 
     if isinstance(src, GPUArray):
         copy.set_src_device(src.gpudata)
@@ -1169,19 +1197,19 @@ def _memcpy_discontig(dst, src, async=False, stream=None):
     else:
         copy.set_dst_host(dst)
 
-    copy.width_in_bytes = src_strides[0]*shape[0]
+    copy.width_in_bytes = src.dtype.itemsize*shape[0]
 
     copy.src_pitch = src_strides[1]
     copy.dst_pitch = dst_strides[1]
     copy.height = shape[1]
     
-    if len(src.shape) == 2:
+    if len(shape) == 2:
         if async:
             copy(stream=stream)
         else:
             copy(aligned=True)
 
-    else: # len(src.shape) == 3
+    else: # len(shape) == 3
         if src_strides[2] % src_strides[1] != 0:
             raise RuntimeError("src's major stride must be a multiple of middle stride")
         copy.src_height = src_strides[2] // src_strides[1]

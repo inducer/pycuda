@@ -998,11 +998,11 @@ class TestGPUArray:
         for start, stop, step in [(0,3,1), (1,2,1), (0,3,2), (0,3,3)]:
             assert np.allclose(a_gpu[start:stop:step,:,start:stop:step].get(), a_gpu.get()[start:stop:step,:,start:stop:step])
 
-        """# 4-d should work as long as only 2 axes are discontiguous
+        # 4-d should work as long as only 2 axes are discontiguous
         a_gpu = curand((3,3,3,3))
         a = a_gpu.get()
-        for start, stop, step in [(0,3,1), (1,2,1), (0,3,2), (0,3,3)]:
-            assert np.allclose(a_gpu[start:stop:step,:,start:stop:step,:].get(), a_gpu.get()[start:stop:step,:,start:stop:step,:])"""
+        for start, stop, step in [(0,3,1), (1,2,1), (0,3,3)]:
+            assert np.allclose(a_gpu[start:stop:step,:,start:stop:step].get(), a_gpu.get()[start:stop:step,:,start:stop:step])
 
     def test_get(self):
         import pycuda.gpuarray as gpuarray
