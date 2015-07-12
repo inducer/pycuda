@@ -220,37 +220,23 @@ class GPUArray(object):
     def flags(self):
         return _ArrayFlags(self)
 
-    def set(self, ary):
-        assert ary.size == self.size
-        assert ary.dtype == self.dtype
-        if ary.strides != self.strides:
+    def set(self, ary, async=False, stream=None):
+        if ary.size != self.size:
+            raise ValueError("ary and self must be the same size")
+        if ary.shape != self.shape:
             from warnings import warn
-            warn("Setting array from one with different strides/storage order. "
-                    "This will cease to work in 2013.x.",
+            warn("Setting array from one with different shape.",
                     stacklevel=2)
+            ary = ary.reshape(self.shape)
 
-        assert self.flags.forc
+        if ary.dtype != self.dtype:
+            raise ValueError("ary and self must have the same dtype")
 
         if self.size:
-            drv.memcpy_htod(self.gpudata, ary)
+            _memcpy_discontig(self, ary, async=async, stream=stream)
 
     def set_async(self, ary, stream=None):
-        assert ary.size == self.size
-        assert ary.dtype == self.dtype
-        if ary.strides != self.strides:
-            from warnings import warn
-            warn("Setting array from one with different strides/storage order. "
-                    "This will cease to work in 2013.x.",
-                    stacklevel=2)
-
-        assert self.flags.forc
-
-        if not ary.flags.forc:
-            raise RuntimeError("cannot asynchronously set from "
-                    "non-contiguous array")
-
-        if self.size:
-            drv.memcpy_htod_async(self.gpudata, ary, stream)
+        return set(ary, async=True, stream=None)
 
     def get(self, ary=None, pagelocked=False, async=False, stream=None):
         if ary is None:
@@ -259,18 +245,8 @@ class GPUArray(object):
             else:
                 ary = np.empty(self.shape, self.dtype)
 
-            # Compute strides to have same order as self, but packed
-            info = sorted((self.strides[axis], self.shape[axis], axis) for axis in xrange(len(self.shape)))
-
-            dst_info = []
-            stride = self.dtype.itemsize
-            for _, dim, axis in info:
-                dst_info.append((axis, stride))
-                stride *= dim
-            dst_info.sort()
-            dst_strides = [stride for _, stride in dst_info]
-
-            ary = _as_strided(ary, strides=dst_strides)
+            strides = _compact_strides(self)
+            ary = _as_strided(ary, strides=strides)
         else:
             if self.size != ary.size:
                 raise ValueError("self and ary must be the same size")
@@ -972,14 +948,14 @@ class GPUArray(object):
 
 def to_gpu(ary, allocator=drv.mem_alloc):
     """converts a numpy array to a GPUArray"""
-    result = GPUArray(ary.shape, ary.dtype, allocator, strides=ary.strides)
+    result = GPUArray(ary.shape, ary.dtype, allocator, strides=_compact_strides(ary))
     result.set(ary)
     return result
 
 
 def to_gpu_async(ary, allocator=drv.mem_alloc, stream=None):
     """converts a numpy array to a GPUArray"""
-    result = GPUArray(ary.shape, ary.dtype, allocator, strides=ary.strides)
+    result = GPUArray(ary.shape, ary.dtype, allocator, strides=_compact_strides(ary))
     result.set_async(ary, stream)
     return result
 
@@ -1097,6 +1073,17 @@ def arange(*args, **kwargs):
     return result
 
 # }}}
+
+def _compact_strides(a):
+    # Compute strides to have same order as self, but packed
+    info = sorted((a.strides[axis], a.shape[axis], axis) for axis in xrange(len(a.shape)))
+
+    strides = [None]*len(a.shape)
+    stride = a.dtype.itemsize
+    for _, dim, axis in info:
+        strides[axis] = stride
+        stride *= dim
+    return strides
 
 def _memcpy_discontig(dst, src, async=False, stream=None):
     """Copy the contents of src into dst.

@@ -1004,13 +1004,18 @@ class TestGPUArray:
         for start, stop, step in [(0,3,1), (1,2,1), (0,3,3)]:
             assert np.allclose(a_gpu[start:stop:step,:,start:stop:step].get(), a_gpu.get()[start:stop:step,:,start:stop:step])
 
-    def test_get(self):
+    def test_get_set(self):
         import pycuda.gpuarray as gpuarray
+
         a = np.random.normal(0., 1., (4,4))
         a_gpu = gpuarray.to_gpu(a)
-        
         assert np.allclose(a_gpu.get(), a)
         assert np.allclose(a_gpu[1:3,1:3].get(), a[1:3,1:3])
+
+        a = np.random.normal(0., 1., (4,4,4)).transpose((1,2,0))
+        a_gpu = gpuarray.to_gpu(a)
+        assert np.allclose(a_gpu.get(), a)
+        assert np.allclose(a_gpu[1:3,1:3,1:3].get(), a[1:3,1:3,1:3])
 
 if __name__ == "__main__":
     # make sure that import failures get reported, instead of skipping the tests.
