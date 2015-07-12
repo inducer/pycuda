@@ -252,78 +252,56 @@ class GPUArray(object):
         if self.size:
             drv.memcpy_htod_async(self.gpudata, ary, stream)
 
-    def get(self, ary=None, pagelocked=False):
+    def get(self, ary=None, pagelocked=False, async=False, stream=None):
         if ary is None:
             if pagelocked:
                 ary = drv.pagelocked_empty(self.shape, self.dtype)
             else:
                 ary = np.empty(self.shape, self.dtype)
 
-            ary = _as_strided(ary, strides=self.strides)
-        else:
-            assert ary.size == self.size
-            assert ary.dtype == self.dtype
-            assert ary.flags.forc
+            # Compute strides to have same order as self, but packed
+            info = [(self.strides[axis], self.shape[axis], axis) for axis in xrange(len(self.shape))]
+            info.sort()
 
+            dst_info = []
+            stride = self.dtype.itemsize
+            for _, dim, axis in info:
+                dst_info.append((axis, stride))
+                stride *= dim
+            dst_info.sort()
+            dst_strides = [stride for _, stride in dst_info]
+
+            ary = _as_strided(ary, strides=dst_strides)
+        else:
+            if self.size != ary.size:
+                raise ValueError("self and ary must be the same size")
             if self.shape != ary.shape:
                 from warnings import warn
                 warn("get() between arrays of different shape is deprecated "
                         "and will be removed in PyCUDA 2017.x",
                         DeprecationWarning, stacklevel=2)
+                ary = ary.reshape(self.shape)
 
-        assert self.flags.forc, "Array in get() must be contiguous"
-
-        if self.size:
-            drv.memcpy_dtoh(ary, self.gpudata)
-        return ary
-
-    def get2(self, ary=None, pagelocked=False):
-        if ary is None:
-            order = _discontiguous_order(self) or 'C'
-            if pagelocked:
-                ary = drv.pagelocked_empty(self.shape, self.dtype, order=order)
-            else:
-                ary = np.empty(self.shape, self.dtype, order=order)
-        else:
-            assert ary.shape == self.shape
-            assert ary.dtype == self.dtype
+            if self.dtype != ary.dtype:
+                raise TypeError("self and ary must have the same dtype")
 
         if self.size:
-            _copy(ary, self)
+            _memcpy_discontig(ary, self, async=async, stream=stream)
         return ary
 
     def get_async(self, stream=None, ary=None):
-        if ary is None:
-            ary = drv.pagelocked_empty(self.shape, self.dtype)
-
-            ary = _as_strided(ary, strides=self.strides)
-        else:
-            assert ary.size == self.size
-            assert ary.dtype == self.dtype
-            assert ary.flags.forc
-
-            if self.shape != ary.shape:
-                from warnings import warn
-                warn("get() between arrays of different shape is deprecated "
-                        "and will be removed in PyCUDA 2017.x",
-                        DeprecationWarning, stacklevel=2)
-
-        assert self.flags.forc, "Array in get() must be contiguous"
-
-        if self.size:
-            drv.memcpy_dtoh_async(ary, self.gpudata, stream)
-        return ary
+        return self.get(ary=ary, async=True, stream=stream)
 
     def copy(self):
         new = GPUArray(self.shape, self.dtype)
-        _copy(new, self)
+        _memcpy_discontig(new, self)
         return new
 
     def __str__(self):
-        return str(self.get2())
+        return str(self.get())
 
     def __repr__(self):
-        return repr(self.get2())
+        return repr(self.get())
 
     def __hash__(self):
         raise TypeError("GPUArrays are not hashable.")
@@ -911,7 +889,7 @@ class GPUArray(object):
                 strides=tuple(new_strides))
 
     def __setitem__(self, index, value):
-        _copy(self[index], value)
+        _memcpy_discontig(self[index], value)
 
     # }}}
 
@@ -1121,74 +1099,61 @@ def arange(*args, **kwargs):
 
 # }}}
 
-def _discontiguous_order(ary):
-    if isinstance(ary, GPUArray):
-        if ary.flags.c_contiguous: return 'C'
-        elif ary.flags.f_contiguous: return 'F'
-    elif isinstance(ary, np.ndarray):
-        if ary.flags['C_CONTIGUOUS']: return 'C'
-        elif ary.flags['F_CONTIGUOUS']: return 'F'
+def _memcpy_discontig(dst, src, async=False, stream=None):
+    """Copy the contents of src into dst.
+    
+    The two arrays should have the same dtype, shape, and order, but
+    not necessarily the same strides. One of the following two
+    conditions should hold:
+    - both src and dst are contiguous
+    - both src and dst have <= 3 axes and are contiguous in their minor axes
 
-    order = None
-    prev_stride = None
-    for stride in ary.strides:
-        if prev_stride:
-            if not order and stride > prev_stride:
-                order = 'F'
-            elif not order and stride < prev_stride:
-                order = 'C'
-            elif ((order == 'F' and stride < prev_stride) or
-                  (order == 'C' and stride > prev_stride)):
-                raise TypeError("Array must have row- or column-major layout")
-        prev_stride = stride
-    return order
-
-def _copy(dst, src):
-    """Copy the contents of src into dst."""
-    if not (isinstance(src, GPUArray) or isinstance(src, np.ndarray)):
-        raise RuntimeError("src must be GPUArray or ndarray")
-    if not (isinstance(dst, GPUArray) or isinstance(dst, np.ndarray)):
-        raise RuntimeError("dst must be GPUArray or ndarray")
+    """
+    if not isinstance(src, (GPUArray, np.ndarray)):
+        raise TypeError("src must be GPUArray or ndarray")
+    if not isinstance(dst, (GPUArray, np.ndarray)):
+        raise TypeError("dst must be GPUArray or ndarray")
     if src.shape != dst.shape:
-        raise RuntimeError("src and dst must be same shape")
+        raise ValueError("src and dst must be same shape")
     if src.dtype != dst.dtype:
-        raise RuntimeError("src and dst must have same dtype")
+        raise TypeError("src and dst must have same dtype")
 
     if isinstance(src, np.ndarray) and isinstance(dst, np.ndarray):
         dst[...] = src
         return
 
-    if len(src.shape) <= 1:
+    # Contiguous case (includes 1-d case)
+    if src.flags.forc and dst.flags.forc:
         if isinstance(src, GPUArray):
             if isinstance(dst, GPUArray):
-                drv.memcpy_dtod(dst.gpudata, src.gpudata, src.nbytes)
+                if async:
+                    drv.memcpy_dtod_async(dst.gpudata, src.gpudata, src.nbytes, stream=stream)
+                else:
+                    drv.memcpy_dtod(dst.gpudata, src.gpudata, src.nbytes)
             else:
-                drv.memcpy_dtoh(dst, src.gpudata)
+                if async:
+                    drv.memcpy_dtoh_async(dst, src.gpudata, stream=stream)
+                else:
+                    drv.memcpy_dtoh(dst, src.gpudata)
         else:
-            drv.memcpy_htod(dst.gpudata, src)
+            if async:
+                drv.memcpy_htod(dst.gpudata, src, stream=stream)
+            else:
+                drv.memcpy_htod(dst.gpudata, src)
         return
 
-    if len(src.shape) > 3:
-        raise RuntimeError("can only copy arrays with 3 or fewer dims")
+    src_info = [(src.strides[axis], src.shape[axis], axis) for axis in xrange(len(src.shape))]
+    src_info.sort()
+    stride, dim, axis = src_info[0]
+    if stride != src.dtype.itemsize:
+        raise ValueError("src must be contiguous in minor axis")
+    if dst.strides[axis] != dst.dtype.itemsize:
+        raise ValueError("dst must be contiguous in minor axis (dst.strides=%s, axis=%s)" % (dst.strides, axis))
+    src_strides, shape, axes = zip(*src_info)
+    dst_strides = [dst.strides[axis] for axis in axes]
+    if dst_strides != sorted(dst_strides):
+        raise ValueError("src and dst must have same order")
 
-    src_order = _discontiguous_order(src)
-    dst_order = _discontiguous_order(dst)
-    if src_order == 'F' and dst_order == 'F':
-        shape = tuple(reversed(src.shape))
-        src_strides = tuple(reversed(src.strides))
-        dst_strides = tuple(reversed(dst.strides))
-    elif src_order == 'F' or dst_order == 'F':
-        raise RuntimeError("src and dst must have same order")
-    else:
-        shape = src.shape
-        src_strides = src.strides
-        dst_strides = dst.strides
-
-    if src_strides[-1] != src.dtype.itemsize:
-        raise RuntimeError("src's minor axis must be contiguous")
-    if dst_strides[-1] != dst.dtype.itemsize:
-        raise RuntimeError("dst's minor axis must be contiguous")
-        
     if len(src.shape) == 2:
         copy = drv.Memcpy2D()
     else: # len(src.shape) == 3
@@ -1204,27 +1169,32 @@ def _copy(dst, src):
     else:
         copy.set_dst_host(dst)
 
-    copy.width_in_bytes = src_strides[-1]*shape[-1]
+    copy.width_in_bytes = src_strides[0]*shape[0]
 
-    copy.src_pitch = src_strides[-2]
-    copy.dst_pitch = dst_strides[-2]
-    copy.height = shape[-2]
+    copy.src_pitch = src_strides[1]
+    copy.dst_pitch = dst_strides[1]
+    copy.height = shape[1]
     
     if len(src.shape) == 2:
-        copy(aligned=True)
+        if async:
+            copy(stream=stream)
+        else:
+            copy(aligned=True)
 
     else: # len(src.shape) == 3
-
-        if src_strides[0] % src_strides[1] != 0:
+        if src_strides[2] % src_strides[1] != 0:
             raise RuntimeError("src's major stride must be a multiple of middle stride")
-        copy.src_height = src_strides[0] // src_strides[1]
+        copy.src_height = src_strides[2] // src_strides[1]
 
-        if dst_strides[0] % dst_strides[1] != 0:
+        if dst_strides[2] % dst_strides[1] != 0:
             raise RuntimeError("dst's major stride must be a multiple of middle stride")
-        copy.dst_height = dst_strides[0] // dst_strides[1]
+        copy.dst_height = dst_strides[2] // dst_strides[1]
 
-        copy.depth = shape[0]
-        copy()
+        copy.depth = shape[2]
+        if async:
+            copy(stream=stream)
+        else:
+            copy()
 
 
 # {{{ pickle support

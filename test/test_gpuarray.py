@@ -978,6 +978,40 @@ class TestGPUArray:
         assert b_gpu.shape == b.shape
         assert b_gpu.strides == b.strides
 
+    def test_copy(self):
+        from pycuda.curandom import rand as curand
+        a_gpu = curand((3,3))
+
+        for start, stop, step in [(0,3,1), (1,2,1), (0,3,2), (0,3,3)]:
+            assert np.allclose(a_gpu[start:stop:step].get(), a_gpu.get()[start:stop:step])
+
+        a_gpu = curand((3,1))
+        for start, stop, step in [(0,3,1), (1,2,1), (0,3,2), (0,3,3)]:
+            assert np.allclose(a_gpu[start:stop:step].get(), a_gpu.get()[start:stop:step])
+
+        a_gpu = curand((3,3,3))
+        for start, stop, step in [(0,3,1), (1,2,1), (0,3,2), (0,3,3)]:
+            assert np.allclose(a_gpu[start:stop:step,start:stop:step].get(), a_gpu.get()[start:stop:step,start:stop:step])
+
+        a_gpu = curand((3,3,3)).transpose((1,2,0))
+        a = a_gpu.get()
+        for start, stop, step in [(0,3,1), (1,2,1), (0,3,2), (0,3,3)]:
+            assert np.allclose(a_gpu[start:stop:step,:,start:stop:step].get(), a_gpu.get()[start:stop:step,:,start:stop:step])
+
+        """# 4-d should work as long as only 2 axes are discontiguous
+        a_gpu = curand((3,3,3,3))
+        a = a_gpu.get()
+        for start, stop, step in [(0,3,1), (1,2,1), (0,3,2), (0,3,3)]:
+            assert np.allclose(a_gpu[start:stop:step,:,start:stop:step,:].get(), a_gpu.get()[start:stop:step,:,start:stop:step,:])"""
+
+    def test_get(self):
+        import pycuda.gpuarray as gpuarray
+        a = np.random.normal(0., 1., (4,4))
+        a_gpu = gpuarray.to_gpu(a)
+        
+        assert np.allclose(a_gpu.get(), a)
+        assert np.allclose(a_gpu[1:3,1:3].get(), a[1:3,1:3])
+
 if __name__ == "__main__":
     # make sure that import failures get reported, instead of skipping the tests.
     import pycuda.autoinit  # noqa
