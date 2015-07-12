@@ -1671,7 +1671,7 @@ namespace pycuda
     { \
       srcMemoryType = CU_MEMORYTYPE_HOST; \
       py_buffer_wrapper buf_wrapper; \
-      buf_wrapper.get(buf_py.ptr(), PyBUF_ANY_CONTIGUOUS); \
+      buf_wrapper.get(buf_py.ptr(), PyBUF_STRIDED_RO); \
       srcHost = buf_wrapper.m_buf.buf; \
     } \
     \
@@ -1691,7 +1691,7 @@ namespace pycuda
     { \
       dstMemoryType = CU_MEMORYTYPE_HOST; \
       py_buffer_wrapper buf_wrapper; \
-      buf_wrapper.get(buf_py.ptr(), PyBUF_ANY_CONTIGUOUS | PyBUF_WRITABLE); \
+      buf_wrapper.get(buf_py.ptr(), PyBUF_STRIDED); \
       dstHost = buf_wrapper.m_buf.buf; \
     } \
     \

@@ -220,91 +220,56 @@ class GPUArray(object):
     def flags(self):
         return _ArrayFlags(self)
 
-    def set(self, ary):
-        assert ary.size == self.size
-        assert ary.dtype == self.dtype
-        if ary.strides != self.strides:
+    def set(self, ary, async=False, stream=None):
+        if ary.size != self.size:
+            raise ValueError("ary and self must be the same size")
+        if ary.shape != self.shape:
             from warnings import warn
-            warn("Setting array from one with different strides/storage order. "
-                    "This will cease to work in 2013.x.",
+            warn("Setting array from one with different shape.",
                     stacklevel=2)
+            ary = ary.reshape(self.shape)
 
-        assert self.flags.forc
+        if ary.dtype != self.dtype:
+            raise ValueError("ary and self must have the same dtype")
 
         if self.size:
-            drv.memcpy_htod(self.gpudata, ary)
+            _memcpy_discontig(self, ary, async=async, stream=stream)
 
     def set_async(self, ary, stream=None):
-        assert ary.size == self.size
-        assert ary.dtype == self.dtype
-        if ary.strides != self.strides:
-            from warnings import warn
-            warn("Setting array from one with different strides/storage order. "
-                    "This will cease to work in 2013.x.",
-                    stacklevel=2)
+        return set(ary, async=True, stream=None)
 
-        assert self.flags.forc
-
-        if not ary.flags.forc:
-            raise RuntimeError("cannot asynchronously set from "
-                    "non-contiguous array")
-
-        if self.size:
-            drv.memcpy_htod_async(self.gpudata, ary, stream)
-
-    def get(self, ary=None, pagelocked=False):
+    def get(self, ary=None, pagelocked=False, async=False, stream=None):
         if ary is None:
             if pagelocked:
                 ary = drv.pagelocked_empty(self.shape, self.dtype)
             else:
                 ary = np.empty(self.shape, self.dtype)
 
-            ary = _as_strided(ary, strides=self.strides)
+            strides = _compact_strides(self)
+            ary = _as_strided(ary, strides=strides)
         else:
-            assert ary.size == self.size
-            assert ary.dtype == self.dtype
-            assert ary.flags.forc
-
+            if self.size != ary.size:
+                raise ValueError("self and ary must be the same size")
             if self.shape != ary.shape:
                 from warnings import warn
                 warn("get() between arrays of different shape is deprecated "
                         "and will be removed in PyCUDA 2017.x",
                         DeprecationWarning, stacklevel=2)
+                ary = ary.reshape(self.shape)
 
-        assert self.flags.forc, "Array in get() must be contiguous"
+            if self.dtype != ary.dtype:
+                raise TypeError("self and ary must have the same dtype")
 
         if self.size:
-            drv.memcpy_dtoh(ary, self.gpudata)
+            _memcpy_discontig(ary, self, async=async, stream=stream)
         return ary
 
     def get_async(self, stream=None, ary=None):
-        if ary is None:
-            ary = drv.pagelocked_empty(self.shape, self.dtype)
-
-            ary = _as_strided(ary, strides=self.strides)
-        else:
-            assert ary.size == self.size
-            assert ary.dtype == self.dtype
-            assert ary.flags.forc
-
-            if self.shape != ary.shape:
-                from warnings import warn
-                warn("get() between arrays of different shape is deprecated "
-                        "and will be removed in PyCUDA 2017.x",
-                        DeprecationWarning, stacklevel=2)
-
-        assert self.flags.forc, "Array in get() must be contiguous"
-
-        if self.size:
-            drv.memcpy_dtoh_async(ary, self.gpudata, stream)
-        return ary
+        return self.get(ary=ary, async=True, stream=stream)
 
     def copy(self):
-        if not self.flags.forc:
-            raise RuntimeError("only contiguous arrays may copied.")
-
         new = GPUArray(self.shape, self.dtype)
-        drv.memcpy_dtod(new.gpudata, self.gpudata, self.nbytes)
+        _memcpy_discontig(new, self)
         return new
 
     def __str__(self):
@@ -898,6 +863,9 @@ class GPUArray(object):
                 gpudata=int(self.gpudata)+new_offset,
                 strides=tuple(new_strides))
 
+    def __setitem__(self, index, value):
+        _memcpy_discontig(self[index], value)
+
     # }}}
 
     # {{{ complex-valued business
@@ -980,14 +948,14 @@ class GPUArray(object):
 
 def to_gpu(ary, allocator=drv.mem_alloc):
     """converts a numpy array to a GPUArray"""
-    result = GPUArray(ary.shape, ary.dtype, allocator, strides=ary.strides)
+    result = GPUArray(ary.shape, ary.dtype, allocator, strides=_compact_strides(ary))
     result.set(ary)
     return result
 
 
 def to_gpu_async(ary, allocator=drv.mem_alloc, stream=None):
     """converts a numpy array to a GPUArray"""
-    result = GPUArray(ary.shape, ary.dtype, allocator, strides=ary.strides)
+    result = GPUArray(ary.shape, ary.dtype, allocator, strides=_compact_strides(ary))
     result.set_async(ary, stream)
     return result
 
@@ -1105,6 +1073,143 @@ def arange(*args, **kwargs):
     return result
 
 # }}}
+
+def _compact_strides(a):
+    # Compute strides to have same order as self, but packed
+    info = sorted((a.strides[axis], a.shape[axis], axis) for axis in xrange(len(a.shape)))
+
+    strides = [None]*len(a.shape)
+    stride = a.dtype.itemsize
+    for _, dim, axis in info:
+        strides[axis] = stride
+        stride *= dim
+    return strides
+
+def _memcpy_discontig(dst, src, async=False, stream=None):
+    """Copy the contents of src into dst.
+    
+    The two arrays should have the same dtype, shape, and order, but
+    not necessarily the same strides. There may be up to _two_
+    axes along which either `src` or `dst` is not contiguous.
+    """
+
+    if not isinstance(src, (GPUArray, np.ndarray)):
+        raise TypeError("src must be GPUArray or ndarray")
+    if not isinstance(dst, (GPUArray, np.ndarray)):
+        raise TypeError("dst must be GPUArray or ndarray")
+    if src.shape != dst.shape:
+        raise ValueError("src and dst must be same shape")
+    if src.dtype != dst.dtype:
+        raise TypeError("src and dst must have same dtype")
+
+    # ndarray -> ndarray
+    if isinstance(src, np.ndarray) and isinstance(dst, np.ndarray):
+        dst[...] = src
+        return
+
+    if src.flags.forc and dst.flags.forc:
+        shape = [src.size]
+        src_strides = dst_strides = [src.dtype.itemsize]
+    else:
+        # put src in Fortran order (which should put dst in Fortran order too)
+        # and remove singleton axes
+        src_info = sorted((src.strides[axis], axis) for axis in xrange(len(src.shape)) if src.shape[axis] > 1)
+        axes = [axis for _, axis in src_info]
+        shape = [src.shape[axis] for axis in axes]
+        src_strides = [src.strides[axis] for axis in axes]
+        dst_strides = [dst.strides[axis] for axis in axes]
+
+        # copy functions require contiguity in minor axis, so add new axis if needed
+        if len(shape) == 0 or src_strides[0] != src.dtype.itemsize or dst_strides[0] != dst.dtype.itemsize:
+            shape[0:0] = [1]
+            src_strides[0:0] = [0]
+            dst_strides[0:0] = [0]
+            axes[0:0] = [np.newaxis]
+
+        # collapse contiguous dimensions
+        # and check that dst is in same order as src
+        i = 1
+        while i < len(shape):
+            if dst_strides[i] < dst_strides[i-1]:
+                raise ValueError("src and dst must have same order")
+            if (src_strides[i-1] * shape[i-1] == src_strides[i] and
+                dst_strides[i-1] * shape[i-1] == dst_strides[i]):
+                shape[i-1:i+1] = [shape[i-1] * shape[i]]
+                del src_strides[i]
+                del dst_strides[i]
+                del axes[i]
+            else:
+                i += 1
+
+    if len(shape) <= 1:
+        if isinstance(src, GPUArray):
+            if isinstance(dst, GPUArray):
+                if async:
+                    drv.memcpy_dtod_async(dst.gpudata, src.gpudata, src.nbytes, stream=stream)
+                else:
+                    drv.memcpy_dtod(dst.gpudata, src.gpudata, src.nbytes)
+            else:
+                # The arrays might be contiguous in the sense of
+                # having no gaps, but the axes could be transposed
+                # so that the order is neither Fortran or C.
+                # So, we attempt to get a contiguous view of dst.
+                dst = _as_strided(dst, shape=(dst.size,), strides=(dst.dtype.itemsize,))
+                if async:
+                    drv.memcpy_dtoh_async(dst, src.gpudata, stream=stream)
+                else:
+                    drv.memcpy_dtoh(dst, src.gpudata)
+        else:
+            src = _as_strided(src, shape=(src.size,), strides=(src.dtype.itemsize,))
+            if async:
+                drv.memcpy_htod(dst.gpudata, src, stream=stream)
+            else:
+                drv.memcpy_htod(dst.gpudata, src)
+        return
+
+    if len(shape) == 2:
+        copy = drv.Memcpy2D()
+    elif len(shape) == 3:
+        copy = drv.Memcpy3D()
+    else:
+        raise ValueError("more than 2 discontiguous axes not supported %s" % (tuple(sorted(axes)),))
+
+    if isinstance(src, GPUArray):
+        copy.set_src_device(src.gpudata)
+    else:
+        copy.set_src_host(src)
+
+    if isinstance(dst, GPUArray):
+        copy.set_dst_device(dst.gpudata)
+    else:
+        copy.set_dst_host(dst)
+
+    copy.width_in_bytes = src.dtype.itemsize*shape[0]
+
+    copy.src_pitch = src_strides[1]
+    copy.dst_pitch = dst_strides[1]
+    copy.height = shape[1]
+    
+    if len(shape) == 2:
+        if async:
+            copy(stream=stream)
+        else:
+            copy(aligned=True)
+
+    else: # len(shape) == 3
+        if src_strides[2] % src_strides[1] != 0:
+            raise RuntimeError("src's major stride must be a multiple of middle stride")
+        copy.src_height = src_strides[2] // src_strides[1]
+
+        if dst_strides[2] % dst_strides[1] != 0:
+            raise RuntimeError("dst's major stride must be a multiple of middle stride")
+        copy.dst_height = dst_strides[2] // dst_strides[1]
+
+        copy.depth = shape[2]
+        if async:
+            copy(stream=stream)
+        else:
+            copy()
+
 
 # {{{ pickle support
 
