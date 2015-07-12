@@ -1166,14 +1166,13 @@ def _memcpy_discontig(dst, src, async=False, stream=None):
                 # having no gaps, but the axes could be transposed
                 # so that the order is neither Fortran or C.
                 # So, we attempt to get a contiguous view of dst.
-                dst_flat = dst.ravel(order='K')
-                assert np.byte_bounds(dst) == np.byte_bounds(dst_flat)
+                dst = _as_strided(dst, shape=(dst.size,), strides=(dst.dtype.itemsize,))
                 if async:
-                    drv.memcpy_dtoh_async(dst_flat, src.gpudata, stream=stream)
+                    drv.memcpy_dtoh_async(dst, src.gpudata, stream=stream)
                 else:
-                    drv.memcpy_dtoh(dst_flat, src.gpudata)
+                    drv.memcpy_dtoh(dst, src.gpudata)
         else:
-            src = src.ravel(order='K')
+            src = _as_strided(src, shape=(src.size,), strides=(src.dtype.itemsize,))
             if async:
                 drv.memcpy_htod(dst.gpudata, src, stream=stream)
             else:
