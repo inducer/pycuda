@@ -976,6 +976,7 @@ class TestGPUArray:
         assert b_gpu.shape == b.shape
         assert b_gpu.strides == b.strides
 
+    @mark_cuda_test
     def test_copy(self):
         from pycuda.curandom import rand as curand
         a_gpu = curand((3,3))
@@ -1002,6 +1003,7 @@ class TestGPUArray:
         for start, stop, step in [(0,3,1), (1,2,1), (0,3,3)]:
             assert np.allclose(a_gpu[start:stop:step,:,start:stop:step].get(), a_gpu.get()[start:stop:step,:,start:stop:step])
 
+    @mark_cuda_test
     def test_get_set(self):
         import pycuda.gpuarray as gpuarray
 
