@@ -912,9 +912,7 @@ class TestGPUArray:
         assert y.shape == Y.shape
         assert y.strides == Y.strides
 
-        import pytest
-        with pytest.raises(AssertionError):
-            assert (y.get() == X.get()[:3, :5]).all()
+        assert np.array_equal(y.get(), X.get()[:3, :5])
 
     @mark_cuda_test
     def test_scalar_comparisons(self):
