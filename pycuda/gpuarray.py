@@ -1161,7 +1161,7 @@ def _memcpy_discontig(dst, src, async=False, stream=None):
         else:
             src = _as_strided(src, shape=(src.size,), strides=(src.dtype.itemsize,))
             if async:
-                drv.memcpy_htod(dst.gpudata, src, stream=stream)
+                drv.memcpy_htod_async(dst.gpudata, src, stream=stream)
             else:
                 drv.memcpy_htod(dst.gpudata, src)
         return
