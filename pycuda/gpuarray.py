@@ -236,7 +236,7 @@ class GPUArray(object):
             _memcpy_discontig(self, ary, async=async, stream=stream)
 
     def set_async(self, ary, stream=None):
-        return set(ary, async=True, stream=None)
+        return self.set(ary, async=True, stream=None)
 
     def get(self, ary=None, pagelocked=False, async=False, stream=None):
         if ary is None:
@@ -1087,7 +1087,7 @@ def _compact_strides(a):
 
 def _memcpy_discontig(dst, src, async=False, stream=None):
     """Copy the contents of src into dst.
-    
+
     The two arrays should have the same dtype, shape, and order, but
     not necessarily the same strides. There may be up to _two_
     axes along which either `src` or `dst` is not contiguous.
@@ -1161,7 +1161,7 @@ def _memcpy_discontig(dst, src, async=False, stream=None):
         else:
             src = _as_strided(src, shape=(src.size,), strides=(src.dtype.itemsize,))
             if async:
-                drv.memcpy_htod(dst.gpudata, src, stream=stream)
+                drv.memcpy_htod_async(dst.gpudata, src, stream=stream)
             else:
                 drv.memcpy_htod(dst.gpudata, src)
         return
@@ -1188,7 +1188,7 @@ def _memcpy_discontig(dst, src, async=False, stream=None):
     copy.src_pitch = src_strides[1]
     copy.dst_pitch = dst_strides[1]
     copy.height = shape[1]
-    
+
     if len(shape) == 2:
         if async:
             copy(stream=stream)
