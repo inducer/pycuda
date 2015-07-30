@@ -1,5 +1,6 @@
 from __future__ import absolute_import
 from __future__ import print_function
+import os
 import setuptools  # noqa
 from setuptools import Extension
 
@@ -249,7 +250,16 @@ class ConfigSchema:
         self.conf_dir = conf_dir
 
     def get_default_config(self):
-        return dict((opt.name, opt.default) for opt in self.options)
+        conf = {}
+        for opt in self.options:
+            if opt.default is not None:
+                value = opt.default
+            elif opt.name in os.environ:
+                value = os.environ[opt.name]
+            else:
+                value = None
+            conf[opt.name] = value
+        return conf
 
     def read_config_from_pyfile(self, filename):
         result = {}
