@@ -178,6 +178,10 @@ def main():
             # build info
             packages=["pycuda", "pycuda.gl", "pycuda.sparse", "pycuda.compyte"],
 
+            setup_requires=[
+                "numpy>=1.6",
+                ],
+
             install_requires=[
                 "pytools>=2011.2",
                 "pytest>=2",
