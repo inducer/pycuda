@@ -573,8 +573,16 @@ class TestDriver:
             from py.test import skip
             skip("register_host_memory is not supported on OS X")
 
-        a = drv.aligned_empty((2**20,), np.float64, alignment=4096)
-        drv.register_host_memory(a)
+        import resource
+
+        a = drv.aligned_empty((2**20,), np.float64,
+            alignment=resource.getpagesize())
+        a_pin = drv.register_host_memory(a)
+
+        gpu_ary = drv.mem_alloc_like(a)
+        stream = drv.Stream()
+        drv.memcpy_htod_async(gpu_ary, a_pin, stream)
+        drv.Context.synchronize()
 
     @pytest.mark.xfail
     @mark_cuda_test
