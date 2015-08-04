@@ -484,7 +484,7 @@ namespace
 
     std::auto_ptr<registered_host_memory> regmem(
         new registered_host_memory(
-          PyArray_DATA(ary.ptr()), PyArray_SIZE(ary.ptr()), flags, ary));
+          PyArray_DATA(ary.ptr()), PyArray_NBYTES(ary.ptr()), flags, ary));
 
     PyObject *new_array_ptr = PyArray_FromInterface(ary.ptr());
     if (new_array_ptr == Py_NotImplemented)
