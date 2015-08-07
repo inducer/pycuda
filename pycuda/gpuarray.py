@@ -236,7 +236,7 @@ class GPUArray(object):
             _memcpy_discontig(self, ary, async=async, stream=stream)
 
     def set_async(self, ary, stream=None):
-        return self.set(ary, async=True, stream=None)
+        return self.set(ary, async=True, stream=stream)
 
     def get(self, ary=None, pagelocked=False, async=False, stream=None):
         if ary is None:
@@ -1191,7 +1191,7 @@ def _memcpy_discontig(dst, src, async=False, stream=None):
 
     if len(shape) == 2:
         if async:
-            copy(stream=stream)
+            copy(stream)
         else:
             copy(aligned=True)
 
@@ -1206,7 +1206,7 @@ def _memcpy_discontig(dst, src, async=False, stream=None):
 
         copy.depth = shape[2]
         if async:
-            copy(stream=stream)
+            copy(stream)
         else:
             copy()
 
