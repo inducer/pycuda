@@ -103,6 +103,12 @@ The :class:`GPUArray` Array Class
         Returns view of array with the same data. If *dtype* is different from
         current dtype, the actual bytes of memory will be reinterpreted.
 
+    .. method :: squeeze(dtype=None)
+
+        Returns a view of the array with dimensions of length 1 removed.
+
+        .. versionadded: 2015.1.4
+
     .. method :: set(ary)
 
         Transfer the contents the :class:`numpy.ndarray` object *ary*
