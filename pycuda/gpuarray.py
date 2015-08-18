@@ -745,11 +745,11 @@ class GPUArray(object):
     def squeeze(self):
         """
         Returns a view of the array with dimensions of
-        length 1 removed 
+        length 1 removed.
         """
         new_shape = tuple([dim for dim in self.shape if dim > 1])
         new_strides = tuple([self.strides[i]
-            for i, dim in enumerate(self.shape) if dim > 1])  
+            for i, dim in enumerate(self.shape) if dim > 1])
 
         return GPUArray(
             shape=new_shape,
