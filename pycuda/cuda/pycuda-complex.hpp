@@ -87,6 +87,10 @@ struct complex {
   value_type real() const { return _M_re; }
   __device__
   value_type imag() const { return _M_im; }
+  __device__
+  void real(value_type val) { _M_re = val; }
+  __device__
+  void imag(value_type val) { _M_im = val; }
 
   // Arithmetic op= operations involving one real argument.
 
@@ -223,6 +227,8 @@ struct _STLP_CLASS_DECLSPEC complex<float> {
   // Element access.
   value_type __device__ real() const { return _M_re; }
   value_type __device__ imag() const { return _M_im; }
+  void __device__ real(value_type val) { _M_re = val; }
+  void __device__ imag(value_type val) { _M_im = val; }
 
   // Arithmetic op= operations involving one real argument.
 
@@ -393,6 +399,10 @@ struct _STLP_CLASS_DECLSPEC complex<double> {
   value_type real() const { return _M_re; }
   __device__
   value_type imag() const { return _M_im; }
+  __device__
+  void real(value_type val) { _M_re = val; }
+  __device__
+  void imag(value_type val) { _M_im = val; }
 
   // Arithmetic op= operations involving one real argument.
 
