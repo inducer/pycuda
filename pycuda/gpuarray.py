@@ -13,6 +13,7 @@ from pycuda.compyte.array import (
 from pycuda.characterize import has_double_support
 import six
 from six.moves import range, zip, reduce
+import numbers
 
 
 def _get_common_dtype(obj1, obj2):
@@ -167,7 +168,7 @@ class GPUArray(object):
             for dim in shape:
                 s *= dim
         except TypeError:
-            assert isinstance(shape, (int, int, np.integer))
+            assert isinstance(shape, numbers.Integral)
             s = shape
             shape = (shape,)
 
