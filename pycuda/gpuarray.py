@@ -168,9 +168,15 @@ class GPUArray(object):
             for dim in shape:
                 s *= dim
         except TypeError:
+            # handle dim-0 ndarrays:
+            if isinstance(shape, np.ndarray):
+                shape = np.asscalar(shape)
             assert isinstance(shape, numbers.Integral)
             s = shape
             shape = (shape,)
+        else:
+            # handle shapes that are ndarrays
+            shape = tuple(shape)
 
         if isinstance(s, np.integer):
             # bombs if s is a Python integer
