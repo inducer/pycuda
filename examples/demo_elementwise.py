@@ -22,5 +22,5 @@ lin_comb = ElementwiseKernel(
 c_gpu = gpuarray.empty_like(a_gpu)
 lin_comb(5, a_gpu, 6, b_gpu, c_gpu)
 
-#import numpy.linalg as la
-#assert la.norm((c_gpu - (5*a_gpu+6*b_gpu)).get()) < 1e-5
+import numpy.linalg as la
+assert la.norm(c_gpu.get() - numpy.sin((5*a_gpu*6*b_gpu).get())) < 1e-5
