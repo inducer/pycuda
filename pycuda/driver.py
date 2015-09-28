@@ -70,7 +70,10 @@ class ArgumentHandler(object):
 
     def get_device_alloc(self):
         if self.dev_alloc is None:
-            self.dev_alloc = mem_alloc_like(self.array)
+            try:
+                self.dev_alloc = mem_alloc_like(self.array)
+            except AttributeError:
+                raise TypeError("could not determine array length of '%s': unsupported array type or not an array" % type(self.array))
         return self.dev_alloc
 
     def pre_call(self, stream):
