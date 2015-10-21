@@ -314,10 +314,11 @@ class TestDriver:
     def test_2d_fp_textures(self):
         orden = "C"
         npoints = 32
-        for prec in [np.float32,np.float64,np.complex64,np.complex128]:
+        for prec in [np.int16,np.float32,np.float64,np.complex64,np.complex128]:
           prec_str = dtype_to_ctype(prec)
-          if prec == np.complex64: fpName_str = 'cfloat'
-          elif prec == np.complex128: fpName_str = 'cdouble'
+          if prec == np.complex64: fpName_str = 'fp_tex_cfloat'
+          elif prec == np.complex128: fpName_str = 'fp_tex_cdouble'
+          elif prec == np.float64: fpName_str = 'fp_tex_double'
           else: fpName_str = prec_str
           A_cpu = np.zeros([npoints,npoints],order=orden,dtype=prec)
           A_cpu[:] = np.random.rand(npoints,npoints)[:]
@@ -325,7 +326,7 @@ class TestDriver:
 
           myKern = '''
           #include <pycuda-helpers.hpp>
-          texture<fp_tex_fpName, 2, cudaReadModeElementType> mtx_tex;
+          texture<fpName, 2, cudaReadModeElementType> mtx_tex;
 
           __global__ void copy_texture(cuPres *dest)
           {
@@ -356,10 +357,11 @@ class TestDriver:
     def test_3d_fp_textures(self):
         orden = "C"
         npoints = 32
-        for prec in [np.float32,np.float64,np.complex64,np.complex128]:
+        for prec in [np.int16,np.float32,np.float64,np.complex64,np.complex128]:
           prec_str = dtype_to_ctype(prec)
-          if prec == np.complex64: fpName_str = 'cfloat'
-          elif prec == np.complex128: fpName_str = 'cdouble'
+          if prec == np.complex64: fpName_str = 'fp_tex_cfloat'
+          elif prec == np.complex128: fpName_str = 'fp_tex_cdouble'
+          elif prec == np.float64: fpName_str = 'fp_tex_double'
           else: fpName_str = prec_str
           A_cpu = np.zeros([npoints,npoints,npoints],order=orden,dtype=prec)
           A_cpu[:] = np.random.rand(npoints,npoints,npoints)[:]
@@ -367,7 +369,7 @@ class TestDriver:
 
           myKern = '''
           #include <pycuda-helpers.hpp>
-          texture<fp_tex_fpName, 3, cudaReadModeElementType> mtx_tex;
+          texture<fpName, 3, cudaReadModeElementType> mtx_tex;
 
           __global__ void copy_texture(cuPres *dest)
           {
@@ -398,10 +400,11 @@ class TestDriver:
     def test_3d_fp_surfaces(self):
         orden = "C"
         npoints = 32
-        for prec in [np.float32,np.float64,np.complex64,np.complex128]:
+        for prec in [np.int16,np.float32,np.float64,np.complex64,np.complex128]:
           prec_str = dtype_to_ctype(prec)
-          if prec == np.complex64: fpName_str = 'cfloat'
-          elif prec == np.complex128: fpName_str = 'cdouble'
+          if prec == np.complex64: fpName_str = 'fp_tex_cfloat'
+          elif prec == np.complex128: fpName_str = 'fp_tex_cdouble'
+          elif prec == np.float64: fpName_str = 'fp_tex_double'
           else: fpName_str = prec_str
           A_cpu = np.zeros([npoints,npoints,npoints],order=orden,dtype=prec)
           A_cpu[:] = np.random.rand(npoints,npoints,npoints)[:]
@@ -452,10 +455,11 @@ class TestDriver:
     def test_2d_fp_surfaces(self):
         orden = "C"
         npoints = 32
-        for prec in [np.float32,np.float64,np.complex64,np.complex128]:
+        for prec in [np.int16,np.float32,np.float64,np.complex64,np.complex128]:
           prec_str = dtype_to_ctype(prec)
-          if prec == np.complex64: fpName_str = 'cfloat'
-          elif prec == np.complex128: fpName_str = 'cdouble'
+          if prec == np.complex64: fpName_str = 'fp_tex_cfloat'
+          elif prec == np.complex128: fpName_str = 'fp_tex_cdouble'
+          elif prec == np.float64: fpName_str = 'fp_tex_double'
           else: fpName_str = prec_str
           A_cpu = np.zeros([npoints,npoints],order=orden,dtype=prec)
           A_cpu[:] = np.random.rand(npoints,npoints)[:]
