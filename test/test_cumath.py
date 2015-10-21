@@ -180,7 +180,7 @@ class TestMath:
                 np.random.seed(1)
                 A = (np.random.random(s)*(b-a) + a).astype(dtype)
                 if complex:
-                    A += (np.random.random(s)*(b-a) + a)*1j
+                    A = A + (np.random.random(s)*(b-a) + a)*1j
 
                 np.random.seed(1)
                 A = (np.random.random(s)*(b-a) + a).astype(dtype)
