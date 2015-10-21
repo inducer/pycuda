@@ -751,7 +751,7 @@ class TestGPUArray:
         a_gpu = gpuarray.GPUArray(100, dtype=gpuarray.vec.float3)
         a_gpu.fill(gpuarray.vec.make_float3(0.0, 0.0, 0.0))
         a = a_gpu.get()
-        assert a.dtype is gpuarray.vec.float3
+        assert a.dtype == gpuarray.vec.float3
 
     @mark_cuda_test
     def test_create_complex_zeros(self):
