@@ -792,6 +792,74 @@ def np_to_array(nparray, order, allowSurfaceBind=False):
       copy2D(aligned=True)
       return cudaArray
 
+def gpuarray_to_array(gpuarray, order, allowSurfaceBind=False):
+
+    case = order in ["C","F"]
+    if not case:
+      raise LogicError("order must be either F or C")
+
+    dimension = len(gpuarray.shape)
+    if dimension == 2:
+      if order == "C": stride = 0
+      if order == "F": stride = -1
+      h, w = gpuarray.shape
+      d = 1
+      if allowSurfaceBind:
+        descrArr = ArrayDescriptor3D()
+        descrArr.width = int(w)
+        descrArr.height = int(h)
+        descrArr.depth = int(d)
+      else:
+        descrArr = ArrayDescriptor()
+        descrArr.width = int(w)
+        descrArr.height = int(h)
+    elif dimension == 3:
+        if order == "C": stride = 1
+        if order == "F": stride = 1
+        d, h, w = gpuarray.shape
+        descrArr = ArrayDescriptor3D()
+        descrArr.width = int(w)
+        descrArr.height = int(h)
+        descrArr.depth = int(d)
+    else:
+        raise LogicError("CUDArray dimensions 2 and 3 supported in CUDA at the moment ... ")
+
+    if gpuarray.dtype == np.complex64:
+      descrArr.format = array_format.SIGNED_INT32 # Reading data as int2 (hi=re,lo=im) structure
+      descrArr.num_channels = 2
+    elif gpuarray.dtype == np.float64:
+      descrArr.format = array_format.SIGNED_INT32 # Reading data as int2 (hi,lo) structure
+      descrArr.num_channels = 2
+    elif gpuarray.dtype == np.complex128:
+      descrArr.format = array_format.SIGNED_INT32 # Reading data as int4 (re=(hi,lo),im=(hi,lo)) structure
+      descrArr.num_channels = 4
+    else:
+      descrArr.format = dtype_to_array_format(gpuarray.dtype)
+      descrArr.num_channels = 1
+
+    if allowSurfaceBind:
+      if dimension==2:  descrArr.flags |= array3d_flags.ARRAY3D_LAYERED
+      descrArr.flags |= array3d_flags.SURFACE_LDST
+
+    cudaArray = Array(descrArr)
+    if allowSurfaceBind or dimension==3:
+      copy3D = Memcpy3D()
+      copy3D.set_src_device(gpuarray.ptr)
+      copy3D.set_dst_array(cudaArray)
+      copy3D.width_in_bytes = copy3D.src_pitch = gpuarray.strides[stride]
+      copy3D.src_height = copy3D.height = int(h)
+      copy3D.depth = int(d)
+      copy3D()
+      return cudaArray
+    else:
+      copy2D = Memcpy2D()
+      copy2D.set_src_device(gpuarray.ptr)
+      copy2D.set_dst_array(cudaArray)
+      copy2D.width_in_bytes = copy2D.src_pitch = gpuarray.strides[stride]
+      copy2D.src_height = copy2D.height = int(h)
+      copy2D(aligned=True)
+      return cudaArray
+
 def make_multichannel_2d_array(ndarray, order):
     """Channel count has to be the first dimension of the C{ndarray}."""
 

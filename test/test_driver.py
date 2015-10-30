@@ -442,8 +442,8 @@ class TestDriver:
             cuBlock = (npoints,npoints,npoints)
           cuGrid   = (npoints//cuBlock[0]+1*(npoints % cuBlock[0] != 0 ),npoints//cuBlock[1]+1*(npoints % cuBlock[1] != 0 ),npoints//cuBlock[2]+1*(npoints % cuBlock[1] != 0 ))
           copy_texture.prepare('Pi')#,texrefs=[mtx_tex])
-          A_cpu = np.zeros([npoints,npoints,npoints],order=orden,dtype=prec) # To initialize surface with zeros
-          cudaArray = drv.np_to_array(A_cpu,orden,allowSurfaceBind=True)
+          A_gpu2 = gpuarray.zeros_like(A_gpu) # To initialize surface with zeros
+          cudaArray = drv.gpuarray_to_array(A_gpu2,orden,allowSurfaceBind=True)
           A_cpu = A_gpu.get() # To remember original array
           mtx_tex.set_array(cudaArray)
           copy_texture.prepared_call(cuGrid,cuBlock,A_gpu.gpudata, np.int32(0)) # Write random array
@@ -497,8 +497,8 @@ class TestDriver:
             cuBlock = (npoints,npoints,1)
           cuGrid   = (npoints//cuBlock[0]+1*(npoints % cuBlock[0] != 0 ),npoints//cuBlock[1]+1*(npoints % cuBlock[1] != 0 ),1)
           copy_texture.prepare('Pi')#,texrefs=[mtx_tex])
-          A_cpu = np.zeros([npoints,npoints],order=orden,dtype=prec) # To initialize surface with zeros
-          cudaArray = drv.np_to_array(A_cpu,orden,allowSurfaceBind=True)
+          A_gpu2 = gpuarray.zeros_like(A_gpu) # To initialize surface with zeros
+          cudaArray = drv.gpuarray_to_array(A_gpu2,orden,allowSurfaceBind=True)
           A_cpu = A_gpu.get() # To remember original array
           mtx_tex.set_array(cudaArray)
           copy_texture.prepared_call(cuGrid,cuBlock,A_gpu.gpudata, np.int32(0)) # Write random array
