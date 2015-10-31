@@ -337,7 +337,7 @@ Constants
 
     .. attribute:: CONTEXT
         MEMORY_TYPE
-        DEVICE_POINTER 
+        DEVICE_POINTER
         HOST_POINTER
 
     CUDA 4.0 and above.
@@ -928,7 +928,7 @@ Global Device Memory
 
     A base class that facilitates casting to pointers within PyCUDA.
     This allows the user to construct custom pointer types that may
-    have been allocated by facilities outside of PyCUDA proper, but 
+    have been allocated by facilities outside of PyCUDA proper, but
     still need to be objects to facilitate RAII. The user needs to
     supply one method to facilitate the pointer cast:
 
@@ -1076,7 +1076,7 @@ Post-Allocation Pagelocking
     .. method:: unregister()
 
         Unregister the page-lock on the host memory held by this instance.
-        Note that this does not free the memory, it only frees the 
+        Note that this does not free the memory, it only frees the
         page-lock.
 
     .. attribute:: base
@@ -1103,7 +1103,7 @@ CUDA 6.0 adds support for a "Unified Memory" model, which creates a managed
 virtual memory space that is visible to both CPUs and GPUs.  The OS will
 migrate the physical pages associated with managed memory between the CPU and
 GPU as needed.  This allows a numpy array on the host to be passed to kernels
-without first creating a DeviceAllocation and manually copying the host data 
+without first creating a DeviceAllocation and manually copying the host data
 to and from the device.
 
 .. note::
@@ -1222,7 +1222,7 @@ an explicit copy::
     The CUDA Unified Memory model has very specific rules regarding concurrent
     access of managed memory allocations.  Host access to any managed array
     is not allowed while the GPU is executing a kernel, regardless of whether
-    the array is in use by the running kernel.  Failure to follow the 
+    the array is in use by the running kernel.  Failure to follow the
     concurrency rules will generate a segmentation fault, *causing the Python
     interpreter to terminate immediately*.
 
@@ -1389,6 +1389,36 @@ Arrays and Textures
     The `order` argument can be either `"C"` or `"F"`. If
     it is `"C"`, then `tex2D(x,y)` is going to fetch `matrix[y,x]`,
     and vice versa for for `"F"`.
+
+.. function:: np_to_array(nparray, order, allowSurfaceBind=False)
+
+    Turn a :class:`numpy.ndarray` with 2D or 3D structure, into an
+    :class:`Array`.
+    The `order` argument can be either `"C"` or `"F"`.
+    If `allowSurfaceBind` is passed as *True* the returned :class:`Array`
+    can be read and write with :class:`SurfaceReference` in addition to
+    :class:`TextureReference`.
+    Function automatically detect `dtype` and adjust channels to
+    supported available :class:`array_format`. Also includes direct support
+    for `np.float64`, `np.complex64` and `np.complex128` formats, similar
+    to :meth:`bind_to_texref_ext`.
+
+    .. versionadded:: 2015.1
+
+.. function:: gpuarray_to_array(gpuparray, order, allowSurfaceBind=False)
+
+    Turn a :class:`GPUArray` with 2D or 3D structure, into an
+    :class:`Array`.
+    The `order` argument can be either `"C"` or `"F"`.
+    If `allowSurfaceBind` is passed as *True* the returned :class:`Array`
+    can be read and write with :class:`SurfaceReference` in addition to
+    :class:`TextureReference`.
+    Function automatically detect `dtype` and adjust channels to
+    supported available :class:`array_format`. Also includes direct support
+    for `np.float64`, `np.complex64` and `np.complex128` formats, similar
+    to :meth:`bind_to_texref_ext`.
+
+    .. versionadded:: 2015.1
 
 .. function:: make_multichannel_2d_array(matrix, order)
 
@@ -1603,7 +1633,7 @@ Structured Memory Transfers
 
 .. class:: Memcpy3DPeer()
 
-    :class:`Memcpy3DPeer` has the same members as :class:`Memcpy3D`, 
+    :class:`Memcpy3DPeer` has the same members as :class:`Memcpy3D`,
     and additionally all of the following:
 
     .. method:: set_src_context(ctx)

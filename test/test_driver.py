@@ -312,199 +312,203 @@ class TestDriver:
 
     @mark_cuda_test
     def test_2d_fp_textures(self):
-        orden = "C"
+        orden = "F"
         npoints = 32
+
         for prec in [np.int16,np.float32,np.float64,np.complex64,np.complex128]:
-          prec_str = dtype_to_ctype(prec)
-          if prec == np.complex64: fpName_str = 'fp_tex_cfloat'
-          elif prec == np.complex128: fpName_str = 'fp_tex_cdouble'
-          elif prec == np.float64: fpName_str = 'fp_tex_double'
-          else: fpName_str = prec_str
-          A_cpu = np.zeros([npoints,npoints],order=orden,dtype=prec)
-          A_cpu[:] = np.random.rand(npoints,npoints)[:]
-          A_gpu = gpuarray.zeros(A_cpu.shape,dtype=prec,order=orden)
+            prec_str = dtype_to_ctype(prec)
+            if prec == np.complex64: fpName_str = 'fp_tex_cfloat'
+            elif prec == np.complex128: fpName_str = 'fp_tex_cdouble'
+            elif prec == np.float64: fpName_str = 'fp_tex_double'
+            else: fpName_str = prec_str
+            A_cpu = np.zeros([npoints,npoints],order=orden,dtype=prec)
+            A_cpu[:] = np.random.rand(npoints,npoints)[:]
+            A_gpu = gpuarray.zeros(A_cpu.shape,dtype=prec,order=orden)
 
-          myKern = '''
-          #include <pycuda-helpers.hpp>
-          texture<fpName, 2, cudaReadModeElementType> mtx_tex;
+            myKern = '''
+            #include <pycuda-helpers.hpp>
+            texture<fpName, 2, cudaReadModeElementType> mtx_tex;
 
-          __global__ void copy_texture(cuPres *dest)
-          {
-            int row = blockIdx.x*blockDim.x + threadIdx.x;
-            int col = blockIdx.y*blockDim.y + threadIdx.y;
+            __global__ void copy_texture(cuPres *dest)
+            {
+              int row = blockIdx.x*blockDim.x + threadIdx.x;
+              int col = blockIdx.y*blockDim.y + threadIdx.y;
 
-            dest[row + col*blockDim.x*gridDim.x] = fp_tex2D(mtx_tex, col, row);
-          }
-          '''
-          myKern = myKern.replace('fpName',fpName_str)
-          myKern = myKern.replace('cuPres',prec_str)
-          mod = SourceModule(myKern)
+              dest[row + col*blockDim.x*gridDim.x] = fp_tex2D(mtx_tex, col, row);
+            }
+            '''
+            myKern = myKern.replace('fpName',fpName_str)
+            myKern = myKern.replace('cuPres',prec_str)
+            mod = SourceModule(myKern)
 
-          copy_texture = mod.get_function("copy_texture")
-          mtx_tex = mod.get_texref("mtx_tex")
-          cuBlock = (16,16,1)
-          if cuBlock[0]>npoints:
-            cuBlock = (npoints,npoints,1)
-          cuGrid   = (npoints//cuBlock[0]+1*(npoints % cuBlock[0] != 0 ),npoints//cuBlock[1]+1*(npoints % cuBlock[1] != 0 ),1)
-          copy_texture.prepare('P',texrefs=[mtx_tex])
-          cudaArray = drv.np_to_array(A_cpu,orden,allowSurfaceBind=False)
-          mtx_tex.set_array(cudaArray)
-          copy_texture.prepared_call(cuGrid,cuBlock,A_gpu.gpudata)
-          assert np.sum(np.abs(A_gpu.get()-np.transpose(A_cpu))) == np.array(0,dtype=prec)
-          A_gpu.gpudata.free()
+            copy_texture = mod.get_function("copy_texture")
+            mtx_tex = mod.get_texref("mtx_tex")
+            cuBlock = (16,16,1)
+            if cuBlock[0]>npoints:
+                cuBlock = (npoints,npoints,1)
+            cuGrid   = (npoints//cuBlock[0]+1*(npoints % cuBlock[0] != 0 ),npoints//cuBlock[1]+1*(npoints % cuBlock[1] != 0 ),1)
+            copy_texture.prepare('P',texrefs=[mtx_tex])
+            cudaArray = drv.np_to_array(A_cpu,orden,allowSurfaceBind=False)
+            mtx_tex.set_array(cudaArray)
+            copy_texture.prepared_call(cuGrid,cuBlock,A_gpu.gpudata)
+            assert np.sum(np.abs(A_gpu.get()-np.transpose(A_cpu))) == np.array(0,dtype=prec)
+            A_gpu.gpudata.free()
 
     @mark_cuda_test
     def test_3d_fp_textures(self):
         orden = "C"
         npoints = 32
+
         for prec in [np.int16,np.float32,np.float64,np.complex64,np.complex128]:
-          prec_str = dtype_to_ctype(prec)
-          if prec == np.complex64: fpName_str = 'fp_tex_cfloat'
-          elif prec == np.complex128: fpName_str = 'fp_tex_cdouble'
-          elif prec == np.float64: fpName_str = 'fp_tex_double'
-          else: fpName_str = prec_str
-          A_cpu = np.zeros([npoints,npoints,npoints],order=orden,dtype=prec)
-          A_cpu[:] = np.random.rand(npoints,npoints,npoints)[:]
-          A_gpu = gpuarray.zeros(A_cpu.shape,dtype=prec,order=orden)
+            prec_str = dtype_to_ctype(prec)
+            if prec == np.complex64: fpName_str = 'fp_tex_cfloat'
+            elif prec == np.complex128: fpName_str = 'fp_tex_cdouble'
+            elif prec == np.float64: fpName_str = 'fp_tex_double'
+            else: fpName_str = prec_str
+            A_cpu = np.zeros([npoints,npoints,npoints],order=orden,dtype=prec)
+            A_cpu[:] = np.random.rand(npoints,npoints,npoints)[:]
+            A_gpu = gpuarray.zeros(A_cpu.shape,dtype=prec,order=orden)
 
-          myKern = '''
-          #include <pycuda-helpers.hpp>
-          texture<fpName, 3, cudaReadModeElementType> mtx_tex;
+            myKern = '''
+            #include <pycuda-helpers.hpp>
+            texture<fpName, 3, cudaReadModeElementType> mtx_tex;
 
-          __global__ void copy_texture(cuPres *dest)
-          {
-            int row   = blockIdx.x*blockDim.x + threadIdx.x;
-            int col   = blockIdx.y*blockDim.y + threadIdx.y;
-            int slice = blockIdx.z*blockDim.z + threadIdx.z;
-            dest[row + col*blockDim.x*gridDim.x + slice*blockDim.x*gridDim.x*blockDim.y*gridDim.y] = fp_tex3D(mtx_tex, slice, col, row);
-          }
-          '''
-          myKern = myKern.replace('fpName',fpName_str)
-          myKern = myKern.replace('cuPres',prec_str)
-          mod = SourceModule(myKern)
+            __global__ void copy_texture(cuPres *dest)
+            {
+              int row   = blockIdx.x*blockDim.x + threadIdx.x;
+              int col   = blockIdx.y*blockDim.y + threadIdx.y;
+              int slice = blockIdx.z*blockDim.z + threadIdx.z;
+              dest[row + col*blockDim.x*gridDim.x + slice*blockDim.x*gridDim.x*blockDim.y*gridDim.y] = fp_tex3D(mtx_tex, slice, col, row);
+            }
+            '''
+            myKern = myKern.replace('fpName',fpName_str)
+            myKern = myKern.replace('cuPres',prec_str)
+            mod = SourceModule(myKern)
 
-          copy_texture = mod.get_function("copy_texture")
-          mtx_tex = mod.get_texref("mtx_tex")
-          cuBlock = (8,8,8)
-          if cuBlock[0]>npoints:
-            cuBlock = (npoints,npoints,npoints)
-          cuGrid   = (npoints//cuBlock[0]+1*(npoints % cuBlock[0] != 0 ),npoints//cuBlock[1]+1*(npoints % cuBlock[1] != 0 ),npoints//cuBlock[2]+1*(npoints % cuBlock[1] != 0 ))
-          copy_texture.prepare('P',texrefs=[mtx_tex])
-          cudaArray = drv.np_to_array(A_cpu,orden,allowSurfaceBind=False)
-          mtx_tex.set_array(cudaArray)
-          copy_texture.prepared_call(cuGrid,cuBlock,A_gpu.gpudata)
-          assert np.sum(np.abs(A_gpu.get()-np.transpose(A_cpu))) == np.array(0,dtype=prec)
-          A_gpu.gpudata.free()
+            copy_texture = mod.get_function("copy_texture")
+            mtx_tex = mod.get_texref("mtx_tex")
+            cuBlock = (8,8,8)
+            if cuBlock[0]>npoints:
+                cuBlock = (npoints,npoints,npoints)
+            cuGrid   = (npoints//cuBlock[0]+1*(npoints % cuBlock[0] != 0 ),npoints//cuBlock[1]+1*(npoints % cuBlock[1] != 0 ),npoints//cuBlock[2]+1*(npoints % cuBlock[1] != 0 ))
+            copy_texture.prepare('P',texrefs=[mtx_tex])
+            cudaArray = drv.np_to_array(A_cpu,orden,allowSurfaceBind=False)
+            mtx_tex.set_array(cudaArray)
+            copy_texture.prepared_call(cuGrid,cuBlock,A_gpu.gpudata)
+            assert np.sum(np.abs(A_gpu.get()-np.transpose(A_cpu))) == np.array(0,dtype=prec)
+            A_gpu.gpudata.free()
 
     @mark_cuda_test
     def test_3d_fp_surfaces(self):
-        orden = "C"
+        orden = "F"
         npoints = 32
+
         for prec in [np.int16,np.float32,np.float64,np.complex64,np.complex128]:
-          prec_str = dtype_to_ctype(prec)
-          if prec == np.complex64: fpName_str = 'fp_tex_cfloat'
-          elif prec == np.complex128: fpName_str = 'fp_tex_cdouble'
-          elif prec == np.float64: fpName_str = 'fp_tex_double'
-          else: fpName_str = prec_str
-          A_cpu = np.zeros([npoints,npoints,npoints],order=orden,dtype=prec)
-          A_cpu[:] = np.random.rand(npoints,npoints,npoints)[:]
-          A_gpu = gpuarray.to_gpu(A_cpu) # Array randomized
+            prec_str = dtype_to_ctype(prec)
+            if prec == np.complex64: fpName_str = 'fp_tex_cfloat'
+            elif prec == np.complex128: fpName_str = 'fp_tex_cdouble'
+            elif prec == np.float64: fpName_str = 'fp_tex_double'
+            else: fpName_str = prec_str
+            A_cpu = np.zeros([npoints,npoints,npoints],order=orden,dtype=prec)
+            A_cpu[:] = np.random.rand(npoints,npoints,npoints)[:]
+            A_gpu = gpuarray.to_gpu(A_cpu) # Array randomized
 
-          myKernRW = '''
-          #include <pycuda-helpers.hpp>
+            myKernRW = '''
+            #include <pycuda-helpers.hpp>
 
-          surface<void, cudaSurfaceType3D> mtx_tex;
+            surface<void, cudaSurfaceType3D> mtx_tex;
 
-          __global__ void copy_texture(cuPres *dest, int rw)
-          {
-            int row   = blockIdx.x*blockDim.x + threadIdx.x;
-            int col   = blockIdx.y*blockDim.y + threadIdx.y;
-            int slice = blockIdx.z*blockDim.z + threadIdx.z;
-            int tid = row + col*blockDim.x*gridDim.x + slice*blockDim.x*gridDim.x*blockDim.y*gridDim.y;
-            if (rw==0){
-            cuPres aux = dest[tid];
-            fp_surf3Dwrite(aux, mtx_tex, row, col, slice,cudaBoundaryModeClamp);}
-            else {
-            cuPres aux = 0;
-            fp_surf3Dread(&aux, mtx_tex, slice, col, row, cudaBoundaryModeClamp);
-            dest[tid] = aux;
+            __global__ void copy_texture(cuPres *dest, int rw)
+            {
+              int row   = blockIdx.x*blockDim.x + threadIdx.x;
+              int col   = blockIdx.y*blockDim.y + threadIdx.y;
+              int slice = blockIdx.z*blockDim.z + threadIdx.z;
+              int tid = row + col*blockDim.x*gridDim.x + slice*blockDim.x*gridDim.x*blockDim.y*gridDim.y;
+              if (rw==0){
+              cuPres aux = dest[tid];
+              fp_surf3Dwrite(aux, mtx_tex, row, col, slice,cudaBoundaryModeClamp);}
+              else {
+              cuPres aux = 0;
+              fp_surf3Dread(&aux, mtx_tex, slice, col, row, cudaBoundaryModeClamp);
+              dest[tid] = aux;
+              }
             }
-          }
-          '''
-          myKernRW = myKernRW.replace('fpName',fpName_str)
-          myKernRW = myKernRW.replace('cuPres',prec_str)
-          modW = SourceModule(myKernRW)
+            '''
+            myKernRW = myKernRW.replace('fpName',fpName_str)
+            myKernRW = myKernRW.replace('cuPres',prec_str)
+            modW = SourceModule(myKernRW)
 
-          copy_texture = modW.get_function("copy_texture")
-          mtx_tex = modW.get_surfref("mtx_tex")
-          cuBlock = (8,8,8)
-          if cuBlock[0]>npoints:
-            cuBlock = (npoints,npoints,npoints)
-          cuGrid   = (npoints//cuBlock[0]+1*(npoints % cuBlock[0] != 0 ),npoints//cuBlock[1]+1*(npoints % cuBlock[1] != 0 ),npoints//cuBlock[2]+1*(npoints % cuBlock[1] != 0 ))
-          copy_texture.prepare('Pi')#,texrefs=[mtx_tex])
-          A_gpu2 = gpuarray.zeros_like(A_gpu) # To initialize surface with zeros
-          cudaArray = drv.gpuarray_to_array(A_gpu2,orden,allowSurfaceBind=True)
-          A_cpu = A_gpu.get() # To remember original array
-          mtx_tex.set_array(cudaArray)
-          copy_texture.prepared_call(cuGrid,cuBlock,A_gpu.gpudata, np.int32(0)) # Write random array
-          copy_texture.prepared_call(cuGrid,cuBlock,A_gpu.gpudata, np.int32(1)) # Read, but transposed
-          assert np.sum(np.abs(A_gpu.get()-np.transpose(A_cpu))) == np.array(0,dtype=prec)
-          A_gpu.gpudata.free()
+            copy_texture = modW.get_function("copy_texture")
+            mtx_tex = modW.get_surfref("mtx_tex")
+            cuBlock = (8,8,8)
+            if cuBlock[0]>npoints:
+                cuBlock = (npoints,npoints,npoints)
+            cuGrid   = (npoints//cuBlock[0]+1*(npoints % cuBlock[0] != 0 ),npoints//cuBlock[1]+1*(npoints % cuBlock[1] != 0 ),npoints//cuBlock[2]+1*(npoints % cuBlock[1] != 0 ))
+            copy_texture.prepare('Pi')#,texrefs=[mtx_tex])
+            A_gpu2 = gpuarray.zeros_like(A_gpu) # To initialize surface with zeros
+            cudaArray = drv.gpuarray_to_array(A_gpu2,orden,allowSurfaceBind=True)
+            A_cpu = A_gpu.get() # To remember original array
+            mtx_tex.set_array(cudaArray)
+            copy_texture.prepared_call(cuGrid,cuBlock,A_gpu.gpudata, np.int32(0)) # Write random array
+            copy_texture.prepared_call(cuGrid,cuBlock,A_gpu.gpudata, np.int32(1)) # Read, but transposed
+            assert np.sum(np.abs(A_gpu.get()-np.transpose(A_cpu))) == np.array(0,dtype=prec)
+            A_gpu.gpudata.free()
 
     @mark_cuda_test
     def test_2d_fp_surfaces(self):
         orden = "C"
         npoints = 32
+
         for prec in [np.int16,np.float32,np.float64,np.complex64,np.complex128]:
-          prec_str = dtype_to_ctype(prec)
-          if prec == np.complex64: fpName_str = 'fp_tex_cfloat'
-          elif prec == np.complex128: fpName_str = 'fp_tex_cdouble'
-          elif prec == np.float64: fpName_str = 'fp_tex_double'
-          else: fpName_str = prec_str
-          A_cpu = np.zeros([npoints,npoints],order=orden,dtype=prec)
-          A_cpu[:] = np.random.rand(npoints,npoints)[:]
-          A_gpu = gpuarray.to_gpu(A_cpu) # Array randomized
+            prec_str = dtype_to_ctype(prec)
+            if prec == np.complex64: fpName_str = 'fp_tex_cfloat'
+            elif prec == np.complex128: fpName_str = 'fp_tex_cdouble'
+            elif prec == np.float64: fpName_str = 'fp_tex_double'
+            else: fpName_str = prec_str
+            A_cpu = np.zeros([npoints,npoints],order=orden,dtype=prec)
+            A_cpu[:] = np.random.rand(npoints,npoints)[:]
+            A_gpu = gpuarray.to_gpu(A_cpu) # Array randomized
 
-          myKernRW = '''
-          #include <pycuda-helpers.hpp>
+            myKernRW = '''
+            #include <pycuda-helpers.hpp>
 
-          surface<void, cudaSurfaceType2DLayered> mtx_tex;
+            surface<void, cudaSurfaceType2DLayered> mtx_tex;
 
-          __global__ void copy_texture(cuPres *dest, int rw)
-          {
-            int row   = blockIdx.x*blockDim.x + threadIdx.x;
-            int col   = blockIdx.y*blockDim.y + threadIdx.y;
-            int layer = 1;
-            int tid = row + col*blockDim.x*gridDim.x ;
-            if (rw==0){
-            cuPres aux = dest[tid];
-            fp_surf2DLayeredwrite(aux, mtx_tex, row, col, layer,cudaBoundaryModeClamp);}
-            else {
-            cuPres aux = 0;
-            fp_surf2DLayeredread(&aux, mtx_tex, col, row, layer, cudaBoundaryModeClamp);
-            dest[tid] = aux;
+            __global__ void copy_texture(cuPres *dest, int rw)
+            {
+              int row   = blockIdx.x*blockDim.x + threadIdx.x;
+              int col   = blockIdx.y*blockDim.y + threadIdx.y;
+              int layer = 1;
+              int tid = row + col*blockDim.x*gridDim.x ;
+              if (rw==0){
+              cuPres aux = dest[tid];
+              fp_surf2DLayeredwrite(aux, mtx_tex, row, col, layer,cudaBoundaryModeClamp);}
+              else {
+              cuPres aux = 0;
+              fp_surf2DLayeredread(&aux, mtx_tex, col, row, layer, cudaBoundaryModeClamp);
+              dest[tid] = aux;
+              }
             }
-          }
-          '''
-          myKernRW = myKernRW.replace('fpName',fpName_str)
-          myKernRW = myKernRW.replace('cuPres',prec_str)
-          modW = SourceModule(myKernRW)
+            '''
+            myKernRW = myKernRW.replace('fpName',fpName_str)
+            myKernRW = myKernRW.replace('cuPres',prec_str)
+            modW = SourceModule(myKernRW)
 
-          copy_texture = modW.get_function("copy_texture")
-          mtx_tex = modW.get_surfref("mtx_tex")
-          cuBlock = (8,8,1)
-          if cuBlock[0]>npoints:
-            cuBlock = (npoints,npoints,1)
-          cuGrid   = (npoints//cuBlock[0]+1*(npoints % cuBlock[0] != 0 ),npoints//cuBlock[1]+1*(npoints % cuBlock[1] != 0 ),1)
-          copy_texture.prepare('Pi')#,texrefs=[mtx_tex])
-          A_gpu2 = gpuarray.zeros_like(A_gpu) # To initialize surface with zeros
-          cudaArray = drv.gpuarray_to_array(A_gpu2,orden,allowSurfaceBind=True)
-          A_cpu = A_gpu.get() # To remember original array
-          mtx_tex.set_array(cudaArray)
-          copy_texture.prepared_call(cuGrid,cuBlock,A_gpu.gpudata, np.int32(0)) # Write random array
-          copy_texture.prepared_call(cuGrid,cuBlock,A_gpu.gpudata, np.int32(1)) # Read, but transposed
-          assert np.sum(np.abs(A_gpu.get()-np.transpose(A_cpu))) == np.array(0,dtype=prec)
-          A_gpu.gpudata.free()
+            copy_texture = modW.get_function("copy_texture")
+            mtx_tex = modW.get_surfref("mtx_tex")
+            cuBlock = (8,8,1)
+            if cuBlock[0]>npoints:
+                cuBlock = (npoints,npoints,1)
+            cuGrid   = (npoints//cuBlock[0]+1*(npoints % cuBlock[0] != 0 ),npoints//cuBlock[1]+1*(npoints % cuBlock[1] != 0 ),1)
+            copy_texture.prepare('Pi')#,texrefs=[mtx_tex])
+            A_gpu2 = gpuarray.zeros_like(A_gpu) # To initialize surface with zeros
+            cudaArray = drv.gpuarray_to_array(A_gpu2,orden,allowSurfaceBind=True)
+            A_cpu = A_gpu.get() # To remember original array
+            mtx_tex.set_array(cudaArray)
+            copy_texture.prepared_call(cuGrid,cuBlock,A_gpu.gpudata, np.int32(0)) # Write random array
+            copy_texture.prepared_call(cuGrid,cuBlock,A_gpu.gpudata, np.int32(1)) # Read, but transposed
+            assert np.sum(np.abs(A_gpu.get()-np.transpose(A_cpu))) == np.array(0,dtype=prec)
+            A_gpu.gpudata.free()
 
     @mark_cuda_test
     def test_large_smem(self):
