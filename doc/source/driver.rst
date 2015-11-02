@@ -1398,25 +1398,17 @@ Arrays and Textures
     If `allowSurfaceBind` is passed as *True* the returned :class:`Array`
     can be read and write with :class:`SurfaceReference` in addition to
     :class:`TextureReference`.
-    Function automatically detect `dtype` and adjust channels to
+    Function automatically detect *dtype* and adjust channels to
     supported available :class:`array_format`. Also includes direct support
-    for `np.float64`, `np.complex64` and `np.complex128` formats, similar
-    to :meth:`bind_to_texref_ext`.
+    for `np.float64`, `np.complex64` and `np.complex128` formats, in a similar
+    way to :meth:`pycuda.gpuarray.GPUArray.bind_to_texref_ext`.
 
     .. versionadded:: 2015.1
 
 .. function:: gpuarray_to_array(gpuparray, order, allowSurfaceBind=False)
 
     Turn a :class:`GPUArray` with 2D or 3D structure, into an
-    :class:`Array`.
-    The `order` argument can be either `"C"` or `"F"`.
-    If `allowSurfaceBind` is passed as *True* the returned :class:`Array`
-    can be read and write with :class:`SurfaceReference` in addition to
-    :class:`TextureReference`.
-    Function automatically detect `dtype` and adjust channels to
-    supported available :class:`array_format`. Also includes direct support
-    for `np.float64`, `np.complex64` and `np.complex128` formats, similar
-    to :meth:`bind_to_texref_ext`.
+    :class:`Array`. Same structure as :func:`np_to_array`
 
     .. versionadded:: 2015.1
 
