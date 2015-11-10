@@ -1059,6 +1059,9 @@ namespace pycuda
 
       CUarray handle() const
       { return m_array; }
+
+    intptr_t handle_int() const
+    { return  (intptr_t) m_array; }
   };
 
   // }}}
