@@ -1283,6 +1283,12 @@ Arrays and Textures
         Return a :class:`ArrayDescriptor3D` object for this 3D array,
         like the one that was used to create it.  CUDA 2.0 and above only.
 
+    .. attribute:: handle
+
+       Return an :class:`int` representing the address in device memory where
+       this array resides.
+
+
 .. class:: SurfaceReference()
 
     .. note::
