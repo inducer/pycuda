@@ -1429,6 +1429,7 @@ BOOST_PYTHON_MODULE(_driver)
       .def(py::init<const CUDA_ARRAY3D_DESCRIPTOR &>())
       .DEF_SIMPLE_METHOD(get_descriptor_3d)
 #endif
+      .add_property("handle", &cl::handle_int)
       ;
   }
   // }}}
