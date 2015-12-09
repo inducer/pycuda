@@ -655,7 +655,7 @@ def managed_empty_like(array, mem_flags=0):
 
 
 def managed_zeros_like(array, mem_flags=0):
-    result = pagelocked_empty_like(array, mem_flags)
+    result = managed_empty_like(array, mem_flags)
     result.fill(0)
     return result
 
