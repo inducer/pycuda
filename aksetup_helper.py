@@ -703,6 +703,7 @@ def substitute(substitutions, fname):
 def _run_git_command(cmd):
     git_error = None
     from subprocess import Popen, PIPE
+    stdout = None
     try:
         popen = Popen(["git"] + cmd, stdout=PIPE)
         stdout, stderr = popen.communicate()
@@ -722,8 +723,11 @@ def _run_git_command(cmd):
         print(git_error)
         print("Hit Ctrl-C now if you'd like to think about the situation.")
         print(DASH_SEPARATOR)
-        count_down_delay(delay=5)
-    return stdout.decode("utf-8"), git_error
+        count_down_delay(delay=0)
+    if stdout:
+        return stdout.decode("utf-8"), git_error
+    else:
+        return '', "(subprocess call to git did not succeed)"
 
 
 def check_git_submodules():
