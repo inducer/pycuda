@@ -1098,9 +1098,12 @@ def arange(*args, **kwargs):
 
 # }}}
 
+
 def _compact_strides(a):
     # Compute strides to have same order as self, but packed
-    info = sorted((a.strides[axis], a.shape[axis], axis) for axis in xrange(len(a.shape)))
+    info = sorted(
+            (a.strides[axis], a.shape[axis], axis)
+            for axis in xrange(len(a.shape)))
 
     strides = [None]*len(a.shape)
     stride = a.dtype.itemsize
@@ -1108,6 +1111,7 @@ def _compact_strides(a):
         strides[axis] = stride
         stride *= dim
     return strides
+
 
 def _memcpy_discontig(dst, src, async=False, stream=None):
     """Copy the contents of src into dst.
@@ -1137,7 +1141,9 @@ def _memcpy_discontig(dst, src, async=False, stream=None):
     else:
         # put src in Fortran order (which should put dst in Fortran order too)
         # and remove singleton axes
-        src_info = sorted((src.strides[axis], axis) for axis in xrange(len(src.shape)) if src.shape[axis] > 1)
+        src_info = sorted(
+                (src.strides[axis], axis)
+                for axis in xrange(len(src.shape)) if src.shape[axis] > 1)
         axes = [axis for _, axis in src_info]
         shape = [src.shape[axis] for axis in axes]
         src_strides = [src.strides[axis] for axis in axes]
