@@ -1737,13 +1737,8 @@ namespace pycuda
 
   struct memcpy_2d : public CUDA_MEMCPY2D
   {
-    memcpy_2d()
+    memcpy_2d() : CUDA_MEMCPY2D()
     {
-      srcXInBytes = 0;
-      srcY = 0;
-
-      dstXInBytes = 0;
-      dstY = 0;
     }
 
     MEMCPY_SETTERS;
@@ -1764,20 +1759,8 @@ namespace pycuda
 #if CUDAPP_CUDA_VERSION >= 2000
   struct memcpy_3d : public CUDA_MEMCPY3D
   {
-    memcpy_3d()
+    memcpy_3d() : CUDA_MEMCPY3D()
     {
-      reserved0 = 0;
-      reserved1 = 0;
-
-      srcXInBytes = 0;
-      srcY = 0;
-      srcZ = 0;
-      srcLOD = 0;
-
-      dstXInBytes = 0;
-      dstY = 0;
-      dstZ = 0;
-      dstLOD = 0;
     }
 
     MEMCPY_SETTERS;
@@ -1796,17 +1779,8 @@ namespace pycuda
 #if CUDAPP_CUDA_VERSION >= 4000
   struct memcpy_3d_peer : public CUDA_MEMCPY3D_PEER
   {
-    memcpy_3d_peer()
+    memcpy_3d_peer() : CUDA_MEMCPY3D_PEER()
     {
-      srcXInBytes = 0;
-      srcY = 0;
-      srcZ = 0;
-      srcLOD = 0;
-
-      dstXInBytes = 0;
-      dstY = 0;
-      dstZ = 0;
-      dstLOD = 0;
     }
 
     MEMCPY_SETTERS;
