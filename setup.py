@@ -52,7 +52,11 @@ def get_config_schema():
         Switch("CUDA_ENABLE_GL", False, "Enable CUDA GL interoperability"),
         Switch("CUDA_ENABLE_CURAND", True, "Enable CURAND library"),
 
-        LibraryDir("CUDADRV", ["${CUDA_ROOT}/lib", "${CUDA_ROOT}/lib64"]),
+        LibraryDir("CUDADRV", [
+            "${CUDA_ROOT}/lib", "${CUDA_ROOT}/lib64",
+            # https://github.com/inducer/pycuda/issues/98
+            "${CUDA_ROOT}/lib/stubs", "${CUDA_ROOT}/lib64/stubs",
+            ]),
         Libraries("CUDADRV", ["cuda"]),
 
         LibraryDir("CUDART", ["${CUDA_ROOT}/lib", "${CUDA_ROOT}/lib64"]),
