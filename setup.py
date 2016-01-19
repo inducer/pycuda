@@ -36,6 +36,12 @@ def get_config_schema():
     else:
         cuda_root_default = normpath(join(dirname(nvcc_path), ".."))
 
+    default_lib_dirs = [
+        "${CUDA_ROOT}/lib", "${CUDA_ROOT}/lib64",
+        # https://github.com/inducer/pycuda/issues/98
+        "${CUDA_ROOT}/lib/stubs", "${CUDA_ROOT}/lib64/stubs",
+        ]
+
     return ConfigSchema(make_boost_base_options() + [
         Switch("USE_SHIPPED_BOOST", True, "Use included Boost library"),
 
@@ -52,17 +58,13 @@ def get_config_schema():
         Switch("CUDA_ENABLE_GL", False, "Enable CUDA GL interoperability"),
         Switch("CUDA_ENABLE_CURAND", True, "Enable CURAND library"),
 
-        LibraryDir("CUDADRV", [
-            "${CUDA_ROOT}/lib", "${CUDA_ROOT}/lib64",
-            # https://github.com/inducer/pycuda/issues/98
-            "${CUDA_ROOT}/lib/stubs", "${CUDA_ROOT}/lib64/stubs",
-            ]),
+        LibraryDir("CUDADRV", default_lib_dirs),
         Libraries("CUDADRV", ["cuda"]),
 
-        LibraryDir("CUDART", ["${CUDA_ROOT}/lib", "${CUDA_ROOT}/lib64"]),
+        LibraryDir("CUDART", default_lib_dirs),
         Libraries("CUDART", ["cudart"]),
 
-        LibraryDir("CURAND", ["${CUDA_ROOT}/lib", "${CUDA_ROOT}/lib64"]),
+        LibraryDir("CURAND", default_lib_dirs),
         Libraries("CURAND", ["curand"]),
 
         StringListOption("CXXFLAGS", [],
