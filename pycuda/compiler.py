@@ -214,6 +214,12 @@ def compile(source, nvcc="nvcc", options=None, keep=False,
         keep = True
         options.extend(["-g", "-G"])
 
+    if "PYCUDA_CACHE_DIR" in os.environ and cache_dir is None:
+        cache_dir = os.environ["PYCUDA_CACHE_DIR"]
+
+    if "PYCUDA_DISABLE_CACHE" in os.environ:
+        cache_dir = False
+
     if cache_dir is None:
         from os.path import join
         import appdirs

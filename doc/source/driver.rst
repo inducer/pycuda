@@ -2029,9 +2029,13 @@ Just-in-time Compilation
     `None`, it defaults to the current context's device's compute capability.
     If `code` is `None`, it will not be specified.
 
-    `cache_dir` gives the directory used for compiler caching. It has a
-    sensible per-user default. If it is set to `False`, caching is
-    disabled.
+    `cache_dir` gives the directory used for compiler caching.  If `None`
+    then `cache_dir` is taken to be :envvar:`PYCUDA_CACHE_DIR` if set or
+    a sensible per-user default.  If passed as `False`, caching is disabled.
+
+    If the environment variable :envvar:`PYCUDA_DISABLE_CACHE` is set to
+    any value then caching is disabled.  This preference overrides any
+    value of `cache_dir` and can be used to disable caching globally.
 
     This class exhibits the same public interface as :class:`pycuda.driver.Module`, but
     does not inherit from it.
