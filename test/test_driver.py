@@ -444,17 +444,30 @@ class TestDriver:
 
     @mark_cuda_test
     def test_3d_fp_surfaces(self):
-        orden = "F"
+        orden = "C"
         npoints = 32
 
         for prec in [np.int16,np.float32,np.float64,np.complex64,np.complex128]:
             prec_str = dtype_to_ctype(prec)
-            if prec == np.complex64: fpName_str = 'fp_tex_cfloat'
-            elif prec == np.complex128: fpName_str = 'fp_tex_cdouble'
-            elif prec == np.float64: fpName_str = 'fp_tex_double'
-            else: fpName_str = prec_str
-            A_cpu = np.zeros([npoints,npoints,npoints],order=orden,dtype=prec)
-            A_cpu[:] = np.random.rand(npoints,npoints,npoints)[:]
+            if prec == np.complex64:
+                fpName_str = 'fp_tex_cfloat'
+                A_cpu = np.zeros([npoints,npoints,npoints],order=orden,dtype=prec)
+                A_cpu[:].real = np.random.rand(npoints,npoints,npoints)[:]
+                A_cpu[:].imag = np.random.rand(npoints,npoints,npoints)[:]
+            elif prec == np.complex128:
+                fpName_str = 'fp_tex_cdouble'
+                A_cpu = np.zeros([npoints,npoints,npoints],order=orden,dtype=prec)
+                A_cpu[:].real = np.random.rand(npoints,npoints,npoints)[:]
+                A_cpu[:].imag = np.random.rand(npoints,npoints,npoints)[:]
+            elif prec == np.float64:
+                fpName_str = 'fp_tex_double'
+                A_cpu = np.zeros([npoints,npoints,npoints],order=orden,dtype=prec)
+                A_cpu[:] = np.random.rand(npoints,npoints,npoints)[:]
+            else:
+                fpName_str = prec_str
+                A_cpu = np.zeros([npoints,npoints,npoints],order=orden,dtype=prec)
+                A_cpu[:] = np.random.rand(npoints,npoints,npoints)[:]*100.
+
             A_gpu = gpuarray.to_gpu(A_cpu) # Array randomized
 
             myKernRW = '''
