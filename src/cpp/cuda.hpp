@@ -491,6 +491,10 @@ namespace pycuda
         return result;
       }
 #endif
+#if CUDAPP_CUDA_VERSION >= 7000
+      boost::shared_ptr<context> retain_primary_context();
+      void release_primary_context();
+#endif
 
   };
 
@@ -826,9 +830,23 @@ namespace pycuda
   }
 
 
+#if CUDAPP_CUDA_VERSION >= 7000
+  inline
+  boost::shared_ptr<context> device::retain_primary_context()
+  {
+    CUcontext ctx;
+    CUDAPP_CALL_GUARDED(cuDevicePrimaryCtxRetain, (&ctx, m_device));
+    boost::shared_ptr<context> result(new context(ctx));
+    CUDAPP_CALL_GUARDED(cuCtxSetCurrent, (ctx));
+    return result;
+  }
 
-
-
+  inline
+  void device::release_primary_context()
+  {
+    CUDAPP_CALL_GUARDED(cuDevicePrimaryCtxRelease, (m_device));
+  }
+#endif
 
 
 
