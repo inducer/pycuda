@@ -6,7 +6,7 @@ try:
 except:
     import xmlrpc.client as xmlrpclib
 
-destwiki = six.moves.xmlrpc_client.ServerProxy("http://wiki.tiker.net?action=xmlrpc2")
+destwiki = six.moves.xmlrpc_client.ServerProxy("https://wiki.tiker.net?action=xmlrpc2")
 
 import os
 try:

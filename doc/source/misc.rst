@@ -1,13 +1,23 @@
 Changes
 =======
 
-Version 2014.1
+Version 2016.2
 --------------
-
 .. note::
 
     This version is the current development version. You can get it from
     `PyCUDA's version control repository <https://github.com/inducer/pycuda>`_.
+
+Version 2016.1
+--------------
+
+* Bug fixes.
+* Global control of caching.
+* Matrix/array interop.
+* Add :meth:`pycuda.gpuarray.GPUArray.squeeze`
+
+Version 2014.1
+--------------
 
 * Add :meth:`PointerHolderBase.as_buffer` and :meth:`DeviceAllocation.as_buffer`.
 * Support for :class:`device_attribute` values added in CUDA 5.0, 5.5, and 6.0.
