@@ -355,6 +355,50 @@ class TestDriver:
             A_gpu.gpudata.free()
 
     @mark_cuda_test
+    def test_2d_fp_texturesLayered(self):
+        orden = "F"
+        npoints = 32
+
+        for prec in [np.int16,np.float32,np.float64,np.complex64,np.complex128]:
+            prec_str = dtype_to_ctype(prec)
+            if prec == np.complex64: fpName_str = 'fp_tex_cfloat'
+            elif prec == np.complex128: fpName_str = 'fp_tex_cdouble'
+            elif prec == np.float64: fpName_str = 'fp_tex_double'
+            else: fpName_str = prec_str
+            A_cpu = np.zeros([npoints,npoints],order=orden,dtype=prec)
+            A_cpu[:] = np.random.rand(npoints,npoints)[:]
+            A_gpu = gpuarray.zeros(A_cpu.shape,dtype=prec,order=orden)
+
+            myKern = '''
+            #include <pycuda-helpers.hpp>
+            texture<fpName, cudaTextureType2DLayered, cudaReadModeElementType> mtx_tex;
+
+            __global__ void copy_texture(cuPres *dest)
+            {
+              int row = blockIdx.x*blockDim.x + threadIdx.x;
+              int col = blockIdx.y*blockDim.y + threadIdx.y;
+
+              dest[row + col*blockDim.x*gridDim.x] = fp_tex2DLayered(mtx_tex, col, row, 1);
+            }
+            '''
+            myKern = myKern.replace('fpName',fpName_str)
+            myKern = myKern.replace('cuPres',prec_str)
+            mod = SourceModule(myKern)
+
+            copy_texture = mod.get_function("copy_texture")
+            mtx_tex = mod.get_texref("mtx_tex")
+            cuBlock = (16,16,1)
+            if cuBlock[0]>npoints:
+                cuBlock = (npoints,npoints,1)
+            cuGrid   = (npoints//cuBlock[0]+1*(npoints % cuBlock[0] != 0 ),npoints//cuBlock[1]+1*(npoints % cuBlock[1] != 0 ),1)
+            copy_texture.prepare('P',texrefs=[mtx_tex])
+            cudaArray = drv.np_to_array(A_cpu,orden,allowSurfaceBind=True)
+            mtx_tex.set_array(cudaArray)
+            copy_texture.prepared_call(cuGrid,cuBlock,A_gpu.gpudata)
+            assert np.sum(np.abs(A_gpu.get()-np.transpose(A_cpu))) == np.array(0,dtype=prec)
+            A_gpu.gpudata.free()
+
+    @mark_cuda_test
     def test_3d_fp_textures(self):
         orden = "C"
         npoints = 32
@@ -400,17 +444,30 @@ class TestDriver:
 
     @mark_cuda_test
     def test_3d_fp_surfaces(self):
-        orden = "F"
+        orden = "C"
         npoints = 32
 
         for prec in [np.int16,np.float32,np.float64,np.complex64,np.complex128]:
             prec_str = dtype_to_ctype(prec)
-            if prec == np.complex64: fpName_str = 'fp_tex_cfloat'
-            elif prec == np.complex128: fpName_str = 'fp_tex_cdouble'
-            elif prec == np.float64: fpName_str = 'fp_tex_double'
-            else: fpName_str = prec_str
-            A_cpu = np.zeros([npoints,npoints,npoints],order=orden,dtype=prec)
-            A_cpu[:] = np.random.rand(npoints,npoints,npoints)[:]
+            if prec == np.complex64:
+                fpName_str = 'fp_tex_cfloat'
+                A_cpu = np.zeros([npoints,npoints,npoints],order=orden,dtype=prec)
+                A_cpu[:].real = np.random.rand(npoints,npoints,npoints)[:]
+                A_cpu[:].imag = np.random.rand(npoints,npoints,npoints)[:]
+            elif prec == np.complex128:
+                fpName_str = 'fp_tex_cdouble'
+                A_cpu = np.zeros([npoints,npoints,npoints],order=orden,dtype=prec)
+                A_cpu[:].real = np.random.rand(npoints,npoints,npoints)[:]
+                A_cpu[:].imag = np.random.rand(npoints,npoints,npoints)[:]
+            elif prec == np.float64:
+                fpName_str = 'fp_tex_double'
+                A_cpu = np.zeros([npoints,npoints,npoints],order=orden,dtype=prec)
+                A_cpu[:] = np.random.rand(npoints,npoints,npoints)[:]
+            else:
+                fpName_str = prec_str
+                A_cpu = np.zeros([npoints,npoints,npoints],order=orden,dtype=prec)
+                A_cpu[:] = np.random.rand(npoints,npoints,npoints)[:]*100.
+
             A_gpu = gpuarray.to_gpu(A_cpu) # Array randomized
 
             myKernRW = '''

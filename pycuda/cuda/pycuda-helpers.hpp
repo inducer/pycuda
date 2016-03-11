@@ -6,7 +6,7 @@
 extern "C++" {
   // "double-precision" textures ------------------------------------------------
   /* Thanks to Nathan Bell <nbell@nvidia.com> for help in figuring this out. */
- 
+
   typedef float fp_tex_float;
   typedef int2 fp_tex_double;
   typedef uint2 fp_tex_cfloat;
@@ -54,6 +54,28 @@ extern "C++" {
   __device__ pycuda::complex<double> fp_tex2D(texture<fp_tex_cdouble, 2, read_mode> tex, int i, int j)
   {
     fp_tex_cdouble v = tex2D(tex, i, j);
+    return pycuda::complex<double>(__hiloint2double(v.y, v.x), __hiloint2double(v.w, v.z));
+  }
+  // 2D Layered extension
+
+  template <enum cudaTextureReadMode read_mode>
+  __device__ double fp_tex2DLayered(texture<fp_tex_double, cudaTextureType2DLayered, read_mode> tex, float i, float j, int layer)
+  {
+    fp_tex_double v = tex2DLayered(tex, i, j, layer);
+    return __hiloint2double(v.y, v.x);
+  }
+
+  template <enum cudaTextureReadMode read_mode>
+  __device__ pycuda::complex<float> fp_tex2DLayered(texture<fp_tex_cfloat, cudaTextureType2DLayered, read_mode> tex, float i, float j, int layer)
+  {
+    fp_tex_cfloat v = tex2DLayered(tex, i, j, layer);
+    return pycuda::complex<float>(__int_as_float(v.x), __int_as_float(v.y));
+  }
+
+  template <enum cudaTextureReadMode read_mode>
+  __device__ pycuda::complex<double> fp_tex2DLayered(texture<fp_tex_cdouble, cudaTextureType2DLayered, read_mode> tex, float i, float j, int layer)
+  {
+    fp_tex_cdouble v = tex2DLayered(tex, i, j, layer);
     return pycuda::complex<double>(__hiloint2double(v.y, v.x), __hiloint2double(v.w, v.z));
   }
 
@@ -188,6 +210,11 @@ extern "C++" {
   __device__ TYPE fp_tex2D(texture<TYPE, 2, read_mode> tex, int i, int j) \
   { \
     return tex2D(tex, i, j); \
+  } \
+  template <enum cudaTextureReadMode read_mode> \
+   __device__ TYPE fp_tex2DLayered(texture<TYPE, cudaTextureType2DLayered, read_mode> tex, int i, int j, int layer) \
+  { \
+    return tex2DLayered(tex, i, j, layer); \
   } \
   template <enum cudaTextureReadMode read_mode> \
   __device__ TYPE fp_tex3D(texture<TYPE, 3, read_mode> tex, int i, int j, int k) \
