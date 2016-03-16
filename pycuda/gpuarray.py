@@ -1103,7 +1103,7 @@ def _compact_strides(a):
     # Compute strides to have same order as self, but packed
     info = sorted(
             (a.strides[axis], a.shape[axis], axis)
-            for axis in xrange(len(a.shape)))
+            for axis in range(len(a.shape)))
 
     strides = [None]*len(a.shape)
     stride = a.dtype.itemsize
@@ -1143,7 +1143,7 @@ def _memcpy_discontig(dst, src, async=False, stream=None):
         # and remove singleton axes
         src_info = sorted(
                 (src.strides[axis], axis)
-                for axis in xrange(len(src.shape)) if src.shape[axis] > 1)
+                for axis in range(len(src.shape)) if src.shape[axis] > 1)
         axes = [axis for _, axis in src_info]
         shape = [src.shape[axis] for axis in axes]
         src_strides = [src.strides[axis] for axis in axes]
