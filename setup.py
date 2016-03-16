@@ -139,12 +139,6 @@ def main():
     exec(compile(open("pycuda/__init__.py").read(), "pycuda/__init__.py", 'exec'),
             ver_dic)
 
-    try:
-        from distutils.command.build_py import build_py_2to3 as build_py
-    except ImportError:
-        # 2.x
-        from distutils.command.build_py import build_py
-
     import sys
     if sys.version_info >= (3,):
         pvt_struct_source = "src/wrapper/_pvt_struct_v3.cpp"
@@ -225,10 +219,7 @@ def main():
                         ]
                     },
 
-            zip_safe=False,
-
-            # 2to3 invocation
-            cmdclass={'build_py': build_py})
+            zip_safe=False)
 
 
 if __name__ == '__main__':
