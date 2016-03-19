@@ -7,7 +7,7 @@ import numpy
 from pycuda.compiler import SourceModule
 
 class DoubleOpStruct:
-    mem_size = 8 + numpy.intp(0).nbytes
+    mem_size = 8 + numpy.uintp(0).nbytes
     def __init__(self, array, struct_arr_ptr):
         self.data = cuda.to_device(array)
         self.shape, self.dtype = array.shape, array.dtype
@@ -20,7 +20,7 @@ class DoubleOpStruct:
         cuda.memcpy_htod(int(struct_arr_ptr),
                          numpy.getbuffer(numpy.int32(array.size)))
         cuda.memcpy_htod(int(struct_arr_ptr) + 8,
-                         numpy.getbuffer(numpy.intp(int(self.data))))
+                         numpy.getbuffer(numpy.uintp(int(self.data))))
 
     def __str__(self):
         return str(cuda.from_device(self.data, self.shape, self.dtype))
@@ -59,7 +59,7 @@ print("doubled arrays")
 print(array1)
 print(array2)
 
-func(numpy.intp(do2_ptr), block=(32, 1, 1), grid=(1, 1))
+func(numpy.uintp(do2_ptr), block=(32, 1, 1), grid=(1, 1))
 print("doubled second only")
 print(array1)
 print(array2)
