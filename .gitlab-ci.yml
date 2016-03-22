@@ -1,4 +1,4 @@
-Python 2.7:
+Python 2.7 Titan:
   script:
   - py_version=2.7
   - EXTRA_INSTALL="numpy mako"
@@ -7,10 +7,22 @@ Python 2.7:
   - ". ./build-and-test-py-project.sh"
   tags:
   - python2.7
-  - cuda
+  - nvidia-titan-black
   except:
   - tags
-Python 3.4:
+Python 2.7 K40:
+  script:
+  - py_version=2.7
+  - EXTRA_INSTALL="numpy mako"
+  - echo "CUDADRV_LIB_DIR = ['/usr/lib/x86_64-linux-gnu/nvidia/current']" > siteconf.py
+  - curl -L -O -k https://gitlab.tiker.net/inducer/ci-support/raw/master/build-and-test-py-project.sh
+  - ". ./build-and-test-py-project.sh"
+  tags:
+  - python2.7
+  - nvidia-k40
+  except:
+  - tags
+Python 3.4 Titan:
   script:
   - py_version=3.4
   - EXTRA_INSTALL="numpy mako"
@@ -19,6 +31,6 @@ Python 3.4:
   - ". ./build-and-test-py-project.sh"
   tags:
   - python3.4
-  - cuda
+  - nvidia-titan-black
   except:
   - tags
