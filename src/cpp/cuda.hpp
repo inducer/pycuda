@@ -1499,7 +1499,7 @@ namespace pycuda
             py::handle<>(
 #if PY_VERSION_HEX >= 0x03030000
               PyMemoryView_FromMemory((char *) (get_pointer() + offset), size,
-                PyBUF_READ | PyBUF_WRITE)
+                PyBUF_WRITE)
 #else /* Py2 */
               PyBuffer_FromReadWriteMemory((void *) (get_pointer() + offset), size)
 #endif
