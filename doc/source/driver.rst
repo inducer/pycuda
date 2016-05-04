@@ -463,7 +463,6 @@ Constants
     CUDA 2.2 and newer.
 
     .. attribute:: DEFAULT
-    .. attribute:: EXCLUSIVE
     .. attribute:: PROHIBITED
     .. attribute:: EXCLUSIVE_PROCESS
 
