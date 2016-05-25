@@ -240,7 +240,7 @@ def compile(source, nvcc="nvcc", options=None, keep=False,
     if code is not None:
         options.extend(["-code", code])
 
-    if 'darwin' in sys.platform and sys.maxint == 9223372036854775807:
+    if 'darwin' in sys.platform and sys.maxsize == 9223372036854775807:
         options.append('-m64')
     elif 'win32' in sys.platform and sys.maxsize == 9223372036854775807:
         options.append('-m64')
