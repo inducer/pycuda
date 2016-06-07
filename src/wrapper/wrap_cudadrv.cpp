@@ -1010,6 +1010,7 @@ BOOST_PYTHON_MODULE(_driver)
       .DEF_SIMPLE_METHOD(set_shared_config)
       .staticmethod("set_shared_config")
 #endif
+      .add_property("handle", &cl::handle_int)
       ;
   }
   // }}}

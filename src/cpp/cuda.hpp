@@ -602,6 +602,9 @@ namespace pycuda
       CUcontext handle() const
       { return m_context; }
 
+      intptr_t handle_int() const
+      { return (intptr_t) m_context; }
+
       bool operator==(const context &other) const
       {
         return m_context == other.m_context;
