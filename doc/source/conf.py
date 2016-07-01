@@ -1,6 +1,7 @@
-from __future__ import absolute_import
 # -*- coding: utf-8 -*-
-#
+
+from __future__ import absolute_import
+
 # PyCUDA documentation build configuration file, created by
 # sphinx-quickstart on Fri Jun 13 00:51:19 2008.
 #
@@ -187,5 +188,5 @@ latex_documents = [
 intersphinx_mapping = {
         'http://docs.python.org/dev': None,
         'http://docs.scipy.org/doc/numpy/': None,
-        'http://documen.tician.de/codepy/': None,
+        'https://documen.tician.de/codepy/': None,
         }
