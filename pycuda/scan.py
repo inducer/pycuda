@@ -24,11 +24,7 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 
-Derived from thrust/detail/backend/cuda/detail/fast_scan.inl
-within the Thrust project, https://code.google.com/p/thrust/
-
-Direct browse link:
-https://code.google.com/p/thrust/source/browse/thrust/detail/backend/cuda/detail/fast_scan.inl
+Derived from code within the Thrust project, https://github.com/thrust/thrust/
 """
 
 

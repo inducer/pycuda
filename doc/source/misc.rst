@@ -355,7 +355,7 @@ FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
 OTHER DEALINGS IN THE SOFTWARE.
 
 PyCUDA includes derivatives of parts of the `Thrust
-<https://code.google.com/p/thrust/>`_ computing package (in particular the scan
+<https://github.com/thrust/thrust/>`_ computing package (in particular the scan
 implementation). These parts are licensed as follows:
 
     Copyright 2008-2011 NVIDIA Corporation
