@@ -244,6 +244,9 @@ class GPUArray(object):
 
     def set_async(self, ary, stream=None):
         return self.set(ary, async=True, stream=stream)
+        
+    def dot(self, x, stream=None, allocator=None):
+        return dot(self, x, stream=stream, allocator=allocator)
 
     def get(self, ary=None, pagelocked=False, async=False, stream=None):
         if ary is None:
