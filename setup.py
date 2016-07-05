@@ -36,10 +36,18 @@ def get_config_schema():
     else:
         cuda_root_default = normpath(join(dirname(nvcc_path), ".."))
 
+    lib64 = "lib64"
+    import sys
+    if sys.platform.startswith("win"):
+        # https://github.com/inducer/pycuda/issues/113
+        lib64 = "x64"
+
     default_lib_dirs = [
-        "${CUDA_ROOT}/lib", "${CUDA_ROOT}/lib64",
+        "${CUDA_ROOT}/lib",
+        "${CUDA_ROOT}/"+lib64,
         # https://github.com/inducer/pycuda/issues/98
-        "${CUDA_ROOT}/lib/stubs", "${CUDA_ROOT}/lib64/stubs",
+        "${CUDA_ROOT}/lib/stubs",
+        "${CUDA_ROOT}/%s/stubs" % lib64,
         ]
 
     return ConfigSchema(make_boost_base_options() + [
