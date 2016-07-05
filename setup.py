@@ -36,11 +36,17 @@ def get_config_schema():
     else:
         cuda_root_default = normpath(join(dirname(nvcc_path), ".."))
 
+    cxxflags_default = []
+    ldflags_default = []
+
     lib64 = "lib64"
     import sys
     if sys.platform.startswith("win"):
         # https://github.com/inducer/pycuda/issues/113
-        lib64 = "x64"
+        lib64 = "lib/x64"
+
+        cxxflags_default.extend(['/EHsc'])
+        ldflags_default.extend(['/FORCE'])
 
     default_lib_dirs = [
         "${CUDA_ROOT}/lib",
@@ -75,9 +81,9 @@ def get_config_schema():
         LibraryDir("CURAND", default_lib_dirs),
         Libraries("CURAND", ["curand"]),
 
-        StringListOption("CXXFLAGS", [],
+        StringListOption("CXXFLAGS", cxxflags_default,
             help="Any extra C++ compiler options to include"),
-        StringListOption("LDFLAGS", [],
+        StringListOption("LDFLAGS", ldflags_default,
             help="Any extra linker options to include"),
         ])
 
