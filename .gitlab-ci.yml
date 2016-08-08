@@ -41,5 +41,6 @@ Documentation:
   - ". ./build-docs.sh"
   tags:
   - python3.5
+  - nvidia-titan-black
   only:
   - master
