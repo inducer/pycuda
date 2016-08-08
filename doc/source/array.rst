@@ -337,7 +337,7 @@ Reductions
 
 .. function:: subset_min(subset, a, stream=None)
 
-Elementwise Functions on :class:`GPUArrray` Instances
+Elementwise Functions on :class:`GPUArray` Instances
 -----------------------------------------------------
 
 .. module:: pycuda.cumath
