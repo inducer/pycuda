@@ -45,3 +45,5 @@ temp*
 setuptools.pth
 distribute*tar.gz
 *.sess
+
+.cache
