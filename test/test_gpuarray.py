@@ -805,12 +805,12 @@ class TestGPUArray:
         # Slice with length 1 on dimensions 0 and 1
         a_gpu_slice = a_gpu[0:1,1:2,:,:]
         assert a_gpu_slice.shape == (1,1,shape[2],shape[3])
-        assert a_gpu_slice.flags.c_contiguous is False 
+        assert a_gpu_slice.flags.c_contiguous
 
         # Squeeze it and obtain contiguity
         a_gpu_squeezed_slice = a_gpu[0:1,1:2,:,:].squeeze()
         assert a_gpu_squeezed_slice.shape == (shape[2],shape[3])
-        assert a_gpu_squeezed_slice.flags.c_contiguous is True 
+        assert a_gpu_squeezed_slice.flags.c_contiguous
 
         # Check that we get the original values out
         assert np.all(a_gpu_slice.get().ravel() == a_gpu_squeezed_slice.get().ravel())
@@ -818,12 +818,12 @@ class TestGPUArray:
         # Slice with length 1 on dimensions 2
         a_gpu_slice = a_gpu[:,:,2:3,:]
         assert a_gpu_slice.shape == (shape[0],shape[1],1,shape[3])
-        assert a_gpu_slice.flags.c_contiguous is False
+        assert not a_gpu_slice.flags.c_contiguous
 
         # Squeeze it, but no contiguity here
         a_gpu_squeezed_slice = a_gpu[:,:,2:3,:].squeeze()
         assert a_gpu_squeezed_slice.shape == (shape[0],shape[1],shape[3])
-        assert a_gpu_squeezed_slice.flags.c_contiguous is False
+        assert not a_gpu_squeezed_slice.flags.c_contiguous
 
         # Check that we get the original values out
         assert np.all(a_gpu_slice.get().ravel() == a_gpu_squeezed_slice.get().ravel())
