@@ -12,7 +12,6 @@ from pycuda.compiler import SourceModule
 #Read in image
 img = imread('noisyImage.jpg', flatten=True).astype(np.float32)
 
-
 mod = SourceModule('''
 __host__ __device__ void sort(int *a, int *b, int *c) {
     int swap;
@@ -64,3 +63,16 @@ __global__ void medianFilter(float *result, float *img, int w, int h) {
         result[i] = pixel11;
     }
 }''')
+
+medianFilter = mod.get_function("medianFilter")
+
+#This will need tweaking based on your image
+blockWidth = np.int32(img.shape[1]/16)
+blockHeight = np.int32(img.shape[0]/16)
+gridSize = np.int32((img.shape[0] * img.shape[1])/(blockWidth * blockHeight))
+
+#Empty array for computation output
+result = np.zeros_like(img)
+#Kernel execution
+medianFilter(drv.Out(result), drv.In(img),np.int32(img.shape[1]),np.int32(img.shape[0]), block=(blockWidth,blockHeight,1), grid=(gridSize,1))
+imsave('medianFilter-CUDA.jpg',result)
