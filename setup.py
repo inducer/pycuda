@@ -200,7 +200,8 @@ def main():
                 "pytools>=2011.2",
                 "pytest>=2",
                 "decorator>=3.2.0",
-                "appdirs>=1.4.0"
+                "appdirs>=1.4.0",
+                "mako",
                 ],
 
             ext_package="pycuda",
