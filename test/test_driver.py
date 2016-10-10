@@ -624,7 +624,7 @@ class TestDriver:
 
         for e in range(e0-6, e0-4):
             for i in range(100):
-                queue.append(pool.allocate(1<<e))
+                queue.append(pool.allocate(1 << e))
                 if len(queue) > 10:
                     queue.pop(0)
         del queue
@@ -632,9 +632,9 @@ class TestDriver:
 
     @mark_cuda_test
     def test_multi_context(self):
-        if drv.get_version() < (2,0,0):
+        if drv.get_version() < (2, 0, 0):
             return
-        if drv.get_version() >= (2,2,0):
+        if drv.get_version() >= (2, 2, 0) and drv.get_version() < (8,):
             if drv.Context.get_device().compute_mode == drv.compute_mode.EXCLUSIVE:
                 return
 
