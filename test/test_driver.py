@@ -830,10 +830,7 @@ class TestDriver:
             from py.test import skip
             skip("register_host_memory is not supported on OS X")
 
-        import resource
-
-        a = drv.aligned_empty((2**20,), np.float64,
-            alignment=resource.getpagesize())
+        a = drv.aligned_empty((2**20,), np.float64)
         a_pin = drv.register_host_memory(a)
 
         gpu_ary = drv.mem_alloc_like(a)
