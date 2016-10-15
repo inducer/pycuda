@@ -19,6 +19,7 @@ include Makefile.in
 include aksetup_helper.py
 include README_SETUP.txt
 include README.rst
+include LICENSE
 
 recursive-include bpl-subset/bpl_subset/boost *.h *.hpp *.cpp *.html *.inl *.ipp *.pl *.txt
 recursive-include bpl-subset/bpl_subset/libs *.h *.hpp *.cpp *.html *.inl *.ipp *.pl *.txt
