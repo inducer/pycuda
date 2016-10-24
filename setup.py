@@ -47,6 +47,12 @@ def get_config_schema():
 
         cxxflags_default.extend(['/EHsc'])
         ldflags_default.extend(['/FORCE'])
+    elif 'darwin' in sys.platform:
+        import glob
+        root_candidates = glob.glob('/Developer/NVIDIA/CUDA-*')
+        if root_candidates:
+            cuda_root_default = root_candidates[-1]
+            lib64 = "lib"
 
     default_lib_dirs = [
         "${CUDA_ROOT}/lib",
@@ -55,6 +61,10 @@ def get_config_schema():
         "${CUDA_ROOT}/lib/stubs",
         "${CUDA_ROOT}/%s/stubs" % lib64,
         ]
+
+    if 'darwin' in sys.platform:
+        default_lib_dirs.append(
+            "/usr/local/cuda/lib")
 
     return ConfigSchema(make_boost_base_options() + [
         Switch("USE_SHIPPED_BOOST", True, "Use included Boost library"),
