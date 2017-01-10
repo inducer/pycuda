@@ -309,13 +309,13 @@ class JitLinkModule(object):
             self.no_extern_c, self.arch, self.code, self.cache_dir,
             self.include_dirs)
         from pycuda.driver import jit_input_type
-        self.linker.add_data(cubin, jit_input_type.PTX, name=name)
+        self.linker.add_data(cubin, jit_input_type.PTX, name)
 
-    def add_data(self, data, cu_jit_input_type, name='unknown'):
-        self.linker.add_data(data, cu_jit_input_type, name)
+    def add_data(self, data, input_type, name='unknown'):
+        self.linker.add_data(data, input_type, name)
 
-    def add_file(self, filename, cu_jit_input_type):
-        self.linker.add_file(filename, cu_jit_input_type)
+    def add_file(self, filename, input_type):
+        self.linker.add_file(filename, input_type)
 
     def link(self):
         self.module = self.linker.link_module()
