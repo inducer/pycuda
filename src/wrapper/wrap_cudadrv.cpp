@@ -410,6 +410,128 @@ namespace
 
   // }}}
 
+  // {{{ linker
+
+#if CUDAPP_CUDA_VERSION >= 5050
+  class Linker : public boost::noncopyable
+  {
+    private:
+      py::object m_message_handler;
+      CUlinkState m_link_state;
+      bool m_log_verbose;
+      std::vector<CUjit_option> m_options;
+      std::vector<void *> m_values;
+      char m_info_buf[32768];
+      char m_error_buf[32768];
+
+      void close() {
+        if (m_link_state != NULL) {
+          cuLinkDestroy(m_link_state);
+          m_link_state = NULL;
+        }
+      }
+
+      void add_option(CUjit_option option, void* value) {
+        m_options.push_back(option);
+        m_values.push_back(value);
+      }
+
+      void check_cu_result(const char* cu_function_name, CUresult cu_result) const {
+        if (cu_result != CUDA_SUCCESS) {
+          call_message_handler(cu_result);
+          throw pycuda::error(cu_function_name, cu_result, error_str().c_str());
+        }
+      }
+
+      void call_message_handler(CUresult cu_result) const {
+        if (m_message_handler != py::object()) {
+          m_message_handler(cu_result == CUDA_SUCCESS, info_str(), error_str());
+        }
+      }
+
+      const std::string info_str() const {
+        return std::string(m_info_buf, size_t(m_values[1]));
+      }
+
+      const std::string error_str() const {
+        return std::string(m_error_buf, size_t(m_values[3]));
+      }
+
+    public:
+      Linker(py::object message_handler = py::object(),
+             py::object py_options = py::object(),
+             py::object py_log_verbose = py::object(false))
+        : m_message_handler(message_handler),
+          m_link_state(),
+          m_log_verbose(py::extract<bool>(py_log_verbose))
+      {
+        add_option(CU_JIT_INFO_LOG_BUFFER, m_info_buf);
+        add_option(CU_JIT_INFO_LOG_BUFFER_SIZE_BYTES, (void*) sizeof(m_info_buf));
+        add_option(CU_JIT_ERROR_LOG_BUFFER, m_error_buf);
+        add_option(CU_JIT_ERROR_LOG_BUFFER_SIZE_BYTES, (void*) sizeof(m_error_buf));
+        add_option(CU_JIT_LOG_VERBOSE, (void*) (m_log_verbose? 1ull : 0ull));
+
+        if (py_options.ptr() != Py_None) {
+          PYTHON_FOREACH(key_value, py_options) {
+            add_option(
+                py::extract<CUjit_option>(key_value[0]),
+                (void*) py::extract<intptr_t>(key_value[1])());
+          }
+        }
+
+        const CUresult cu_result = cuLinkCreate(
+            (unsigned int) m_options.size(),
+            const_cast<CUjit_option *>(&*m_options.begin()),
+            const_cast<void **>(&*m_values.begin()),
+            &m_link_state);
+        check_cu_result("cuLinkCreate", cu_result);
+      }
+
+      ~Linker()
+      {
+        close();
+      }
+
+      void add_data(py::object py_data, CUjitInputType input_type, py::str py_name)
+      {
+        const char *data_buf;
+        PYCUDA_BUFFER_SIZE_T data_buf_len;
+        if (PyObject_AsCharBuffer(py_data.ptr(), &data_buf, &data_buf_len) != 0) {
+          throw py::error_already_set();
+        }
+        const char* name = (py_name.ptr() != Py_None)? py::extract<const char*>(py_name) : NULL;
+        const CUresult cu_result = cuLinkAddData(m_link_state, input_type, (void*)data_buf, data_buf_len, name, 0, NULL, NULL);
+        check_cu_result("cuLinkAddData", cu_result);
+      }
+
+      void add_file(py::str py_filename, CUjitInputType input_type)
+      {
+        const char* filename = py::extract<const char*>(py_filename);
+        const CUresult cu_result = cuLinkAddFile(m_link_state, input_type, filename, 0, NULL, NULL);
+        check_cu_result("cuLinkAddFile", cu_result);
+      }
+
+      module* link_module()
+      {
+        const char* cubin_data = NULL;
+        size_t cubin_size = 0;
+        CUresult cu_result = cuLinkComplete(m_link_state, (void**)&cubin_data, &cubin_size);
+        check_cu_result("cuLinkComplete", cu_result);
+
+        CUmodule cu_module = NULL;
+        cu_result = cuModuleLoadData(&cu_module, (void*)cubin_data);
+        check_cu_result("cuModuleLoadData", cu_result);
+
+        call_message_handler(cu_result);
+        close();
+
+        return new module(cu_module);
+      }
+  };
+#endif
+
+  // }}}
+
   template <class T>
   PyObject *mem_obj_to_long(T const &mo)
   {
@@ -1055,6 +1177,27 @@ BOOST_PYTHON_MODULE(_driver)
        py::arg("options")=py::list(),
        py::arg("message_handler")=py::object()),
       py::return_value_policy<py::manage_new_object>());
+
+  // }}}
+
+  // {{{ linker
+
+#if CUDAPP_CUDA_VERSION >= 5050
+  py::enum_<CUjitInputType>("jit_input_type")
+    .value("CUBIN", CU_JIT_INPUT_CUBIN)
+    .value("PTX", CU_JIT_INPUT_PTX)
+    .value("FATBINARY", CU_JIT_INPUT_FATBINARY)
+    .value("OBJECT", CU_JIT_INPUT_OBJECT)
+    .value("LIBRARY", CU_JIT_INPUT_LIBRARY);
+
+  py::class_<Linker, boost::noncopyable, shared_ptr<Linker> >("Linker")
+    .def(py::init<py::object>())
+    .def(py::init<py::object, py::object>())
+    .def(py::init<py::object, py::object, py::object>())
+    .def("add_data", &Linker::add_data, (py::arg("data"), py::arg("input_type"), py::arg("name")=py::str("unknown")))
+    .def("add_file", &Linker::add_file, (py::arg("filename"), py::arg("input_type")))
+    .def("link_module", &Linker::link_module, py::return_value_policy<py::manage_new_object>());
+#endif
 
   // }}}
 
