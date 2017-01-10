@@ -304,7 +304,7 @@ class JitLinkModule(object):
         from pycuda.driver import Linker
         self.linker = Linker(message_handler, options, log_verbose)
 
-    def add_source(self, source, nvcc_options=None, name='unknown'):
+    def add_source(self, source, nvcc_options=None, name='kernel.ptx'):
         ptx = compile(source, self.nvcc, nvcc_options, self.keep,
             self.no_extern_c, self.arch, self.code, self.cache_dir,
             self.include_dirs, target="ptx")
