@@ -305,11 +305,11 @@ class JitLinkModule(object):
         self.linker = Linker(message_handler, options, log_verbose)
 
     def add_source(self, source, nvcc_options=None, name='unknown'):
-        cubin = compile(source, self.nvcc, nvcc_options, self.keep,
+        ptx = compile(source, self.nvcc, nvcc_options, self.keep,
             self.no_extern_c, self.arch, self.code, self.cache_dir,
-            self.include_dirs)
+            self.include_dirs, target="ptx")
         from pycuda.driver import jit_input_type
-        self.linker.add_data(cubin, jit_input_type.PTX, name)
+        self.linker.add_data(ptx, jit_input_type.PTX, name)
 
     def add_data(self, data, input_type, name='unknown'):
         self.linker.add_data(data, input_type, name)
