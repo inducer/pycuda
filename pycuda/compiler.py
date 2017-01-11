@@ -254,40 +254,6 @@ def compile(source, nvcc="nvcc", options=None, keep=False,
 
     return compile_plain(source, options, keep, nvcc, cache_dir, target)
 
-
-class SourceModule(object):
-    def __init__(self, source, nvcc="nvcc", options=None, keep=False,
-            no_extern_c=False, arch=None, code=None, cache_dir=None,
-            include_dirs=[]):
-        self._check_arch(arch)
-
-        cubin = compile(source, nvcc, options, keep, no_extern_c,
-                arch, code, cache_dir, include_dirs)
-
-        from pycuda.driver import module_from_buffer
-        self.module = module_from_buffer(cubin)
-
-        self.get_global = self.module.get_global
-        self.get_texref = self.module.get_texref
-        if hasattr(self.module, "get_surfref"):
-            self.get_surfref = self.module.get_surfref
-
-    def _check_arch(self, arch):
-        if arch is None:
-            return
-        try:
-            from pycuda.driver import Context
-            capability = Context.get_device().compute_capability()
-            if tuple(map(int, tuple(arch.split("_")[1]))) > capability:
-                from warnings import warn
-                warn("trying to compile for a compute capability "
-                        "higher than selected GPU")
-        except:
-            pass
-
-    def get_function(self, name):
-        return self.module.get_function(name)
-
 class JitLinkModule(object):
     def __init__(self, nvcc='nvcc', options=None, keep=False,
             no_extern_c=False, arch=None, code=None, cache_dir=None,
@@ -305,9 +271,10 @@ class JitLinkModule(object):
         self.linker = Linker(message_handler, options, log_verbose)
 
     def add_source(self, source, nvcc_options=None, name='kernel.ptx'):
-        ptx = compile(source, self.nvcc, nvcc_options, self.keep,
-            self.no_extern_c, self.arch, self.code, self.cache_dir,
-            self.include_dirs, target="ptx")
+        ptx = compile(source, nvcc=self.nvcc, options=nvcc_options,
+            keep=self.keep, no_extern_c=self.no_extern_c, arch=self.arch,
+            code=self.code, cache_dir=self.cache_dir,
+            include_dirs=self.include_dirs, target="ptx")
         from pycuda.driver import jit_input_type
         self.linker.add_data(ptx, jit_input_type.PTX, name)
 
@@ -320,7 +287,6 @@ class JitLinkModule(object):
     def link(self):
         self.module = self.linker.link_module()
         self.linker = None
-
         self.get_global = self.module.get_global
         self.get_texref = self.module.get_texref
         if hasattr(self.module, "get_surfref"):
@@ -341,3 +307,14 @@ class JitLinkModule(object):
 
     def get_function(self, name):
         return self.module.get_function(name)
+
+class SourceModule(JitLinkModule):
+    def __init__(self, source, nvcc="nvcc", options=None, keep=False,
+            no_extern_c=False, arch=None, code=None, cache_dir=None,
+            include_dirs=[], message_handler=None, log_verbose=False):
+        super(SourceModule, self).__init__(nvcc=nvcc, options=None,
+            keep=keep, no_extern_c=no_extern_c, arch=arch, code=code,
+            cache_dir=cache_dir, include_dirs=include_dirs,
+            message_handler=message_handler, log_verbose=log_verbose)
+        self.add_source(source, nvcc_options=options)
+        self.link()
