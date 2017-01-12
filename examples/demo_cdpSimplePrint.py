@@ -96,12 +96,9 @@ def main(argv):
 
     print("starting Simple Print (CUDA Dynamic Parallelism)")
 
-    # TODO: this add_file('cudadevrt.lib') probably works under Windows only,
-    # not sure about Linux, maybe "/usr/lib/x86_64-linux-gnu/libcudadevrt.a"?
-
     mod = JitLinkModule()
     mod.add_source(cdpSimplePrint_cu, nvcc_options=['-O3', '-rdc=true', '-lcudadevrt'])
-    mod.add_file(os.environ['CUDA_PATH'] + '\\lib\\x64\\cudadevrt.lib', jit_input_type.LIBRARY)
+    mod.add_stdlib('cudadevrt')
     mod.link()
 
     cdp_kernel = mod.get_function('cdp_kernel').prepare('iiii').prepared_call

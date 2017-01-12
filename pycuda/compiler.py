@@ -257,7 +257,8 @@ def compile(source, nvcc="nvcc", options=None, keep=False,
 class JitLinkModule(object):
     def __init__(self, nvcc='nvcc', options=None, keep=False,
             no_extern_c=False, arch=None, code=None, cache_dir=None,
-            include_dirs=[],  message_handler=None, log_verbose=False):
+            include_dirs=[],  message_handler=None, log_verbose=False,
+            cudalib_dir=None):
         self._check_arch(arch)
         self.nvcc = nvcc
         self.keep = keep
@@ -266,6 +267,7 @@ class JitLinkModule(object):
         self.code = code
         self.cache_dir = cache_dir
         self.include_dirs = include_dirs
+        self.cudalib_dir = cudalib_dir
         self.module = None
         from pycuda.driver import Linker
         self.linker = Linker(message_handler, options, log_verbose)
@@ -283,6 +285,30 @@ class JitLinkModule(object):
 
     def add_file(self, filename, input_type):
         self.linker.add_file(filename, input_type)
+
+    def add_stdlib(self, libname):
+        import os, os.path
+        from pycuda.driver import jit_input_type
+        from platform import system
+        syst = system()
+        if syst == 'Windows':
+            if self.cudalib_dir is None:
+                libdir = os.path.join(os.environ['CUDA_PATH'], 'lib/x64')
+            else:
+                libdir = self.cudalib_dir
+            libpath = os.path.join(libdir, '%s.lib' % libname)
+        elif syst == 'Linux':
+            if self.cudalib_dir is None:
+                libdir = '/usr/lib/x86_64-linux-gnu'
+            else:
+                libdir = self.cudalib_dir
+            libpath = os.path.join(libdir, 'lib%s.a' % libname)
+        else:
+            raise Exception('System "%s" currently not supported, use add_file() instead' % syst)
+        if os.path.isfile(libpath):
+            self.linker.add_file(libpath, jit_input_type.LIBRARY)
+        else:
+            raise Exception('Library file "%s" not found, use add_file() instead' % libpath)
 
     def link(self):
         self.module = self.linker.link_module()

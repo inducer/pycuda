@@ -42,15 +42,6 @@ class TestJitLink:
             raise Exception('Minimum compute capability for dynamic parallelism is 3.5 (found: %u.%u)!' %
                 (compute_capability[0], compute_capability[1]))
 
-        import os, os.path
-        from platform import system
-        if system() == 'Windows':
-            cudadevrt = os.path.join(os.environ['CUDA_PATH'], 'lib/x64/cudadevrt.lib')
-        else:
-            cudadevrt = '/usr/lib/x86_64-linux-gnu/libcudadevrt.a'  # TODO: this is just an untested guess!
-        if not os.path.isfile(cudadevrt):
-            raise Exception('Cannot locate library cudadevrt!')
-
         test_cu = '''#include <cstdio>
         __global__ void test_kernel_inner() {
             printf("  Hello inner world!\\n");
@@ -62,8 +53,9 @@ class TestJitLink:
 
         mod = JitLinkModule()
         mod.add_source(test_cu, nvcc_options=['-rdc=true', '-lcudadevrt'])
-        mod.add_file(cudadevrt, jit_input_type.LIBRARY)
+        mod.add_stdlib('cudadevrt')
         mod.link()
+
         test_kernel = mod.get_function('test_kernel')
         test_kernel(grid=(2,1), block=(1,1,1))
 
