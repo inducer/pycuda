@@ -20,8 +20,7 @@
 import sys, os
 import pycuda.autoinit
 import pycuda.driver as cuda
-from pycuda.compiler import JitLinkModule
-from pycuda.driver import jit_input_type
+from pycuda.compiler import DynamicSourceModule
 
 cdpSimplePrint_cu = '''
 #include <cstdio>
@@ -96,11 +95,7 @@ def main(argv):
 
     print("starting Simple Print (CUDA Dynamic Parallelism)")
 
-    mod = JitLinkModule()
-    mod.add_source(cdpSimplePrint_cu, nvcc_options=['-O3', '-rdc=true', '-lcudadevrt'])
-    mod.add_stdlib('cudadevrt')
-    mod.link()
-
+    mod = DynamicSourceModule(cdpSimplePrint_cu)
     cdp_kernel = mod.get_function('cdp_kernel').prepare('iiii').prepared_call
 
     print("***************************************************************************")
@@ -113,14 +108,11 @@ def main(argv):
         num_blocks *= 4
         print("+%d" % num_blocks)
         sum += num_blocks
-
     print("=%d blocks are launched!!! (%d from the GPU)" % (sum, sum-2))
     print("***************************************************************************\n")
 
-    # TODO: cudaDeviceSetLimit() is not available on PyCuda, works anyway on my GeForce GTX 980; maybe add that function?
-    #cudaDeviceSetLimit( cudaLimitDevRuntimeSyncDepth, max_depth )
+    pycuda.autoinit.context.set_limit(cuda.limit.DEV_RUNTIME_SYNC_DEPTH, max_depth)
 
-    # Launch the kernel from the CPU.
     print("Launching cdp_kernel() with CUDA Dynamic Parallelism:\n")
     cdp_kernel((2,1), (2,1,1), max_depth, 0, 0, -1)
 
