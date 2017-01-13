@@ -838,7 +838,6 @@ class TestDriver:
         drv.memcpy_htod_async(gpu_ary, a_pin, stream)
         drv.Context.synchronize()
 
-    @pytest.mark.xfail
     @mark_cuda_test
     # https://github.com/inducer/pycuda/issues/45
     def test_recursive_launch(self):
