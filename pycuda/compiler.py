@@ -292,15 +292,12 @@ class SourceModule(CudaModule):
         self._bind_module()
 
 class JitLinkModule(CudaModule):
-    # TODO:
-    # - How do we handle multiple CUDA devices? Currently using
-    #   pycuda.autoinit.device
     def __init__(self, nvcc='nvcc', link_options=None, keep=False,
             no_extern_c=False, arch=None, code=None, cache_dir=None,
             include_dirs=[],  message_handler=None, log_verbose=False,
             cuda_libdir=None):
-        from pycuda.autoinit import device
-        compute_capability = device.compute_capability()
+        from pycuda.driver import Context
+        compute_capability = Context.get_device().compute_capability()
         if compute_capability < (3,5):
             raise Exception('Minimum compute capability for dynamic parallelism is 3.5 (found: %u.%u)!' %
                 (compute_capability[0], compute_capability[1]))
@@ -332,7 +329,11 @@ class JitLinkModule(CudaModule):
             directory, and libptn is the %-format pattern to construct
             library file names from library names on the local system.
         Does not raise an Excpetion in case of failure.
+        Links
+        - Post-installation Actions
+          http://docs.nvidia.com/cuda/cuda-installation-guide-linux/index.html#post-installation-actions
         TODO:
+        - Is $CUDA_ROOT/lib64 the correct path to assume for 64-Bit CUDA libraries on Linux?
         - Mac OS X (Darwin) is currently treated like Linux, is that correct?
         - Check CMake's FindCUDA module, it might contain some helpful clues in its sources
           https://cmake.org/cmake/help/v3.0/module/FindCUDA.html
@@ -340,7 +341,7 @@ class JitLinkModule(CudaModule):
         - Verify all Linux code paths somehow
         '''
         from os.path import isfile, join
-        from platform import system as platform_system   #  TODO: Only since Pyhton 2.3., future or is 2.3 fine?
+        from platform import system as platform_system
         system = platform_system()
         libdir, libptn = None, None
         if system == 'Windows':
@@ -353,10 +354,8 @@ class JitLinkModule(CudaModule):
             if cuda_libdir is not None:
                 libdir = cuda_libdir
             elif 'CUDA_ROOT' in os.environ and isfile(join(os.environ['CUDA_ROOT'], 'lib64/libcudadevrt.a')):
-                # TODO: Is $CUDA_ROOT/lib64 the correct path to assume for 64-Bit CUDA libraries?
                 libdir = join(os.environ['CUDA_ROOT'], 'lib64')
             elif 'LD_LIBRARY_PATH' in os.environ:
-                # see: http://docs.nvidia.com/cuda/cuda-installation-guide-linux/index.html#post-installation-actions
                 for ld_path in os.environ['LD_LIBRARY_PATH'].split(':'):
                     if isfile(join(ld_path, 'libcudadevrt.a')):
                         libdir = ld_path
@@ -384,13 +383,12 @@ class JitLinkModule(CudaModule):
         return self
 
     def add_stdlib(self, libname):
-        # TODO: which error class to raise best here?
         if self.libdir is None:
-            raise Exception('Unable to find CUDA installation path, please set CUDA library path manually')
+            raise RuntimeError('Unable to find CUDA installation path, please set CUDA library path manually')
         from os.path import isfile, join
         libpath = join(self.libdir, self.libptn % libname)
         if not isfile(libpath):
-            raise Exception('CUDA library file "%s" not found' % libpath)
+            raise FileNotFoundError('CUDA library file "%s" not found' % libpath)
         from pycuda.driver import jit_input_type
         self.linker.add_file(libpath, jit_input_type.LIBRARY)
         return self
@@ -409,6 +407,7 @@ class DynamicSourceModule(JitLinkModule):
             link_options=None, keep=keep, no_extern_c=no_extern_c,
             arch=arch, code=code, cache_dir=cache_dir,
             include_dirs=include_dirs, cuda_libdir=cuda_libdir)
+        options = options[:]
         if not '-rdc=true' in options:
             options.append('-rdc=true')
         if not '-lcudadevrt' in options:
