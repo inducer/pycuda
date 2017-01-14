@@ -431,9 +431,10 @@ namespace
         }
       }
 
-      void add_option(CUjit_option option, void* value) {
+      template<typename T>
+      void add_option(CUjit_option option, T value) {
         m_options.push_back(option);
-        m_values.push_back(value);
+        m_values.push_back(reinterpret_cast<void *>(value));
       }
 
       void check_cu_result(const char* cu_function_name, CUresult cu_result) const {
@@ -466,16 +467,16 @@ namespace
           m_log_verbose(py::extract<bool>(py_log_verbose))
       {
         add_option(CU_JIT_INFO_LOG_BUFFER, m_info_buf);
-        add_option(CU_JIT_INFO_LOG_BUFFER_SIZE_BYTES, (void*) sizeof(m_info_buf));
+        add_option(CU_JIT_INFO_LOG_BUFFER_SIZE_BYTES, sizeof(m_info_buf));
         add_option(CU_JIT_ERROR_LOG_BUFFER, m_error_buf);
-        add_option(CU_JIT_ERROR_LOG_BUFFER_SIZE_BYTES, (void*) sizeof(m_error_buf));
-        add_option(CU_JIT_LOG_VERBOSE, (void*) (m_log_verbose? 1ull : 0ull));
+        add_option(CU_JIT_ERROR_LOG_BUFFER_SIZE_BYTES, sizeof(m_error_buf));
+        add_option(CU_JIT_LOG_VERBOSE, m_log_verbose? 1ull : 0ull);
 
         if (py_options.ptr() != Py_None) {
           PYTHON_FOREACH(key_value, py_options) {
             add_option(
                 py::extract<CUjit_option>(key_value[0]),
-                (void*) py::extract<intptr_t>(key_value[1])());
+                py::extract<intptr_t>(key_value[1])());
           }
         }
 
@@ -499,8 +500,11 @@ namespace
         if (PyObject_AsCharBuffer(py_data.ptr(), &data_buf, &data_buf_len) != 0) {
           throw py::error_already_set();
         }
-        const char* name = (py_name.ptr() != Py_None)? py::extract<const char*>(py_name) : NULL;
-        const CUresult cu_result = cuLinkAddData(m_link_state, input_type, (void*)data_buf, data_buf_len, name, 0, NULL, NULL);
+        const char* name = (py_name.ptr() != Py_None)?
+            py::extract<const char*>(py_name) : NULL;
+        const CUresult cu_result = cuLinkAddData(m_link_state, input_type,
+            static_cast<void *>(const_cast<char *>(data_buf)),
+            data_buf_len, name, 0, NULL, NULL);
         check_cu_result("cuLinkAddData", cu_result);
       }
 
@@ -513,13 +517,14 @@ namespace
 
       module* link_module()
       {
-        const char* cubin_data = NULL;
+        char* cubin_data = NULL;
         size_t cubin_size = 0;
-        CUresult cu_result = cuLinkComplete(m_link_state, (void**)&cubin_data, &cubin_size);
+        CUresult cu_result = cuLinkComplete(m_link_state,
+            reinterpret_cast<void **>(&cubin_data), &cubin_size);
         check_cu_result("cuLinkComplete", cu_result);
 
         CUmodule cu_module = NULL;
-        cu_result = cuModuleLoadData(&cu_module, (void*)cubin_data);
+        cu_result = cuModuleLoadData(&cu_module, cubin_data);
         check_cu_result("cuModuleLoadData", cu_result);
 
         call_message_handler(cu_result);
