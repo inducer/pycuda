@@ -511,7 +511,8 @@ namespace
       void add_file(py::str py_filename, CUjitInputType input_type)
       {
         const char* filename = py::extract<const char*>(py_filename);
-        const CUresult cu_result = cuLinkAddFile(m_link_state, input_type, filename, 0, NULL, NULL);
+        const CUresult cu_result = cuLinkAddFile(m_link_state, input_type,
+            filename, 0, NULL, NULL);
         check_cu_result("cuLinkAddFile", cu_result);
       }
 

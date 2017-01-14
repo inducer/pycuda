@@ -934,8 +934,8 @@ class TestDriver:
             printf("  Hello inner world!\\n");
         }'''
 
-        from pycuda.compiler import JitLinkModule
-        mod = JitLinkModule()
+        from pycuda.compiler import DynamicModule
+        mod = DynamicModule()
         mod.add_source(test_outer_cu, nvcc_options=['-rdc=true', '-lcudadevrt'])
         mod.add_source(test_inner_cu, nvcc_options=['-rdc=true', '-lcudadevrt'])
         mod.add_stdlib('cudadevrt')

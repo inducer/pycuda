@@ -278,6 +278,10 @@ class CudaModule(object):
         return self.module.get_function(name)
 
 class SourceModule(CudaModule):
+    '''
+    Creates a Module from a single .cu source object linked against the
+    static CUDA runtime.
+    '''
     def __init__(self, source, nvcc="nvcc", options=None, keep=False,
             no_extern_c=False, arch=None, code=None, cache_dir=None,
             include_dirs=[]):
@@ -291,7 +295,11 @@ class SourceModule(CudaModule):
 
         self._bind_module()
 
-class JitLinkModule(CudaModule):
+class DynamicModule(CudaModule):
+    '''
+    Creates a Module from multiple .cu source, library file and/or data
+    objects linked against the static or dynamic CUDA runtime.
+    '''
     def __init__(self, nvcc='nvcc', link_options=None, keep=False,
             no_extern_c=False, arch=None, code=None, cache_dir=None,
             include_dirs=[],  message_handler=None, log_verbose=False,
@@ -312,15 +320,17 @@ class JitLinkModule(CudaModule):
         self.code = code
         self.cache_dir = cache_dir
         self.include_dirs = include_dirs
+        self.cuda_libdir = cuda_libdir
+        self.libdir, self.libptn = None, None
         self.module = None
-        self.libdir, self.libptn = self._locate_cuda_libdir(cuda_libdir)
 
-    def _locate_cuda_libdir(self, cuda_libdir=None):
+    def _locate_cuda_libdir(self):
         '''
-        Locate the CUDA "standard" libraries directory in the local
+        Locate the "standard" CUDA SDK library directory in the local
         file system. Supports 64-Bit Windows, Linux and Mac OS X.
-        In case the caller supplied cuda_libdir other than None that
-        value is returned unchecked, else make a best-effort attempt.
+        In case the caller supplied cuda_libdir in the constructor
+        other than None that value is returned unchecked, else a
+        best-effort attempt is made.
         Precedence:
             Windows: cuda_libdir > %CUDA_PATH%
             Linux:   cuda_libdir > $CUDA_ROOT > $LD_LIBRARY_PATH > '/usr/lib/x86_64-linux-gnu'
@@ -328,8 +338,8 @@ class JitLinkModule(CudaModule):
             of failure or a string containing the absolute path of the
             directory, and libptn is the %-format pattern to construct
             library file names from library names on the local system.
-        Does not raise an Excpetion in case of failure.
-        Links
+        Raises a RuntimeError in case of failure.
+        Links:
         - Post-installation Actions
           http://docs.nvidia.com/cuda/cuda-installation-guide-linux/index.html#post-installation-actions
         TODO:
@@ -345,14 +355,14 @@ class JitLinkModule(CudaModule):
         system = platform_system()
         libdir, libptn = None, None
         if system == 'Windows':
-            if cuda_libdir is not None:
-                libdir = cuda_libdir
-            elif 'CUDA_PATH' in os.environ and isfile(join(os.environ['CUDA_PATH'], 'lib/x64/cudadevrt.lib')):
-                libdir = join(os.environ['CUDA_PATH'], 'lib/x64')
+            if self.cuda_libdir is not None:
+                libdir = self.cuda_libdir
+            elif 'CUDA_PATH' in os.environ and isfile(join(os.environ['CUDA_PATH'], 'lib\\x64\\cudadevrt.lib')):
+                libdir = join(os.environ['CUDA_PATH'], 'lib\\x64')
             libptn = '%s.lib'
         elif system == 'Linux' or system == 'Darwin':
-            if cuda_libdir is not None:
-                libdir = cuda_libdir
+            if self.cuda_libdir is not None:
+                libdir = self.cuda_libdir
             elif 'CUDA_ROOT' in os.environ and isfile(join(os.environ['CUDA_ROOT'], 'lib64/libcudadevrt.a')):
                 libdir = join(os.environ['CUDA_ROOT'], 'lib64')
             elif 'LD_LIBRARY_PATH' in os.environ:
@@ -363,6 +373,9 @@ class JitLinkModule(CudaModule):
             if libdir is None and isfile('/usr/lib/x86_64-linux-gnu/libcudadevrt.a'):
                 libdir = '/usr/lib/x86_64-linux-gnu'
             libptn = 'lib%s.a'
+        if libdir is None:
+            raise RuntimeError('Unable to locate the CUDA SDK installation '
+                'directory, set CUDA library path manually')
         return libdir, libptn
 
     def add_source(self, source, nvcc_options=None, name='kernel.ptx'):
@@ -384,11 +397,11 @@ class JitLinkModule(CudaModule):
 
     def add_stdlib(self, libname):
         if self.libdir is None:
-            raise RuntimeError('Unable to find CUDA installation path, please set CUDA library path manually')
+            self.libdir, self.libptn = self._locate_cuda_libdir()
         from os.path import isfile, join
         libpath = join(self.libdir, self.libptn % libname)
         if not isfile(libpath):
-            raise FileNotFoundError('CUDA library file "%s" not found' % libpath)
+            raise FileNotFoundError('CUDA SDK library file "%s" not found' % libpath)
         from pycuda.driver import jit_input_type
         self.linker.add_file(libpath, jit_input_type.LIBRARY)
         return self
@@ -399,7 +412,15 @@ class JitLinkModule(CudaModule):
         self._bind_module()
         return self
 
-class DynamicSourceModule(JitLinkModule):
+class DynamicSourceModule(DynamicModule):
+    '''
+    Creates a Module from a single .cu source object linked against the
+    dynamic CUDA runtime.
+    - compiler generates PTX relocatable device code (rdc) from source that
+      can be linked with other relocatable device code
+    - source is linked against the CUDA device runtime library cudadevrt
+    - library cudadevrt is statically linked into the generated Module
+    '''
     def __init__(self, source, nvcc="nvcc", options=[], keep=False,
             no_extern_c=False, arch=None, code=None, cache_dir=None,
             include_dirs=[], cuda_libdir=None):
