@@ -254,24 +254,7 @@ def compile(source, nvcc="nvcc", options=None, keep=False,
 
     return compile_plain(source, options, keep, nvcc, cache_dir, target)
 
-
-class SourceModule(object):
-    def __init__(self, source, nvcc="nvcc", options=None, keep=False,
-            no_extern_c=False, arch=None, code=None, cache_dir=None,
-            include_dirs=[]):
-        self._check_arch(arch)
-
-        cubin = compile(source, nvcc, options, keep, no_extern_c,
-                arch, code, cache_dir, include_dirs)
-
-        from pycuda.driver import module_from_buffer
-        self.module = module_from_buffer(cubin)
-
-        self.get_global = self.module.get_global
-        self.get_texref = self.module.get_texref
-        if hasattr(self.module, "get_surfref"):
-            self.get_surfref = self.module.get_surfref
-
+class CudaModule(object):
     def _check_arch(self, arch):
         if arch is None:
             return
@@ -285,5 +268,171 @@ class SourceModule(object):
         except:
             pass
 
+    def _bind_module(self):
+        self.get_global = self.module.get_global
+        self.get_texref = self.module.get_texref
+        if hasattr(self.module, "get_surfref"):
+            self.get_surfref = self.module.get_surfref
+
     def get_function(self, name):
         return self.module.get_function(name)
+
+class SourceModule(CudaModule):
+    '''
+    Creates a Module from a single .cu source object linked against the
+    static CUDA runtime.
+    '''
+    def __init__(self, source, nvcc="nvcc", options=None, keep=False,
+            no_extern_c=False, arch=None, code=None, cache_dir=None,
+            include_dirs=[]):
+        self._check_arch(arch)
+
+        cubin = compile(source, nvcc, options, keep, no_extern_c,
+                arch, code, cache_dir, include_dirs)
+
+        from pycuda.driver import module_from_buffer
+        self.module = module_from_buffer(cubin)
+
+        self._bind_module()
+
+class DynamicModule(CudaModule):
+    '''
+    Creates a Module from multiple .cu source, library file and/or data
+    objects linked against the static or dynamic CUDA runtime.
+    '''
+    def __init__(self, nvcc='nvcc', link_options=None, keep=False,
+            no_extern_c=False, arch=None, code=None, cache_dir=None,
+            include_dirs=[],  message_handler=None, log_verbose=False,
+            cuda_libdir=None):
+        from pycuda.driver import Context
+        compute_capability = Context.get_device().compute_capability()
+        if compute_capability < (3,5):
+            raise Exception('Minimum compute capability for dynamic parallelism is 3.5 (found: %u.%u)!' %
+                (compute_capability[0], compute_capability[1]))
+        else:
+            from pycuda.driver import Linker
+            self.linker = Linker(message_handler, link_options, log_verbose)
+        self._check_arch(arch)
+        self.nvcc = nvcc
+        self.keep = keep
+        self.no_extern_c = no_extern_c
+        self.arch = arch
+        self.code = code
+        self.cache_dir = cache_dir
+        self.include_dirs = include_dirs
+        self.cuda_libdir = cuda_libdir
+        self.libdir, self.libptn = None, None
+        self.module = None
+
+    def _locate_cuda_libdir(self):
+        '''
+        Locate the "standard" CUDA SDK library directory in the local
+        file system. Supports 64-Bit Windows, Linux and Mac OS X.
+        In case the caller supplied cuda_libdir in the constructor
+        other than None that value is returned unchecked, else a
+        best-effort attempt is made.
+        Precedence:
+            Windows: cuda_libdir > %CUDA_PATH%
+            Linux:   cuda_libdir > $CUDA_ROOT > $LD_LIBRARY_PATH > '/usr/lib/x86_64-linux-gnu'
+        Returns a pair (libdir, libptn) where libdir is None in case
+            of failure or a string containing the absolute path of the
+            directory, and libptn is the %-format pattern to construct
+            library file names from library names on the local system.
+        Raises a RuntimeError in case of failure.
+        Links:
+        - Post-installation Actions
+          http://docs.nvidia.com/cuda/cuda-installation-guide-linux/index.html#post-installation-actions
+        TODO:
+        - Is $CUDA_ROOT/lib64 the correct path to assume for 64-Bit CUDA libraries on Linux?
+        - Mac OS X (Darwin) is currently treated like Linux, is that correct?
+        - Check CMake's FindCUDA module, it might contain some helpful clues in its sources
+          https://cmake.org/cmake/help/v3.0/module/FindCUDA.html
+          https://github.com/Kitware/CMake/blob/master/Modules/FindCUDA.cmake
+        - Verify all Linux code paths somehow
+        '''
+        from os.path import isfile, join
+        from platform import system as platform_system
+        system = platform_system()
+        libdir, libptn = None, None
+        if system == 'Windows':
+            if self.cuda_libdir is not None:
+                libdir = self.cuda_libdir
+            elif 'CUDA_PATH' in os.environ and isfile(join(os.environ['CUDA_PATH'], 'lib\\x64\\cudadevrt.lib')):
+                libdir = join(os.environ['CUDA_PATH'], 'lib\\x64')
+            libptn = '%s.lib'
+        elif system == 'Linux' or system == 'Darwin':
+            if self.cuda_libdir is not None:
+                libdir = self.cuda_libdir
+            elif 'CUDA_ROOT' in os.environ and isfile(join(os.environ['CUDA_ROOT'], 'lib64/libcudadevrt.a')):
+                libdir = join(os.environ['CUDA_ROOT'], 'lib64')
+            elif 'LD_LIBRARY_PATH' in os.environ:
+                for ld_path in os.environ['LD_LIBRARY_PATH'].split(':'):
+                    if isfile(join(ld_path, 'libcudadevrt.a')):
+                        libdir = ld_path
+                        break
+            if libdir is None and isfile('/usr/lib/x86_64-linux-gnu/libcudadevrt.a'):
+                libdir = '/usr/lib/x86_64-linux-gnu'
+            libptn = 'lib%s.a'
+        if libdir is None:
+            raise RuntimeError('Unable to locate the CUDA SDK installation '
+                'directory, set CUDA library path manually')
+        return libdir, libptn
+
+    def add_source(self, source, nvcc_options=None, name='kernel.ptx'):
+        ptx = compile(source, nvcc=self.nvcc, options=nvcc_options,
+            keep=self.keep, no_extern_c=self.no_extern_c, arch=self.arch,
+            code=self.code, cache_dir=self.cache_dir,
+            include_dirs=self.include_dirs, target="ptx")
+        from pycuda.driver import jit_input_type
+        self.linker.add_data(ptx, jit_input_type.PTX, name)
+        return self
+
+    def add_data(self, data, input_type, name='unknown'):
+        self.linker.add_data(data, input_type, name)
+        return self
+
+    def add_file(self, filename, input_type):
+        self.linker.add_file(filename, input_type)
+        return self
+
+    def add_stdlib(self, libname):
+        if self.libdir is None:
+            self.libdir, self.libptn = self._locate_cuda_libdir()
+        from os.path import isfile, join
+        libpath = join(self.libdir, self.libptn % libname)
+        if not isfile(libpath):
+            raise FileNotFoundError('CUDA SDK library file "%s" not found' % libpath)
+        from pycuda.driver import jit_input_type
+        self.linker.add_file(libpath, jit_input_type.LIBRARY)
+        return self
+
+    def link(self):
+        self.module = self.linker.link_module()
+        self.linker = None
+        self._bind_module()
+        return self
+
+class DynamicSourceModule(DynamicModule):
+    '''
+    Creates a Module from a single .cu source object linked against the
+    dynamic CUDA runtime.
+    - compiler generates PTX relocatable device code (rdc) from source that
+      can be linked with other relocatable device code
+    - source is linked against the CUDA device runtime library cudadevrt
+    - library cudadevrt is statically linked into the generated Module
+    '''
+    def __init__(self, source, nvcc="nvcc", options=[], keep=False,
+            no_extern_c=False, arch=None, code=None, cache_dir=None,
+            include_dirs=[], cuda_libdir=None):
+        super(DynamicSourceModule, self).__init__(nvcc=nvcc,
+            link_options=None, keep=keep, no_extern_c=no_extern_c,
+            arch=arch, code=code, cache_dir=cache_dir,
+            include_dirs=include_dirs, cuda_libdir=cuda_libdir)
+        options = options[:]
+        if not '-rdc=true' in options:
+            options.append('-rdc=true')
+        if not '-lcudadevrt' in options:
+            options.append('-lcudadevrt')
+        self.add_source(source, nvcc_options=options)
+        self.add_stdlib('cudadevrt')
+        self.link()

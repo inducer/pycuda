@@ -838,7 +838,6 @@ class TestDriver:
         drv.memcpy_htod_async(gpu_ary, a_pin, stream)
         drv.Context.synchronize()
 
-    @pytest.mark.xfail
     @mark_cuda_test
     # https://github.com/inducer/pycuda/issues/45
     def test_recursive_launch(self):
@@ -894,9 +893,8 @@ class TestDriver:
             drv.memcpy_htod(a_gpu, a)
             drv.memcpy_htod(b_gpu, b)
 
-            mod = SourceModule(cuda_string,
-                    options=['-rdc=true', '-lcudadevrt'],
-                    keep=True)
+            from pycuda.compiler import DynamicSourceModule
+            mod = DynamicSourceModule(cuda_string, keep=True)
 
             func = mod.get_function("math")
             func(a_gpu, b_gpu, c_gpu, d_gpu, e_gpu, f_gpu,
@@ -917,6 +915,34 @@ class TestDriver:
         f = np.array(a, dtype='d')
 
         math(a, b, c, d, e, f)
+
+    @mark_cuda_test
+    def test_jit_link_module(self):
+        if drv.Context.get_device().compute_capability() < (3, 5):
+            from pytest import skip
+            skip("need compute capability 3.5 or higher for dynamic parallelism")
+
+        test_outer_cu = '''#include <cstdio>
+        __global__ void test_kernel() {
+            extern __global__ void test_kernel_inner();
+            printf("Hello outer world!\\n");
+            test_kernel_inner<<<2, 1>>>();
+        }'''
+
+        test_inner_cu = '''#include <cstdio>
+        __global__ void test_kernel_inner() {
+            printf("  Hello inner world!\\n");
+        }'''
+
+        from pycuda.compiler import DynamicModule
+        mod = DynamicModule()
+        mod.add_source(test_outer_cu, nvcc_options=['-rdc=true', '-lcudadevrt'])
+        mod.add_source(test_inner_cu, nvcc_options=['-rdc=true', '-lcudadevrt'])
+        mod.add_stdlib('cudadevrt')
+        mod.link()
+
+        test_kernel = mod.get_function('test_kernel')
+        test_kernel(grid=(2,1), block=(1,1,1))
 
 
 def test_import_pyopencl_before_pycuda():
