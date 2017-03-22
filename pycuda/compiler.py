@@ -412,6 +412,7 @@ class DynamicModule(CudaModule):
         self._bind_module()
         return self
 
+
 class DynamicSourceModule(DynamicModule):
     '''
     Creates a Module from a single .cu source object linked against the
@@ -429,9 +430,9 @@ class DynamicSourceModule(DynamicModule):
             arch=arch, code=code, cache_dir=cache_dir,
             include_dirs=include_dirs, cuda_libdir=cuda_libdir)
         options = options[:]
-        if not '-rdc=true' in options:
+        if '-rdc=true' not in options:
             options.append('-rdc=true')
-        if not '-lcudadevrt' in options:
+        if '-lcudadevrt' not in options:
             options.append('-lcudadevrt')
         self.add_source(source, nvcc_options=options)
         self.add_stdlib('cudadevrt')
