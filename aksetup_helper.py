@@ -164,6 +164,12 @@ def hack_distutils(debug=False, fast_link=True, what_opt=3):
 
             cvars['OPT'] = str.join(' ', cflags)
             cvars["CFLAGS"] = cvars["BASECFLAGS"] + " " + cvars["OPT"]
+            
+        ccshared = cvars['CCSHARED'].split()
+        if ccshared:
+            if what_opt is not None:
+                ccshared += ["-DNDEBUG", "-O%s" % what_opt]
+                cvars['CCSHARED'] = ' '.join(ccshared)
 
         if fast_link:
             for varname in ["LDSHARED", "BLDSHARED"]:
