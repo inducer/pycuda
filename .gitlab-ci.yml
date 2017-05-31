@@ -10,6 +10,7 @@ Python 2.7 Titan:
   - nvidia-titan-x
   except:
   - tags
+
 Python 2.7 K40:
   script:
   - py_version=2.7
@@ -22,6 +23,7 @@ Python 2.7 K40:
   - nvidia-k40
   except:
   - tags
+
 Python 3.5 Titan:
   script:
   - py_version=3.5
@@ -34,6 +36,20 @@ Python 3.5 Titan:
   - nvidia-titan-x
   except:
   - tags
+
+Python 3.5 K40:
+  script:
+  - py_version=3.5
+  - EXTRA_INSTALL="numpy mako"
+  - echo "CUDADRV_LIB_DIR = ['/usr/lib/x86_64-linux-gnu/nvidia/current']" > siteconf.py
+  - curl -L -O -k https://gitlab.tiker.net/inducer/ci-support/raw/master/build-and-test-py-project.sh
+  - ". ./build-and-test-py-project.sh"
+  tags:
+  - python3.5
+  - nvidia-k40
+  except:
+  - tags
+
 Documentation:
   script:
   - EXTRA_INSTALL="numpy mako"
