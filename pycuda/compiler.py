@@ -295,6 +295,28 @@ class SourceModule(CudaModule):
 
         self._bind_module()
 
+
+def _search_on_path(filenames):
+    """Find file on system path."""
+    # http://aspn.activestate.com/ASPN/Cookbook/Python/Recipe/52224
+
+    from os.path import exists, abspath, join
+    from os import pathsep, environ
+
+    search_path = environ["PATH"]
+
+    paths = search_path.split(pathsep)
+    for path in paths:
+        for filename in filenames:
+            if exists(join(path, filename)):
+                return abspath(join(path, filename))
+
+
+@memoize
+def _find_nvcc_on_path():
+    return _search_on_path(["nvcc", "nvcc.exe"])
+
+
 class DynamicModule(CudaModule):
     '''
     Creates a Module from multiple .cu source, library file and/or data
@@ -360,7 +382,7 @@ class DynamicModule(CudaModule):
             elif 'CUDA_PATH' in os.environ and isfile(join(os.environ['CUDA_PATH'], 'lib\\x64\\cudadevrt.lib')):
                 libdir = join(os.environ['CUDA_PATH'], 'lib\\x64')
             libptn = '%s.lib'
-        elif system == 'Linux' or system == 'Darwin':
+        elif system in ['Linux', 'Darwin']:
             if self.cuda_libdir is not None:
                 libdir = self.cuda_libdir
             elif 'CUDA_ROOT' in os.environ and isfile(join(os.environ['CUDA_ROOT'], 'lib64/libcudadevrt.a')):
@@ -370,6 +392,12 @@ class DynamicModule(CudaModule):
                     if isfile(join(ld_path, 'libcudadevrt.a')):
                         libdir = ld_path
                         break
+
+            if libdir is None:
+                nvcc_path = _find_nvcc_on_path()
+                if nvcc_path is not None:
+                    libdir = join(os.path.dirname(nvcc_path), "..", "lib64")
+
             if libdir is None and isfile('/usr/lib/x86_64-linux-gnu/libcudadevrt.a'):
                 libdir = '/usr/lib/x86_64-linux-gnu'
             libptn = 'lib%s.a'
