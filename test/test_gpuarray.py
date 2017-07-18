@@ -691,6 +691,25 @@ class TestGPUArray:
             assert la.norm(z.get().imag - z.imag.get()) == 0
             assert la.norm(z.get().conj() - z.conj().get()) == 0
 
+            # verify contiguity is preserved
+            for order in ["C", "F"]:
+                # test both zero and non-zero value code paths
+                z_real = gpuarray.zeros(z.shape, dtype=real_dtype,
+                                        order=order)
+                z2 = z.reshape(z.shape, order=order)
+                for zdata in [z_real, z2]:
+                    if order == "C":
+                        assert zdata.flags.c_contiguous == True
+                        assert zdata.real.flags.c_contiguous == True
+                        assert zdata.imag.flags.c_contiguous == True
+                        assert zdata.conj().flags.c_contiguous == True
+                    elif order == "F":
+                        assert zdata.flags.f_contiguous == True
+                        assert zdata.real.flags.f_contiguous == True
+                        assert zdata.imag.flags.f_contiguous == True
+                        assert zdata.conj().flags.f_contiguous == True
+
+
     @mark_cuda_test
     def test_pass_slice_to_kernel(self):
         mod = SourceModule("""
