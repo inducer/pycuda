@@ -213,7 +213,6 @@ class GPUArray(object):
             assert base is None
         else:
             self.gpudata = gpudata
-
         self.base = base
 
         self._grid, self._block = splay(self.mem_size)
@@ -375,7 +374,7 @@ class GPUArray(object):
 
         return out
 
-    def _new_like_me(self, dtype=None):
+    def _new_like_me(self, dtype=None, order="C"):
         strides = None
         if dtype is None:
             dtype = self.dtype
@@ -384,7 +383,7 @@ class GPUArray(object):
                 strides = self.strides
 
         return self.__class__(self.shape, dtype,
-                allocator=self.allocator, strides=strides)
+                allocator=self.allocator, strides=strides, order=order)
 
     # operators ---------------------------------------------------------------
     def mul_add(self, selffac, other, otherfac, add_timer=None, stream=None):
@@ -900,8 +899,11 @@ class GPUArray(object):
         if issubclass(dtype.type, np.complexfloating):
             from pytools import match_precision
             real_dtype = match_precision(np.dtype(np.float64), dtype)
-
-            result = self._new_like_me(dtype=real_dtype)
+            if self.flags.f_contiguous:
+                order = "F"
+            else:
+                order = "C"
+            result = self._new_like_me(dtype=real_dtype, order=order)
 
             func = elementwise.get_real_kernel(dtype, real_dtype)
             func.prepared_async_call(self._grid, self._block, None,
@@ -922,8 +924,11 @@ class GPUArray(object):
 
             from pytools import match_precision
             real_dtype = match_precision(np.dtype(np.float64), dtype)
-
-            result = self._new_like_me(dtype=real_dtype)
+            if self.flags.f_contiguous:
+                order = "F"
+            else:
+                order = "C"
+            result = self._new_like_me(dtype=real_dtype, order=order)
 
             func = elementwise.get_imag_kernel(dtype, real_dtype)
             func.prepared_async_call(self._grid, self._block, None,
@@ -941,7 +946,11 @@ class GPUArray(object):
                 raise RuntimeError("only contiguous arrays may "
                         "be used as arguments to this operation")
 
-            result = self._new_like_me()
+            if self.flags.f_contiguous:
+                order = "F"
+            else:
+                order = "C"
+            result = self._new_like_me(order=order)
 
             func = elementwise.get_conj_kernel(dtype)
             func.prepared_async_call(self._grid, self._block, None,
