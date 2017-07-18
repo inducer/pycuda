@@ -779,6 +779,17 @@ class TestGPUArray:
             throws_exception = True
         assert throws_exception
 
+        # with order specified
+        a_gpu = a_gpu.reshape((4, 32), order='C')
+        assert a_gpu.flags.c_contiguous
+        a_gpu = a_gpu.reshape(4, 32, order='F')
+        assert a_gpu.flags.f_contiguous
+        a_gpu = a_gpu.reshape((4, 32), order='F')
+        assert a_gpu.flags.f_contiguous
+        # default is C-contiguous
+        a_gpu = a_gpu.reshape((4, 32))
+        assert a_gpu.flags.c_contiguous
+
     @mark_cuda_test
     def test_view(self):
         a = np.arange(128).reshape(8, 16).astype(np.float32)

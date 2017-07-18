@@ -679,8 +679,11 @@ class GPUArray(object):
 
         return result
 
-    def reshape(self, *shape, order="C"):
+    def reshape(self, *shape, **kwargs):
         """Gives a new shape to an array without changing its data."""
+
+        # Python 2.x compatibility: use kwargs instead of named 'order' keyword
+        order = kwargs.pop("order", "C")
 
         # TODO: add more error-checking, perhaps
         if not self.flags.forc:
@@ -690,7 +693,10 @@ class GPUArray(object):
         if isinstance(shape[0], tuple) or isinstance(shape[0], list):
             shape = tuple(shape[0])
 
-        if shape == self.shape:
+        same_contiguity = ((order == "C" and self.flags.c_contiguous) or
+                           (order == "F" and self.flags.f_contiguous))
+
+        if shape == self.shape and same_contiguity:
             return self
 
         if -1 in shape:
