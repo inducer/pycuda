@@ -679,7 +679,7 @@ class GPUArray(object):
 
         return result
 
-    def reshape(self, *shape):
+    def reshape(self, *shape, order="C"):
         """Gives a new shape to an array without changing its data."""
 
         # TODO: add more error-checking, perhaps
@@ -711,7 +711,8 @@ class GPUArray(object):
                 dtype=self.dtype,
                 allocator=self.allocator,
                 base=self,
-                gpudata=int(self.gpudata))
+                gpudata=int(self.gpudata),
+                order=order)
 
     def ravel(self):
         return self.reshape(self.size)
