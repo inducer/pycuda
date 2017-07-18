@@ -1039,6 +1039,21 @@ def zeros_like(other_ary, dtype=None, order='K'):
     return result
 
 
+def ones_like(other_ary, dtype=None, order='K'):
+    if order == 'K':
+        if other_ary.flags.f_contiguous:
+            order = "F"
+        else:
+            order = "C"
+    if dtype is None:
+        dtype = other_ary.dtype
+    result = GPUArray(
+            other_ary.shape, dtype, other_ary.allocator, order=order)
+    one = np.ones((), result.dtype)
+    result.fill(one)
+    return result
+
+
 def arange(*args, **kwargs):
     """Create an array filled with numbers spaced `step` apart,
     starting from `start` and ending at `stop`.
