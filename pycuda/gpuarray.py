@@ -1005,22 +1005,35 @@ empty = GPUArray
 
 def zeros(shape, dtype, allocator=drv.mem_alloc, order="C"):
     """Returns an array of the given shape and dtype filled with 0's."""
-
     result = GPUArray(shape, dtype, allocator, order=order)
     zero = np.zeros((), dtype)
     result.fill(zero)
     return result
 
 
-def empty_like(other_ary):
+def empty_like(other_ary, dtype=None, order='K'):
+    if order == 'K':
+        if other_ary.flags.f_contiguous:
+            order = "F"
+        else:
+            order = "C"
+    if dtype is None:
+        dtype = other_ary.dtype
     result = GPUArray(
-            other_ary.shape, other_ary.dtype, other_ary.allocator)
+            other_ary.shape, dtype, other_ary.allocator, order=order)
     return result
 
 
-def zeros_like(other_ary):
+def zeros_like(other_ary, dtype=None, order='K'):
+    if order == 'K':
+        if other_ary.flags.f_contiguous:
+            order = "F"
+        else:
+            order = "C"
+    if dtype is None:
+        dtype = other_ary.dtype
     result = GPUArray(
-            other_ary.shape, other_ary.dtype, other_ary.allocator)
+            other_ary.shape, dtype, other_ary.allocator, order=order)
     zero = np.zeros((), result.dtype)
     result.fill(zero)
     return result
