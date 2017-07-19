@@ -273,23 +273,29 @@ Constructing :class:`GPUArray` Instances
     Same as :func:`empty`, but the :class:`GPUArray` is zero-initialized before
     being returned.
 
-.. function:: empty_like(other_ary, dtype=None, order="K")
+.. function:: empty_like(other_ary, dtype=None, order="A")
 
     Make a new, uninitialized :class:`GPUArray` having the same properties
     as *other_ary*.  The *dtype* and *order* attributes allow these aspects to
-    be set independently of their values in *other_ary*.
+    be set independently of their values in *other_ary*.  For *order*, "A"
+    means retain Fortran-ordering if the input is Fortran-contiguous, otherwise
+    use "C" ordering.
 
-.. function:: zeros_like(other_ary, dtype=None, order="K")
+.. function:: zeros_like(other_ary, dtype=None, order="A")
 
     Make a new, zero-initialized :class:`GPUArray` having the same properties
     as *other_ary*.  The *dtype* and *order* attributes allow these aspects to
-    be set independently of their values in *other_ary*.
+    be set independently of their values in *other_ary*.  For *order*, "A"
+    means retain Fortran-ordering if the input is Fortran-contiguous, otherwise
+    use "C" ordering.
 
-.. function:: ones_like(other_ary, dtype=None, order="K")
+.. function:: ones_like(other_ary, dtype=None, order="A")
 
     Make a new, ones-initialized :class:`GPUArray` having the same properties
     as *other_ary*.  The *dtype* and *order* attributes allow these aspects to
-    be set independently of their values in *other_ary*.
+    be set independently of their values in *other_ary*.  For *order*, "A"
+    means retain Fortran-ordering if the input is Fortran-contiguous, otherwise
+    use "C" ordering.
 
     .. versionadded: 2017.1.1
 

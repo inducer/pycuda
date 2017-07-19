@@ -1011,12 +1011,14 @@ def zeros(shape, dtype, allocator=drv.mem_alloc, order="C"):
     return result
 
 
-def empty_like(other_ary, dtype=None, order='K'):
-    if order == 'K':
-        if other_ary.flags.f_contiguous:
+def empty_like(other_ary, dtype=None, order='A'):
+    if order == 'A':
+        if other_ary.flags.f_contiguous and not other_ary.flags.c_contiguous:
             order = "F"
         else:
             order = "C"
+    elif order not in ['C', 'F']:
+        raise ValueError("Unsupported order: %r" % order)
     if dtype is None:
         dtype = other_ary.dtype
     result = GPUArray(
@@ -1024,12 +1026,14 @@ def empty_like(other_ary, dtype=None, order='K'):
     return result
 
 
-def zeros_like(other_ary, dtype=None, order='K'):
-    if order == 'K':
-        if other_ary.flags.f_contiguous:
+def zeros_like(other_ary, dtype=None, order='A'):
+    if order == 'A':
+        if other_ary.flags.f_contiguous and not other_ary.flags.c_contiguous:
             order = "F"
         else:
             order = "C"
+    elif order not in ['C', 'F']:
+        raise ValueError("Unsupported order: %r" % order)
     if dtype is None:
         dtype = other_ary.dtype
     result = GPUArray(
@@ -1039,12 +1043,14 @@ def zeros_like(other_ary, dtype=None, order='K'):
     return result
 
 
-def ones_like(other_ary, dtype=None, order='K'):
-    if order == 'K':
-        if other_ary.flags.f_contiguous:
+def ones_like(other_ary, dtype=None, order='A'):
+    if order == 'A':
+        if other_ary.flags.f_contiguous and not other_ary.flags.c_contiguous:
             order = "F"
         else:
             order = "C"
+    elif order not in ['C', 'F']:
+        raise ValueError("Unsupported order: %r" % order)
     if dtype is None:
         dtype = other_ary.dtype
     result = GPUArray(
