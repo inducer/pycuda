@@ -213,7 +213,6 @@ class GPUArray(object):
             assert base is None
         else:
             self.gpudata = gpudata
-
         self.base = base
 
         self._grid, self._block = splay(self.mem_size)
@@ -375,7 +374,7 @@ class GPUArray(object):
 
         return out
 
-    def _new_like_me(self, dtype=None):
+    def _new_like_me(self, dtype=None, order="C"):
         strides = None
         if dtype is None:
             dtype = self.dtype
@@ -384,7 +383,7 @@ class GPUArray(object):
                 strides = self.strides
 
         return self.__class__(self.shape, dtype,
-                allocator=self.allocator, strides=strides)
+                allocator=self.allocator, strides=strides, order=order)
 
     # operators ---------------------------------------------------------------
     def mul_add(self, selffac, other, otherfac, add_timer=None, stream=None):
@@ -680,8 +679,11 @@ class GPUArray(object):
 
         return result
 
-    def reshape(self, *shape):
+    def reshape(self, *shape, **kwargs):
         """Gives a new shape to an array without changing its data."""
+
+        # Python 2.x compatibility: use kwargs instead of named 'order' keyword
+        order = kwargs.pop("order", "C")
 
         # TODO: add more error-checking, perhaps
         if not self.flags.forc:
@@ -691,7 +693,10 @@ class GPUArray(object):
         if isinstance(shape[0], tuple) or isinstance(shape[0], list):
             shape = tuple(shape[0])
 
-        if shape == self.shape:
+        same_contiguity = ((order == "C" and self.flags.c_contiguous) or
+                           (order == "F" and self.flags.f_contiguous))
+
+        if shape == self.shape and same_contiguity:
             return self
 
         if -1 in shape:
@@ -712,7 +717,8 @@ class GPUArray(object):
                 dtype=self.dtype,
                 allocator=self.allocator,
                 base=self,
-                gpudata=int(self.gpudata))
+                gpudata=int(self.gpudata),
+                order=order)
 
     def ravel(self):
         return self.reshape(self.size)
@@ -900,8 +906,11 @@ class GPUArray(object):
         if issubclass(dtype.type, np.complexfloating):
             from pytools import match_precision
             real_dtype = match_precision(np.dtype(np.float64), dtype)
-
-            result = self._new_like_me(dtype=real_dtype)
+            if self.flags.f_contiguous:
+                order = "F"
+            else:
+                order = "C"
+            result = self._new_like_me(dtype=real_dtype, order=order)
 
             func = elementwise.get_real_kernel(dtype, real_dtype)
             func.prepared_async_call(self._grid, self._block, None,
@@ -922,8 +931,11 @@ class GPUArray(object):
 
             from pytools import match_precision
             real_dtype = match_precision(np.dtype(np.float64), dtype)
-
-            result = self._new_like_me(dtype=real_dtype)
+            if self.flags.f_contiguous:
+                order = "F"
+            else:
+                order = "C"
+            result = self._new_like_me(dtype=real_dtype, order=order)
 
             func = elementwise.get_imag_kernel(dtype, real_dtype)
             func.prepared_async_call(self._grid, self._block, None,
@@ -941,7 +953,11 @@ class GPUArray(object):
                 raise RuntimeError("only contiguous arrays may "
                         "be used as arguments to this operation")
 
-            result = self._new_like_me()
+            if self.flags.f_contiguous:
+                order = "F"
+            else:
+                order = "C"
+            result = self._new_like_me(order=order)
 
             func = elementwise.get_conj_kernel(dtype)
             func.prepared_async_call(self._grid, self._block, None,
@@ -989,24 +1005,52 @@ empty = GPUArray
 
 def zeros(shape, dtype, allocator=drv.mem_alloc, order="C"):
     """Returns an array of the given shape and dtype filled with 0's."""
-
     result = GPUArray(shape, dtype, allocator, order=order)
     zero = np.zeros((), dtype)
     result.fill(zero)
     return result
 
 
-def empty_like(other_ary):
+def empty_like(other_ary, dtype=None, order='K'):
+    if order == 'K':
+        if other_ary.flags.f_contiguous:
+            order = "F"
+        else:
+            order = "C"
+    if dtype is None:
+        dtype = other_ary.dtype
     result = GPUArray(
-            other_ary.shape, other_ary.dtype, other_ary.allocator)
+            other_ary.shape, dtype, other_ary.allocator, order=order)
     return result
 
 
-def zeros_like(other_ary):
+def zeros_like(other_ary, dtype=None, order='K'):
+    if order == 'K':
+        if other_ary.flags.f_contiguous:
+            order = "F"
+        else:
+            order = "C"
+    if dtype is None:
+        dtype = other_ary.dtype
     result = GPUArray(
-            other_ary.shape, other_ary.dtype, other_ary.allocator)
+            other_ary.shape, dtype, other_ary.allocator, order=order)
     zero = np.zeros((), result.dtype)
     result.fill(zero)
+    return result
+
+
+def ones_like(other_ary, dtype=None, order='K'):
+    if order == 'K':
+        if other_ary.flags.f_contiguous:
+            order = "F"
+        else:
+            order = "C"
+    if dtype is None:
+        dtype = other_ary.dtype
+    result = GPUArray(
+            other_ary.shape, dtype, other_ary.allocator, order=order)
+    one = np.ones((), result.dtype)
+    result.fill(one)
     return result
 
 
