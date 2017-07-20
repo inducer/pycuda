@@ -1085,6 +1085,45 @@ class TestGPUArray:
         assert np.allclose(a_gpu.get(), a)
         assert np.allclose(a_gpu[1:3,1:3,1:3].get(), a[1:3,1:3,1:3])
 
+    @mark_cuda_test
+    def test_zeros_like_etc(self):
+        shape = (16, 16)
+        a = np.random.randn(*shape).astype(np.float32)
+        z = gpuarray.to_gpu(a)
+        zf = gpuarray.to_gpu(np.asfortranarray(a))
+        for func in [gpuarray.empty_like,
+                     gpuarray.zeros_like,
+                     gpuarray.ones_like]:
+            for arr in [z, zf]:
+                # Output matches order of input
+                new_z = func(arr, order='A')
+                assert new_z.flags.c_contiguous == arr.flags.c_contiguous
+                assert new_z.flags.f_contiguous == arr.flags.f_contiguous
+                assert new_z.dtype == arr.dtype
+                assert new_z.shape == arr.shape
+
+                # Fortan-ordered input give C-orded output
+                new_z = func(arr, order='C')
+                assert new_z.flags.c_contiguous is True
+                assert new_z.flags.f_contiguous is False
+                assert new_z.dtype == arr.dtype
+                assert new_z.shape == arr.shape
+
+                # C-ordered input give Fortran-orded output
+                new_z = func(arr, order='F')
+                assert new_z.flags.c_contiguous is False
+                assert new_z.flags.f_contiguous is True
+                assert new_z.dtype == arr.dtype
+                assert new_z.shape == arr.shape
+
+                # change the dtype, but otherwise matching
+                new_z = func(arr, dtype=np.complex64, order='A')
+                assert new_z.flags.c_contiguous == arr.flags.c_contiguous
+                assert new_z.flags.f_contiguous == arr.flags.f_contiguous
+                assert new_z.dtype == np.complex64
+                assert new_z.shape == arr.shape
+
+
 if __name__ == "__main__":
     # make sure that import failures get reported, instead of skipping the tests.
     import pycuda.autoinit  # noqa
