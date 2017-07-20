@@ -202,6 +202,7 @@ class GPUArray(object):
         self.strides = strides
         self.mem_size = self.size = s
         self.nbytes = self.dtype.itemsize * self.size
+        self.itemsize = self.dtype.itemsize
 
         self.allocator = allocator
         if gpudata is None:
@@ -1011,50 +1012,57 @@ def zeros(shape, dtype, allocator=drv.mem_alloc, order="C"):
     return result
 
 
-def empty_like(other_ary, dtype=None, order='A'):
-    if order == 'A':
+def _array_like_helper(other_ary, dtype, order):
+    """Set order, strides, dtype as in numpy's zero_like. """
+    strides = None
+    if order == "A":
         if other_ary.flags.f_contiguous and not other_ary.flags.c_contiguous:
             order = "F"
         else:
             order = "C"
-    elif order not in ['C', 'F']:
+    elif order == "K":
+        if other_ary.flags.c_contiguous or (other_ary.ndim <= 1):
+            order = "C"
+        elif other_ary.flags.f_contiguous:
+            order = "F"
+        else:
+            # array_like routines only return positive strides
+            strides = [np.abs(s) for s in other_ary.strides]
+            if dtype is not None and dtype != other_ary.dtype:
+                # scale strides by itemsize when dtype is not the same
+                itemsize = other_ary.nbytes // other_ary.size
+                itemsize_ratio = np.dtype(dtype).itemsize / itemsize
+                strides = [int(s*itemsize_ratio) for s in strides]
+    elif order not in ["C", "F"]:
         raise ValueError("Unsupported order: %r" % order)
     if dtype is None:
         dtype = other_ary.dtype
+    return dtype, order, strides
+
+
+def empty_like(other_ary, dtype=None, order="K"):
+    dtype, order, strides = _array_like_helper(other_ary, dtype, order)
     result = GPUArray(
-            other_ary.shape, dtype, other_ary.allocator, order=order)
+            other_ary.shape, dtype, other_ary.allocator, order=order,
+            strides=strides)
     return result
 
 
-def zeros_like(other_ary, dtype=None, order='A'):
-    if order == 'A':
-        if other_ary.flags.f_contiguous and not other_ary.flags.c_contiguous:
-            order = "F"
-        else:
-            order = "C"
-    elif order not in ['C', 'F']:
-        raise ValueError("Unsupported order: %r" % order)
-    if dtype is None:
-        dtype = other_ary.dtype
+def zeros_like(other_ary, dtype=None, order="K"):
+    dtype, order, strides = _array_like_helper(other_ary, dtype, order)
     result = GPUArray(
-            other_ary.shape, dtype, other_ary.allocator, order=order)
+            other_ary.shape, dtype, other_ary.allocator, order=order,
+            strides=strides)
     zero = np.zeros((), result.dtype)
     result.fill(zero)
     return result
 
 
-def ones_like(other_ary, dtype=None, order='A'):
-    if order == 'A':
-        if other_ary.flags.f_contiguous and not other_ary.flags.c_contiguous:
-            order = "F"
-        else:
-            order = "C"
-    elif order not in ['C', 'F']:
-        raise ValueError("Unsupported order: %r" % order)
-    if dtype is None:
-        dtype = other_ary.dtype
+def ones_like(other_ary, dtype=None, order="K"):
+    dtype, order, strides = _array_like_helper(other_ary, dtype, order)
     result = GPUArray(
-            other_ary.shape, dtype, other_ary.allocator, order=order)
+            other_ary.shape, dtype, other_ary.allocator, order=order,
+            strides=strides)
     one = np.ones((), result.dtype)
     result.fill(one)
     return result

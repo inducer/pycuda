@@ -1091,33 +1091,44 @@ class TestGPUArray:
         a = np.random.randn(*shape).astype(np.float32)
         z = gpuarray.to_gpu(a)
         zf = gpuarray.to_gpu(np.asfortranarray(a))
+        a_noncontig = np.arange(3*4*5).reshape(3, 4, 5).swapaxes(1, 2)
+        z_noncontig = gpuarray.to_gpu(a_noncontig)
         for func in [gpuarray.empty_like,
                      gpuarray.zeros_like,
                      gpuarray.ones_like]:
-            for arr in [z, zf]:
-                # Output matches order of input
-                new_z = func(arr, order='A')
-                assert new_z.flags.c_contiguous == arr.flags.c_contiguous
-                assert new_z.flags.f_contiguous == arr.flags.f_contiguous
+            for arr in [z, zf, z_noncontig]:
+
+                contig = arr.flags.c_contiguous or arr.flags.f_contiguous
+
+                # Output matches order of input.
+                # Non-contiguous becomes C-contiguous
+                new_z = func(arr, order="A")
+                if contig:
+                    assert new_z.flags.c_contiguous == arr.flags.c_contiguous
+                    assert new_z.flags.f_contiguous == arr.flags.f_contiguous
+                else:
+                    assert new_z.flags.c_contiguous is True
+                    assert new_z.flags.f_contiguous is False
                 assert new_z.dtype == arr.dtype
                 assert new_z.shape == arr.shape
 
-                # Fortan-ordered input give C-orded output
-                new_z = func(arr, order='C')
+                # Force C-ordered output
+                new_z = func(arr, order="C")
                 assert new_z.flags.c_contiguous is True
                 assert new_z.flags.f_contiguous is False
                 assert new_z.dtype == arr.dtype
                 assert new_z.shape == arr.shape
 
-                # C-ordered input give Fortran-orded output
-                new_z = func(arr, order='F')
+                # Force Fortran-orded output
+                new_z = func(arr, order="F")
                 assert new_z.flags.c_contiguous is False
                 assert new_z.flags.f_contiguous is True
                 assert new_z.dtype == arr.dtype
                 assert new_z.shape == arr.shape
 
-                # change the dtype, but otherwise matching
-                new_z = func(arr, dtype=np.complex64, order='A')
+                # Change the dtype, but otherwise match order & strides
+                # order = "K" so non-contiguous array remains non-contiguous
+                new_z = func(arr, dtype=np.complex64, order="K")
                 assert new_z.flags.c_contiguous == arr.flags.c_contiguous
                 assert new_z.flags.f_contiguous == arr.flags.f_contiguous
                 assert new_z.dtype == np.complex64

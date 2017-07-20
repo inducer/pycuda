@@ -1,6 +1,18 @@
 Changes
 =======
 
+Version 2017.2
+--------------
+
+* :func:`zeros_like` and :func:`empty_like` now have  *dtype* and *order*
+  arguments as in numpy.  Previously these routines always returned a
+  C-order array.  The new default behavior follows the numpy default, which is
+  to match the order and strides of the input as closely as possible.
+* A :func:`ones_like` gpuarray function was added.
+* methods :attr:`GPUArray.imag`, :attr:`GPUArray.real`, :meth:`GPUArray.conj`
+  now all return Fortran-ordered arrays when the :class:`GPUArray` is
+  Fortran-ordered.
+
 Version 2016.2
 --------------
 .. note::
