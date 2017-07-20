@@ -90,7 +90,7 @@ The :class:`GPUArray` Array Class
         of :attr:`size` instead of its current value. The change was made in order
         to match :mod:`numpy`.
 
-    .. method :: reshape(shape)
+    .. method :: reshape(shape, order="C")
 
         Returns an array containing the same data with a new shape.
 
@@ -273,15 +273,34 @@ Constructing :class:`GPUArray` Instances
     Same as :func:`empty`, but the :class:`GPUArray` is zero-initialized before
     being returned.
 
-.. function:: empty_like(other_ary)
+.. function:: empty_like(other_ary, dtype=None, order="K")
 
     Make a new, uninitialized :class:`GPUArray` having the same properties
-    as *other_ary*.
+    as *other_ary*.  The *dtype* and *order* attributes allow these aspects to
+    be set independently of their values in *other_ary*.  For *order*, "A"
+    means retain Fortran-ordering if the input is Fortran-contiguous, otherwise
+    use "C" ordering.  The default, *order* or "K" tries to match the strides
+    of *other_ary* as closely as possible.
 
-.. function:: zeros_like(other_ary)
+.. function:: zeros_like(other_ary, dtype=None, order="K")
 
     Make a new, zero-initialized :class:`GPUArray` having the same properties
-    as *other_ary*.
+    as *other_ary*.  The *dtype* and *order* attributes allow these aspects to
+    be set independently of their values in *other_ary*.  For *order*, "A"
+    means retain Fortran-ordering if the input is Fortran-contiguous, otherwise
+    use "C" ordering.  The default, *order* or "K" tries to match the strides
+    of *other_ary* as closely as possible.
+
+.. function:: ones_like(other_ary, dtype=None, order="K")
+
+    Make a new, ones-initialized :class:`GPUArray` having the same properties
+    as *other_ary*.  The *dtype* and *order* attributes allow these aspects to
+    be set independently of their values in *other_ary*.  For *order*, "A"
+    means retain Fortran-ordering if the input is Fortran-contiguous, otherwise
+    use "C" ordering.  The default, *order* or "K" tries to match the strides
+    of *other_ary* as closely as possible.
+
+    .. versionadded: 2017.2
 
 .. function:: arange(start, stop, step, dtype=None, stream=None)
 
