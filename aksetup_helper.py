@@ -163,7 +163,10 @@ def hack_distutils(debug=False, fast_link=True, what_opt=3):
                     cflags.append("-DNDEBUG")
 
             cvars['OPT'] = str.join(' ', cflags)
-            cvars["CFLAGS"] = cvars["BASECFLAGS"] + " " + cvars["OPT"]
+            if "BASECFLAGS" in cvars:
+                cvars["CFLAGS"] = cvars["BASECFLAGS"] + " " + cvars["OPT"]
+            else:
+                assert "CFLAGS" in cvars
 
         if fast_link:
             for varname in ["LDSHARED", "BLDSHARED"]:
