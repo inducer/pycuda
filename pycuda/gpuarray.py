@@ -605,14 +605,10 @@ class GPUArray(object):
 
         return result
 
-    def __pow__(self, other):
-        """pow function::
-
-           example:
-                   array = pow(array)
-                   array = pow(array,4)
-                   array = pow(array,array)
-
+    def _pow(self, other, new):
+        """
+        Do the pow operator.
+        with new, the user can choose between ipow or just pow
         """
 
         if isinstance(other, GPUArray):
@@ -622,7 +618,10 @@ class GPUArray(object):
 
             assert self.shape == other.shape
 
-            result = self._new_like_me(_get_common_dtype(self, other))
+            if new:
+                result = self._new_like_me(_get_common_dtype(self, other))
+            else:
+                result = self
 
             func = elementwise.get_pow_array_kernel(
                     self.dtype, other.dtype, result.dtype)
@@ -637,13 +636,38 @@ class GPUArray(object):
                 raise RuntimeError("only contiguous arrays may "
                         "be used as arguments to this operation")
 
-            result = self._new_like_me()
+            if new:
+                result = self._new_like_me()
+            else:
+                result = self
             func = elementwise.get_pow_kernel(self.dtype)
             func.prepared_async_call(self._grid, self._block, None,
                     other, self.gpudata, result.gpudata,
                     self.mem_size)
 
             return result
+
+    def __pow__(self, other):
+        """pow function::
+
+           example:
+                   array = pow(array)
+                   array = pow(array,4)
+                   array = pow(array,array)
+
+        """
+        return self._pow(other,new=True)
+
+    def __ipow__(self, other):
+        """ipow function::
+
+           example:
+                   array **= 4
+                   array **= array
+
+        """
+        return self._pow(other,new=False)
+        
 
     def reverse(self, stream=None):
         """Return this array in reversed order. The array is treated
