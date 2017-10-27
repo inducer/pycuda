@@ -36,6 +36,10 @@ class TestGPUArray:
         result = (a_gpu**a_gpu).get()
         assert (np.abs(pow(a, a) - result) < 1e-3).all()
 
+        a_gpu **= a_gpu
+        a_gpu = a_gpu.get()
+        assert (np.abs(pow(a, a) - a_gpu) < 1e-3).all()
+
     @mark_cuda_test
     def test_pow_number(self):
         a = np.array([1, 2, 3, 4, 5, 6, 7, 8, 9, 10]).astype(np.float32)
@@ -43,6 +47,10 @@ class TestGPUArray:
 
         result = pow(a_gpu, 2).get()
         assert (np.abs(a**2 - result) < 1e-3).all()
+
+        a_gpu **= 2
+        a_gpu = a_gpu.get()
+        assert (np.abs(a**2 - a_gpu) < 1e-3).all()
 
     @mark_cuda_test
     def test_numpy_integer_shape(self):
