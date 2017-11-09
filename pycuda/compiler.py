@@ -393,13 +393,14 @@ class DynamicModule(CudaModule):
                         libdir = ld_path
                         break
 
+            if libdir is None and isfile('/usr/lib/x86_64-linux-gnu/libcudadevrt.a'):
+                libdir = '/usr/lib/x86_64-linux-gnu'
+
             if libdir is None:
                 nvcc_path = _find_nvcc_on_path()
                 if nvcc_path is not None:
                     libdir = join(os.path.dirname(nvcc_path), "..", "lib64")
 
-            if libdir is None and isfile('/usr/lib/x86_64-linux-gnu/libcudadevrt.a'):
-                libdir = '/usr/lib/x86_64-linux-gnu'
             libptn = 'lib%s.a'
         if libdir is None:
             raise RuntimeError('Unable to locate the CUDA SDK installation '
