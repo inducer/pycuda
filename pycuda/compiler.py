@@ -429,7 +429,7 @@ class DynamicModule(CudaModule):
         from os.path import isfile, join
         libpath = join(self.libdir, self.libptn % libname)
         if not isfile(libpath):
-            raise FileNotFoundError('CUDA SDK library file "%s" not found' % libpath)
+            raise OSError('CUDA SDK library file "%s" not found' % libpath)
         from pycuda.driver import jit_input_type
         self.linker.add_file(libpath, jit_input_type.LIBRARY)
         return self
