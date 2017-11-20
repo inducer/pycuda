@@ -573,6 +573,24 @@ class TestGPUArray:
             assert la.norm(a_gpu_slice.get()-a_slice) == 0
 
     @mark_cuda_test
+    def test_reverse_slice(self):
+        from pycuda.curandom import rand as curand
+
+        l = 20000
+        a_gpu = curand((l,))
+        a = a_gpu.get()
+
+        from random import randrange
+        for i in range(200):
+            start = randrange(l)
+            end = randrange(start, l)
+
+            a_gpu_slice = a_gpu[end:start:-2]
+            a_slice = a[start:end]
+
+            assert la.norm(a_gpu_slice.get()-a_slice) == 0
+
+    @mark_cuda_test
     def test_2d_slice_c(self):
         from pycuda.curandom import rand as curand
 
