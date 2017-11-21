@@ -586,7 +586,7 @@ class TestGPUArray:
             end = randrange(start, l)
 
             a_gpu_slice = a_gpu[end:start:-2]
-            a_slice = a[start:end]
+            a_slice = a[end:start:-2]
 
             assert la.norm(a_gpu_slice.get()-a_slice) == 0
 
