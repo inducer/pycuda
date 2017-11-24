@@ -470,7 +470,7 @@ class TestGPUArray:
         b = a_cpu.get()
 
         for i in range(0, 10):
-            assert a[len(a)-1-i] == b[i]
+            assert a[len(a)-1-i] == b[i], "%s, %s" % (a[len(a)-1-i], b[i])
 
     @mark_cuda_test
     def test_sum(self):
@@ -582,12 +582,17 @@ class TestGPUArray:
 
         from random import randrange
         for i in range(200):
-            start = 2
-            end = 5
+            start = end = 0
+            while end-start < 2:
+                start = randrange(l)
+                end = randrange(start, l)
 
-            a_gpu_slice = a_gpu[end:start:-2]
-            a_slice = a[end:start:-2]
+            step = randrange(1, min(end-start, 20))
 
+            a_gpu_slice = a_gpu[end:start:-step]
+            a_slice = a[end:start:-step]
+
+            print("Slice", start, end, step)
             print("GPU", a_gpu_slice.get())
             print("CPU", a_slice)
             print("Ref", a)

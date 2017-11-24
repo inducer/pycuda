@@ -866,6 +866,7 @@ class GPUArray(object):
                     # shift required due to [i:j] does not include j
                     start = int(stop + n_step * idx_stride + 1)
                     stop += 1
+                    print(start, stop, idx_stride)
 
                 array_stride = self.strides[array_axis]
 
@@ -929,6 +930,7 @@ class GPUArray(object):
                 gpudata=int(self.gpudata)+new_offset,
                 strides=tuple(new_strides))
 
+        print("Before", tmp)
         if new_strides[0] < 0:
             tmp = tmp.reverse()
 
