@@ -857,24 +857,24 @@ class GPUArray(object):
                 start, stop, idx_stride = index_entry.indices(
                         self.shape[array_axis])
 
+                # number of element
+                n = (abs(stop-start)-1) // idx_stride + 1
+                
                 if idx_stride < 0:
-                    # with idx_stride expect stop < start
-                    start, stop = stop, start
-                    # now need to take care of the rounding
-                    n_step = abs(stop - start)
-                    n_step /= abs(idx_stride)
-                    # shift required due to [i:j] does not include j
-                    start = int(stop + n_step * idx_stride + 1)
-                    stop += 1
-                    print(start, stop, idx_stride)
+                    # compute number of element
+                    n = (abs(stop - start) + abs(idx_stride) - 1) // abs(idx_stride)
+                    # compute boundaries
+                    stop = start + 1
+                    start = stop - (n - 1) * abs(idx_stride) - 1
 
                 array_stride = self.strides[array_axis]
 
-                new_shape.append((abs(stop-start)-1)//abs(idx_stride)+1)
+                new_shape.append(n)
                 new_strides.append(idx_stride*array_stride)
                 new_offset += array_stride*start
 
                 index_axis += 1
+                
                 array_axis += 1
 
             elif isinstance(index_entry, (int, np.integer)):
@@ -930,7 +930,6 @@ class GPUArray(object):
                 gpudata=int(self.gpudata)+new_offset,
                 strides=tuple(new_strides))
 
-        print("Before", tmp)
         if new_strides[0] < 0:
             tmp = tmp.reverse()
 
