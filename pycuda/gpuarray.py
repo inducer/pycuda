@@ -674,10 +674,6 @@ class GPUArray(object):
         as one-dimensional.
         """
 
-        #if not self.flags.forc:
-        #    raise RuntimeError("only contiguous arrays may "
-        #            "be used as arguments to this operation")
-
         result = self._new_like_me()
 
         func = elementwise.get_reverse_kernel(self.dtype)
@@ -930,6 +926,7 @@ class GPUArray(object):
                 gpudata=int(self.gpudata)+new_offset,
                 strides=tuple(new_strides))
 
+        print("Before", tmp)
         if new_strides[0] < 0:
             tmp = tmp.reverse()
 

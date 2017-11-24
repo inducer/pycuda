@@ -592,10 +592,6 @@ class TestGPUArray:
             a_gpu_slice = a_gpu[end:start:-step]
             a_slice = a[end:start:-step]
 
-            print("Slice", start, end, step)
-            print("GPU", a_gpu_slice.get())
-            print("CPU", a_slice)
-            print("Ref", a)
             assert la.norm(a_gpu_slice.get()-a_slice) == 0
 
     @mark_cuda_test

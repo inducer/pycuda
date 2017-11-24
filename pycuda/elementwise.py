@@ -500,12 +500,8 @@ def get_reverse_kernel(dtype):
         },
         """
         skip = abs(skip);
-        if (skip == 1) {
-            z[i] = y[n-1-i];
-        }
-        else {
-            z[i] = y[n-i*skip];
-        }
+        size_t N = (n-1)*skip;
+        z[i] = y[N-i*skip];
         """,
         "reverse")
 
