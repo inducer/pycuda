@@ -926,7 +926,6 @@ class GPUArray(object):
                 gpudata=int(self.gpudata)+new_offset,
                 strides=tuple(new_strides))
 
-        print("Before", tmp)
         if new_strides[0] < 0:
             tmp = tmp.reverse()
 
