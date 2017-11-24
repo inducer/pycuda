@@ -674,16 +674,17 @@ class GPUArray(object):
         as one-dimensional.
         """
 
-        if not self.flags.forc:
-            raise RuntimeError("only contiguous arrays may "
-                    "be used as arguments to this operation")
+        #if not self.flags.forc:
+        #    raise RuntimeError("only contiguous arrays may "
+        #            "be used as arguments to this operation")
 
         result = self._new_like_me()
 
         func = elementwise.get_reverse_kernel(self.dtype)
+        skip = self.strides[0] // self.dtype.itemsize
         func.prepared_async_call(self._grid, self._block, stream,
-                self.gpudata, result.gpudata,
-                self.mem_size)
+                                 self.gpudata, result.gpudata,
+                                 skip, self.mem_size)
 
         return result
 
@@ -856,9 +857,19 @@ class GPUArray(object):
                 start, stop, idx_stride = index_entry.indices(
                         self.shape[array_axis])
 
+                if idx_stride < 0:
+                    # with idx_stride expect stop < start
+                    start, stop = stop, start
+                    # now need to take care of the rounding
+                    n_step = abs(stop - start)
+                    n_step /= abs(idx_stride)
+                    # shift required due to [i:j] does not include j
+                    start = int(stop + n_step * idx_stride + 1)
+                    stop += 1
+
                 array_stride = self.strides[array_axis]
 
-                new_shape.append((stop-start-1)//idx_stride+1)
+                new_shape.append((abs(stop-start)-1)//abs(idx_stride)+1)
                 new_strides.append(idx_stride*array_stride)
                 new_offset += array_stride*start
 
@@ -910,13 +921,18 @@ class GPUArray(object):
 
             array_axis += 1
 
-        return GPUArray(
+        tmp =  GPUArray(
                 shape=tuple(new_shape),
                 dtype=self.dtype,
                 allocator=self.allocator,
                 base=self,
                 gpudata=int(self.gpudata)+new_offset,
                 strides=tuple(new_strides))
+
+        if new_strides[0] < 0:
+            tmp = tmp.reverse()
+
+        return tmp
 
     def __setitem__(self, index, value):
         _memcpy_discontig(self[index], value)
@@ -1297,7 +1313,7 @@ def _memcpy_discontig(dst, src, async=False, stream=None):
 
     copy.width_in_bytes = src.dtype.itemsize*shape[0]
 
-    copy.src_pitch = src_strides[1]
+    copy.src_pitch = abs(src_strides[1])
     copy.dst_pitch = dst_strides[1]
     copy.height = shape[1]
 

@@ -576,18 +576,21 @@ class TestGPUArray:
     def test_reverse_slice(self):
         from pycuda.curandom import rand as curand
 
-        l = 20000
+        l = 10
         a_gpu = curand((l,))
         a = a_gpu.get()
 
         from random import randrange
         for i in range(200):
-            start = randrange(l)
-            end = randrange(start, l)
+            start = 2
+            end = 5
 
             a_gpu_slice = a_gpu[end:start:-2]
             a_slice = a[end:start:-2]
 
+            print("GPU", a_gpu_slice.get())
+            print("CPU", a_slice)
+            print("Ref", a)
             assert la.norm(a_gpu_slice.get()-a_slice) == 0
 
     @mark_cuda_test

@@ -495,7 +495,7 @@ def get_fill_kernel(dtype):
 @context_dependent_memoize
 def get_reverse_kernel(dtype):
     return get_elwise_kernel(
-            "%(tp)s *y, %(tp)s *z" % {
+            "%(tp)s *y, %(tp)s *z, int skip" % {
                 "tp": dtype_to_ctype(dtype),
                 },
             "z[i] = y[n-1-i]",
