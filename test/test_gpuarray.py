@@ -952,7 +952,9 @@ class TestGPUArray:
 
     @mark_cuda_test
     def test_dot_allocator(self):
-        pytest.skip("https://github.com/inducer/pycuda/issues/163")
+        from pytest import skip
+        skip("https://github.com/inducer/pycuda/issues/163")
+
         import pycuda.tools
         pool = pycuda.tools.DeviceMemoryPool()
 
