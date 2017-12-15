@@ -227,7 +227,7 @@ class GPUArray(object):
     def flags(self):
         return _ArrayFlags(self)
 
-    def set(self, ary, async=False, stream=None):
+    def set(self, ary, asynchronous=False, stream=None):
         if ary.size != self.size:
             raise ValueError("ary and self must be the same size")
         if ary.shape != self.shape:
@@ -240,12 +240,12 @@ class GPUArray(object):
             raise ValueError("ary and self must have the same dtype")
 
         if self.size:
-            _memcpy_discontig(self, ary, async=async, stream=stream)
+            _memcpy_discontig(self, ary, asynchronous=asynchronous, stream=stream)
 
     def set_async(self, ary, stream=None):
-        return self.set(ary, async=True, stream=stream)
+        return self.set(ary, asynchronous=True, stream=stream)
 
-    def get(self, ary=None, pagelocked=False, async=False, stream=None):
+    def get(self, ary=None, pagelocked=False, asynchronous=False, stream=None):
         if ary is None:
             if pagelocked:
                 ary = drv.pagelocked_empty(self.shape, self.dtype)
@@ -268,11 +268,11 @@ class GPUArray(object):
                 raise TypeError("self and ary must have the same dtype")
 
         if self.size:
-            _memcpy_discontig(ary, self, async=async, stream=stream)
+            _memcpy_discontig(ary, self, asynchronous=asynchronous, stream=stream)
         return ary
 
     def get_async(self, stream=None, ary=None):
-        return self.get(ary=ary, async=True, stream=stream)
+        return self.get(ary=ary, asynchronous=True, stream=stream)
 
     def copy(self):
         new = GPUArray(self.shape, self.dtype, self.allocator)
@@ -1195,7 +1195,7 @@ def _compact_strides(a):
     return strides
 
 
-def _memcpy_discontig(dst, src, async=False, stream=None):
+def _memcpy_discontig(dst, src, asynchronous=False, stream=None):
     """Copy the contents of src into dst.
 
     The two arrays should have the same dtype, shape, and order, but
@@ -1256,7 +1256,7 @@ def _memcpy_discontig(dst, src, async=False, stream=None):
     if len(shape) <= 1:
         if isinstance(src, GPUArray):
             if isinstance(dst, GPUArray):
-                if async:
+                if asynchronous:
                     drv.memcpy_dtod_async(dst.gpudata, src.gpudata, src.nbytes, stream=stream)
                 else:
                     drv.memcpy_dtod(dst.gpudata, src.gpudata, src.nbytes)
@@ -1266,13 +1266,13 @@ def _memcpy_discontig(dst, src, async=False, stream=None):
                 # so that the order is neither Fortran or C.
                 # So, we attempt to get a contiguous view of dst.
                 dst = _as_strided(dst, shape=(dst.size,), strides=(dst.dtype.itemsize,))
-                if async:
+                if asynchronous:
                     drv.memcpy_dtoh_async(dst, src.gpudata, stream=stream)
                 else:
                     drv.memcpy_dtoh(dst, src.gpudata)
         else:
             src = _as_strided(src, shape=(src.size,), strides=(src.dtype.itemsize,))
-            if async:
+            if asynchronous:
                 drv.memcpy_htod_async(dst.gpudata, src, stream=stream)
             else:
                 drv.memcpy_htod(dst.gpudata, src)
@@ -1302,7 +1302,7 @@ def _memcpy_discontig(dst, src, async=False, stream=None):
     copy.height = shape[1]
 
     if len(shape) == 2:
-        if async:
+        if asynchronous:
             copy(stream)
         else:
             copy(aligned=True)
@@ -1317,7 +1317,7 @@ def _memcpy_discontig(dst, src, async=False, stream=None):
         copy.dst_height = dst_strides[2] // dst_strides[1]
 
         copy.depth = shape[2]
-        if async:
+        if asynchronous:
             copy(stream)
         else:
             copy()
