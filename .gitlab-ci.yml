@@ -43,7 +43,7 @@ Python 3.5 Titan:
 Python 3.7 Titan:
   script:
   - py_version=3.7
-  - EXTRA_INSTALL="cython numpy mako"
+  - EXTRA_INSTALL="cython git+https://github.com/numpy/numpy.git@d233e1f4c176de8b1bf1365aac48caa10610a402 mako"
   - echo "CUDADRV_LIB_DIR = ['/usr/lib/x86_64-linux-gnu/nvidia/current']" > siteconf.py
   - curl -L -O -k https://gitlab.tiker.net/inducer/ci-support/raw/master/build-and-test-py-project.sh
   - "export LD_LIBRARY_PATH=/usr/local/cuda/lib64:$LD_LIBRARY_PATH"
