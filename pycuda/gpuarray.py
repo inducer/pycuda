@@ -379,9 +379,8 @@ class GPUArray(object):
         strides = None
         if dtype is None:
             dtype = self.dtype
-        else:
-            if dtype == self.dtype:
-                strides = self.strides
+        if dtype == self.dtype:
+            strides = self.strides
 
         return self.__class__(self.shape, dtype,
                 allocator=self.allocator, strides=strides, order=order)
