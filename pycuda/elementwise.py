@@ -36,92 +36,413 @@ from pycuda.tools import context_dependent_memoize
 import numpy as np
 from pycuda.tools import dtype_to_ctype, VectorArg, ScalarArg
 from pytools import memoize_method
+from pycuda.deferred import DeferredSourceModule, DeferredSource
+
+class ElementwiseSourceModule(DeferredSourceModule):
+    '''
+    This is a ``DeferredSourceModule`` which is backwards-compatible with the
+    original ``get_elwise_module`` and ``get_elwise_range_module`` (using
+    ``do_range=True``).  However, this class delays the compilation of
+    kernels until call-time.  If you send actual ``GPUArray`` arguments
+    (instead of their ``.gpudata`` members) when calling the methods
+    supported by the return value of ``get_function()``, then you get:
+      * support for array-specific flat indices (i.e. for input array ``z``,
+        you can index it as ``z[z_i]`` in addition to the old-style ``z[i]``)
+      * support for non-contiguous (and arbitrarily-strided) arrays, but
+        only if you use the array-specific indices above.
+    Array-specific flat indices only really work if all the arrays using them
+    are the same shape.  This shape is also used to optimize index
+    calculations.  By default, the shape is taken from the first argument
+    that is specified as a pointer/array, but you can override this by
+    sending ``shape_arg_index=N`` where ``N`` is the zero-based index of the
+    kernel argument whose shape should be used.
+    '''
+    def __init__(self, arguments, operation,
+                 name="kernel", preamble="", loop_prep="", after_loop="",
+                 do_range=False, shape_arg_index=None,
+                 **compilekwargs):
+        super(ElementwiseSourceModule, self).__init__(**compilekwargs)
+        self._do_range = do_range
+        self._shape_arg_index = shape_arg_index
+        self._init_args = (arguments, operation,
+                           name, preamble, loop_prep, after_loop)
+
+    def create_key(self, grid, block, *args):
+        (arguments, operation,
+         funcname, preamble, loop_prep, after_loop) = self._init_args
+        shape_arg_index = self._shape_arg_index
+
+        # 'args' is the list of actual parameters being sent to the kernel
+        # 'arguments' is the list of argument descriptors (VectorArg, ScalarArg)
+
+        arraypairs = []
+        contigmatch = True
+        arrayspecificinds = True
+        shape = None
+        size = None
+        order = None
+        for i, argpair in enumerate(zip(args, arguments)):
+            arg, arg_descr = argpair
+            if isinstance(arg_descr, VectorArg):
+                # is a GPUArray/DeviceAllocation
+                arraypairs.append(argpair)
+                if not arrayspecificinds:
+                    continue
+                if not hasattr(arg, 'shape'):
+                    # At least one array argument is probably sent as a
+                    # GPUArray.gpudata rather than the GPUArray itself,
+                    # so disable array-specific indices -- caller is on
+                    # their own.
+                    arrayspecificinds = False
+                    continue
+                curshape = arg.shape
+                cursize = arg.size
+                curorder = 'N'
+                if arg.flags.f_contiguous:
+                    curorder = 'F'
+                elif arg.flags.c_contiguous:
+                    curorder = 'C'
+                if shape is None:
+                    shape = curshape
+                    size = cursize
+                    order = curorder
+                elif curorder == 'N' or order != curorder:
+                    contigmatch = False
+                elif shape_arg_index is None and shape != curshape:
+                    raise Exception("All input arrays to elementwise kernels must have the same shape, or you must specify the argument that has the canonical shape with shape_arg_index; found shapes %s and %s" % (shape, curshape))
+                if shape_arg_index == i:
+                    shape = curshape
+
+        self._contigmatch = contigmatch
+        self._arraypairs = arraypairs
+        self._arrayspecificinds = arrayspecificinds
+
+        key = repr(self._init_args)
+
+        if contigmatch:
+            return key
+
+        # Arrays are not contiguous or different order
+
+        if grid[1] != 1 or block[1] != 1 or block[2] != 1:
+            raise Exception("Grid (%s) and block (%s) specifications should have all '1' except in the first element" % (grid, block))
+
+        ndim = len(shape)
+        numthreads = block[0]
+        shape = np.array(shape)
+
+        # Use index of minimum stride in first array as a hint on how to
+        # order the traversal of dimensions.  We could probably do something
+        # smarter, like tranposing/reshaping arrays if possible to maximize
+        # performance, but that is probably best done in a pre-processing step.
+        # Note that this could mess up custom indexing that assumes a
+        # particular traversal order, but in that case one should probably
+        # ensure that inputs have the same order, and explicitly send
+        # shape_arg_index to turn this off.
+        do_reverse = False
+        if (shape_arg_index is None and
+            np.argmin(np.abs(arraypairs[0][0].strides)) > ndim // 2):
+            print "traversing dimensions in reverse order"
+            # traverse dimensions in reverse order
+            do_reverse = True
+        if do_reverse:
+            shape = shape[::-1]
+        block_step = np.array(shape)
+        tmp = numthreads
+        for dimnum in range(ndim):
+            newstep = tmp % block_step[dimnum]
+            tmp = tmp // block_step[dimnum]
+            block_step[dimnum] = newstep
+        arrayarginfos = []
+        for arg, arg_descr in arraypairs:
+            if do_reverse:
+                elemstrides = np.array(arg.strides[::-1]) // arg.itemsize
+            else:
+                elemstrides = np.array(arg.strides) // arg.itemsize
+            dimelemstrides = elemstrides * shape
+            blockelemstrides = elemstrides * block_step
+            arrayarginfos.append(
+                (arg_descr.name, tuple(elemstrides), tuple(dimelemstrides), tuple(blockelemstrides))
+            )
+
+        self._arrayarginfos = arrayarginfos
+        self._ndim = ndim
+        self._numthreads = numthreads
+        self._shape = shape
+        self._block_step = block_step
+
+        key = (self._init_args, grid, block, tuple(self._arrayarginfos))
+
+        return key
+
+    def create_source(self, grid, block, *args):
+        # Precondition: create_key() must have been run with the same arguments
+
+        (arguments, operation,
+         funcname, preamble, loop_prep, after_loop) = self._init_args
+
+        contigmatch = self._contigmatch
+
+        if contigmatch:
+            arraypairs = self._arraypairs
+            arrayspecificinds = self._arrayspecificinds
+
+            indtype = 'unsigned'
+            if self._do_range:
+                indtype = 'long'
+
+            # All arrays are contiguous and same order (or we don't know and
+            # it's up to the caller to make sure it works)
+            if arrayspecificinds:
+                for arg, arg_descr in arraypairs:
+                    preamble = preamble + """
+                        #define %s_i i
+                    """ % (arg_descr.name,)
+            if self._do_range:
+                loop_body = """
+                  if (step < 0)
+                  {
+                    for (i = start + (cta_start + tid)*step;
+                      i > stop; i += total_threads*step)
+                    {
+                      %(operation)s;
+                    }
+                  }
+                  else
+                  {
+                    for (i = start + (cta_start + tid)*step;
+                      i < stop; i += total_threads*step)
+                    {
+                      %(operation)s;
+                    }
+                  }
+                """ % {
+                    "operation": operation,
+                }
+            else:
+                loop_body = """
+                  for (i = cta_start + tid; i < n; i += total_threads)
+                  {
+                    %(operation)s;
+                  }
+                """ % {
+                    "operation": operation,
+                }
+
+            return """
+                #include <pycuda-complex.hpp>
+
+                %(preamble)s
+
+                __global__ void %(name)s(%(arguments)s)
+                {
+                  unsigned tid = threadIdx.x;
+                  unsigned total_threads = gridDim.x*blockDim.x;
+                  unsigned cta_start = blockDim.x*blockIdx.x;
+
+                  %(indtype)s i;
+
+                  %(loop_prep)s;
+
+                  %(loop_body)s;
+
+                  %(after_loop)s;
+                }
+                """ % {
+                    "arguments": ", ".join(arg.declarator() for arg in arguments),
+                    "name": funcname,
+                    "preamble": preamble,
+                    "loop_prep": loop_prep,
+                    "after_loop": after_loop,
+                    "loop_body": loop_body,
+                    "indtype": indtype,
+                }
+
+        # Arrays are not contiguous or different order
+
+        arrayarginfos = self._arrayarginfos
+        ndim = self._ndim
+        numthreads = self._numthreads
+        shape = self._shape
+        block_step = self._block_step
+
+        arraynames = [ x[0] for x in arrayarginfos ]
+
+        defines = DeferredSource()
+        for dimnum in range(ndim):
+            defines += """
+                #define SHAPE_%d %d
+                #define BLOCK_STEP_%d %d
+            """ % (dimnum, shape[dimnum],
+                   dimnum, block_step[dimnum])
+            for name, elemstrides, dimelemstrides, blockelemstrides in arrayarginfos:
+                basename = "%s_%d" % (name, dimnum)
+                defines += """
+                    #define ELEMSTRIDE_%s_%d %d
+                    #define DIMELEMSTRIDE_%s_%d %d
+                    #define BLOCKELEMSTRIDE_%s_%d %d
+                """ % (name, dimnum, elemstrides[dimnum],
+                       name, dimnum, dimelemstrides[dimnum],
+                       name, dimnum, blockelemstrides[dimnum])
+
+        decls = DeferredSource()
+        decls += """
+            unsigned GLOBAL_i = cta_start + tid;
+        """
+        for name in arraynames:
+            decls += """
+                long %s_i = 0;
+            """ % (name,)
+        for dimnum in range(ndim):
+            decls += """
+                long INDEX_%d;
+            """ % (dimnum,)
+
+        loop_inds_calc = DeferredSource()
+        loop_inds_calc += """
+            unsigned int TMP_GLOBAL_i = GLOBAL_i;
+        """
+        for dimnum in range(ndim):
+            loop_inds_calc += """
+                INDEX_%d = TMP_GLOBAL_i %% SHAPE_%d;
+                TMP_GLOBAL_i = TMP_GLOBAL_i / SHAPE_%d;
+            """ % (dimnum, dimnum,
+                   dimnum)
+
+            for name in arraynames:
+                loop_inds_calc += """
+                    %s_i += INDEX_%d * ELEMSTRIDE_%s_%d;
+                """ % (name, dimnum, name, dimnum)
+
+        loop_inds_inc = DeferredSource()
+        for dimnum in range(ndim):
+            loop_inds_inc += """
+                    INDEX_%d += BLOCK_STEP_%d;
+            """ % (dimnum, dimnum)
+            for name in arraynames:
+                loop_inds_inc += """
+                    %s_i += BLOCKELEMSTRIDE_%s_%d;
+                """ % (name, name, dimnum)
+            if dimnum < ndim - 1:
+                loop_inds_inc += """
+                    if (INDEX_%d > SHAPE_%d) {
+                """ % (dimnum, dimnum)
+                loop_inds_inc.indent()
+                loop_inds_inc += """
+                      INDEX_%d -= SHAPE_%d;
+                      INDEX_%d ++;
+                """ % (dimnum, dimnum,
+                       dimnum + 1)
+                for name in arraynames:
+                    loop_inds_inc += """
+                      %s_i -= DIMELEMSTRIDE_%s_%d;
+                    """ % (name, name, dimnum)
+                loop_inds_inc.dedent()
+                loop_inds_inc += """
+                    }
+                """
+
+        loop_body = DeferredSource()
+        if self._do_range:
+            loop_body.add("""
+              if (step < 0)
+              {
+                for (/*void*/; GLOBAL_i > stop; GLOBAL_i += total_threads*step)
+                {
+                  %(operation)s;
+
+                  %(loop_inds_inc)s;
+                }
+              }
+              else
+              {
+                for (/*void*/; GLOBAL_i < stop; GLOBAL_i += total_threads*step)
+                {
+                  %(operation)s;
+
+                  %(loop_inds_inc)s;
+                }
+              }
+            """, format_dict={
+                "operation": operation,
+                "loop_inds_inc": loop_inds_inc,
+            })
+        else:
+            loop_body.add("""
+              for (/*void*/; GLOBAL_i < n; GLOBAL_i += total_threads)
+              {
+                %(operation)s;
+
+                %(loop_inds_inc)s;
+              }
+            """, format_dict={
+                "operation": operation,
+                "loop_inds_inc": loop_inds_inc,
+            })
+
+        source = DeferredSource()
+
+        source.add("""
+            #include <pycuda-complex.hpp>
+            #include <stdio.h>
+
+            %(defines)s
+
+            %(preamble)s
+
+            __global__ void %(name)s(%(arguments)s)
+            {
+
+              unsigned tid = threadIdx.x;
+              unsigned total_threads = gridDim.x*blockDim.x;
+              unsigned cta_start = blockDim.x*blockIdx.x;
+
+              %(decls)s
+
+              %(loop_prep)s;
+
+              %(loop_inds_calc)s;
+
+              %(loop_body)s;
+
+              %(after_loop)s;
+            }
+            """, format_dict={
+                "arguments": ", ".join(arg.declarator() for arg in arguments),
+                "operation": operation,
+                "name": funcname,
+                "preamble": preamble,
+                "loop_prep": loop_prep,
+                "after_loop": after_loop,
+                "defines": defines,
+                "decls": decls,
+                "loop_inds_calc": loop_inds_calc,
+                "loop_body": loop_body,
+            })
+
+        return source
 
 
 def get_elwise_module(arguments, operation,
         name="kernel", keep=False, options=None,
-        preamble="", loop_prep="", after_loop=""):
-    from pycuda.compiler import SourceModule
-    return SourceModule("""
-        #include <pycuda-complex.hpp>
-
-        %(preamble)s
-
-        __global__ void %(name)s(%(arguments)s)
-        {
-
-          unsigned tid = threadIdx.x;
-          unsigned total_threads = gridDim.x*blockDim.x;
-          unsigned cta_start = blockDim.x*blockIdx.x;
-          unsigned i;
-
-          %(loop_prep)s;
-
-          for (i = cta_start + tid; i < n; i += total_threads)
-          {
-            %(operation)s;
-          }
-
-          %(after_loop)s;
-        }
-        """ % {
-            "arguments": ", ".join(arg.declarator() for arg in arguments),
-            "operation": operation,
-            "name": name,
-            "preamble": preamble,
-            "loop_prep": loop_prep,
-            "after_loop": after_loop,
-            },
-        options=options, keep=keep)
-
+        preamble="", loop_prep="", after_loop="",
+        shape_arg_index=None):
+    return ElementwiseSourceModule(arguments, operation,
+                                   name=name, preamble=preamble,
+                                   loop_prep=loop_prep, after_loop=after_loop,
+                                   keep=keep, options=options,
+                                   shape_arg_index=shape_arg_index)
 
 def get_elwise_range_module(arguments, operation,
         name="kernel", keep=False, options=None,
-        preamble="", loop_prep="", after_loop=""):
-    from pycuda.compiler import SourceModule
-    return SourceModule("""
-        #include <pycuda-complex.hpp>
-
-        %(preamble)s
-
-        __global__ void %(name)s(%(arguments)s)
-        {
-          unsigned tid = threadIdx.x;
-          unsigned total_threads = gridDim.x*blockDim.x;
-          unsigned cta_start = blockDim.x*blockIdx.x;
-          long i;
-
-          %(loop_prep)s;
-
-          if (step < 0)
-          {
-            for (i = start + (cta_start + tid)*step;
-              i > stop; i += total_threads*step)
-            {
-              %(operation)s;
-            }
-          }
-          else
-          {
-            for (i = start + (cta_start + tid)*step;
-              i < stop; i += total_threads*step)
-            {
-              %(operation)s;
-            }
-          }
-
-          %(after_loop)s;
-        }
-        """ % {
-            "arguments": ", ".join(arg.declarator() for arg in arguments),
-            "operation": operation,
-            "name": name,
-            "preamble": preamble,
-            "loop_prep": loop_prep,
-            "after_loop": after_loop,
-            },
-        options=options, keep=keep)
-
+        preamble="", loop_prep="", after_loop="",
+        shape_arg_index=None):
+    return ElementwiseSourceModule(arguments, operation,
+                                   name=name, preamble=preamble,
+                                   loop_prep=loop_prep, after_loop=after_loop,
+                                   keep=keep, options=options,
+                                   do_range=True,
+                                   shape_arg_index=shape_arg_index)
 
 def get_elwise_kernel_and_types(arguments, operation,
         name="kernel", keep=False, options=None, use_range=False, **kwargs):
