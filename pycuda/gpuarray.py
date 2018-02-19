@@ -246,13 +246,14 @@ class GPUArray(object):
         return self.set(ary, async=True, stream=stream)
 
     def get(self, ary=None, pagelocked=False, async=False, stream=None):
+        slicer = None
         if ary is None:
             if pagelocked:
                 ary = drv.pagelocked_empty(self.shape, self.dtype)
             else:
                 ary = np.empty(self.shape, self.dtype)
 
-            strides = _compact_strides(self)
+            self, strides, slicer = _compact_positive_strides(self)
             ary = _as_strided(ary, strides=strides)
         else:
             if self.size != ary.size:
@@ -269,13 +270,15 @@ class GPUArray(object):
 
         if self.size:
             _memcpy_discontig(ary, self, async=async, stream=stream)
+        if slicer:
+            ary = ary[slicer]
         return ary
 
     def get_async(self, stream=None, ary=None):
         return self.get(ary=ary, async=True, stream=stream)
 
-    def copy(self):
-        new = GPUArray(self.shape, self.dtype, self.allocator)
+    def copy(self, order="K"):
+        new = self._new_like_me(order=order)
         _memcpy_discontig(new, self)
         return new
 
@@ -375,15 +378,52 @@ class GPUArray(object):
 
         return out
 
-    def _new_like_me(self, dtype=None, order="C"):
-        strides = None
+    def _new_like_me(self, dtype=None, order="K"):
+        slicer, selflist = _flip_negative_strides((self,))
+        self = selflist[0]
+        ndim = self.ndim
+        shape = self.shape
+        mystrides = self.strides
+        mydtype = self.dtype
+        myitemsize = mydtype.itemsize
         if dtype is None:
-            dtype = self.dtype
-        if dtype == self.dtype:
-            strides = self.strides
-
-        return self.__class__(self.shape, dtype,
-                allocator=self.allocator, strides=strides, order=order)
+            dtype = mydtype
+        else:
+            dtype = np.dtype(dtype)
+        itemsize = dtype.itemsize
+        if order == "K":
+            if self.flags.c_contiguous:
+                order = "C"
+            elif self.flags.f_contiguous:
+                order = "F"
+        if order == "C":
+            newstrides = _c_contiguous_strides(itemsize, shape)
+        elif order == "F":
+            newstrides = _f_contiguous_strides(itemsize, shape)
+        else:
+            maxstride = mystrides[0]
+            maxstrideind = 0
+            for i in range(1, ndim):
+                curstride = mystrides[i]
+                if curstride > maxstride:
+                    maxstrideind = i
+                    maxstride = curstride
+            mymaxoffset = (maxstride / myitemsize) * shape[maxstrideind]
+            if mymaxoffset <= self.size:
+                # it's probably safe to just allocate and pass strides
+                # XXX (do we need to calculate full offset for [-1,-1,-1...]?)
+                newstrides = tuple((x // myitemsize) * itemsize for x in mystrides)
+            else:
+                # just punt and choose something close
+                if ndim > 1 and maxstrideind == 0:
+                    newstrides = _c_contiguous_strides(itemsize, shape)
+                else:
+                    newstrides = _f_contiguous_strides(itemsize, shape)
+        retval = self.__class__(shape, dtype,
+                     allocator=self.allocator, strides=newstrides)
+        if slicer:
+            retval = retval[slicer]
+        return retval
 
     # operators ---------------------------------------------------------------
     def mul_add(self, selffac, other, otherfac, add_timer=None, stream=None):
@@ -1012,15 +1052,21 @@ class GPUArray(object):
 
 def to_gpu(ary, allocator=drv.mem_alloc):
     """converts a numpy array to a GPUArray"""
-    result = GPUArray(ary.shape, ary.dtype, allocator, strides=_compact_strides(ary))
+    ary, newstrides, slicer = _compact_positive_strides(ary)
+    result = GPUArray(ary.shape, ary.dtype, allocator, strides=newstrides)
     result.set(ary)
+    if slicer:
+        result = result[slicer]
     return result
 
 
 def to_gpu_async(ary, allocator=drv.mem_alloc, stream=None):
     """converts a numpy array to a GPUArray"""
-    result = GPUArray(ary.shape, ary.dtype, allocator, strides=_compact_strides(ary))
+    ary, newstrides, slicer = _compact_positive_strides(ary)
+    result = GPUArray(ary.shape, ary.dtype, allocator, strides=newstrides)
     result.set_async(ary, stream)
+    if slicer:
+        result = result[slicer]
     return result
 
 
@@ -1180,8 +1226,41 @@ def arange(*args, **kwargs):
 # }}}
 
 
-def _compact_strides(a):
-    # Compute strides to have same order as self, but packed
+def _flip_negative_strides(arrays):
+    # If arrays have negative strides, flip them.  Return a list
+    # ``(slicer, arrays)`` where ``slicer`` is a tuple of slice objects
+    # used to flip the arrays (or ``None`` if there was no flipping),
+    # and ``arrays`` is the list of flipped arrays.
+    # NOTE: Every input array A must have the same value for the following
+    # expression:  np.sign(A.strides)
+    # NOTE: ``slicer`` is its own inverse, so ``A[slicer][slicer] == A``
+    if isinstance(arrays, GPUArray):
+        raise TypeError("_flip_negative_strides expects a list of GPUArrays")
+    slicer = None
+    ndim = arrays[0].ndim
+    shape = arrays[0].shape
+    for t in zip(range(ndim), *[np.sign(x.strides) for x in arrays]):
+        axis = t[0]
+        stride_sign = t[1]
+        if len(arrays) > 1:
+            if not np.all(t[2:] == stride_sign):
+                raise ValueError("found differing signs in dimension %d: %s" % (axis, t[1:]))
+        if stride_sign == -1:
+            if slicer is None:
+                slicer = [slice(None)] * ndim
+            slicer[axis] = slice(None, None, -1)
+    if slicer is not None:
+        slicer = tuple(slicer)
+        arrays = [x[slicer] for x in arrays]
+    return slicer, arrays
+
+
+def _compact_positive_strides(a):
+    # Flip ``a``'s axes if there are any negative strides, then compute
+    # strides to have same order as a, but packed.  Return flipped ``a``
+    # and packed strides.
+    slicer, alist = _flip_negative_strides((a,))
+    a = alist[0]
     info = sorted(
             (a.strides[axis], a.shape[axis], axis)
             for axis in range(len(a.shape)))
@@ -1191,7 +1270,7 @@ def _compact_strides(a):
     for _, dim, axis in info:
         strides[axis] = stride
         stride *= dim
-    return strides
+    return a, strides, slicer
 
 
 def _memcpy_discontig(dst, src, async=False, stream=None):
@@ -1216,6 +1295,14 @@ def _memcpy_discontig(dst, src, async=False, stream=None):
         dst[...] = src
         return
 
+    dst_gpudata = 0
+    src_gpudata = 0
+    if isinstance(src, GPUArray):
+        src_gpudata = src.gpudata
+    if isinstance(dst, GPUArray):
+        dst_gpudata = dst.gpudata
+    src, dst = _flip_negative_strides((src, dst))[1]
+    
     if src.flags.forc and dst.flags.forc:
         shape = [src.size]
         src_strides = dst_strides = [src.dtype.itemsize]
