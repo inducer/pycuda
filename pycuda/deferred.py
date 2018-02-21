@@ -244,7 +244,7 @@ class DeferredVal(object):
                 return _retval
             args = self._eval_list(args)
             kwargs = self._eval_dict(kwargs)
-            return getattr(self._val, _name)(*newargs, **newkwargs)
+            return getattr(self._val, _name)(*args, **kwargs)
         _deferred_func.__name__ = _name + ".deferred"
         return _deferred_func
 
