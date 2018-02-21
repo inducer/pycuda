@@ -117,9 +117,8 @@ class ElementwiseSourceModule(DeferredSourceModule):
         self._arraypairs = arraypairs
         self._arrayspecificinds = arrayspecificinds
 
-        key = repr(self._init_args)
-
         if contigmatch:
+            key = repr(self._init_args)
             return key
 
         # Arrays are not contiguous or different order
@@ -526,7 +525,7 @@ class ElementwiseKernel:
                             "deal with non-contiguous arrays")
 
                 vectors.append(arg)
-                invocation_args.append(arg.gpudata)
+                invocation_args.append(arg)
             else:
                 invocation_args.append(arg)
 
@@ -573,9 +572,9 @@ def get_take_kernel(dtype, idx_dtype, vec_count=1):
         "texture <%s, 1, cudaReadModeElementType> tex_src%d;" % (ctx["tex_tp"], i)
         for i in range(vec_count))
     body = (
-            ("%(idx_tp)s src_idx = idx[i];\n" % ctx)
+            ("%(idx_tp)s src_idx = idx[idx_i];\n" % ctx)
             + "\n".join(
-                "dest%d[i] = fp_tex1Dfetch(tex_src%d, src_idx);" % (i, i)
+                "dest%d[dest%d_i] = fp_tex1Dfetch(tex_src%d, src_idx);" % (i, i, i)
                 for i in range(vec_count)))
 
     mod = get_elwise_module(args, body, "take", preamble=preamble)
@@ -618,11 +617,12 @@ def get_take_put_kernel(dtype, idx_dtype, with_offsets, vec_count=1):
             return ("dest%d[dest_idx] = "
                     "fp_tex1Dfetch(tex_src%d, src_idx);" % (i, i))
 
-    body = (("%(idx_tp)s src_idx = gmem_src_idx[i];\n"
-                "%(idx_tp)s dest_idx = gmem_dest_idx[i];\n" % ctx)
+    body = (("%(idx_tp)s src_idx = gmem_src_idx[gmem_src_idx_i];\n"
+                "%(idx_tp)s dest_idx = gmem_dest_idx[gmem_dest_idx_i];\n" % ctx)
             + "\n".join(get_copy_insn(i) for i in range(vec_count)))
 
-    mod = get_elwise_module(args, body, "take_put", preamble=preamble)
+    mod = get_elwise_module(args, body, "take_put",
+                            preamble=preamble, shape_arg_index=0)
     func = mod.get_function("take_put")
     tex_src = [mod.get_texref("tex_src%d" % i) for i in range(vec_count)]
 
@@ -652,11 +652,12 @@ def get_put_kernel(dtype, idx_dtype, vec_count=1):
             ] + [ScalarArg(np.intp, "n")]
 
     body = (
-            "%(idx_tp)s dest_idx = gmem_dest_idx[i];\n" % ctx
-            + "\n".join("dest%d[dest_idx] = src%d[i];" % (i, i)
+            "%(idx_tp)s dest_idx = gmem_dest_idx[gmem_dest_idx_i];\n" % ctx
+            + "\n".join("dest%d[dest_idx] = src%d[src%d_i];" % (i, i, i)
                 for i in range(vec_count)))
 
-    func = get_elwise_module(args, body, "put").get_function("put")
+    func = get_elwise_module(args, body, "put",
+                             shape_arg_index=0).get_function("put")
     func.prepare("P"+(2*vec_count*"P")+np.dtype(np.uintp).char)
     return func
 
@@ -668,7 +669,7 @@ def get_copy_kernel(dtype_dest, dtype_src):
                 "tp_dest": dtype_to_ctype(dtype_dest),
                 "tp_src": dtype_to_ctype(dtype_src),
                 },
-            "dest[i] = src[i]",
+            "dest[dest_i] = src[src_i]",
             "copy")
 
 
@@ -700,13 +701,13 @@ def get_linear_combination_kernel(summand_descriptors,
             args.append(ScalarArg(scalar_dtype, "a%d" % i))
             args.append(VectorArg(vector_dtype, "x%d" % i))
 
-        summands.append("a%d*x%d[i]" % (i, i))
+        summands.append("a%d*x%d[x%d_i]" % (i, i, i))
 
     args.append(VectorArg(dtype_z, "z"))
     args.append(ScalarArg(np.uintp, "n"))
 
     mod = get_elwise_module(args,
-            "z[i] = " + " + ".join(summands),
+            "z[z_i] = " + " + ".join(summands),
             "linear_combination",
             preamble="\n".join(preamble),
             loop_prep=";\n".join(loop_prep))
@@ -727,7 +728,7 @@ def get_axpbyz_kernel(dtype_x, dtype_y, dtype_z):
                 "tp_y": dtype_to_ctype(dtype_y),
                 "tp_z": dtype_to_ctype(dtype_z),
                 },
-            "z[i] = a*x[i] + b*y[i]",
+            "z[z_i] = a*x[x_i] + b*y[y_i]",
             "axpbyz")
 
 
@@ -738,7 +739,7 @@ def get_axpbz_kernel(dtype_x, dtype_z):
                 "tp_x": dtype_to_ctype(dtype_x),
                 "tp_z": dtype_to_ctype(dtype_z)
                 },
-            "z[i] = a * x[i] + b",
+            "z[z_i] = a * x[x_i] + b",
             "axpb")
 
 
@@ -750,7 +751,7 @@ def get_binary_op_kernel(dtype_x, dtype_y, dtype_z, operator):
                 "tp_y": dtype_to_ctype(dtype_y),
                 "tp_z": dtype_to_ctype(dtype_z),
                 },
-            "z[i] = x[i] %s y[i]" % operator,
+            "z[z_i] = x[x_i] %s y[y_i]" % operator,
             "multiply")
 
 
@@ -761,7 +762,7 @@ def get_rdivide_elwise_kernel(dtype_x, dtype_z):
                 "tp_x": dtype_to_ctype(dtype_x),
                 "tp_z": dtype_to_ctype(dtype_z),
                 },
-            "z[i] = y / x[i]",
+            "z[z_i] = y / x[x_i]",
             "divide_r")
 
 
@@ -773,7 +774,7 @@ def get_binary_func_kernel(func, dtype_x, dtype_y, dtype_z):
                 "tp_y": dtype_to_ctype(dtype_y),
                 "tp_z": dtype_to_ctype(dtype_z),
                 },
-            "z[i] = %s(x[i], y[i])" % func,
+            "z[z_i] = %s(x[x_i], y[y_i])" % func,
             func+"_kernel")
 
 
@@ -785,7 +786,7 @@ def get_binary_func_scalar_kernel(func, dtype_x, dtype_y, dtype_z):
                 "tp_y": dtype_to_ctype(dtype_y),
                 "tp_z": dtype_to_ctype(dtype_z),
                 },
-            "z[i] = %s(x[i], y)" % func,
+            "z[z_i] = %s(x[x_i], y)" % func,
             func+"_kernel")
 
 
@@ -809,7 +810,7 @@ def get_fill_kernel(dtype):
             "%(tp)s a, %(tp)s *z" % {
                 "tp": dtype_to_ctype(dtype),
                 },
-            "z[i] = a",
+            "z[z_i] = a",
             "fill")
 
 
@@ -819,7 +820,7 @@ def get_reverse_kernel(dtype):
             "%(tp)s *y, %(tp)s *z" % {
                 "tp": dtype_to_ctype(dtype),
                 },
-            "z[i] = y[n-1-i]",
+            "z[z_i] = y[n-1-y_i]",
             "reverse")
 
 
@@ -830,7 +831,7 @@ def get_real_kernel(dtype, real_dtype):
                 "tp": dtype_to_ctype(dtype),
                 "real_tp": dtype_to_ctype(real_dtype),
                 },
-            "z[i] = real(y[i])",
+            "z[z_i] = real(y[y_i])",
             "real")
 
 
@@ -841,7 +842,7 @@ def get_imag_kernel(dtype, real_dtype):
                 "tp": dtype_to_ctype(dtype),
                 "real_tp": dtype_to_ctype(real_dtype),
                 },
-            "z[i] = imag(y[i])",
+            "z[z_i] = imag(y[y_i])",
             "imag")
 
 
@@ -851,7 +852,7 @@ def get_conj_kernel(dtype):
             "%(tp)s *y, %(tp)s *z" % {
                 "tp": dtype_to_ctype(dtype),
                 },
-            "z[i] = pycuda::conj(y[i])",
+            "z[z_i] = pycuda::conj(y[y_i])",
             "conj")
 
 
@@ -861,7 +862,7 @@ def get_arange_kernel(dtype):
             "%(tp)s *z, %(tp)s start, %(tp)s step" % {
                 "tp": dtype_to_ctype(dtype),
                 },
-            "z[i] = start + i*step",
+            "z[z_i] = start + z_i*step",
             "arange")
 
 
@@ -876,7 +877,7 @@ def get_pow_kernel(dtype):
             "%(tp)s value, %(tp)s *y, %(tp)s *z" % {
                 "tp": dtype_to_ctype(dtype),
                 },
-            "z[i] = %s(y[i], value)" % func,
+            "z[z_i] = %s(y[y_i], value)" % func,
             "pow_method")
 
 
@@ -893,7 +894,7 @@ def get_pow_array_kernel(dtype_x, dtype_y, dtype_z):
                 "tp_y": dtype_to_ctype(dtype_y),
                 "tp_z": dtype_to_ctype(dtype_z),
                 },
-            "z[i] = %s(x[i], y[i])" % func,
+            "z[z_i] = %s(x[x_i], y[y_i])" % func,
             "pow_method")
 
 
@@ -901,7 +902,7 @@ def get_pow_array_kernel(dtype_x, dtype_y, dtype_z):
 def get_fmod_kernel():
     return get_elwise_kernel(
             "float *arg, float *mod, float *z",
-            "z[i] = fmod(arg[i], mod[i])",
+            "z[z_i] = fmod(arg[arg_i], mod[mod_i])",
             "fmod_kernel")
 
 
@@ -909,7 +910,7 @@ def get_fmod_kernel():
 def get_modf_kernel():
     return get_elwise_kernel(
             "float *x, float *intpart ,float *fracpart",
-            "fracpart[i] = modf(x[i], &intpart[i])",
+            "fracpart[fracpart_i] = modf(x[x_i], &intpart[intpart_i])",
             "modf_kernel")
 
 
@@ -919,8 +920,8 @@ def get_frexp_kernel():
             "float *x, float *significand, float *exponent",
             """
                 int expt = 0;
-                significand[i] = frexp(x[i], &expt);
-                exponent[i] = expt;
+                significand[significand_i] = frexp(x[x_i], &expt);
+                exponent[exponent_i] = expt;
             """,
             "frexp_kernel")
 
@@ -929,7 +930,7 @@ def get_frexp_kernel():
 def get_ldexp_kernel():
     return get_elwise_kernel(
             "float *sig, float *expt, float *z",
-            "z[i] = ldexp(sig[i], int(expt[i]))",
+            "z[z_i] = ldexp(sig[sig_i], int(expt[expt_i]))",
             "ldexp_kernel")
 
 
@@ -943,7 +944,7 @@ def get_unary_func_kernel(func_name, in_dtype, out_dtype=None):
                 "tp_in": dtype_to_ctype(in_dtype),
                 "tp_out": dtype_to_ctype(out_dtype),
                 },
-            "z[i] = %s(y[i])" % func_name,
+            "z[z_i] = %s(y[y_i])" % func_name,
             "%s_kernel" % func_name)
 
 
@@ -955,7 +956,7 @@ def get_if_positive_kernel(crit_dtype, dtype):
             VectorArg(dtype, "else_"),
             VectorArg(dtype, "result"),
             ],
-            "result[i] = crit[i] > 0 ? then_[i] : else_[i]",
+            "result[result_i] = crit[crit_i] > 0 ? then_[then__i] : else_[else__i]",
             "if_positive")
 
 
@@ -967,5 +968,5 @@ def get_scalar_op_kernel(dtype_x, dtype_y, operator):
                 "tp_y": dtype_to_ctype(dtype_y),
                 "tp_a": dtype_to_ctype(dtype_x),
                 },
-            "y[i] = x[i] %s a" % operator,
+            "y[y_i] = x[x_i] %s a" % operator,
             "scalarop_kernel")
