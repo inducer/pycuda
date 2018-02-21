@@ -118,16 +118,8 @@ def splay(n, dev=None):
 
 def _make_binary_op(operator):
     def func(self, other):
-        if not self.flags.forc:
-            raise RuntimeError("only contiguous arrays may "
-                    "be used as arguments to this operation")
-
         if isinstance(other, GPUArray):
             assert self.shape == other.shape
-
-            if not other.flags.forc:
-                raise RuntimeError("only contiguous arrays may "
-                        "be used as arguments to this operation")
 
             result = self._new_like_me()
             func = elementwise.get_binary_op_kernel(
@@ -300,9 +292,6 @@ class GPUArray(object):
         """Compute ``out = selffac * self + otherfac*other``,
         where `other` is a vector.."""
         assert self.shape == other.shape
-        #if not self.flags.forc or not other.flags.forc:
-        #    raise RuntimeError("only contiguous arrays may "
-        #            "be used as arguments to this operation")
 
         func = elementwise.get_axpbyz_kernel(self.dtype, other.dtype, out.dtype)
 
@@ -320,10 +309,6 @@ class GPUArray(object):
     def _axpbz(self, selffac, other, out, stream=None):
         """Compute ``out = selffac * self + other``, where `other` is a scalar."""
 
-        #if not self.flags.forc:
-        #    raise RuntimeError("only contiguous arrays may "
-        #            "be used as arguments to this operation")
-
         func = elementwise.get_axpbz_kernel(self.dtype, out.dtype)
         func.prepared_async_call(self._grid, self._block, stream,
                 selffac, self,
@@ -332,10 +317,6 @@ class GPUArray(object):
         return out
 
     def _elwise_multiply(self, other, out, stream=None):
-        #if not self.flags.forc:
-        #    raise RuntimeError("only contiguous arrays may "
-        #            "be used as arguments to this operation")
-
         func = elementwise.get_binary_op_kernel(self.dtype, other.dtype,
                 out.dtype, "*")
         func.prepared_async_call(self._grid, self._block, stream,
@@ -350,10 +331,6 @@ class GPUArray(object):
            y = n / self
         """
 
-        #if not self.flags.forc:
-        #    raise RuntimeError("only contiguous arrays may "
-        #            "be used as arguments to this operation")
-
         func = elementwise.get_rdivide_elwise_kernel(self.dtype, out.dtype)
         func.prepared_async_call(self._grid, self._block, stream,
                 self, other,
@@ -363,10 +340,6 @@ class GPUArray(object):
 
     def _div(self, other, out, stream=None):
         """Divides an array by another array."""
-
-        #if not self.flags.forc or not other.flags.forc:
-        #    raise RuntimeError("only contiguous arrays may "
-        #            "be used as arguments to this operation")
 
         assert self.shape == other.shape
 
@@ -651,10 +624,6 @@ class GPUArray(object):
         """
 
         if isinstance(other, GPUArray):
-            #if not self.flags.forc or not other.flags.forc:
-            #    raise RuntimeError("only contiguous arrays may "
-            #            "be used as arguments to this operation")
-
             assert self.shape == other.shape
 
             if new:
@@ -671,10 +640,6 @@ class GPUArray(object):
 
             return result
         else:
-            #if not self.flags.forc:
-            #    raise RuntimeError("only contiguous arrays may "
-            #            "be used as arguments to this operation")
-
             if new:
                 result = self._new_like_me()
             else:
@@ -713,10 +678,6 @@ class GPUArray(object):
         as one-dimensional.
         """
 
-        #if not self.flags.forc:
-        #    raise RuntimeError("only contiguous arrays may "
-        #            "be used as arguments to this operation")
-
         result = self._new_like_me()
 
         func = elementwise.get_reverse_kernel(self.dtype)
@@ -727,10 +688,6 @@ class GPUArray(object):
         return result
 
     def astype(self, dtype, stream=None):
-        #if not self.flags.forc:
-        #    raise RuntimeError("only contiguous arrays may "
-        #            "be used as arguments to this operation")
-
         if dtype == self.dtype:
             return self.copy()
 
@@ -750,9 +707,6 @@ class GPUArray(object):
         order = kwargs.pop("order", "C")
 
         # TODO: add more error-checking, perhaps
-        #if not self.flags.forc:
-        #    raise RuntimeError("only contiguous arrays may "
-        #            "be used as arguments to this operation")
 
         if isinstance(shape[0], tuple) or isinstance(shape[0], list):
             shape = tuple(shape[0])
@@ -970,11 +924,7 @@ class GPUArray(object):
         if issubclass(dtype.type, np.complexfloating):
             from pytools import match_precision
             real_dtype = match_precision(np.dtype(np.float64), dtype)
-            if self.flags.f_contiguous:
-                order = "F"
-            else:
-                order = "C"
-            result = self._new_like_me(dtype=real_dtype, order=order)
+            result = self._new_like_me(dtype=real_dtype)
 
             func = elementwise.get_real_kernel(dtype, real_dtype)
             func.prepared_async_call(self._grid, self._block, None,
@@ -989,17 +939,9 @@ class GPUArray(object):
     def imag(self):
         dtype = self.dtype
         if issubclass(self.dtype.type, np.complexfloating):
-            #if not self.flags.forc:
-            #    raise RuntimeError("only contiguous arrays may "
-            #            "be used as arguments to this operation")
-
             from pytools import match_precision
             real_dtype = match_precision(np.dtype(np.float64), dtype)
-            if self.flags.f_contiguous:
-                order = "F"
-            else:
-                order = "C"
-            result = self._new_like_me(dtype=real_dtype, order=order)
+            result = self._new_like_me(dtype=real_dtype)
 
             func = elementwise.get_imag_kernel(dtype, real_dtype)
             func.prepared_async_call(self._grid, self._block, None,
@@ -1013,15 +955,7 @@ class GPUArray(object):
     def conj(self):
         dtype = self.dtype
         if issubclass(self.dtype.type, np.complexfloating):
-            #if not self.flags.forc:
-            #    raise RuntimeError("only contiguous arrays may "
-            #            "be used as arguments to this operation")
-
-            if self.flags.f_contiguous:
-                order = "F"
-            else:
-                order = "C"
-            result = self._new_like_me(order=order)
+            result = self._new_like_me()
 
             func = elementwise.get_conj_kernel(dtype)
             func.prepared_async_call(self._grid, self._block, None,
