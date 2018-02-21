@@ -912,7 +912,11 @@ class GPUArray(object):
                 strides=tuple(new_strides))
 
     def __setitem__(self, index, value):
-        _memcpy_discontig(self[index], value)
+        if isinstance(value, GPUArray) or isinstance(value, np.ndarray):
+            return _memcpy_discontig(self[index], value)
+
+        # Let's assume it's a scalar
+        self[index].fill(value)
 
     # }}}
 
@@ -1229,12 +1233,6 @@ def _memcpy_discontig(dst, src, async=False, stream=None):
         dst[...] = src
         return
 
-    dst_gpudata = 0
-    src_gpudata = 0
-    if isinstance(src, GPUArray):
-        src_gpudata = src.gpudata
-    if isinstance(dst, GPUArray):
-        dst_gpudata = dst.gpudata
     src, dst = _flip_negative_strides((src, dst))[1]
     
     if src.flags.forc and dst.flags.forc:
