@@ -417,8 +417,11 @@ class DeferredSourceModule(SourceModule):
     ``block``, and ``*args`` are the same arguments that were sent to the
     ``DeferredFunction`` call functions above.
     The function ``create_key(self, grid, block, *args)`` is always
-    called before ``create_source`` and the key returned (if not None) is
-    used to cache any compiled functions.
+    called before ``create_source`` and the key returned is used to cache
+    any compiled functions.  Default return value of ``create_key()`` is
+    None, which means to use the function name and generated source as the
+    key.  The return value of ``create_key()`` must be usable as a hash
+    key.
     '''
     _cache = {}
 

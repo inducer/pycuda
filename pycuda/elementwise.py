@@ -64,7 +64,7 @@ class ElementwiseSourceModule(DeferredSourceModule):
         super(ElementwiseSourceModule, self).__init__(**compilekwargs)
         self._do_range = do_range
         self._shape_arg_index = shape_arg_index
-        self._init_args = (arguments, operation,
+        self._init_args = (tuple(arguments), operation,
                            name, preamble, loop_prep, after_loop)
 
     def create_key(self, grid, block, *args):
