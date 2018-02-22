@@ -319,8 +319,8 @@ class DeferredFunction(object):
     rather than their ``.gpudata`` members; this can be helpful to
     dynamically create kernels.
     '''
-    def __init__(self, modulelazy, funcname):
-        self._modulelazy = modulelazy
+    def __init__(self, deferredmod, funcname):
+        self._deferredmod = deferredmod
         self._funcname = funcname
         self._prepare_args = None
 
@@ -346,7 +346,7 @@ class DeferredFunction(object):
             kwargs['texrefs'] = newtexrefs
 
     def __call__(self, *args, **kwargs):
-        func = self._modulelazy.create_function(self._funcname, args)
+        func = self._deferredmod._delayed_get_function(self._funcname, args)
         self._fix_texrefs(kwargs)
         return func.__call__(*args, **kwargs)
 
@@ -367,7 +367,7 @@ class DeferredFunction(object):
     def _generic_prepared_call(self, funcmethodstr, funcmethodargs, funcargs, funckwargs):
         grid = funcmethodargs[0]
         block = funcmethodargs[1]
-        func = self._modulelazy._delayed_get_function(self._funcname, funcargs, grid, block)
+        func = self._deferredmod._delayed_get_function(self._funcname, funcargs, grid, block)
         self._do_delayed_prepare(func)
         newfuncargs = [ getattr(arg, 'gpudata', arg) for arg in funcargs ]
         fullargs = list(funcmethodargs)
