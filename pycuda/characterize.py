@@ -6,7 +6,11 @@ import numpy as np
 
 
 def platform_bits():
-    return tuple.__itemsize__ * 8
+    import sys
+    if sys.maxsize > 2**32:
+        return 64
+    else:
+        return 32
 
 
 def has_stack():
