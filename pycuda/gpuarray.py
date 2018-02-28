@@ -1034,10 +1034,10 @@ def _array_like_helper(other_ary, dtype, order):
             order = "F"
         else:
             # array_like routines only return positive strides
-            strides = [np.abs(s) for s in other_ary.strides]
+            _, strides, _ = _compact_positive_strides(other_ary)
             if dtype is not None and dtype != other_ary.dtype:
                 # scale strides by itemsize when dtype is not the same
-                itemsize = other_ary.nbytes // other_ary.size
+                itemsize = other_ary.dtype.itemsize
                 itemsize_ratio = np.dtype(dtype).itemsize / itemsize
                 strides = [int(s*itemsize_ratio) for s in strides]
     elif order not in ["C", "F"]:
