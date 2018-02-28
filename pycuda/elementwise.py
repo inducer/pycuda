@@ -806,7 +806,7 @@ def get_binary_op_kernel(dtype_x, dtype_y, dtype_z, operator):
                 "tp_z": dtype_to_ctype(dtype_z),
                 },
             "z[z_i] = x[x_i] %s y[y_i]" % operator,
-            "multiply")
+            "binary_op")
 
 
 @context_dependent_memoize
