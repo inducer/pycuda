@@ -339,8 +339,8 @@ class ElementwiseSourceModule(DeferredSourceModule):
                        dimnum + 1)
                 for name in arraynames:
                     loop_inds_inc += """
-                      %s_i -= DIMELEMSTRIDE_%s_%d;
-                    """ % (name, name, dimnum)
+                      %s_i += ELEMSTRIDE_%s_%d - DIMELEMSTRIDE_%s_%d;
+                    """ % (name, name, dimnum + 1, name, dimnum)
                 loop_inds_inc.dedent()
                 loop_inds_inc += """
                     }
