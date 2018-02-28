@@ -130,7 +130,6 @@ class ElementwiseSourceModule(DeferredSourceModule):
 
         ndim = len(shape)
         numthreads = block[0]
-        shape = np.array(shape)
 
         # Use index of minimum stride in first array as a hint on how to
         # order the traversal of dimensions.  We could probably do something
@@ -148,7 +147,8 @@ class ElementwiseSourceModule(DeferredSourceModule):
             do_reverse = True
         if do_reverse:
             shape = shape[::-1]
-        block_step = np.array(shape)
+        shapearr = np.array(shape)
+        block_step = np.array(shapearr)
         tmp = numthreads
         for dimnum in range(ndim):
             newstep = tmp % block_step[dimnum]
@@ -160,7 +160,7 @@ class ElementwiseSourceModule(DeferredSourceModule):
                 elemstrides = np.array(arg.strides[::-1]) // arg.itemsize
             else:
                 elemstrides = np.array(arg.strides) // arg.itemsize
-            dimelemstrides = elemstrides * shape
+            dimelemstrides = elemstrides * shapearr
             blockelemstrides = elemstrides * block_step
             arrayarginfos.append(
                 (arg_descr.name, tuple(elemstrides), tuple(dimelemstrides), tuple(blockelemstrides))
@@ -172,7 +172,7 @@ class ElementwiseSourceModule(DeferredSourceModule):
         self._shape = shape
         self._block_step = block_step
 
-        key = (self._init_args, grid, block, tuple(self._arrayarginfos))
+        key = (self._init_args, grid, block, shape, tuple(self._arrayarginfos))
 
         return key
 
