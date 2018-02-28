@@ -338,16 +338,20 @@ class DeferredFunction(object):
     def _fix_texrefs(self, kwargs):
         texrefs = kwargs.get('texrefs', None)
         if texrefs is not None:
+            kwargs = kwargs.copy()
             newtexrefs = []
             for texref in texrefs:
                 if isinstance(texref, DeferredVal):
-                    texref = texref._eval()
+                    # don't use _eval() as the cached value may cause
+                    # problems when this function is called again
+                    texref = texref._evalbase()
                 newtexrefs.append(texref)
             kwargs['texrefs'] = newtexrefs
+        return kwargs
 
     def __call__(self, *args, **kwargs):
         func = self._deferredmod._delayed_get_function(self._funcname, args)
-        self._fix_texrefs(kwargs)
+        kwargs = self._fix_texrefs(kwargs)
         return func.__call__(*args, **kwargs)
 
     def param_set_texref(self, *args, **kwargs):
@@ -361,7 +365,7 @@ class DeferredFunction(object):
         if self._prepare_args is None:
             raise Exception("prepared_*_call() requires that prepare() be called first")
         (prepare_args, prepare_kwargs) = self._prepare_args
-        self._fix_texrefs(prepare_kwargs)
+        kwargs = self._fix_texrefs(prepare_kwargs)
         func.prepare(*prepare_args, **prepare_kwargs)
 
     def _generic_prepared_call(self, funcmethodstr, funcmethodargs, funcargs, funckwargs):
