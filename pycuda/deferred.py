@@ -350,7 +350,11 @@ class DeferredFunction(object):
         return kwargs
 
     def __call__(self, *args, **kwargs):
-        func = self._deferredmod._delayed_get_function(self._funcname, args)
+        block = kwargs.get('block', None)
+        if block is None or not isinstance(block, tuple) or len(block) != 3:
+            raise ValueError("keyword argument 'block' is required, and must be a 3-tuple of integers")
+        grid = kwargs.get('grid', (1,1))
+        func = self._deferredmod._delayed_get_function(self._funcname, args, grid, block)
         kwargs = self._fix_texrefs(kwargs)
         return func.__call__(*args, **kwargs)
 
