@@ -463,7 +463,6 @@ class ElementwiseSourceModule(DeferredSourceModule):
             }
             """, format_dict={
                 "arguments": ", ".join(arg.declarator() for arg in arguments),
-                "operation": operation,
                 "name": funcname,
                 "preamble": preamble,
                 "loop_prep": loop_prep,
