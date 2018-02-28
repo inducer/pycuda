@@ -147,7 +147,7 @@ class DeferredVal(object):
     '''
     This is an object that serves as a proxy to an as-yet undetermined
     object, which is only known at the time when either ``_set_val()``
-    or ``_eval()`` is called.  Any calls to methods listed in the class
+    or ``_evalbase()`` is called.  Any calls to methods listed in the class
     attribute ``_deferred_method_dict`` are queued until then, at which
     point the queued method calls are executed in order immediately on
     the new object.
