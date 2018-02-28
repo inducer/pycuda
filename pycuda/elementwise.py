@@ -60,12 +60,14 @@ class ElementwiseSourceModule(DeferredSourceModule):
     def __init__(self, arguments, operation,
                  name="kernel", preamble="", loop_prep="", after_loop="",
                  do_range=False, shape_arg_index=None,
+                 debug=False,
                  **compilekwargs):
         super(ElementwiseSourceModule, self).__init__(**compilekwargs)
         self._do_range = do_range
         self._shape_arg_index = shape_arg_index
         self._init_args = (tuple(arguments), operation,
                            name, preamble, loop_prep, after_loop)
+        self._debug = debug
 
     def create_key(self, grid, block, *args):
         (arguments, operation,
@@ -268,6 +270,12 @@ class ElementwiseSourceModule(DeferredSourceModule):
         arraynames = [ x[0] for x in arrayarginfos ]
 
         defines = DeferredSource()
+        decls = DeferredSource()
+        loop_preop = DeferredSource()
+        loop_inds_calc = DeferredSource()
+        loop_inds_inc = DeferredSource()
+        loop_body = DeferredSource()
+
         for dimnum in range(ndim):
             defines += """
                 #define SHAPE_%d %d
@@ -284,7 +292,6 @@ class ElementwiseSourceModule(DeferredSourceModule):
                        name, dimnum, dimelemstrides[dimnum],
                        name, dimnum, blockelemstrides[dimnum])
 
-        decls = DeferredSource()
         decls += """
             unsigned GLOBAL_i = cta_start + tid;
         """
@@ -297,7 +304,6 @@ class ElementwiseSourceModule(DeferredSourceModule):
                 long INDEX_%d;
             """ % (dimnum,)
 
-        loop_inds_calc = DeferredSource()
         loop_inds_calc += """
             unsigned int TMP_GLOBAL_i = GLOBAL_i;
         """
@@ -313,7 +319,6 @@ class ElementwiseSourceModule(DeferredSourceModule):
                     %s_i += INDEX_%d * ELEMSTRIDE_%s_%d;
                 """ % (name, dimnum, name, dimnum)
 
-        loop_inds_inc = DeferredSource()
         for dimnum in range(ndim):
             loop_inds_inc += """
                     INDEX_%d += BLOCK_STEP_%d;
@@ -341,13 +346,57 @@ class ElementwiseSourceModule(DeferredSourceModule):
                     }
                 """
 
-        loop_body = DeferredSource()
+        if self._debug:
+            preamble += """
+                #include <stdio.h>
+            """
+            loop_inds_calc += """
+                if (cta_start == 0 && tid == 0) {
+            """
+            loop_inds_calc.indent()
+            loop_inds_calc += r"""
+                printf("=======================\n");
+                printf("CALLING FUNC %s\n");
+                printf("N=%%u\n", (unsigned int)n);
+            """ % (funcname,)
+            for name, elemstrides, dimelemstrides, blockelemstrides in arrayarginfos:
+                loop_inds_calc += r"""
+                    printf("(%s) %s: ptr=0x%%lx maxoffset(elems)=%s\n", (unsigned long)%s);
+                """ % (funcname, name, np.sum((np.array(shape) - 1) * np.array(elemstrides)), name)
+            loop_inds_calc.dedent()
+            loop_inds_calc += """
+                }
+            """
+            indtest = DeferredSource()
+            for name in arraynames:
+                indtest += r"""
+                    if (%s_i > %s || %s_i < 0) {
+                """ % (name, np.sum((np.array(shape) - 1) * np.array(elemstrides)), name)
+                indtest.indent()
+                indtest += r"""
+                        printf("cta_start=%%d tid=%%d GLOBAL_i=%%d %s_i=%%d\n", cta_start, tid, GLOBAL_i, %s_i);
+                        break;
+                """ % (name, name)
+                indtest.dedent()
+                indtest += """
+                    }
+                """
+            loop_preop = indtest + loop_preop
+            after_loop += r"""
+                if (cta_start == 0 && tid == 0) {
+                    printf("DONE CALLING FUNC %s\n");
+                    printf("-----------------------\n");
+                }
+            """ % (funcname,)
+
         if self._do_range:
             loop_body.add("""
               if (step < 0)
               {
                 for (/*void*/; GLOBAL_i > stop; GLOBAL_i += total_threads*step)
                 {
+                  %(loop_preop)s;
+
                   %(operation)s;
 
                   %(loop_inds_inc)s;
@@ -357,12 +406,15 @@ class ElementwiseSourceModule(DeferredSourceModule):
               {
                 for (/*void*/; GLOBAL_i < stop; GLOBAL_i += total_threads*step)
                 {
+                  %(loop_preop)s;
+
                   %(operation)s;
 
                   %(loop_inds_inc)s;
                 }
               }
             """, format_dict={
+                "loop_preop": loop_preop,
                 "operation": operation,
                 "loop_inds_inc": loop_inds_inc,
             })
@@ -370,11 +422,14 @@ class ElementwiseSourceModule(DeferredSourceModule):
             loop_body.add("""
               for (/*void*/; GLOBAL_i < n; GLOBAL_i += total_threads)
               {
+                %(loop_preop)s;
+
                 %(operation)s;
 
                 %(loop_inds_inc)s;
               }
             """, format_dict={
+                "loop_preop": loop_preop,
                 "operation": operation,
                 "loop_inds_inc": loop_inds_inc,
             })
@@ -425,23 +480,23 @@ class ElementwiseSourceModule(DeferredSourceModule):
 def get_elwise_module(arguments, operation,
         name="kernel", keep=False, options=None,
         preamble="", loop_prep="", after_loop="",
-        shape_arg_index=None):
+        **kwargs):
     return ElementwiseSourceModule(arguments, operation,
                                    name=name, preamble=preamble,
                                    loop_prep=loop_prep, after_loop=after_loop,
                                    keep=keep, options=options,
-                                   shape_arg_index=shape_arg_index)
+                                   **kwargs)
 
 def get_elwise_range_module(arguments, operation,
         name="kernel", keep=False, options=None,
         preamble="", loop_prep="", after_loop="",
-        shape_arg_index=None):
+        **kwargs):
     return ElementwiseSourceModule(arguments, operation,
                                    name=name, preamble=preamble,
                                    loop_prep=loop_prep, after_loop=after_loop,
                                    keep=keep, options=options,
                                    do_range=True,
-                                   shape_arg_index=shape_arg_index)
+                                   **kwargs)
 
 def get_elwise_kernel_and_types(arguments, operation,
         name="kernel", keep=False, options=None, use_range=False, **kwargs):
