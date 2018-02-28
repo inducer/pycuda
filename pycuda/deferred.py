@@ -470,12 +470,12 @@ class DeferredSourceModule(SourceModule):
                 source = source.generate()
             if key is None:
                 funckey = (funcname, source)
-        func = funccache.get(funckey, None)
-        if func is None:
+        modfunc = funccache.get(funckey, None)
+        if modfunc is None:
             module = self._delayed_compile(source)
             func = module.get_function(funcname)
-            funccache[funckey] = func
-        return func
+            modfunc = funccache[funckey] = (module, func)
+        return modfunc[1]
 
     def get_function(self, name):
         return DeferredFunction(self, name)
