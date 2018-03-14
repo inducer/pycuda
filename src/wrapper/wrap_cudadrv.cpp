@@ -1587,9 +1587,52 @@ BOOST_PYTHON_MODULE(_driver)
       .def(py::init<const CUDA_ARRAY3D_DESCRIPTOR &>())
       .DEF_SIMPLE_METHOD(get_descriptor_3d)
 #endif
+#if CUDAPP_CUDA_VERSION >= 5000
+      .def("get_texobj", &cl::get_texobj,
+          py::return_value_policy<py::manage_new_object>())
+      .def("get_surfobj", &cl::get_surfobj,
+          py::return_value_policy<py::manage_new_object>())
+#endif
       .add_property("handle", &cl::handle_int)
       ;
   }
+  // }}}
+
+  // {{{ texture object
+#if CUDAPP_CUDA_VERSION >= 5000
+  {
+    typedef CUDA_TEXTURE_DESC cl;
+    py::class_<cl>("TextureDesc")
+      .add_property("address_mode", make_array(&cl::addressMode))
+      .add_property("border_color", make_array(&cl::borderColor))
+      .def_readwrite("filter_mode", &cl::filterMode)
+      .def_readwrite("flags", &cl::flags)
+      .def_readwrite("max_anisotropy", &cl::maxAnisotropy)
+      .def_readwrite("max_mipmap_level_clamp", &cl::maxMipmapLevelClamp)
+      .def_readwrite("min_mipmap_level_clamp", &cl::minMipmapLevelClamp)
+      .def_readwrite("mipmap_filter_mode", &cl::mipmapFilterMode)
+      .def_readwrite("mipmap_level_bias", &cl::mipmapLevelBias)
+      ;
+  }
+
+  {
+    typedef texture_object cl;
+    py::class_<cl, boost::noncopyable>("TextureObject", py::no_init)
+      .add_property("handle", &cl::handle)
+      ;
+  }
+#endif
+  // }}}
+
+  // {{{ surface object
+#if CUDAPP_CUDA_VERSION >= 5000
+  {
+    typedef surface_object cl;
+    py::class_<cl, boost::noncopyable>("SurfaceObject", py::no_init)
+      .add_property("handle", &cl::handle)
+      ;
+  }
+#endif
   // }}}
 
   // {{{ texture reference

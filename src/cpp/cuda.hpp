@@ -1003,6 +1003,63 @@ namespace pycuda
 
   // }}}
 
+  // {{{ texture object
+#if CUDAPP_CUDA_VERSION >= 5000
+  class texture_object : public  boost::noncopyable
+  {
+    private:
+      CUtexObject m_texobj;
+      bool m_managed;
+
+    public:
+      texture_object(CUtexObject to, bool managed)
+        : m_texobj(to), m_managed(managed)
+      { }
+
+      ~texture_object()
+      {
+        if (m_managed)
+        {
+          CUDAPP_CALL_GUARDED_CLEANUP(cuTexObjectDestroy, (m_texobj));
+        }
+      }
+
+      CUtexObject handle() const
+      { return m_texobj; }
+  };
+#endif
+
+  // }}}
+
+  // {{{ surface object
+#if CUDAPP_CUDA_VERSION >= 5000
+  class surface_object : public  boost::noncopyable
+  {
+    private:
+      CUsurfObject m_surfobj;
+      bool m_managed;
+
+    public:
+      surface_object(CUsurfObject so, bool managed)
+        : m_surfobj(so), m_managed(managed)
+      { }
+
+      ~surface_object()
+      {
+        if (m_managed)
+        {
+          CUDAPP_CALL_GUARDED_CLEANUP(cuSurfObjectDestroy, (m_surfobj));
+        }
+      }
+
+      CUsurfObject handle() const
+      { return m_surfobj; }
+  };
+#endif
+
+  // }}}
+
+
   // {{{ array
   class array : public boost::noncopyable, public context_dependent
   {
@@ -1057,6 +1114,28 @@ namespace pycuda
         CUDA_ARRAY3D_DESCRIPTOR result;
         CUDAPP_CALL_GUARDED(cuArray3DGetDescriptor, (&result, m_array));
         return result;
+      }
+#endif
+
+#if CUDAPP_CUDA_VERSION >= 5000
+      texture_object *get_texobj(CUDA_TEXTURE_DESC* pTexDesc) {
+          CUtexObject texObject;
+          CUDA_RESOURCE_DESC resDesc;
+          memset(&resDesc,0,sizeof(CUDA_RESOURCE_DESC));
+          resDesc.resType = CU_RESOURCE_TYPE_ARRAY;
+          resDesc.res.array.hArray = m_array;
+          CUDAPP_CALL_GUARDED(cuTexObjectCreate, (&texObject, &resDesc, pTexDesc, NULL));
+          return new texture_object(texObject, true);
+      }
+
+      surface_object *get_surfobj() {
+          CUsurfObject surfObject;
+          CUDA_RESOURCE_DESC resDesc;
+          memset(&resDesc,0,sizeof(CUDA_RESOURCE_DESC));
+          resDesc.resType = CU_RESOURCE_TYPE_ARRAY;
+          resDesc.res.array.hArray = m_array;
+          CUDAPP_CALL_GUARDED(cuSurfObjectCreate, (&surfObject, &resDesc));
+          return new surface_object(surfObject, true);
       }
 #endif
 
