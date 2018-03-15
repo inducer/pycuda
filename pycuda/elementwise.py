@@ -129,7 +129,7 @@ class ElementwiseSourceModule(DeferredSourceModule):
             raise Exception("Grid (%s) and block (%s) specifications should have all '1' except in the first element" % (grid, block))
 
         ndim = len(shape)
-        numthreads = block[0]
+        numthreads = block[0] * grid[0]
 
         # Use index of minimum stride in first array as a hint on how to
         # order the traversal of dimensions.  We could probably do something
@@ -329,7 +329,7 @@ class ElementwiseSourceModule(DeferredSourceModule):
                 """ % (name, name, dimnum)
             if dimnum < ndim - 1:
                 loop_inds_inc += """
-                    if (INDEX_%d > SHAPE_%d) {
+                    if (INDEX_%d >= SHAPE_%d) {
                 """ % (dimnum, dimnum)
                 loop_inds_inc.indent()
                 loop_inds_inc += """
@@ -368,7 +368,7 @@ class ElementwiseSourceModule(DeferredSourceModule):
                 }
             """
             indtest = DeferredSource()
-            for name in arraynames:
+            for name, elemstrides, dimelemstrides, blockelemstrides in arrayarginfos:
                 indtest += r"""
                     if (%s_i > %s || %s_i < 0) {
                 """ % (name, np.sum((np.array(shape) - 1) * np.array(elemstrides)), name)
