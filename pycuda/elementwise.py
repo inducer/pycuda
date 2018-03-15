@@ -916,7 +916,9 @@ def get_arange_kernel(dtype):
             "%(tp)s *z, %(tp)s start, %(tp)s step" % {
                 "tp": dtype_to_ctype(dtype),
                 },
-            "z[z_i] = start + z_i*step",
+            "z[z_i] = start + %(tp)s(z_i)*step" % {
+                "tp": dtype_to_ctype(dtype),
+                },
             "arange")
 
 
