@@ -276,21 +276,25 @@ class ElementwiseSourceModule(DeferredSourceModule):
         loop_inds_inc = DeferredSource()
         loop_body = DeferredSource()
 
-        for dimnum in range(ndim):
-            defines += """
-                #define SHAPE_%d %d
-                #define BLOCK_STEP_%d %d
-            """ % (dimnum, shape[dimnum],
-                   dimnum, block_step[dimnum])
-            for name, elemstrides, dimelemstrides, blockelemstrides in arrayarginfos:
-                basename = "%s_%d" % (name, dimnum)
+        for definename, vals in (
+                ('SHAPE', shape),
+                ('BLOCK_STEP', block_step),
+        ):
+            for dimnum in range(ndim):
                 defines += """
-                    #define ELEMSTRIDE_%s_%d %d
-                    #define DIMELEMSTRIDE_%s_%d %d
-                    #define BLOCKELEMSTRIDE_%s_%d %d
-                """ % (name, dimnum, elemstrides[dimnum],
-                       name, dimnum, dimelemstrides[dimnum],
-                       name, dimnum, blockelemstrides[dimnum])
+                    #define %s_%d %d
+                """ % (definename, dimnum, vals[dimnum])
+        for name, elemstrides, dimelemstrides, blockelemstrides in arrayarginfos:
+            for definename, vals in (
+                    ('ELEMSTRIDE', elemstrides),
+                    ('DIMELEMSTRIDE', dimelemstrides),
+                    ('BLOCKELEMSTRIDE', blockelemstrides),
+            ):
+                for dimnum in range(ndim):
+                    basename = "%s_%d" % (name, dimnum)
+                    defines += """
+                        #define %s_%s_%d %d
+                    """ % (definename, name, dimnum, vals[dimnum])
 
         decls += """
             unsigned GLOBAL_i = cta_start + tid;
@@ -370,18 +374,20 @@ class ElementwiseSourceModule(DeferredSourceModule):
             indtest = DeferredSource()
             for name, elemstrides, dimelemstrides, blockelemstrides in arrayarginfos:
                 indtest += r"""
-                    if (%s_i > %s || %s_i < 0) {
+                    if (%s_i > %s || %s_i < 0)
                 """ % (name, np.sum((np.array(shape) - 1) * np.array(elemstrides)), name)
+                indtest += r"""{"""
                 indtest.indent()
                 indtest += r"""
-                        printf("cta_start=%%d tid=%%d GLOBAL_i=%%d %s_i=%%d\n", cta_start, tid, GLOBAL_i, %s_i);
-                        break;
-                """ % (name, name)
+                        printf("cta_start=%%d tid=%%d GLOBAL_i=%%u %s_i=%%ld %s\n", cta_start, tid, GLOBAL_i, %s_i, %s);
+                """ % (name, ' '.join("INDEX_%d=%%ld" % (dimnum,) for dimnum in range(ndim)), name, ',  '.join("INDEX_%d" % (dimnum,) for dimnum in range(ndim)))
+                indtest += """break;"""
                 indtest.dedent()
-                indtest += """
-                    }
-                """
+                indtest += """}"""
             loop_preop = indtest + loop_preop
+            tmp_after_loop = after_loop
+            after_loop = DeferredSource()
+            after_loop += tmp_after_loop
             after_loop += r"""
                 if (cta_start == 0 && tid == 0) {
                     printf("DONE CALLING FUNC %s\n");
