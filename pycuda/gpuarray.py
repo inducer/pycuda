@@ -1214,7 +1214,7 @@ def _compact_positive_strides(a):
 def _memcpy_discontig(dst, src, async=False, stream=None):
     """Copy the contents of src into dst.
 
-    The two arrays should have the same dtype, shape, and order, but
+    The two arrays should have the same dtype, and shape, but
     not necessarily the same strides. There may be up to _two_
     axes along which either `src` or `dst` is not contiguous.
     """
@@ -1234,8 +1234,15 @@ def _memcpy_discontig(dst, src, async=False, stream=None):
         return
 
     src, dst = _flip_negative_strides((src, dst))[1]
+
+    if any(np.argsort(src.strides) != np.argsort(dst.strides)):
+        # order is not the same, create a no-op "assignment" kernel
+        func = elementwise.get_unary_func_kernel("", src.dtype)
+        func.prepared_async_call(src._grid, src._block, None,
+                                 src, dst, src.mem_size)
+        return
     
-    if src.flags.forc and dst.flags.forc:
+    if src.flags.f_contiguous == dst.flags.f_contiguous or src.flags.c_contiguous == dst.flags.c_contiguous:
         shape = [src.size]
         src_strides = dst_strides = [src.dtype.itemsize]
     else:
@@ -1301,7 +1308,11 @@ def _memcpy_discontig(dst, src, async=False, stream=None):
     elif len(shape) == 3:
         copy = drv.Memcpy3D()
     else:
-        raise ValueError("more than 2 discontiguous axes not supported %s" % (tuple(sorted(axes)),))
+        # can't use MemcpyXD, create a no-op "assignment" kernel
+        func = elementwise.get_unary_func_kernel("", src.dtype)
+        func.prepared_async_call(src._grid, src._block, None,
+                                 src, dst, src.mem_size)
+        return
 
     if isinstance(src, GPUArray):
         copy.set_src_device(src.gpudata)
