@@ -1242,7 +1242,8 @@ def _memcpy_discontig(dst, src, async=False, stream=None):
                                  src, dst, src.mem_size)
         return
     
-    if src.flags.f_contiguous == dst.flags.f_contiguous or src.flags.c_contiguous == dst.flags.c_contiguous:
+    if ((src.flags.f_contiguous and dst.flags.f_contiguous) or
+        (src.flags.c_contiguous and dst.flags.c_contiguous)):
         shape = [src.size]
         src_strides = dst_strides = [src.dtype.itemsize]
     else:
