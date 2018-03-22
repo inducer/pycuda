@@ -1210,6 +1210,27 @@ def _compact_positive_strides(a):
         stride *= dim
     return a, strides, slicer
 
+def _memcpy_discontig_slow(dst, src):
+    # This is a generic memcpy using a no-op "assignment" kernel.
+    # NOTE: no need to use this if both src and dst are on host.
+    func = elementwise.get_unary_func_kernel("", src.dtype)
+
+    # if one array is on host, need to make an intermediate device array
+    src_gpu = src
+    dst_gpu = dst
+    if isinstance(src, np.ndarray):
+        dtype, order, strides = _array_like_helper(src, None, "K")
+        src_gpu = GPUArray(src.shape, dtype, order=order, strides=strides)
+    if isinstance(dst, np.ndarray):
+        dtype, order, strides = _array_like_helper(dst, None, "K")
+        dst_gpu = GPUArray(dst.shape, dtype, order=order, strides=strides)
+    func.prepared_async_call(src_gpu._grid, src_gpu._block, None,
+                             src_gpu, dst_gpu, src.mem_size)
+    if src is not src_gpu:
+        src_gpu.get(src)
+    if dst is not dst_gpu:
+        dst_gpu.get(dst)
+    return
 
 def _memcpy_discontig(dst, src, async=False, stream=None):
     """Copy the contents of src into dst.
@@ -1236,10 +1257,8 @@ def _memcpy_discontig(dst, src, async=False, stream=None):
     src, dst = _flip_negative_strides((src, dst))[1]
 
     if any(np.argsort(src.strides) != np.argsort(dst.strides)):
-        # order is not the same, create a no-op "assignment" kernel
-        func = elementwise.get_unary_func_kernel("", src.dtype)
-        func.prepared_async_call(src._grid, src._block, None,
-                                 src, dst, src.mem_size)
+        # order is not the same, use generic slow version
+        _memcpy_discontig_slow(dst, src)
         return
     
     if ((src.flags.f_contiguous and dst.flags.f_contiguous) or
@@ -1309,10 +1328,8 @@ def _memcpy_discontig(dst, src, async=False, stream=None):
     elif len(shape) == 3:
         copy = drv.Memcpy3D()
     else:
-        # can't use MemcpyXD, create a no-op "assignment" kernel
-        func = elementwise.get_unary_func_kernel("", src.dtype)
-        func.prepared_async_call(src._grid, src._block, None,
-                                 src, dst, src.mem_size)
+        # can't use MemcpyXD, use generic slow version
+        _memcpy_discontig_slow(dst, src)
         return
 
     if isinstance(src, GPUArray):
