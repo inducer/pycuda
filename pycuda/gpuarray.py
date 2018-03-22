@@ -1177,13 +1177,15 @@ def _flip_negative_strides(arrays):
     slicer = None
     ndim = arrays[0].ndim
     shape = arrays[0].shape
-    for t in zip(range(ndim), *[np.sign(x.strides) for x in arrays]):
-        axis = t[0]
-        stride_sign = t[1]
+    for axis, stride_signs in enumerate(zip(*[np.sign(x.strides) for x in arrays])):
+        max_sign = np.max(stride_signs)
+        min_sign = np.min(stride_signs)
         if len(arrays) > 1:
-            if not np.all(t[2:] == stride_sign):
+            # Stride signs are -1 or 1, or 0 if stride is 0.
+            # Zero strides don't matter, but fail if there are both -1 and 1.
+            if max_sign == 1 and min_sign == -1:
                 raise ValueError("found differing signs in strides for dimension %d (strides for all arrays: %s)" % (axis, [x.strides for x in arrays]))
-        if stride_sign == -1:
+        if min_sign == -1:
             if slicer is None:
                 slicer = [slice(None)] * ndim
             slicer[axis] = slice(None, None, -1)
@@ -1256,7 +1258,9 @@ def _memcpy_discontig(dst, src, async=False, stream=None):
 
     src, dst = _flip_negative_strides((src, dst))[1]
 
-    if any(np.argsort(src.strides) != np.argsort(dst.strides)):
+    if (0 in src.strides or
+        0 in dst.strides or
+        any(np.argsort(src.strides) != np.argsort(dst.strides))):
         # order is not the same, use generic slow version
         _memcpy_discontig_slow(dst, src)
         return
