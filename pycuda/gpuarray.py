@@ -1257,11 +1257,15 @@ def _memcpy_discontig(dst, src, async=False, stream=None):
         dst[...] = src
         return
 
-    src, dst = _flip_negative_strides((src, dst))[1]
+    doslow = (0 in src.strides) or (0 in dst.strides)
+    try:
+        src, dst = _flip_negative_strides((src, dst))[1]
+    except ValueError:
+        # probably different signs in strides -- will use slow version below
+        doslow = True
+        pass
 
-    if (0 in src.strides or
-        0 in dst.strides or
-        any(np.argsort(src.strides) != np.argsort(dst.strides))):
+    if doslow or any(np.argsort(src.strides) != np.argsort(dst.strides)):
         # order is not the same, use generic slow version
         _memcpy_discontig_slow(dst, src)
         return
@@ -1289,11 +1293,8 @@ def _memcpy_discontig(dst, src, async=False, stream=None):
             axes[0:0] = [np.newaxis]
 
         # collapse contiguous dimensions
-        # and check that dst is in same order as src
         i = 1
         while i < len(shape):
-            if dst_strides[i] < dst_strides[i-1]:
-                raise ValueError("src and dst must have same order")
             if (src_strides[i-1] * shape[i-1] == src_strides[i] and
                 dst_strides[i-1] * shape[i-1] == dst_strides[i]):
                 shape[i-1:i+1] = [shape[i-1] * shape[i]]
