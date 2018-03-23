@@ -1223,11 +1223,12 @@ def _memcpy_discontig_slow(dst, src):
     if isinstance(src, np.ndarray):
         dtype, order, strides = _array_like_helper(src, None, "K")
         src_gpu = GPUArray(src.shape, dtype, order=order, strides=strides)
+        src_gpu.set(src)
     if isinstance(dst, np.ndarray):
         dtype, order, strides = _array_like_helper(dst, None, "K")
         dst_gpu = GPUArray(dst.shape, dtype, order=order, strides=strides)
     func.prepared_async_call(src_gpu._grid, src_gpu._block, None,
-                             src_gpu, dst_gpu, src.mem_size)
+                             src_gpu, dst_gpu, src_gpu.mem_size)
     if src is not src_gpu:
         src_gpu.get(src)
     if dst is not dst_gpu:
