@@ -1986,7 +1986,7 @@ CUDA 4.0 and newer.
 
     .. versionadded:: 2011.1
 
-.. function:: stop()
+.. function:: stop_profiler()
 
     .. versionadded:: 2011.1
 
