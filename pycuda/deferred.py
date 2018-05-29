@@ -27,6 +27,8 @@ class DeferredSource(object):
         if subsources is None:
             subsources = []
         self.subsources = subsources
+        self._regex_space = re.compile(r"^(\s*)(.*?)(\s*)$")
+        self._regex_format = re.compile(r"%\(([^\)]*)\)([a-zA-Z])")
 
     def __str__(self):
         return self.generate()
@@ -53,13 +55,11 @@ class DeferredSource(object):
                 retval = retval + subsource.generate(indent=(indent + subindent), get_list=get_list)
                 continue
             lines = subsource.split("\n")
-            regex_space = re.compile(r"^(\s*)(.*?)(\s*)$")
-            regex_format = re.compile(r"%\(([^\)]*)\)([a-zA-Z])")
             minstrip = None
             newlines = []
             for line in lines:
                 linelen = len(line)
-                space_match = regex_space.match(line)
+                space_match = self._regex_space.match(line)
                 end_leading_space = space_match.end(1)
                 begin_trailing_space = space_match.start(3)
                 if strip_space:
@@ -74,7 +74,7 @@ class DeferredSource(object):
                 newlinelist = None
                 newline = ''
                 curpos = 0
-                matches = list(regex_format.finditer(line, end_leading_space))
+                matches = list(self._regex_format.finditer(line, end_leading_space))
                 nummatches = len(matches)
                 for match in matches:
                     formatchar = match.group(2)
