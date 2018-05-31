@@ -1233,8 +1233,6 @@ def _memcpy_discontig_slow(dst, src):
         dst_gpu = GPUArray(dst.shape, dtype, order=order, strides=strides)
     func.prepared_async_call(src_gpu._grid, src_gpu._block, None,
                              src_gpu, dst_gpu, src_gpu.mem_size)
-    if src is not src_gpu:
-        src_gpu.get(src)
     if dst is not dst_gpu:
         dst_gpu.get(dst)
     return
