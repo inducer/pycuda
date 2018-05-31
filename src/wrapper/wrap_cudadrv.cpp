@@ -17,6 +17,120 @@
 
 
 
+namespace precalc {
+  namespace py = boost::python;
+  py::tuple _precalc_array_info(const py::object & args, const py::object & arg_descrs, const py::object & shape_arg_index) {
+    bool contigmatch = true;
+    bool arrayspecificinds = true;
+    std::vector<int> arrayarginds;
+    std::vector<int> shape;
+    py::object shape_obj;
+    char order = 'N';
+    int numargs = py::len(args);
+
+    for (int i = 0; i < numargs; i++) {
+      py::object arg_descr = py::object(arg_descrs[i]);
+      // below is our version of isinstance(arg_descr, VectorArg)
+      py::object struct_char;
+      try {
+	struct_char = arg_descr.attr("struct_char");
+      } catch (...) {
+	continue;
+      }
+      if (py::extract<char>(struct_char) != 'P') {
+	continue;
+      }
+      // is a GPUArray/DeviceAllocation
+      //py::object arg = py::object(args[i]);
+      py::object arg = args[i];
+      arrayarginds.push_back(i);
+      if (!arrayspecificinds) {
+	continue;
+      }
+      py::object curshape_obj;
+      py::object curstrides_obj;
+      int itemsize;
+      int ndim;
+      try {
+	curshape_obj = arg.attr("shape");
+	curstrides_obj = arg.attr("strides");
+	itemsize = py::extract<int>(arg.attr("itemsize"));
+	ndim = py::extract<int>(arg.attr("ndim"));
+      } catch (...) {
+	// At least one array argument is probably sent as a
+	// GPUArray.gpudata rather than the GPUArray itself,
+	// so disable array-specific indices -- caller is on
+	// their own.
+	arrayspecificinds = false;
+	continue;
+      }
+      std::vector<int> curshape(ndim);
+      std::vector<int> curstrides(ndim);
+      for (int i = 0; i < ndim; i++) {
+	curshape[i] = py::extract<int>(curshape_obj[i]);
+	curstrides[i] = py::extract<int>(curstrides_obj[i]);
+      }
+      if (contigmatch) {
+	char curorder = 'N';
+	int tmpaccum = itemsize;
+	bool is_f = (curstrides[0] == tmpaccum);
+	tmpaccum *= curshape[0];
+	for (int i = 1; i < ndim; i++) {
+	  if (curshape[i] == 1) {
+	    continue;
+	  }
+	  if (curstrides[i] != tmpaccum) {
+	    is_f = false;
+	    break;
+	  }
+	  tmpaccum *= curshape[i];
+	}
+	tmpaccum = itemsize;
+	bool is_c = (curstrides[ndim - 1] == tmpaccum);
+	tmpaccum *= curshape[ndim - 1];
+	for (int i = ndim - 2; i >= 0; i--) {
+	  if (curshape[i] == 1) {
+	    continue;
+	  }
+	  if (curstrides[i] != tmpaccum) {
+	    is_c = false;
+	    break;
+	  }
+	  tmpaccum *= curshape[i];
+	}
+	if (is_f) {
+	  curorder = 'F';
+	}
+	if (is_c) {
+	  curorder = 'C';
+	}
+	if (shape.size() == 0) {
+	  shape = curshape;
+	  shape_obj = curshape_obj;
+	  order = curorder;
+	} else if (curorder == 'N' || order != curorder) {
+	  contigmatch = false;
+	}
+      }
+      if (shape_arg_index.is_none() && shape != curshape) {
+	PyErr_SetString(PyExc_RuntimeError, "All input arrays to elementwise kernels must have the same shape, or you must specify the argument that has the canonical shape with shape_arg_index");
+	py::throw_error_already_set();
+      }
+      if (shape_arg_index == i) {
+	shape = curshape;
+	shape_obj = curshape_obj;
+      }
+    }
+    py::list arrayarginds_obj;
+    {
+      typename std::vector<int>::iterator iter = arrayarginds.begin();
+      for (/*null*/; iter != arrayarginds.end(); iter++) {
+	arrayarginds_obj.append(*iter);
+      }
+    }
+    return py::make_tuple(contigmatch, arrayarginds_obj, arrayspecificinds, shape_obj);
+  }
+}
 
 using namespace pycuda;
 using boost::shared_ptr;
@@ -1657,6 +1771,11 @@ BOOST_PYTHON_MODULE(_driver)
 #ifdef HAVE_CURAND
   pycuda_expose_curand();
 #endif
+
+  {
+    using namespace precalc;
+    DEF_SIMPLE_FUNCTION_WITH_ARGS(_precalc_array_info, ("args", "arg_descrs", "shape_arg_index"));
+  }
 }
 
 // vim: foldmethod=marker

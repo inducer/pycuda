@@ -441,12 +441,13 @@ class DeferredSourceModule(SourceModule):
     (or ``DeferredSource`` object) that should be compiled.  ``grid``,
     ``block``, and ``*args`` are the same arguments that were sent to the
     ``DeferredFunction`` call functions above.
-    The function ``create_key(self, grid, block, *args)`` is always
-    called before ``create_source`` and the key returned is used to cache
-    any compiled functions.  Default return value of ``create_key()`` is
-    None, which means to use the function name and generated source as the
-    key.  The return value of ``create_key()`` must be usable as a hash
-    key.
+    The function ``create_key(self, grid, block, *args)`` returns a tuple
+    ``(key, precalc)``.  ``create_key`` is always called before
+    ``create_source`` and any pre-calculated info in ``precalc`` is sent back
+    to ``create_source``; ``key`` is used to cache any compiled functions.
+    Default return value of ``create_key()`` is (None, None), which means to
+    use the function name and generated source as the key.  The key returned
+    by ``create_key()`` must be usable as a hash key.
     '''
     _cache = {}
 
@@ -467,25 +468,25 @@ class DeferredSourceModule(SourceModule):
         return _delayed_compile_aux(source, self._compileargs)
 
     def create_key(self, grid, block, *funcargs):
-        return None
+        return (None, None)
 
     def create_source(self, grid, block, *funcargs):
         raise NotImplementedError("create_source must be overridden!")
 
     def _delayed_get_function(self, funcname, funcargs, grid, block):
         '''
-        If ``create_key()`` returns non-None, then it is used as the key
-        to cache compiled functions.  Otherwise the return value of
-        ``create_source()`` is used as the key.
+        If the first element of the tuple returned by ``create_key()`` is
+        not None, then it is used as the key to cache compiled functions.
+        Otherwise the return value of ``create_source()`` is used as the key.
         '''
         context = pycuda.driver.Context.get_current()
         funccache = DeferredSourceModule._cache.get(context, None)
         if funccache is None:
             funccache = self._cache[context] = {}
-        key = self.create_key(grid, block, *funcargs)
+        (key, precalc) = self.create_key(grid, block, *funcargs)
         funckey = (funcname, key)
         if key is None or funckey not in funccache:
-            source = self.create_source(grid, block, *funcargs)
+            source = self.create_source(precalc, grid, block, *funcargs)
             if isinstance(source, DeferredSource):
                 source = source.generate()
             if key is None:

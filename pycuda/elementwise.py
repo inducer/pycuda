@@ -37,6 +37,7 @@ import numpy as np
 from pycuda.tools import dtype_to_ctype, VectorArg, ScalarArg
 from pytools import memoize_method
 from pycuda.deferred import DeferredSourceModule, DeferredSource
+import pycuda._driver as _drv
 
 class ElementwiseSourceModule(DeferredSourceModule):
     '''
@@ -67,27 +68,25 @@ class ElementwiseSourceModule(DeferredSourceModule):
         self._shape_arg_index = shape_arg_index
         self._init_args = (tuple(arguments), operation,
                            name, preamble, loop_prep, after_loop)
+        self._init_args_repr = repr(self._init_args)
         self._debug = debug
 
-    def create_key(self, grid, block, *args):
-        (arguments, operation,
-         funcname, preamble, loop_prep, after_loop) = self._init_args
-        shape_arg_index = self._shape_arg_index
-
+    @profile
+    def _precalc_array_info(self, args, arguments, shape_arg_index):
         # 'args' is the list of actual parameters being sent to the kernel
         # 'arguments' is the list of argument descriptors (VectorArg, ScalarArg)
 
-        arraypairs = []
+        arrayarginds = []
         contigmatch = True
         arrayspecificinds = True
         shape = None
-        size = None
         order = None
-        for i, argpair in enumerate(zip(args, arguments)):
-            arg, arg_descr = argpair
+        for i, arg_descr in enumerate(arguments):
+            arg_descr = arguments[i]
             if isinstance(arg_descr, VectorArg):
                 # is a GPUArray/DeviceAllocation
-                arraypairs.append(argpair)
+                arg = args[i]
+                arrayarginds.append(i)
                 if not arrayspecificinds:
                     continue
                 if not hasattr(arg, 'shape'):
@@ -98,30 +97,35 @@ class ElementwiseSourceModule(DeferredSourceModule):
                     arrayspecificinds = False
                     continue
                 curshape = arg.shape
-                cursize = arg.size
                 curorder = 'N'
-                if arg.flags.f_contiguous:
-                    curorder = 'F'
-                elif arg.flags.c_contiguous:
-                    curorder = 'C'
-                if shape is None:
-                    shape = curshape
-                    size = cursize
-                    order = curorder
-                elif curorder == 'N' or order != curorder:
-                    contigmatch = False
-                elif shape_arg_index is None and shape != curshape:
+                if contigmatch:
+                    if arg.flags.f_contiguous:
+                        curorder = 'F'
+                    elif arg.flags.c_contiguous:
+                        curorder = 'C'
+                    if shape is None:
+                        shape = curshape
+                        order = curorder
+                    elif curorder == 'N' or order != curorder:
+                        contigmatch = False
+                if shape_arg_index is None and shape != curshape:
                     raise Exception("All input arrays to elementwise kernels must have the same shape, or you must specify the argument that has the canonical shape with shape_arg_index; found shapes %s and %s" % (shape, curshape))
                 if shape_arg_index == i:
                     shape = curshape
 
-        self._contigmatch = contigmatch
-        self._arraypairs = arraypairs
-        self._arrayspecificinds = arrayspecificinds
+        return (contigmatch, arrayarginds, arrayspecificinds, shape)
+
+
+    @profile
+    def create_key(self, grid, block, *args):
+        #print "Calling _precalc_array_info(args=%s, self._init_args[0]=%s, self._shape_arg_index=%s)\n" % (args, self._init_args[0], self._shape_arg_index)
+        #precalc = self._precalc_array_info(args, self._init_args[0], self._shape_arg_index)
+        precalc = _drv._precalc_array_info(args, self._init_args[0], self._shape_arg_index)
+        (contigmatch, arrayarginds, arrayspecificinds, shape) = precalc
 
         if contigmatch:
-            key = repr(self._init_args)
-            return key
+            key = self._init_args_repr
+            return key, (contigmatch, arrayarginds, arrayspecificinds, shape, None, None, None, None, None)
 
         # Arrays are not contiguous or different order
 
@@ -130,6 +134,7 @@ class ElementwiseSourceModule(DeferredSourceModule):
 
         ndim = len(shape)
         numthreads = block[0] * grid[0]
+        arguments = self._init_args[0]
 
         # Use index of minimum stride in first array as a hint on how to
         # order the traversal of dimensions.  We could probably do something
@@ -140,9 +145,8 @@ class ElementwiseSourceModule(DeferredSourceModule):
         # ensure that inputs have the same order, and explicitly send
         # shape_arg_index to turn this off.
         do_reverse = False
-        if (shape_arg_index is None and
-            np.argmin(np.abs(arraypairs[0][0].strides)) > ndim // 2):
-            print "traversing dimensions in reverse order"
+        if (self._shape_arg_index is None and
+            np.argmin(np.abs(args[arrayarginds[0]].strides)) > ndim // 2):
             # traverse dimensions in reverse order
             do_reverse = True
         if do_reverse:
@@ -155,7 +159,9 @@ class ElementwiseSourceModule(DeferredSourceModule):
             tmp = tmp // block_step[dimnum]
             block_step[dimnum] = newstep
         arrayarginfos = []
-        for arg, arg_descr in arraypairs:
+        for i in arrayarginds:
+            arg = args[i]
+            arg_descr = arguments[i]
             if do_reverse:
                 elemstrides = np.array(arg.strides[::-1]) // arg.itemsize
             else:
@@ -172,22 +178,17 @@ class ElementwiseSourceModule(DeferredSourceModule):
         self._shape = shape
         self._block_step = block_step
 
-        key = (self._init_args, grid, block, shape, tuple(self._arrayarginfos))
+        key = (self._init_args_repr, grid, block, shape, tuple(self._arrayarginfos))
 
-        return key
+        return key, (contigmatch, arrayarginds, arrayspecificinds, shape, arrayarginfos, ndim, numthreads, shape, block_step)
 
-    def create_source(self, grid, block, *args):
-        # Precondition: create_key() must have been run with the same arguments
+    def create_source(self, precalc, grid, block, *args):
+        (contigmatch, arrayarginds, arrayspecificinds, shape, arrayarginfos, ndim, numthreads, shape, block_step) = precalc
 
         (arguments, operation,
          funcname, preamble, loop_prep, after_loop) = self._init_args
 
-        contigmatch = self._contigmatch
-
         if contigmatch:
-            arraypairs = self._arraypairs
-            arrayspecificinds = self._arrayspecificinds
-
             indtype = 'unsigned'
             if self._do_range:
                 indtype = 'long'
@@ -195,10 +196,10 @@ class ElementwiseSourceModule(DeferredSourceModule):
             # All arrays are contiguous and same order (or we don't know and
             # it's up to the caller to make sure it works)
             if arrayspecificinds:
-                for arg, arg_descr in arraypairs:
+                for i in arrayarginds:
                     preamble = preamble + """
                         #define %s_i i
-                    """ % (arg_descr.name,)
+                    """ % (arguments[i].name,)
             if self._do_range:
                 loop_body = """
                   if (step < 0)
@@ -260,12 +261,6 @@ class ElementwiseSourceModule(DeferredSourceModule):
                 }
 
         # Arrays are not contiguous or different order
-
-        arrayarginfos = self._arrayarginfos
-        ndim = self._ndim
-        numthreads = self._numthreads
-        shape = self._shape
-        block_step = self._block_step
 
         arraynames = [ x[0] for x in arrayarginfos ]
 
