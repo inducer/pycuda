@@ -470,7 +470,7 @@ class DeferredSourceModule(SourceModule):
     def create_key(self, grid, block, *funcargs):
         return (None, None)
 
-    def create_source(self, grid, block, *funcargs):
+    def create_source(self, precalc, grid, block, *funcargs):
         raise NotImplementedError("create_source must be overridden!")
 
     def _delayed_get_function(self, funcname, funcargs, grid, block):
