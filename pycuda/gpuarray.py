@@ -1259,7 +1259,13 @@ def _memcpy_discontig(dst, src, async=False, stream=None):
         dst[...] = src
         return
 
-    doslow = (0 in src.strides) or (0 in dst.strides)
+    # check for stride tricks (like stride == 0 with shape > 1)
+    shape = src.shape
+    doslow = (any(sh > 1 for sh, st in zip(shape, src.strides) if st == 0)
+              or
+              any(sh > 1 for sh, st in zip(shape, dst.strides) if st == 0))
+    del shape
+
     try:
         src, dst = _flip_negative_strides((src, dst))[1]
     except ValueError:
