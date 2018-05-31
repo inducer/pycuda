@@ -238,14 +238,14 @@ class GPUArray(object):
         return self.set(ary, async=True, stream=stream)
 
     def get(self, ary=None, pagelocked=False, async=False, stream=None):
-        slicer = None
+        flipper = None
         if ary is None:
             if pagelocked:
                 ary = drv.pagelocked_empty(self.shape, self.dtype)
             else:
                 ary = np.empty(self.shape, self.dtype)
 
-            self, strides, slicer = _compact_positive_strides(self)
+            self, strides, flipper = _compact_positive_strides(self)
             ary = _as_strided(ary, strides=strides)
         else:
             if self.size != ary.size:
@@ -262,8 +262,8 @@ class GPUArray(object):
 
         if self.size:
             _memcpy_discontig(ary, self, async=async, stream=stream)
-        if slicer:
-            ary = ary[slicer]
+        if flipper is not None:
+            ary = ary[flipper]
         return ary
 
     def get_async(self, stream=None, ary=None):
@@ -352,7 +352,7 @@ class GPUArray(object):
         return out
 
     def _new_like_me(self, dtype=None, order="K"):
-        slicer, selflist = _flip_negative_strides((self,))
+        flipper, selflist = _flip_negative_strides((self,))
         self = selflist[0]
         ndim = self.ndim
         shape = self.shape
@@ -394,8 +394,8 @@ class GPUArray(object):
                     newstrides = _f_contiguous_strides(itemsize, shape)
         retval = self.__class__(shape, dtype,
                      allocator=self.allocator, strides=newstrides)
-        if slicer:
-            retval = retval[slicer]
+        if flipper is not None:
+            retval = retval[flipper]
         return retval
 
     # operators ---------------------------------------------------------------
@@ -990,21 +990,21 @@ class GPUArray(object):
 
 def to_gpu(ary, allocator=drv.mem_alloc):
     """converts a numpy array to a GPUArray"""
-    ary, newstrides, slicer = _compact_positive_strides(ary)
+    ary, newstrides, flipper = _compact_positive_strides(ary)
     result = GPUArray(ary.shape, ary.dtype, allocator, strides=newstrides)
     result.set(ary)
-    if slicer:
-        result = result[slicer]
+    if flipper is not None:
+        result = result[flipper]
     return result
 
 
 def to_gpu_async(ary, allocator=drv.mem_alloc, stream=None):
     """converts a numpy array to a GPUArray"""
-    ary, newstrides, slicer = _compact_positive_strides(ary)
+    ary, newstrides, flipper = _compact_positive_strides(ary)
     result = GPUArray(ary.shape, ary.dtype, allocator, strides=newstrides)
     result.set_async(ary, stream)
-    if slicer:
-        result = result[slicer]
+    if flipper:
+        result = result[flipper]
     return result
 
 
@@ -1166,40 +1166,44 @@ def arange(*args, **kwargs):
 
 def _flip_negative_strides(arrays):
     # If arrays have negative strides, flip them.  Return a list
-    # ``(slicer, arrays)`` where ``slicer`` is a tuple of slice objects
-    # used to flip the arrays (or ``None`` if there was no flipping),
-    # and ``arrays`` is the list of flipped arrays.
+    # ``(flipper, arrays)`` where ``flipper`` is a tuple of slice
+    # objects that can used to unflip the returned (flipped) arrays
+    # (or ``None`` if there was no flipping).
     # NOTE: Every input array A must have the same value for the following
     # expression:  np.sign(A.strides)
     # NOTE: ``slicer`` is its own inverse, so ``A[slicer][slicer] == A``
     if isinstance(arrays, GPUArray):
         raise TypeError("_flip_negative_strides expects a list of GPUArrays")
-    slicer = None
-    ndim = arrays[0].ndim
-    shape = arrays[0].shape
-    for axis, stride_signs in enumerate(zip(*[np.sign(x.strides) for x in arrays])):
-        max_sign = np.max(stride_signs)
-        min_sign = np.min(stride_signs)
-        if len(arrays) > 1:
-            # Stride signs are -1 or 1, or 0 if stride is 0.
-            # Zero strides don't matter, but fail if there are both -1 and 1.
-            if max_sign == 1 and min_sign == -1:
-                raise ValueError("found differing signs in strides for dimension %d (strides for all arrays: %s)" % (axis, [x.strides for x in arrays]))
-        if min_sign == -1:
-            if slicer is None:
-                slicer = [slice(None)] * ndim
-            slicer[axis] = slice(None, None, -1)
-    if slicer is not None:
-        slicer = tuple(slicer)
-        arrays = [x[slicer] for x in arrays]
-    return slicer, arrays
-
+    if not any(any(s < 0 for s in x.strides) for x in arrays):
+        return None, arrays
+    strides = np.vstack(x.strides for x in arrays)
+    shapes = np.vstack(x.shape for x in arrays)
+    signs = np.sign(strides)
+    max_signs = np.max(signs, axis=0)
+    min_signs = np.min(signs, axis=0)
+    # Stride signs are -1 or 1, or 0 if stride is 0.
+    # Zero strides don't matter, but fail if there are both -1 and 1.
+    if _builtin_min(min_signs) != -1:
+        # no flips needed
+        return None, arrays
+    flips = (min_signs == -1)[None, :]
+    if any(max_signs * min_signs == -1):
+        raise ValueError("found differing signs in strides (strides for all arrays: %s)" % ([x.strides for x in arrays],))
+    offsets = np.sum(strides * shapes * flips, axis=1)
+    strides = strides * (flips * -1)
+    sliceboth = (slice(None), slice(None, None, -1))
+    flipper = tuple(sliceboth[flip] for flip in flips[0])
+    arrays = [
+        arr[flipper]
+        for arr in arrays
+    ]
+    return flipper, arrays
 
 def _compact_positive_strides(a):
     # Flip ``a``'s axes if there are any negative strides, then compute
     # strides to have same order as a, but packed.  Return flipped ``a``
     # and packed strides.
-    slicer, alist = _flip_negative_strides((a,))
+    flipper, alist = _flip_negative_strides((a,))
     a = alist[0]
     info = sorted(
             (a.strides[axis], a.shape[axis], axis)
@@ -1210,7 +1214,7 @@ def _compact_positive_strides(a):
     for _, dim, axis in info:
         strides[axis] = stride
         stride *= dim
-    return a, strides, slicer
+    return a, strides, flipper
 
 def _memcpy_discontig_slow(dst, src):
     # This is a generic memcpy using a no-op "assignment" kernel.
