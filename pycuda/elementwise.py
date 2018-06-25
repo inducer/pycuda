@@ -69,58 +69,54 @@ class ElementwiseSourceModule(DeferredSourceModule):
         self._init_args = (tuple(arguments), operation,
                            name, preamble, loop_prep, after_loop)
         self._init_args_repr = repr(self._init_args)
+        self._arrayarginds = [i for i in range(len(arguments)) if isinstance(arguments[i], VectorArg)]
         self._debug = debug
 
     @profile
-    def _precalc_array_info(self, args, arguments, shape_arg_index):
+    def _precalc_array_info(self, args, shape_arg_index):
         # 'args' is the list of actual parameters being sent to the kernel
-        # 'arguments' is the list of argument descriptors (VectorArg, ScalarArg)
 
-        arrayarginds = []
         contigmatch = True
         arrayspecificinds = True
         shape = None
         order = None
-        for i, arg_descr in enumerate(arguments):
-            arg_descr = arguments[i]
-            if isinstance(arg_descr, VectorArg):
-                # is a GPUArray/DeviceAllocation
-                arg = args[i]
-                arrayarginds.append(i)
-                if not arrayspecificinds:
-                    continue
-                if not hasattr(arg, 'shape'):
-                    # At least one array argument is probably sent as a
-                    # GPUArray.gpudata rather than the GPUArray itself,
-                    # so disable array-specific indices -- caller is on
-                    # their own.
-                    arrayspecificinds = False
-                    continue
-                curshape = arg.shape
-                curorder = 'N'
-                if contigmatch:
-                    if arg.flags.f_contiguous:
-                        curorder = 'F'
-                    elif arg.flags.c_contiguous:
-                        curorder = 'C'
-                    if shape is None:
-                        shape = curshape
-                        order = curorder
-                    elif curorder == 'N' or order != curorder:
-                        contigmatch = False
-                if shape_arg_index is None and shape != curshape:
-                    raise Exception("All input arrays to elementwise kernels must have the same shape, or you must specify the argument that has the canonical shape with shape_arg_index; found shapes %s and %s" % (shape, curshape))
-                if shape_arg_index == i:
+        for i in self._arrayarginds:
+            # is a GPUArray/DeviceAllocation
+            arg = args[i]
+            if not arrayspecificinds:
+                continue
+            if not hasattr(arg, 'shape'):
+                # At least one array argument is probably sent as a
+                # GPUArray.gpudata rather than the GPUArray itself,
+                # so disable array-specific indices -- caller is on
+                # their own.
+                arrayspecificinds = False
+                continue
+            curshape = arg.shape
+            curorder = 'N'
+            if contigmatch:
+                if arg.flags.f_contiguous:
+                    curorder = 'F'
+                elif arg.flags.c_contiguous:
+                    curorder = 'C'
+                if shape is None:
                     shape = curshape
+                    order = curorder
+                elif curorder == 'N' or order != curorder:
+                    contigmatch = False
+            if shape_arg_index is None and shape != curshape:
+                raise Exception("All input arrays to elementwise kernels must have the same shape, or you must specify the argument that has the canonical shape with shape_arg_index; found shapes %s and %s" % (shape, curshape))
+            if shape_arg_index == i:
+                shape = curshape
 
-        return (contigmatch, arrayarginds, arrayspecificinds, shape)
+        return (contigmatch, self._arrayarginds, arrayspecificinds, shape)
 
 
     @profile
     def create_key(self, grid, block, *args):
         #print "Calling _precalc_array_info(args=%s, self._init_args[0]=%s, self._shape_arg_index=%s)\n" % (args, self._init_args[0], self._shape_arg_index)
-        #precalc = self._precalc_array_info(args, self._init_args[0], self._shape_arg_index)
-        precalc = _drv._precalc_array_info(args, self._init_args[0], self._shape_arg_index)
+        #precalc = self._precalc_array_info(args, self._shape_arg_index)
+        precalc = _drv._precalc_array_info(args, self._arrayarginds, self._shape_arg_index)
         (contigmatch, arrayarginds, arrayspecificinds, shape) = precalc
 
         if contigmatch:

@@ -19,38 +19,26 @@
 
 namespace precalc {
   namespace py = boost::python;
-  py::tuple _precalc_array_info(const py::object & args, const py::object & arg_descrs, const py::object & shape_arg_index) {
+  py::tuple _precalc_array_info(const py::object & args, const py::object & arrayarginds, const py::object & shape_arg_index) {
     bool contigmatch = true;
     bool arrayspecificinds = true;
-    std::vector<int> arrayarginds;
     std::vector<int> shape;
     py::object shape_obj;
     char order = 'N';
-    int numargs = py::len(args);
+    int numarrays = py::len(arrayarginds);
 
-    for (int i = 0; i < numargs; i++) {
-      py::object arg_descr = py::object(arg_descrs[i]);
-      // below is our version of isinstance(arg_descr, VectorArg)
-      py::object struct_char;
-      try {
-	struct_char = arg_descr.attr("struct_char");
-      } catch (...) {
-	continue;
-      }
-      if (py::extract<char>(struct_char) != 'P') {
-	continue;
-      }
+    for (int aind = 0; aind < numarrays; aind++) {
+      int arrayargind = py::extract<int>(arrayarginds[aind]);
       // is a GPUArray/DeviceAllocation
       //py::object arg = py::object(args[i]);
-      py::object arg = args[i];
-      arrayarginds.push_back(i);
+      py::object arg(args[arrayargind]);
       if (!arrayspecificinds) {
 	continue;
       }
       py::object curshape_obj;
       py::object curstrides_obj;
       int itemsize;
-      int ndim;
+      int ndim = 0;
       try {
 	curshape_obj = arg.attr("shape");
 	curstrides_obj = arg.attr("strides");
@@ -62,6 +50,10 @@ namespace precalc {
 	// so disable array-specific indices -- caller is on
 	// their own.
 	arrayspecificinds = false;
+	continue;
+      }
+      if (ndim == 0) {
+	// probably a scalar
 	continue;
       }
       std::vector<int> curshape(ndim);
@@ -116,19 +108,12 @@ namespace precalc {
 	PyErr_SetString(PyExc_RuntimeError, "All input arrays to elementwise kernels must have the same shape, or you must specify the argument that has the canonical shape with shape_arg_index");
 	py::throw_error_already_set();
       }
-      if (shape_arg_index == i) {
+      if (shape_arg_index == arrayargind) {
 	shape = curshape;
 	shape_obj = curshape_obj;
       }
     }
-    py::list arrayarginds_obj;
-    {
-      typename std::vector<int>::iterator iter = arrayarginds.begin();
-      for (/*null*/; iter != arrayarginds.end(); iter++) {
-	arrayarginds_obj.append(*iter);
-      }
-    }
-    return py::make_tuple(contigmatch, arrayarginds_obj, arrayspecificinds, shape_obj);
+    return py::make_tuple(contigmatch, arrayarginds, arrayspecificinds, shape_obj);
   }
 }
 
@@ -1774,7 +1759,7 @@ BOOST_PYTHON_MODULE(_driver)
 
   {
     using namespace precalc;
-    DEF_SIMPLE_FUNCTION_WITH_ARGS(_precalc_array_info, ("args", "arg_descrs", "shape_arg_index"));
+    DEF_SIMPLE_FUNCTION_WITH_ARGS(_precalc_array_info, ("args", "arrayarginds", "shape_arg_index"));
   }
 }
 
