@@ -1264,7 +1264,6 @@ def _memcpy_discontig(dst, src, async=False, stream=None):
     doslow = (any(sh > 1 for sh, st in zip(shape, src.strides) if st == 0)
               or
               any(sh > 1 for sh, st in zip(shape, dst.strides) if st == 0))
-    del shape
 
     try:
         src, dst = _flip_negative_strides((src, dst))[1]
