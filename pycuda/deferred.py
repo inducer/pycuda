@@ -486,15 +486,15 @@ class DeferredSourceModule(SourceModule):
         funccache = DeferredSourceModule._cache.get(context, None)
         if funccache is None:
             funccache = self._cache[context] = {}
-        (key, precalc) = self.create_key(grid, block, *funcargs)
-        funckey = (funcname, key)
-        if key is None or funckey not in funccache:
+        (funckey, precalc) = self.create_key(grid, block, *funcargs)
+        modfunc = funccache.get(funckey, None)
+        if modfunc is None:
             source = self.create_source(precalc, grid, block, *funcargs)
             if isinstance(source, DeferredSource):
                 source = source.generate()
-            if key is None:
+            if funckey is None:
                 funckey = (funcname, source)
-        modfunc = funccache.get(funckey, None)
+            modfunc = funccache.get(funckey, None)
         if modfunc is None:
             module = self._delayed_compile(source)
             func = module.get_function(funcname)
