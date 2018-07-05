@@ -260,6 +260,10 @@ class ElementwiseSourceModule(DeferredSourceModule):
 
         arraynames = [ x[0] for x in arrayarginfos ]
 
+        preamble = DeferredSource(preamble)
+        operation = DeferredSource(operation)
+        loop_prep = DeferredSource(loop_prep)
+        after_loop = DeferredSource(after_loop)
         defines = DeferredSource()
         decls = DeferredSource()
         loop_preop = DeferredSource()

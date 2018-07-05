@@ -21,12 +21,14 @@ class DeferredSource(object):
     generate source.
     
     '''
-    def __init__(self, subsources=None, base_indent=0, indent_step=2):
+    def __init__(self, str=None, subsources=None, base_indent=0, indent_step=2):
         self.base_indent = base_indent
         self.indent_step = indent_step
         if subsources is None:
             subsources = []
         self.subsources = subsources
+        if str is not None:
+            self.add(str)
         self._regex_space = re.compile(r"^(\s*)(.*?)(\s*)$")
         self._regex_format = re.compile(r"%\(([^\)]*)\)([a-zA-Z])")
 
