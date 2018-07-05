@@ -97,12 +97,13 @@ class DeferredSource(object):
                         newline = newline + line[curpos:matchstart]
                         newline = newline + (('%' + formatchar) % (repl,))
                     curpos = matchend
-                if newlinelist is None:
-                    newline = newline + line[curpos:]
-                    newlines.append(newline)
-                else:
+                if newlinelist:
                     newlines.extend(newlinelist)
-                    newlines.append(line[curpos:])
+                else:
+                    newlines.append(newline)
+                # add remaining unprocessed part of line to end of last
+                # replacement
+                newlines[-1] = newlines[-1] + line[curpos:]
             indentstr = ' ' * (indent + subindent)
             for i, line in enumerate(newlines):
                 line = indentstr + line[minstrip:]
