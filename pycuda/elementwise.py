@@ -51,28 +51,50 @@ class ElementwiseSourceModule(DeferredSourceModule):
         you can index it as ``z[z_i]`` in addition to the old-style ``z[i]``)
       * support for non-contiguous (and arbitrarily-strided) arrays, but
         only if you use the array-specific indices above.
+      * if do_indices=True, the N-D index of the current data item in all
+        participating arrays is available in INDEX[dim] where dim goes from
+        0 to NDIM - 1.
     Array-specific flat indices only really work if all the arrays using them
     are the same shape.  This shape is also used to optimize index
     calculations.  By default, the shape is taken from the first argument
     that is specified as a pointer/array, but you can override this by
     sending ``shape_arg_index=N`` where ``N`` is the zero-based index of the
     kernel argument whose shape should be used.
+    By default, any VectorArg objects in ```arguments``` are assumed to be
+    arrays that need index calculations.  If only some of the VectorArgs
+    will be traversed element-wise, you can specify their indices (within
+    ```arguments```) with ```array_arg_inds```, and the resulting kernel will
+    not waste time computing indices for those.
     '''
     def __init__(self, arguments, operation,
                  name="kernel", preamble="", loop_prep="", after_loop="",
-                 do_range=False, shape_arg_index=None,
+                 do_range=False,
+                 shape_arg_index=None,
+                 array_arg_inds=None,
+                 do_indices=False,
+                 order='K',
                  debug=False,
                  **compilekwargs):
         super(ElementwiseSourceModule, self).__init__(**compilekwargs)
         self._do_range = do_range
-        self._shape_arg_index = shape_arg_index
-        self._init_args = (tuple(arguments), operation,
+        self._do_indices = do_indices
+        assert(order in 'CFK', "order must be 'F', 'C', or 'K'")
+        self._order = order
+        self._arg_decls = ", ".join(arg.declarator() for arg in arguments)
+        if array_arg_inds is None:
+            array_arg_inds = [i for i in range(len(arguments)) if isinstance(arguments[i], VectorArg)]
+        self._array_arg_inds = array_arg_inds
+        if shape_arg_index is None:
+            self._shape_arg_index = array_arg_inds[0]
+        else:
+            self._shape_arg_index = shape_arg_index
+        self._arg_names = tuple(argument.name for argument in arguments)
+        self._array_arg_names = tuple(self._arg_names[i] for i in self._array_arg_inds)
+        self._init_args = (self._arg_names, self._arg_decls, operation,
                            name, preamble, loop_prep, after_loop)
         self._init_args_repr = repr(self._init_args)
-        self._arrayarginds = [i for i in range(len(arguments)) if isinstance(arguments[i], VectorArg)]
         self._debug = debug
 
-    @profile
     def _precalc_array_info(self, args, shape_arg_index):
         # 'args' is the list of actual parameters being sent to the kernel
 
@@ -80,7 +102,8 @@ class ElementwiseSourceModule(DeferredSourceModule):
         arrayspecificinds = True
         shape = None
         order = None
-        for i in self._arrayarginds:
+        array_arg_inds = self._array_arg_inds
+        for i in array_arg_inds:
             # is a GPUArray/DeviceAllocation
             arg = args[i]
             if not arrayspecificinds:
@@ -109,82 +132,64 @@ class ElementwiseSourceModule(DeferredSourceModule):
             if shape_arg_index == i:
                 shape = curshape
 
-        return (contigmatch, self._arrayarginds, arrayspecificinds, shape)
+        arrayitemstrides = tuple((arg.itemsize, arg.strides) for arg in (args[i] for i in array_arg_inds))
+
+        return (contigmatch, arrayspecificinds, shape, arrayitemstrides)
 
 
-    @profile
     def create_key(self, grid, block, *args):
         #print "Calling _precalc_array_info(args=%s, self._init_args[0]=%s, self._shape_arg_index=%s)\n" % (args, self._init_args[0], self._shape_arg_index)
-        #precalc = self._precalc_array_info(args, self._shape_arg_index)
-        precalc = _drv._precalc_array_info(args, self._arrayarginds, self._shape_arg_index)
-        (contigmatch, arrayarginds, arrayspecificinds, shape) = precalc
+        #precalc_init = self._precalc_array_info(args, self._shape_arg_index)
+        array_arg_inds = self._array_arg_inds
+        precalc_init = _drv._precalc_array_info(args, array_arg_inds, self._shape_arg_index)
+        (contigmatch, arrayspecificinds, shape, arrayitemstrides) = precalc_init
 
-        if contigmatch:
+        if (contigmatch or not arrayspecificinds) and not self._do_indices:
             key = self._init_args_repr
-            return key, (contigmatch, arrayarginds, arrayspecificinds, shape, None, None, None, None, None)
+            return key, (self._init_args_repr, shape, contigmatch, arrayspecificinds, None, None, None, None, None)
 
-        # Arrays are not contiguous or different order
+        # Arrays are not contiguous or different order or need calculated indices
 
         if grid[1] != 1 or block[1] != 1 or block[2] != 1:
             raise Exception("Grid (%s) and block (%s) specifications should have all '1' except in the first element" % (grid, block))
 
         ndim = len(shape)
-        numthreads = block[0] * grid[0]
-        arguments = self._init_args[0]
+        arg_names = self._arg_names
 
-        # Use index of minimum stride in first array as a hint on how to
+        # Kernel traverses in Fortran-order by default, but if order == 'C',
+        # we can just reverse the shape and strides, since the kernel is
+        # elementwise.  If order == 'K', use index of minimum stride in first
+        # array (or that specified by shape_arg_index) as a hint on how to
         # order the traversal of dimensions.  We could probably do something
         # smarter, like tranposing/reshaping arrays if possible to maximize
         # performance, but that is probably best done in a pre-processing step.
         # Note that this could mess up custom indexing that assumes a
-        # particular traversal order, but in that case one should probably
-        # ensure that inputs have the same order, and explicitly send
-        # shape_arg_index to turn this off.
+        # particular traversal order, but in that case one should explicitly
+        # set order to 'C' or 'F'.
         do_reverse = False
-        if (self._shape_arg_index is None and
-            np.argmin(np.abs(args[arrayarginds[0]].strides)) > ndim // 2):
-            # traverse dimensions in reverse order
+        if self._order == 'C':
             do_reverse = True
-        if do_reverse:
-            shape = shape[::-1]
-        shapearr = np.array(shape)
-        block_step = np.array(shapearr)
-        tmp = numthreads
-        for dimnum in range(ndim):
-            newstep = tmp % block_step[dimnum]
-            tmp = tmp // block_step[dimnum]
-            block_step[dimnum] = newstep
-        arrayarginfos = []
-        for i in arrayarginds:
-            arg = args[i]
-            arg_descr = arguments[i]
-            if do_reverse:
-                elemstrides = np.array(arg.strides[::-1]) // arg.itemsize
-            else:
-                elemstrides = np.array(arg.strides) // arg.itemsize
-            dimelemstrides = elemstrides * shapearr
-            blockelemstrides = elemstrides * block_step
-            arrayarginfos.append(
-                (arg_descr.name, tuple(elemstrides), tuple(dimelemstrides), tuple(blockelemstrides))
-            )
+        elif self._order == 'K':
+            if np.argmin(np.abs(args[self._shape_arg_index].strides)) > ndim // 2:
+                # traverse dimensions in reverse order
+                do_reverse = True
 
-        self._arrayarginfos = arrayarginfos
-        self._ndim = ndim
-        self._numthreads = numthreads
-        self._shape = shape
-        self._block_step = block_step
+        # need to include grid and block in key because kernel will change
+        # depending on number of threads
+        key = (self._init_args_repr, shape, contigmatch, arrayspecificinds, arrayitemstrides, self._arg_decls, do_reverse, grid, block)
 
-        key = (self._init_args_repr, grid, block, shape, tuple(self._arrayarginfos))
-
-        return key, (contigmatch, arrayarginds, arrayspecificinds, shape, arrayarginfos, ndim, numthreads, shape, block_step)
+        return key, key
 
     def create_source(self, precalc, grid, block, *args):
-        (contigmatch, arrayarginds, arrayspecificinds, shape, arrayarginfos, ndim, numthreads, shape, block_step) = precalc
+        (_, shape, contigmatch, arrayspecificinds, arrayitemstrides, _, do_reverse, _, _) = precalc
 
-        (arguments, operation,
+        (arg_names, arg_decls, operation,
          funcname, preamble, loop_prep, after_loop) = self._init_args
 
-        if contigmatch:
+        array_arg_inds = self._array_arg_inds
+        array_arg_names = tuple(arg_names[i] for i in array_arg_inds)
+
+        if contigmatch and not self._do_indices:
             indtype = 'unsigned'
             if self._do_range:
                 indtype = 'long'
@@ -192,15 +197,15 @@ class ElementwiseSourceModule(DeferredSourceModule):
             # All arrays are contiguous and same order (or we don't know and
             # it's up to the caller to make sure it works)
             if arrayspecificinds:
-                for i in arrayarginds:
+                for arg_name in array_arg_names:
                     preamble = preamble + """
                         #define %s_i i
-                    """ % (arguments[i].name,)
+                    """ % (arg_name,)
             if self._do_range:
                 loop_body = """
                   if (step < 0)
                   {
-                    for (i = start + (cta_start + tid)*step;
+                    for (i = start + (_CTA_START + _TID)*step;
                       i > stop; i += total_threads*step)
                     {
                       %(operation)s;
@@ -208,7 +213,7 @@ class ElementwiseSourceModule(DeferredSourceModule):
                   }
                   else
                   {
-                    for (i = start + (cta_start + tid)*step;
+                    for (i = start + (_CTA_START + _TID)*step;
                       i < stop; i += total_threads*step)
                     {
                       %(operation)s;
@@ -219,7 +224,7 @@ class ElementwiseSourceModule(DeferredSourceModule):
                 }
             else:
                 loop_body = """
-                  for (i = cta_start + tid; i < n; i += total_threads)
+                  for (i = _CTA_START + _TID; i < n; i += total_threads)
                   {
                     %(operation)s;
                   }
@@ -232,11 +237,11 @@ class ElementwiseSourceModule(DeferredSourceModule):
 
                 %(preamble)s
 
-                __global__ void %(name)s(%(arguments)s)
+                __global__ void %(name)s(%(arg_decls)s)
                 {
-                  unsigned tid = threadIdx.x;
+                  unsigned _TID = threadIdx.x;
                   unsigned total_threads = gridDim.x*blockDim.x;
-                  unsigned cta_start = blockDim.x*blockIdx.x;
+                  unsigned _CTA_START = blockDim.x*blockIdx.x;
 
                   %(indtype)s i;
 
@@ -247,7 +252,7 @@ class ElementwiseSourceModule(DeferredSourceModule):
                   %(after_loop)s;
                 }
                 """ % {
-                    "arguments": ", ".join(arg.declarator() for arg in arguments),
+                    "arg_decls": arg_decls,
                     "name": funcname,
                     "preamble": preamble,
                     "loop_prep": loop_prep,
@@ -256,9 +261,50 @@ class ElementwiseSourceModule(DeferredSourceModule):
                     "indtype": indtype,
                 }
 
-        # Arrays are not contiguous or different order
+        # Arrays are not contiguous or different order or we need N-D indices
 
-        arraynames = [ x[0] for x in arrayarginfos ]
+        # these are the arrays that need calculated indices
+        arrayindnames = []
+
+        # these are the arrays that match another array and can use the
+        # same indices
+        arrayrefnames = []
+
+        argnamestrides = ((arg_name, itemstride[0], itemstride[1]) for (arg_name, itemstride) in zip(array_arg_names, arrayitemstrides))
+
+        ndim = len(shape)
+        numthreads = block[0] * grid[0]
+        if do_reverse:
+            shape = shape[::-1]
+        shapearr = np.array(shape)
+        block_step = np.array(shapearr)
+        tmpnumthreads = numthreads
+        for dimnum in range(ndim):
+            newstep = tmpnumthreads % block_step[dimnum]
+            tmpnumthreads = tmpnumthreads // block_step[dimnum]
+            block_step[dimnum] = newstep
+        arrayarginfos = []
+        for (arg_name, arg_itemsize, arg_strides) in argnamestrides:
+            strides = [0] * ndim
+            if do_reverse:
+                strides[0:len(arg_strides)] = arg_strides[::-1]
+            else:
+                strides[0:len(arg_strides)] = arg_strides
+            elemstrides = np.array(strides) // arg_itemsize
+            dimelemstrides = tuple(elemstrides * shapearr)
+            blockelemstrides = tuple(elemstrides * block_step)
+            elemstrides = tuple(elemstrides)
+            inforef = None
+            for i, arrayarginfo in enumerate(arrayarginfos):
+                if elemstrides == arrayarginfo[1]:
+                    inforef = i
+            if inforef is None:
+                arrayindnames.append(arg_name)
+            else:
+                arrayrefnames.append((arg_name, arrayarginfos[inforef][0]))
+            arrayarginfos.append(
+                (arg_name, elemstrides, dimelemstrides, blockelemstrides, inforef)
+            )
 
         preamble = DeferredSource(preamble)
         operation = DeferredSource(operation)
@@ -271,6 +317,9 @@ class ElementwiseSourceModule(DeferredSourceModule):
         loop_inds_inc = DeferredSource()
         loop_body = DeferredSource()
 
+        if self._do_indices:
+            defines += """#define NDIM %d""" % (ndim,)
+
         for definename, vals in (
                 ('SHAPE', shape),
                 ('BLOCK_STEP', block_step),
@@ -279,53 +328,71 @@ class ElementwiseSourceModule(DeferredSourceModule):
                 defines += """
                     #define %s_%d %d
                 """ % (definename, dimnum, vals[dimnum])
-        for name, elemstrides, dimelemstrides, blockelemstrides in arrayarginfos:
+        for name, elemstrides, dimelemstrides, blockelemstrides, inforef in arrayarginfos:
             for definename, vals in (
                     ('ELEMSTRIDE', elemstrides),
                     ('DIMELEMSTRIDE', dimelemstrides),
                     ('BLOCKELEMSTRIDE', blockelemstrides),
             ):
                 for dimnum in range(ndim):
-                    basename = "%s_%d" % (name, dimnum)
                     defines += """
                         #define %s_%s_%d %d
                     """ % (definename, name, dimnum, vals[dimnum])
 
         decls += """
-            unsigned GLOBAL_i = cta_start + tid;
+            unsigned _GLOBAL_i = _CTA_START + _TID;
         """
-        for name in arraynames:
+        for name in arrayindnames:
             decls += """
                 long %s_i = 0;
             """ % (name,)
-        for dimnum in range(ndim):
+
+        for (name, refname) in arrayrefnames:
+            defines += """
+                #define %s_i %s_i
+            """ % (name, refname)
+
+        if self._do_indices:
             decls += """
+                long INDEX[%d];
+            """ % (ndim,)
+
+            for dimnum in range(ndim):
+                defines += """
+                #define INDEX_%d (INDEX[%d])
+                """ % (dimnum, dimnum)
+        else:
+            for dimnum in range(ndim):
+                decls += """
                 long INDEX_%d;
-            """ % (dimnum,)
+                """ % (dimnum,)
 
         loop_inds_calc += """
-            unsigned int TMP_GLOBAL_i = GLOBAL_i;
+            unsigned int _TMP_GLOBAL_i = _GLOBAL_i;
         """
         for dimnum in range(ndim):
             loop_inds_calc += """
-                INDEX_%d = TMP_GLOBAL_i %% SHAPE_%d;
-                TMP_GLOBAL_i = TMP_GLOBAL_i / SHAPE_%d;
+                INDEX_%d = _TMP_GLOBAL_i %% SHAPE_%d;
+                _TMP_GLOBAL_i = _TMP_GLOBAL_i / SHAPE_%d;
             """ % (dimnum, dimnum,
                    dimnum)
 
-            for name in arraynames:
+            for name in arrayindnames:
                 loop_inds_calc += """
                     %s_i += INDEX_%d * ELEMSTRIDE_%s_%d;
                 """ % (name, dimnum, name, dimnum)
 
+        for name in arrayindnames:
+            loop_inds_inc += """
+                    %s_i += %s;
+            """ % (name,
+                   " + ".join(
+                       "BLOCKELEMSTRIDE_%s_%d" % (name, dimnum)
+                       for dimnum in range(ndim)))
         for dimnum in range(ndim):
             loop_inds_inc += """
                     INDEX_%d += BLOCK_STEP_%d;
             """ % (dimnum, dimnum)
-            for name in arraynames:
-                loop_inds_inc += """
-                    %s_i += BLOCKELEMSTRIDE_%s_%d;
-                """ % (name, name, dimnum)
             if dimnum < ndim - 1:
                 loop_inds_inc += """
                     if (INDEX_%d >= SHAPE_%d) {
@@ -336,7 +403,7 @@ class ElementwiseSourceModule(DeferredSourceModule):
                       INDEX_%d ++;
                 """ % (dimnum, dimnum,
                        dimnum + 1)
-                for name in arraynames:
+                for name in arrayindnames:
                     loop_inds_inc += """
                       %s_i += ELEMSTRIDE_%s_%d - DIMELEMSTRIDE_%s_%d;
                     """ % (name, name, dimnum + 1, name, dimnum)
@@ -350,7 +417,7 @@ class ElementwiseSourceModule(DeferredSourceModule):
                 #include <stdio.h>
             """
             loop_inds_calc += """
-                if (cta_start == 0 && tid == 0) {
+                if (_CTA_START == 0 && _TID == 0) {
             """
             loop_inds_calc.indent()
             loop_inds_calc += r"""
@@ -358,7 +425,7 @@ class ElementwiseSourceModule(DeferredSourceModule):
                 printf("CALLING FUNC %s\n");
                 printf("N=%%u\n", (unsigned int)n);
             """ % (funcname,)
-            for name, elemstrides, dimelemstrides, blockelemstrides in arrayarginfos:
+            for name, elemstrides, dimelemstrides, blockelemstrides, inforef in arrayarginfos:
                 loop_inds_calc += r"""
                     printf("(%s) %s: ptr=0x%%lx maxoffset(elems)=%s\n", (unsigned long)%s);
                 """ % (funcname, name, np.sum((np.array(shape) - 1) * np.array(elemstrides)), name)
@@ -367,24 +434,23 @@ class ElementwiseSourceModule(DeferredSourceModule):
                 }
             """
             indtest = DeferredSource()
-            for name, elemstrides, dimelemstrides, blockelemstrides in arrayarginfos:
+            for name, elemstrides, dimelemstrides, blockelemstrides, inforef in arrayarginfos:
+                if inforef is not None:
+                    continue
                 indtest += r"""
                     if (%s_i > %s || %s_i < 0)
                 """ % (name, np.sum((np.array(shape) - 1) * np.array(elemstrides)), name)
                 indtest += r"""{"""
                 indtest.indent()
                 indtest += r"""
-                        printf("cta_start=%%d tid=%%d GLOBAL_i=%%u %s_i=%%ld %s\n", cta_start, tid, GLOBAL_i, %s_i, %s);
+                        printf("_CTA_START=%%d _TID=%%d _GLOBAL_i=%%u %s_i=%%ld %s\n", _CTA_START, _TID, _GLOBAL_i, %s_i, %s);
                 """ % (name, ' '.join("INDEX_%d=%%ld" % (dimnum,) for dimnum in range(ndim)), name, ',  '.join("INDEX_%d" % (dimnum,) for dimnum in range(ndim)))
                 indtest += """break;"""
                 indtest.dedent()
                 indtest += """}"""
             loop_preop = indtest + loop_preop
-            tmp_after_loop = after_loop
-            after_loop = DeferredSource()
-            after_loop += tmp_after_loop
             after_loop += r"""
-                if (cta_start == 0 && tid == 0) {
+                if (_CTA_START == 0 && _TID == 0) {
                     printf("DONE CALLING FUNC %s\n");
                     printf("-----------------------\n");
                 }
@@ -394,7 +460,7 @@ class ElementwiseSourceModule(DeferredSourceModule):
             loop_body.add("""
               if (step < 0)
               {
-                for (/*void*/; GLOBAL_i > stop; GLOBAL_i += total_threads*step)
+                for (/*void*/; _GLOBAL_i > stop; _GLOBAL_i += total_threads*step)
                 {
                   %(loop_preop)s;
 
@@ -405,7 +471,7 @@ class ElementwiseSourceModule(DeferredSourceModule):
               }
               else
               {
-                for (/*void*/; GLOBAL_i < stop; GLOBAL_i += total_threads*step)
+                for (/*void*/; _GLOBAL_i < stop; _GLOBAL_i += total_threads*step)
                 {
                   %(loop_preop)s;
 
@@ -421,7 +487,7 @@ class ElementwiseSourceModule(DeferredSourceModule):
             })
         else:
             loop_body.add("""
-              for (/*void*/; GLOBAL_i < n; GLOBAL_i += total_threads)
+              for (/*void*/; _GLOBAL_i < n; _GLOBAL_i += total_threads)
               {
                 %(loop_preop)s;
 
@@ -445,12 +511,12 @@ class ElementwiseSourceModule(DeferredSourceModule):
 
             %(preamble)s
 
-            __global__ void %(name)s(%(arguments)s)
+            __global__ void %(name)s(%(arg_decls)s)
             {
 
-              unsigned tid = threadIdx.x;
-              unsigned total_threads = gridDim.x*blockDim.x;
-              unsigned cta_start = blockDim.x*blockIdx.x;
+              const unsigned int _TID = threadIdx.x;
+              const unsigned int total_threads = gridDim.x*blockDim.x;
+              const unsigned int _CTA_START = blockDim.x*blockIdx.x;
 
               %(decls)s
 
@@ -463,7 +529,7 @@ class ElementwiseSourceModule(DeferredSourceModule):
               %(after_loop)s;
             }
             """, format_dict={
-                "arguments": ", ".join(arg.declarator() for arg in arguments),
+                "arg_decls": arg_decls,
                 "name": funcname,
                 "preamble": preamble,
                 "loop_prep": loop_prep,

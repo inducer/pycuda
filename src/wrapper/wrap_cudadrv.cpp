@@ -26,6 +26,7 @@ namespace precalc {
     py::object shape_obj;
     char order = 'N';
     int numarrays = py::len(arrayarginds);
+    PyObject * arrayitemstrides = PyTuple_New(numarrays);
 
     for (int aind = 0; aind < numarrays; aind++) {
       int arrayargind = py::extract<int>(arrayarginds[aind]);
@@ -37,12 +38,14 @@ namespace precalc {
       }
       py::object curshape_obj;
       py::object curstrides_obj;
+      py::object itemsize_obj;
       int itemsize;
       int ndim = 0;
       try {
 	curshape_obj = arg.attr("shape");
 	curstrides_obj = arg.attr("strides");
-	itemsize = py::extract<int>(arg.attr("itemsize"));
+	itemsize_obj = arg.attr("itemsize");
+	itemsize = py::extract<int>(itemsize_obj);
 	ndim = py::extract<int>(arg.attr("ndim"));
       } catch (...) {
 	// At least one array argument is probably sent as a
@@ -56,6 +59,10 @@ namespace precalc {
 	// probably a scalar
 	continue;
       }
+      PyObject * sizestrides = PyTuple_New(2);
+      PyTuple_SetItem(sizestrides, 0, py::incref(itemsize_obj.ptr()));
+      PyTuple_SetItem(sizestrides, 1, py::incref(curstrides_obj.ptr()));
+      PyTuple_SetItem(arrayitemstrides, aind, sizestrides);
       std::vector<int> curshape(ndim);
       std::vector<int> curstrides(ndim);
       for (int i = 0; i < ndim; i++) {
@@ -113,7 +120,8 @@ namespace precalc {
 	shape_obj = curshape_obj;
       }
     }
-    return py::make_tuple(contigmatch, arrayarginds, arrayspecificinds, shape_obj);
+
+    return py::make_tuple(contigmatch, arrayspecificinds, shape_obj, py::object(py::handle<>(arrayitemstrides)));
   }
 }
 
