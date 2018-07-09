@@ -1171,7 +1171,7 @@ def _flip_negative_strides(arrays):
     # (or ``None`` if there was no flipping).
     # NOTE: Every input array A must have the same value for the following
     # expression:  np.sign(A.strides)
-    # NOTE: ``slicer`` is its own inverse, so ``A[slicer][slicer] == A``
+    # NOTE: ``flipper`` is its own inverse, so ``A[flipper][flipper] == A``
     if isinstance(arrays, GPUArray):
         raise TypeError("_flip_negative_strides expects a list of GPUArrays")
     if not any(any(s < 0 for s in x.strides) for x in arrays):
