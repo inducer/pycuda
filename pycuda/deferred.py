@@ -62,6 +62,7 @@ class DeferredSource(object):
             for line in lines:
                 linelen = len(line)
                 space_match = self._regex_space.match(line)
+                space = space_match.group(1)
                 end_leading_space = space_match.end(1)
                 begin_trailing_space = space_match.start(3)
                 if strip_space:
@@ -90,7 +91,6 @@ class DeferredSource(object):
                         nummatches == 1 and
                         matchstart == end_leading_space):
                         # only one replacement, and only spaces preceding
-                        space = space_match.group(1)
                         newlinelist = [ space + x
                                         for x in repl.generate(get_list=True) ]
                     else:
@@ -103,7 +103,10 @@ class DeferredSource(object):
                     newlines.append(newline)
                 # add remaining unprocessed part of line to end of last
                 # replacement
-                newlines[-1] = newlines[-1] + line[curpos:]
+                if newlinelist is not None and len(newlinelist) > 1:
+                    newlines.append(space + line[curpos:])
+                else:
+                    newlines[-1] = newlines[-1] + line[curpos:]
             indentstr = ' ' * (indent + subindent)
             for i, line in enumerate(newlines):
                 line = indentstr + line[minstrip:]
