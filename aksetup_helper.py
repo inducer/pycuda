@@ -285,7 +285,7 @@ class ConfigSchema:
             if value is not None:
                 filevars[key] = value
 
-        keys = filevars.keys()
+        keys = list(filevars.keys())
         keys.sort()
 
         outf = open(filename, "w")
