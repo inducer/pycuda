@@ -78,9 +78,9 @@ if have_pycuda():
     test_sqrt = make_unary_function_test("sqrt", 1e-5, 1, 2e-7)
 
     test_sin = make_unary_function_test("sin", -10, 10, 1e-7)
-    test_sin_c = make_unary_function_test("sin", -3, 3, 2e-6, complex=True)
+    test_sin_c = make_unary_function_test("sin", -3, 3, 2.1e-6, complex=True)
     test_cos = make_unary_function_test("cos", -10, 10, 1e-7)
-    test_cos_c = make_unary_function_test("cos", -3, 3, 2e-6, complex=True)
+    test_cos_c = make_unary_function_test("cos", -3, 3, 2.1e-6, complex=True)
     test_asin = make_unary_function_test("asin", -0.9, 0.9, 5e-7)
     #test_sin_c = make_unary_function_test("sin", -0.9, 0.9, 2e-6, complex=True)
     test_acos = make_unary_function_test("acos", -0.9, 0.9, 5e-7)
