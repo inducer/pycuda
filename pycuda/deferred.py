@@ -151,23 +151,40 @@ class DeferredSource(object):
 
 class DeferredVal(object):
     '''
-    This is an object that serves as a proxy to an as-yet undetermined
-    object, which is only known at the time when either ``_set_val()``
-    or ``_evalbase()`` is called.  Any calls to methods listed in the class
-    attribute ``_deferred_method_dict`` are queued until a call to
-    ``_eval()``, at which point ``_evalbase()`` is called (unless the value
-    has been already set by an earlier call to ``_evalbase()`` or
-    ``set_val()``), and then the queued method calls are executed, in order,
-    immediately on the new object.
-    This class must be subclassed, and the class attribute
-    ``_deferred_method_dict`` must contain a mapping from defer-able method
-    names to either ``DeferredVal``, None (same as ``DeferredVal``), or a
-    subclass, which when instantiated, will be assigned (with ``_set_val()``)
-    the return value of the method.
-    There are two ways to set the proxied object.  One is to set it
-    explicitly with ``_set_val(val)``.  The other is to override the method
-    ``_evalbase()`` which should return the new object, and will be called
-    by ``_eval()``.
+    This is an object that serves as a wrapper to an object that may not
+    even exist yet (perhaps this should have been called FutureVal).  All
+    methods provided by ``DeferredVal`` start with underscores so as not to
+    interfere with common attribute names.
+
+    The life of a ``DeferredVal`` can be divided into two phases: before
+    and after the wrapped object is "completed", i.e. once the wrapped
+    object is specified (see below for how/when this happens).
+
+    After it is completed, any attempt to access attributes on this
+    ``DeferredVal`` will be simply redirected to the wrapped object.
+
+    Before the wrapped object is completed, the only attributes allowed are
+    methods named in the class variable ``_deferred_method_dict`` (which
+    must be set in a subclass).  ``_deferred_method_dict`` specifies the
+    names of methods that can be deferred to a later time when the current
+    ``DeferredVal`` is completed.  It maps method names to a result class
+    that will be instantiated and used to represent the return value of the
+    deferred method call.  The result class can be DeferredVal, a subclass
+    of ``DeferredVal``, or None (same as DeferredVal).  Any attempts to
+    call one of these defer-able methods will return an instance of the
+    result class, which will be tied to a future call of the method once
+    the current ``DeferredVal`` object is completed.
+
+    A ``DeferredVal`` can be completed by specifying the wrapped object in
+    one of two ways.  One way is to set it explicitly with
+    ``_set_val(val)``.  The other is to call ``_get()``, which requires
+    that ``_eval()`` be defined in a subclass to return the actual object.
+    Both ways will trigger the deferred method calls (described above) that
+    depend on this ``DeferredVal`` and the completion of their own
+    ``DeferredVal`` return values.
+
+    Once completed, the wrapped object can be retrieved by calling
+    ``_get()``.
     '''
     __unimpl = object()
     _deferred_method_dict = None # must be set by subclass
@@ -218,45 +235,54 @@ class DeferredVal(object):
         self._eval_methods()
         return val
 
-    def _evalbase(self, evalcont=None):
+    def _eval(self):
         raise NotImplementedError()
 
-    def _eval_list(self, vals, evalcont=None):
+    def _eval_list(self, vals):
         newvals = []
         for val in vals:
             if isinstance(val, DeferredVal):
-                val = val._eval(evalcont=evalcont)
+                val = val._get()
             newvals.append(val)
         return newvals
 
-    def _eval_dict(self, valsdict, evalcont=None):
+    def _eval_dict(self, valsdict):
         newvalsdict = {}
         for name, val in valsdict.items():
             if isinstance(val, DeferredVal):
-                val = val._eval(evalcont=evalcont)
+                val = val._get()
             newvalsdict[name] = val
         return newvalsdict
 
-    def _eval_methods(self, evalcont=None):
+    def _eval_methods(self):
         assert(self._val_available)
         val = self._val
         for op in self._deferred_method_calls:
             (methodname, methodargs, methodkwargs, deferredretval) = op
-            methodargs = self._eval_list(methodargs, evalcont=evalcont)
-            methodkwargs = self._eval_dict(methodkwargs, evalcont=evalcont)
+            methodargs = self._eval_list(methodargs)
+            methodkwargs = self._eval_dict(methodkwargs)
             retval = getattr(val, methodname)(*methodargs, **methodkwargs)
             deferredretval._set_val(retval)
         self._deferred_method_calls = []
 
-    def _eval(self, evalcont=None):
+    def _get(self):
         if not self._val_available:
-            self._val = self._evalbase(evalcont=evalcont)
+            self._val = self._eval()
             self._val_available = True
-            self._eval_methods(evalcont=evalcont)
+            self._eval_methods()
         return self._val
 
     def _get_deferred_func(self, _name, _retval):
         def _deferred_func(*args, **kwargs):
+            """
+            When this function is called from an "uncompleted" DeferredVal,
+            the name of the deferred method, arguments, and DeferredVal/wrapper
+            object for the eventual return value are stored for future
+            evaluation when the current wrapped object is completed, and
+            the DeferredVal return object is returned.
+            Otherwise, if the DeferredVal is already completed, then return
+            the result of calling the method directly.
+            """
             if not self._val_available:
                 self._deferred_method_calls.append((_name, args, kwargs, _retval))
                 return _retval
@@ -279,7 +305,11 @@ class DeferredVal(object):
             return self._get_deferred_func(name, retval)
         raise AttributeError("no such attribute (yet): '%s'" % (name,))
 
-# we allow all math operators to be deferred
+class DeferredNumeric(DeferredVal):
+    """
+    This is a DeferredVal that allows the deferral of all math operations.
+    """
+    pass
 _mathops = (
     '__add__', '__sub__', '__mul__', '__floordiv__', '__mod__',
     '__divmod__', '__pow__', '__lshift__', '__rshift__', '__and__',
@@ -291,8 +321,6 @@ _mathops = (
     '__irshift__', '__iand__', '__ixor__', '__ior__', '__pos__', '__abs__',
     '__invert__', '__complex__', '__int__', '__long__', '__float__',
     '__oct__', '__hex__', '__index__', '__coerce__')
-class DeferredNumeric(DeferredVal):
-    pass
 DeferredNumeric._deferred_method_dict = dict((x, DeferredNumeric)
                                              for x in _mathops)
 def _get_deferred_attr_func(_name):
@@ -310,15 +338,18 @@ class DeferredModuleCall(DeferredVal):
         self._methodstr = methodstr
         self._args = args
         self._kwargs = kwargs
+        self._mod = None
+
+    def _set_mod(self, mod):
+        self._mod = mod
 
     def _copy(self, retval=None):
         if retval is None:
             retval = self.__class__(self._methodstr, *self._args, **self._kwargs)
         return super(DeferredModuleCall, self)._copy(retval=retval)
 
-    def _evalbase(self, evalcont):
-        # evalcont is the actual Module object
-        return getattr(evalcont, self._methodstr)(*self._args, **self._kwargs)
+    def _eval(self):
+        return getattr(self._mod, self._methodstr)(*self._args, **self._kwargs)
 
 class DeferredTexRef(DeferredModuleCall):
     _deferred_method_dict = {
@@ -366,8 +397,12 @@ class DeferredFunction(object):
             newtexrefs = []
             for texref in texrefs:
                 if isinstance(texref, DeferredVal):
-                    texref = texref._copy() # future calls may use different modules/functions
-                    texref = texref._eval(mod)
+                    if isinstance(texref, DeferredModuleCall):
+                        texref = texref._copy() # future calls may use different modules/functions
+                        texref._set_mod(mod)
+                    texref = texref._get()
+                elif isinstance(texref, DeferredVal):
+                    texref = texref._get()
                 newtexrefs.append(texref)
             kwargs['texrefs'] = newtexrefs
         return kwargs
