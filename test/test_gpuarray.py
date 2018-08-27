@@ -1082,6 +1082,12 @@ class TestGPUArray:
         for start, stop, step in [(0,3,1), (1,2,1), (0,3,3)]:
             assert np.allclose(a_gpu[start:stop:step,:,start:stop:step].get(), a_gpu.get()[start:stop:step,:,start:stop:step])
 
+        # try 3 axes discontiguous
+        a_gpu = curand((10,10,10,10))
+        a = a_gpu.get()
+        for start, stop, step in [(0,3,1), (1,2,1), (0,3,3)]:
+            assert np.allclose(a_gpu[start:stop:step,start:stop:step,start:stop:step].get(), a_gpu.get()[start:stop:step,start:stop:step,start:stop:step])
+
     @mark_cuda_test
     def test_get_set(self):
         import pycuda.gpuarray as gpuarray
@@ -1144,6 +1150,121 @@ class TestGPUArray:
                 assert new_z.flags.f_contiguous == arr.flags.f_contiguous
                 assert new_z.dtype == np.complex64
                 assert new_z.shape == arr.shape
+
+    @mark_cuda_test
+    def test_noncontig_get(self):
+        from pycuda.curandom import rand as curand
+        a_gpu = curand((200,200))
+        a = a_gpu.get()
+
+        ret_a = a[2::3, 1::4]
+
+        ret_a_gpu = (a_gpu[2::3, 1::4]).get()
+
+        assert np.allclose(ret_a, ret_a_gpu)
+
+    @mark_cuda_test
+    def test_noncontig_get2(self):
+        from pycuda.curandom import rand as curand
+        a_gpu = curand((200,200))
+        a = a_gpu.get()
+
+        ret_a = a[2::3,::-1]
+
+        ret_a_gpu = (a_gpu[2::3,::-1]).get()
+
+        assert np.allclose(ret_a, ret_a_gpu)
+
+    @mark_cuda_test
+    def test_noncontig_set(self):
+        import pycuda.gpuarray as gpuarray
+
+        # test different orders, transpositions, offsets, and sizes of both
+        # src (host) and dst (device)
+        for host_order in ('C', 'F'):
+          for dev_order in ('C', 'F'):
+            for transpose in ((0,1,2), (0,2,1), (1,2,0), (1,0,2), (2,0,1), (2,1,0)):
+              for start, stop, step in [(0, 50, 2), (1, 50, 2), (49, None, -2), (48, None, -2)]:
+                print("host_order=%s dev_order=%s transpose=%s start=%s stop=%s step=%s" % (host_order, dev_order, transpose, start, stop, step))
+                a = np.array(np.random.normal(0., 1., (25,25,25)), order=host_order)
+                a_gpu = gpuarray.zeros((50, 50, 50), np.float64, order=dev_order)
+                a_gpu_sub = a_gpu[start:stop:step,start:stop:step,start:stop:step]
+                a_gpu_sub.set(a)
+                assert np.allclose(a_gpu_sub.get(), a)
+                assert np.allclose(a_gpu.get()[start:stop:step,start:stop:step,start:stop:step], a)
+
+
+    @mark_cuda_test
+    def test_noncontig_unary(self):
+        from pycuda.curandom import rand as curand
+        a_gpu = curand((200,200))[1::4, ::-2]
+        a = a_gpu.get()
+
+        ret_a = a ** 2
+
+        ret_a_gpu = (a_gpu ** 2).get()
+
+        assert np.allclose(ret_a, ret_a_gpu)
+
+    @mark_cuda_test
+    def test_noncontig_different_strides(self):
+        x = 200; y = 200
+
+        a_gpu = gpuarray.arange(0, x*y, 1, dtype=np.float32).reshape((x, y), order='C')
+        a = a_gpu.get()
+        assert a_gpu.strides[0] > a_gpu.strides[1], "a_gpu not C-order"
+
+        b_gpu = gpuarray.zeros_like(a_gpu, order='F')
+        b_gpu += a_gpu
+        b = b_gpu.get()
+        assert b_gpu.strides[1] > b_gpu.strides[0], "b_gpu not F-order"
+
+        assert np.allclose(a, b)
+
+    @mark_cuda_test
+    def test_noncontig_stride_tricky(self):
+        from pycuda.curandom import rand as curand
+        a_gpu = curand((200,200))
+        a = a_gpu.get()
+
+        a_gpu = a_gpu[1::4, ::-2]
+        a = a[1::4, ::-2]
+
+        a_gpu = gpuarray.GPUArray(a_gpu.shape, a_gpu.dtype,
+                                  base=a_gpu,
+                                  gpudata=a_gpu.gpudata,
+                                  strides=(0,0))
+        a.strides = (0, 0)
+
+        ret_a = a
+
+        ret_a_gpu = a_gpu.get()
+
+        assert np.allclose(ret_a, ret_a_gpu)
+
+    @mark_cuda_test
+    def test_noncontig_stride_tricky2(self):
+        # sliding window using tricks
+        from numpy.lib.stride_tricks import as_strided
+        from pycuda.curandom import rand as curand
+        a_gpu = curand((200000))
+        a = a_gpu.get()
+
+        a_gpu = gpuarray.GPUArray((199998, 3), a_gpu.dtype,
+                                  base=a_gpu,
+                                  gpudata=a_gpu.gpudata,
+                                  strides=(a_gpu.itemsize, a_gpu.itemsize))
+        a = as_strided(a, shape=(199998, 3), strides=(a.itemsize, a.itemsize))
+
+        ret_a = a
+        ret_a_gpu = a_gpu.get()
+
+        assert np.allclose(ret_a, ret_a_gpu)
+
+        ret_a = a + 2
+        ret_a_gpu = (a_gpu + 2).get()
+
+        assert np.allclose(ret_a, ret_a_gpu)
 
 
 if __name__ == "__main__":

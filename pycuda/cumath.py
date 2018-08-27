@@ -42,7 +42,7 @@ def _make_unary_array_func(name):
 
         func = elementwise.get_unary_func_kernel(func_name, array.dtype)
         func.prepared_async_call(array._grid, array._block, stream,
-                array.gpudata, out.gpudata, array.mem_size)
+                array, out, array.mem_size)
 
         return out
     return f
@@ -77,7 +77,7 @@ def fmod(arg, mod, stream=None):
 
     func = elementwise.get_fmod_kernel()
     func.prepared_async_call(arg._grid, arg._block, stream,
-            arg.gpudata, mod.gpudata, result.gpudata, arg.mem_size)
+            arg, mod, result, arg.mem_size)
 
     return result
 
@@ -94,7 +94,7 @@ def frexp(arg, stream=None):
 
     func = elementwise.get_frexp_kernel()
     func.prepared_async_call(arg._grid, arg._block, stream,
-            arg.gpudata, sig.gpudata, expt.gpudata, arg.mem_size)
+            arg, sig, expt, arg.mem_size)
 
     return sig, expt
 
@@ -111,7 +111,7 @@ def ldexp(significand, exponent, stream=None):
 
     func = elementwise.get_ldexp_kernel()
     func.prepared_async_call(significand._grid, significand._block, stream,
-            significand.gpudata, exponent.gpudata, result.gpudata,
+            significand, exponent, result,
             significand.mem_size)
 
     return result
@@ -129,7 +129,7 @@ def modf(arg, stream=None):
 
     func = elementwise.get_modf_kernel()
     func.prepared_async_call(arg._grid, arg._block, stream,
-            arg.gpudata, intpart.gpudata, fracpart.gpudata,
+            arg, intpart, fracpart,
             arg.mem_size)
 
     return fracpart, intpart

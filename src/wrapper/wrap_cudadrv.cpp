@@ -17,6 +17,123 @@
 
 
 
+namespace precalc {
+  namespace py = boost::python;
+  py::tuple _precalc_array_info(const py::object & args, const py::object & elwisearginds) {
+    bool contigmatch = true;
+    bool arrayspecificinds = true;
+    std::vector<int> shape;
+    py::object shape_obj;
+    char order = 'N';
+    int numarrays = py::len(elwisearginds);
+    PyObject * arrayitemstrides = PyTuple_New(numarrays);
+
+    for (int aind = 0; aind < numarrays; aind++) {
+      int elwiseargind = py::extract<int>(elwisearginds[aind]);
+      // is a GPUArray/DeviceAllocation
+      //py::object arg = py::object(args[i]);
+      py::object arg(args[elwiseargind]);
+      if (!arrayspecificinds) {
+	continue;
+      }
+      py::object curshape_obj;
+      py::object curstrides_obj;
+      py::object itemsize_obj;
+      int itemsize;
+      int ndim = 0;
+      try {
+	curshape_obj = arg.attr("shape");
+	curstrides_obj = arg.attr("strides");
+	itemsize_obj = arg.attr("itemsize");
+	itemsize = py::extract<int>(itemsize_obj);
+	ndim = py::extract<int>(arg.attr("ndim"));
+      } catch (...) {
+	// At least one array argument is probably sent as a
+	// GPUArray.gpudata rather than the GPUArray itself,
+	// so disable array-specific indices -- caller is on
+	// their own.
+	arrayspecificinds = false;
+	continue;
+      }
+      if (ndim == 0) {
+	// probably a scalar
+	continue;
+      }
+      std::vector<int> curshape(ndim);
+      std::vector<int> curstrides(ndim);
+      for (int i = 0; i < ndim; i++) {
+	int tmp = py::extract<int>(curshape_obj[i]);
+	curshape[i] = tmp;
+	if (tmp > 1) {
+	  curstrides[i] = py::extract<int>(curstrides_obj[i]);
+	} else {
+	  curstrides[i] = 0;
+	}
+      }
+      PyObject * newstrides = PyTuple_New(ndim);
+      for (int i = 0; i < ndim; i++) {
+	// PyTuple_SetItem steals the reference of the new PyInt
+	PyTuple_SetItem(newstrides, i, PyInt_FromLong(curstrides[i]));
+      }
+      PyObject * sizestrides = PyTuple_New(2);
+      PyTuple_SetItem(sizestrides, 0, py::incref(itemsize_obj.ptr()));
+      // PyTuple_SetItem steals the reference of newstrides
+      PyTuple_SetItem(sizestrides, 1, newstrides);
+      PyTuple_SetItem(arrayitemstrides, aind, sizestrides);
+      if (contigmatch) {
+	char curorder = 'N';
+	int tmpaccum = itemsize;
+	bool is_f = (curstrides[0] == tmpaccum);
+	tmpaccum *= curshape[0];
+	for (int i = 1; i < ndim; i++) {
+	  if (curshape[i] == 1) {
+	    continue;
+	  }
+	  if (curstrides[i] != tmpaccum) {
+	    is_f = false;
+	    break;
+	  }
+	  tmpaccum *= curshape[i];
+	}
+	tmpaccum = itemsize;
+	bool is_c = (curstrides[ndim - 1] == tmpaccum);
+	tmpaccum *= curshape[ndim - 1];
+	for (int i = ndim - 2; i >= 0; i--) {
+	  if (curshape[i] == 1) {
+	    continue;
+	  }
+	  if (curstrides[i] != tmpaccum) {
+	    is_c = false;
+	    break;
+	  }
+	  tmpaccum *= curshape[i];
+	}
+	if (is_f) {
+	  curorder = 'F';
+	}
+	if (is_c) {
+	  curorder = 'C';
+	}
+	if (curorder == 'N') {
+	  contigmatch = false;
+	}
+	if (shape.size() == 0) {
+	  shape = curshape;
+	  shape_obj = curshape_obj;
+	  order = curorder;
+	} else if (order != curorder) {
+	  contigmatch = false;
+	}
+      }
+      if (shape != curshape) {
+	PyErr_SetString(PyExc_RuntimeError, "All input arrays to elementwise kernels must have the same shape, or you must specify the arrays to be traversed element-wise explicitly with elwise_arg_inds");
+	py::throw_error_already_set();
+      }
+    }
+
+    return py::make_tuple(contigmatch, arrayspecificinds, shape_obj, py::object(py::handle<>(arrayitemstrides)));
+  }
+}
 
 using namespace pycuda;
 using boost::shared_ptr;
@@ -1657,6 +1774,11 @@ BOOST_PYTHON_MODULE(_driver)
 #ifdef HAVE_CURAND
   pycuda_expose_curand();
 #endif
+
+  {
+    using namespace precalc;
+    DEF_SIMPLE_FUNCTION_WITH_ARGS(_precalc_array_info, ("args", "elwisearginds"));
+  }
 }
 
 // vim: foldmethod=marker
