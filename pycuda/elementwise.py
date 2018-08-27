@@ -116,6 +116,8 @@ class ElementwiseSourceModule(DeferredSourceModule):
                 arrayspecificinds = False
                 continue
             curshape = arg.shape
+            # make strides == 0 when shape == 1
+            arg.strides = tuple((np.array(curshape) > 1) * arg.strides)
             curorder = 'N'
             if contigmatch:
                 if arg.flags.f_contiguous:

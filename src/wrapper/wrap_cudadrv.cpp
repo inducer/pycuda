@@ -59,16 +59,27 @@ namespace precalc {
 	// probably a scalar
 	continue;
       }
-      PyObject * sizestrides = PyTuple_New(2);
-      PyTuple_SetItem(sizestrides, 0, py::incref(itemsize_obj.ptr()));
-      PyTuple_SetItem(sizestrides, 1, py::incref(curstrides_obj.ptr()));
-      PyTuple_SetItem(arrayitemstrides, aind, sizestrides);
       std::vector<int> curshape(ndim);
       std::vector<int> curstrides(ndim);
       for (int i = 0; i < ndim; i++) {
-	curshape[i] = py::extract<int>(curshape_obj[i]);
-	curstrides[i] = py::extract<int>(curstrides_obj[i]);
+	int tmp = py::extract<int>(curshape_obj[i]);
+	curshape[i] = tmp;
+	if (tmp > 1) {
+	  curstrides[i] = py::extract<int>(curstrides_obj[i]);
+	} else {
+	  curstrides[i] = 0;
+	}
       }
+      PyObject * newstrides = PyTuple_New(ndim);
+      for (int i = 0; i < ndim; i++) {
+	// PyTuple_SetItem steals the reference of the new PyInt
+	PyTuple_SetItem(newstrides, i, PyInt_FromLong(curstrides[i]));
+      }
+      PyObject * sizestrides = PyTuple_New(2);
+      PyTuple_SetItem(sizestrides, 0, py::incref(itemsize_obj.ptr()));
+      // PyTuple_SetItem steals the reference of newstrides
+      PyTuple_SetItem(sizestrides, 1, newstrides);
+      PyTuple_SetItem(arrayitemstrides, aind, sizestrides);
       if (contigmatch) {
 	char curorder = 'N';
 	int tmpaccum = itemsize;
