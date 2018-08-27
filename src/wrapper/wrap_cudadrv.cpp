@@ -103,11 +103,14 @@ namespace precalc {
 	if (is_c) {
 	  curorder = 'C';
 	}
+	if (curorder == 'N') {
+	  contigmatch = false;
+	}
 	if (shape.size() == 0) {
 	  shape = curshape;
 	  shape_obj = curshape_obj;
 	  order = curorder;
-	} else if (curorder == 'N' || order != curorder) {
+	} else if (order != curorder) {
 	  contigmatch = false;
 	}
       }

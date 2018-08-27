@@ -122,10 +122,12 @@ class ElementwiseSourceModule(DeferredSourceModule):
                     curorder = 'F'
                 elif arg.flags.c_contiguous:
                     curorder = 'C'
+                if curorder == 'N':
+                    contigmatch = False
                 if shape is None:
                     shape = curshape
                     order = curorder
-                elif curorder == 'N' or order != curorder:
+                elif order != curorder:
                     contigmatch = False
             if shape_arg_index is None and shape != curshape:
                 raise Exception("All input arrays to elementwise kernels must have the same shape, or you must specify the argument that has the canonical shape with shape_arg_index; found shapes %s and %s" % (shape, curshape))
