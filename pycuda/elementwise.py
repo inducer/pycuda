@@ -54,23 +54,20 @@ class ElementwiseSourceModule(DeferredSourceModule):
       * if do_indices=True, the N-D index of the current data item in all
         participating arrays is available in INDEX[dim] where dim goes from
         0 to NDIM - 1.
-    Array-specific flat indices only really work if all the arrays using them
-    are the same shape.  This shape is also used to optimize index
-    calculations.  By default, the shape is taken from the first argument
-    that is specified as a pointer/array, but you can override this by
-    sending ``shape_arg_index=N`` where ``N`` is the zero-based index of the
-    kernel argument whose shape should be used.
-    By default, any VectorArg objects in ```arguments``` are assumed to be
-    arrays that need index calculations.  If only some of the VectorArgs
-    will be traversed element-wise, you can specify their indices (within
-    ```arguments```) with ```array_arg_inds```, and the resulting kernel will
-    not waste time computing indices for those.
+    ``elwise_arg_inds`` specifies the kernel arguments (as indices into
+    ``arguments``) that will be treated element-wise and need array-specific
+    index calculations.  If ``elwise_arg_inds`` is not specified, it is
+    constructed by finding all arguments that are VectorArg objects.  If only
+    some of the VectorArgs will be traversed element-wise, specifying
+    ``elwise_arg_inds`` ensures that the kernel doesn't wastes time
+    calculating unneeded indices.  When the kernel is eventually called,
+    all elementwise array arguments specified in ``elwise_arg_inds`` must be
+    the same shape, which is used to optimize index calculations.
     '''
     def __init__(self, arguments, operation,
                  name="kernel", preamble="", loop_prep="", after_loop="",
                  do_range=False,
-                 shape_arg_index=None,
-                 array_arg_inds=None,
+                 elwise_arg_inds=None,
                  do_indices=False,
                  order='K',
                  debug=False,
@@ -81,29 +78,25 @@ class ElementwiseSourceModule(DeferredSourceModule):
         assert(order in 'CFK', "order must be 'F', 'C', or 'K'")
         self._order = order
         self._arg_decls = ", ".join(arg.declarator() for arg in arguments)
-        if array_arg_inds is None:
-            array_arg_inds = [i for i in range(len(arguments)) if isinstance(arguments[i], VectorArg)]
-        self._array_arg_inds = array_arg_inds
-        if shape_arg_index is None:
-            self._shape_arg_index = array_arg_inds[0]
-        else:
-            self._shape_arg_index = shape_arg_index
+        if elwise_arg_inds is None:
+            elwise_arg_inds = [i for i in range(len(arguments)) if isinstance(arguments[i], VectorArg)]
+        self._elwise_arg_inds = elwise_arg_inds
         self._arg_names = tuple(argument.name for argument in arguments)
-        self._array_arg_names = tuple(self._arg_names[i] for i in self._array_arg_inds)
+        self._elwise_arg_names = tuple(self._arg_names[i] for i in self._elwise_arg_inds)
         self._init_args = (self._arg_names, self._arg_decls, operation,
                            name, preamble, loop_prep, after_loop)
         self._init_args_repr = repr(self._init_args)
         self._debug = debug
 
-    def _precalc_array_info(self, args, shape_arg_index):
+    def _precalc_array_info(self, args):
         # 'args' is the list of actual parameters being sent to the kernel
 
         contigmatch = True
         arrayspecificinds = True
         shape = None
         order = None
-        array_arg_inds = self._array_arg_inds
-        for i in array_arg_inds:
+        elwise_arg_inds = self._elwise_arg_inds
+        for i in elwise_arg_inds:
             # is a GPUArray/DeviceAllocation
             arg = args[i]
             if not arrayspecificinds:
@@ -131,21 +124,19 @@ class ElementwiseSourceModule(DeferredSourceModule):
                     order = curorder
                 elif order != curorder:
                     contigmatch = False
-            if shape_arg_index is None and shape != curshape:
-                raise Exception("All input arrays to elementwise kernels must have the same shape, or you must specify the argument that has the canonical shape with shape_arg_index; found shapes %s and %s" % (shape, curshape))
-            if shape_arg_index == i:
-                shape = curshape
+            if shape != curshape:
+                raise Exception("All input arrays to elementwise kernels must have the same shape, or you must specify the arrays to be traversed element-wise explicitly with elwise_arg_inds; found shapes %s and %s" % (shape, curshape))
 
-        arrayitemstrides = tuple((arg.itemsize, arg.strides) for arg in (args[i] for i in array_arg_inds))
+        arrayitemstrides = tuple((arg.itemsize, arg.strides) for arg in (args[i] for i in elwise_arg_inds))
 
         return (contigmatch, arrayspecificinds, shape, arrayitemstrides)
 
 
     def create_key(self, grid, block, *args):
-        #print "Calling _precalc_array_info(args=%s, self._init_args[0]=%s, self._shape_arg_index=%s)\n" % (args, self._init_args[0], self._shape_arg_index)
-        #precalc_init = self._precalc_array_info(args, self._shape_arg_index)
-        array_arg_inds = self._array_arg_inds
-        precalc_init = _drv._precalc_array_info(args, array_arg_inds, self._shape_arg_index)
+        #print "Calling _precalc_array_info(args=%s, elwise_arg_inds=%s)\n" % (args, self._elwise_arg_inds)
+        #precalc_init = self._precalc_array_info(args)
+        elwise_arg_inds = self._elwise_arg_inds
+        precalc_init = _drv._precalc_array_info(args, elwise_arg_inds)
         (contigmatch, arrayspecificinds, shape, arrayitemstrides) = precalc_init
 
         if (contigmatch or not arrayspecificinds) and not self._do_indices:
@@ -163,7 +154,7 @@ class ElementwiseSourceModule(DeferredSourceModule):
         # Kernel traverses in Fortran-order by default, but if order == 'C',
         # we can just reverse the shape and strides, since the kernel is
         # elementwise.  If order == 'K', use index of minimum stride in first
-        # array (or that specified by shape_arg_index) as a hint on how to
+        # elementwise array as a hint on how to
         # order the traversal of dimensions.  We could probably do something
         # smarter, like tranposing/reshaping arrays if possible to maximize
         # performance, but that is probably best done in a pre-processing step.
@@ -174,7 +165,7 @@ class ElementwiseSourceModule(DeferredSourceModule):
         if self._order == 'C':
             do_reverse = True
         elif self._order == 'K':
-            if np.argmin(np.abs(args[self._shape_arg_index].strides)) > ndim // 2:
+            if np.argmin(np.abs(args[self._elwise_arg_inds[0]].strides)) > ndim // 2:
                 # traverse dimensions in reverse order
                 do_reverse = True
 
@@ -190,8 +181,8 @@ class ElementwiseSourceModule(DeferredSourceModule):
         (arg_names, arg_decls, operation,
          funcname, preamble, loop_prep, after_loop) = self._init_args
 
-        array_arg_inds = self._array_arg_inds
-        array_arg_names = tuple(arg_names[i] for i in array_arg_inds)
+        elwise_arg_inds = self._elwise_arg_inds
+        elwise_arg_names = self._elwise_arg_names
 
         if contigmatch and not self._do_indices:
             indtype = 'unsigned'
@@ -201,7 +192,7 @@ class ElementwiseSourceModule(DeferredSourceModule):
             # All arrays are contiguous and same order (or we don't know and
             # it's up to the caller to make sure it works)
             if arrayspecificinds:
-                for arg_name in array_arg_names:
+                for arg_name in elwise_arg_names:
                     preamble = preamble + """
                         #define %s_i i
                     """ % (arg_name,)
@@ -274,7 +265,7 @@ class ElementwiseSourceModule(DeferredSourceModule):
         # same indices
         arrayrefnames = []
 
-        argnamestrides = ((arg_name, itemstride[0], itemstride[1]) for (arg_name, itemstride) in zip(array_arg_names, arrayitemstrides))
+        argnamestrides = ((arg_name, itemstride[0], itemstride[1]) for (arg_name, itemstride) in zip(elwise_arg_names, arrayitemstrides))
 
         ndim = len(shape)
         numthreads = block[0] * grid[0]
@@ -702,7 +693,8 @@ def get_take_kernel(dtype, idx_dtype, vec_count=1):
                 "dest%d[dest%d_i] = fp_tex1Dfetch(tex_src%d, src_idx);" % (i, i, i)
                 for i in range(vec_count)))
 
-    mod = get_elwise_module(args, body, "take", preamble=preamble)
+    mod = get_elwise_module(args, body, "take", preamble=preamble,
+                            elwise_arg_inds=(0, 1))
     func = mod.get_function("take")
     tex_src = [mod.get_texref("tex_src%d" % i) for i in range(vec_count)]
     func.prepare("P"+(vec_count*"P")+np.dtype(np.uintp).char, texrefs=tex_src)
@@ -747,7 +739,7 @@ def get_take_put_kernel(dtype, idx_dtype, with_offsets, vec_count=1):
             + "\n".join(get_copy_insn(i) for i in range(vec_count)))
 
     mod = get_elwise_module(args, body, "take_put",
-                            preamble=preamble, shape_arg_index=0)
+                            preamble=preamble, elwise_arg_inds=(0,1))
     func = mod.get_function("take_put")
     tex_src = [mod.get_texref("tex_src%d" % i) for i in range(vec_count)]
 
@@ -782,7 +774,10 @@ def get_put_kernel(dtype, idx_dtype, vec_count=1):
                 for i in range(vec_count)))
 
     func = get_elwise_module(args, body, "put",
-                             shape_arg_index=0).get_function("put")
+                             elwise_arg_inds=(
+                                 [0] + range(1+vec_count, 1+(2*vec_count))
+                             )
+                            ).get_function("put")
     func.prepare("P"+(2*vec_count*"P")+np.dtype(np.uintp).char)
     return func
 

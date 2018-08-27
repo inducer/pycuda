@@ -19,20 +19,20 @@
 
 namespace precalc {
   namespace py = boost::python;
-  py::tuple _precalc_array_info(const py::object & args, const py::object & arrayarginds, const py::object & shape_arg_index) {
+  py::tuple _precalc_array_info(const py::object & args, const py::object & elwisearginds) {
     bool contigmatch = true;
     bool arrayspecificinds = true;
     std::vector<int> shape;
     py::object shape_obj;
     char order = 'N';
-    int numarrays = py::len(arrayarginds);
+    int numarrays = py::len(elwisearginds);
     PyObject * arrayitemstrides = PyTuple_New(numarrays);
 
     for (int aind = 0; aind < numarrays; aind++) {
-      int arrayargind = py::extract<int>(arrayarginds[aind]);
+      int elwiseargind = py::extract<int>(elwisearginds[aind]);
       // is a GPUArray/DeviceAllocation
       //py::object arg = py::object(args[i]);
-      py::object arg(args[arrayargind]);
+      py::object arg(args[elwiseargind]);
       if (!arrayspecificinds) {
 	continue;
       }
@@ -125,13 +125,9 @@ namespace precalc {
 	  contigmatch = false;
 	}
       }
-      if (shape_arg_index.is_none() && shape != curshape) {
-	PyErr_SetString(PyExc_RuntimeError, "All input arrays to elementwise kernels must have the same shape, or you must specify the argument that has the canonical shape with shape_arg_index");
+      if (shape != curshape) {
+	PyErr_SetString(PyExc_RuntimeError, "All input arrays to elementwise kernels must have the same shape, or you must specify the arrays to be traversed element-wise explicitly with elwise_arg_inds");
 	py::throw_error_already_set();
-      }
-      if (shape_arg_index == arrayargind) {
-	shape = curshape;
-	shape_obj = curshape_obj;
       }
     }
 
@@ -1781,7 +1777,7 @@ BOOST_PYTHON_MODULE(_driver)
 
   {
     using namespace precalc;
-    DEF_SIMPLE_FUNCTION_WITH_ARGS(_precalc_array_info, ("args", "arrayarginds", "shape_arg_index"));
+    DEF_SIMPLE_FUNCTION_WITH_ARGS(_precalc_array_info, ("args", "elwisearginds"));
   }
 }
 
