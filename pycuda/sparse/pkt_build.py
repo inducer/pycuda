@@ -12,6 +12,7 @@ def build_pkt_data_structure(spmv, packet_nr_to_dofs, max_thread_costs,
     packet_start = 0
     base_dof_nr = 0
 
+    max_thread_costs = int(max_thread_costs)
     index_array = np.zeros(
             max_thread_costs*thread_count, dtype=spmv.packed_index_dtype)
     data_array = np.zeros(

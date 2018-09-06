@@ -1556,7 +1556,7 @@ namespace pycuda
             py::handle<>(
 #if PY_VERSION_HEX >= 0x03030000
               PyMemoryView_FromMemory((char *) (m_devptr + offset), size,
-                PyBUF_READ | PyBUF_WRITE)
+                PyBUF_WRITE)
 #else /* Py2 */
               PyBuffer_FromReadWriteMemory((void *) (m_devptr + offset), size)
 #endif

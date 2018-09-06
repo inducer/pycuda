@@ -28,7 +28,7 @@ CUDA API already exist--so why the need for PyCUDA?
 
 * Helpful Documentation. You're looking at it. ;)
 
-Here's an example, to given you an impression::
+Here's an example, to give you an impression::
 
   import pycuda.autoinit
   import pycuda.driver as drv
