@@ -36,6 +36,8 @@ from decorator import decorator
 import pycuda._driver as _drv
 import numpy as np
 
+from pytools.persistent_dict import KeyBuilder as KeyBuilderBase
+
 
 bitlog2 = _drv.bitlog2
 DeviceMemoryPool = _drv.DeviceMemoryPool
@@ -402,13 +404,53 @@ def parse_c_arg(c_arg):
 def get_arg_type(c_arg):
     return parse_c_arg(c_arg).struct_char
 
+def parse_arg_list(arguments):
+    """Parse a list of kernel arguments. *arguments* may be a comma-separate
+    list of C declarators in a string, a list of strings representing C
+    declarators, or :class:`Argument` objects.
+    """
+
+    if isinstance(arguments, str):
+        arguments = arguments.split(",")
+
+    def parse_single_arg(obj):
+        if isinstance(obj, str):
+            from pycuda.tools import parse_c_arg
+            return parse_c_arg(obj)
+        else:
+            return obj
+
+    return [parse_single_arg(arg) for arg in arguments]
+
+def get_arg_list_scalar_arg_dtypes(arg_types):
+    result = []
+
+    for arg_type in arg_types:
+        if isinstance(arg_type, ScalarArg):
+            result.append(arg_type.dtype)
+        elif isinstance(arg_type, VectorArg):
+            result.append(None)
+        else:
+            raise RuntimeError("arg type not understood: %s" % type(arg_type))
+
+    return result
+
 # }}}
+
+def _process_code_for_macro(code):
+    # FIXME: Replace this with something else ?
+    #code = code.replace("//CL//", "\n")
+
+    if "//" in code:
+        raise RuntimeError("end-of-line comments ('//') may not be used in "
+                "code snippets")
+
+    return code.replace("\n", " \\\n")
+
 
 # {{{ context-dep memoization
 
 context_dependent_memoized_functions = []
-
-
 
 
 @decorator
@@ -476,6 +518,17 @@ def mark_cuda_test(inner_f):
 
 # }}}
 
+# {{{ numpy key types builder
 
+class _NumpyTypesKeyBuilder(KeyBuilderBase):
+    def update_for_type(self, key_hash, key):
+        if issubclass(key, np.generic):
+            self.update_for_str(key_hash, key.__name__)
+            return
+
+        raise TypeError("unsupported type for persistent hash keying: %s"
+                % type(key))
+
+# }}}
 
 # vim: foldmethod=marker
