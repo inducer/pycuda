@@ -38,7 +38,6 @@ scan_test_counts = [
     2 ** 20 + 1,
     2 ** 20,
     2 ** 23 + 3,
-    # larger sizes cause out of memory on low-end AMD APUs
     ]
 
 
