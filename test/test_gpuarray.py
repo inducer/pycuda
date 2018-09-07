@@ -785,7 +785,7 @@ class TestGPUArray:
                 assert (gpu_data.get() == desired_result).all()
 
     @mark_cuda_test
-    def test_segmented_scan(ctx_factory):
+    def test_segmented_scan(self):
         from pytest import importorskip
         importorskip("mako")
 
