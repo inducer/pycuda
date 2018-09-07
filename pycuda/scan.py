@@ -10,8 +10,6 @@ Copyright 2011 Andreas Kloeckner
 Copyright 2008-2011 NVIDIA Corporation
 """
 
-
-
 __license__ = """
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -512,7 +510,6 @@ void ${kernel_name}(
 
             // {{{ write data
 
-            %if is_gpu:
             {
                 // work hard with index math to achieve contiguous 32-bit stores
                 GLOBAL_MEM int *dest =
@@ -555,22 +552,6 @@ void ${kernel_name}(
                     }
                 %endfor
             }
-            %else:
-            for (index_type k = 0; k < K; k++)
-            {
-                const index_type offset = k*WG_SIZE + LID_0;
-
-                %if is_tail:
-                if (unit_base + offset < interval_end)
-                %endif
-                {
-                    pycu_printf(("write: %d\n", unit_base + offset));
-                    partial_scan_buffer[unit_base + offset] =
-                        ldata[offset % K][offset / K].value;
-                }
-            }
-            %endif
-
             pycu_printf(("after write\n"));
 
             // }}}
@@ -777,18 +758,17 @@ _IGNORED_WORDS = set("""
         4 8 32
 
         typedef for endfor if void while endwhile endfor endif else const printf
-        None return bool n char true false ifdef pycl_printf str range assert
-        np iinfo max itemsize __packed__ struct restrict
+        None return bool n char true false ifdef pycu_printf str range assert
+        np iinfo max itemsize __packed__ struct
 
         set iteritems len setdefault
 
         GLOBAL_MEM LOCAL_MEM_ARG WITHIN_KERNEL LOCAL_MEM KERNEL REQD_WG_SIZE
         local_barrier
-        CLK_LOCAL_MEM_FENCE OPENCL EXTENSION
-        pragma __attribute__ __global __kernel __local
+        CLK_LOCAL_MEM_FENCE
+        pragma __attribute__
         get_local_size get_local_id cl_khr_fp64 reqd_work_group_size
         get_num_groups barrier get_group_id
-        CL_VERSION_1_1 __OPENCL_C_VERSION__ 120
 
         _final_update _debug_scan kernel_name
 
@@ -823,7 +803,7 @@ _IGNORED_WORDS = set("""
         update_loop_lookbehind update_loop_plain update_loop
         use_lookbehind_update store_segment_start_flags
         update_loop first_seg scan_dtype dtype_to_ctype
-        is_gpu use_bank_conflict_avoidance
+        use_bank_conflict_avoidance
 
         a b prev_item i last_item prev_value
         N NO_SEG_BOUNDARY across_seg_boundary
@@ -910,7 +890,6 @@ class _GeneratedFinalUpdateKernelInfo(Record):
     def build(self, options):
         program = SourceModule(self.source, options=options)
         kernel = program.get_function(self.kernel_name)
-        # FIXME: This maybe wrong
         kernel.prepare(self.scalar_arg_dtypes)
         return _BuiltFinalUpdateKernelInfo(
                 kernel=kernel,
@@ -940,15 +919,15 @@ class _GenericScanKernelBase(object):
             arguments, input_expr, scan_expr, neutral, output_statement,
             is_segment_start_expr=None, input_fetch_exprs=[],
             index_dtype=np.int32,
-            name_prefix="scan", options=[], preamble="", devices=None):
+            name_prefix="scan", options=[], preamble=""):
         """
         :arg dtype: the :class:`numpy.dtype` with which the scan will
             be performed. May be a structured type if that type was registered
             through :func:`pyopencl.tools.get_or_register_dtype`.
         :arg arguments: A string of comma-separated C argument declarations.
             If *arguments* is specified, then *input_expr* must also be
-            specified. All types used here must be known to PyOpenCL.
-            (see :func:`pyopencl.tools.get_or_register_dtype`).
+            specified. All types used here must be known to PyCUDA.
+            (see :func:`pycuda.tools.get_or_register_dtype`).
         :arg scan_expr: The associative, binary operation carrying out the scan,
             represented as a C string. Its two arguments are available as `a`
             and `b` when it is evaluated. `b` is guaranteed to be the
@@ -1074,7 +1053,6 @@ class _GenericScanKernelBase(object):
         from pytools import all
         from pycuda.characterize import has_double_support
 
-        # FIXME: Get rid of the is_gpu variable
         self.code_variables = dict(
             np=np,
             dtype_to_ctype=dtype_to_ctype,
@@ -1087,7 +1065,6 @@ class _GenericScanKernelBase(object):
             arg_ctypes=arg_ctypes,
             scan_expr=_process_code_for_macro(scan_expr),
             neutral=_process_code_for_macro(neutral),
-            is_gpu=True,
             double_support=has_double_support(),
             )
 
@@ -1136,25 +1113,22 @@ class GenericScanKernel(_GenericScanKernelBase):
 
     Usage example::
 
-        from pyopencl.scan import GenericScanKernel
+        import pycuda as cu
+        from pycuda.scan import GenericScanKernel
         knl = GenericScanKernel(
-                context, np.int32,
-                arguments="__global int *ary",
+                np.int32,
+                arguments="int *ary",
                 input_expr="ary[i]",
                 scan_expr="a+b", neutral="0",
                 output_statement="ary[i+1] = item;")
 
-        a = cl.array.arange(queue, 10000, dtype=np.int32)
-        knl(a, queue=queue)
+        a = cu.gpuarray.arange(10000, dtype=np.int32)
+        knl(a)
 
     """
 
     def finish_setup(self):
         # Before generating the kernel, see if it's cached.
-        # FIXME: Removing the device id from cache checking temporarily
-        #from pyopencl.cache import get_device_cache_id
-        #devices_key = tuple(get_device_cache_id(device)
-        #        for device in self.devices)
 
         cache_key = (self.kernel_key,)
 
@@ -1198,7 +1172,6 @@ class GenericScanKernel(_GenericScanKernelBase):
 
     def _finish_setup_impl(self):
         # {{{ find usable workgroup/k-group size, build first-level scan
-        # FIXME: Lot of changes made here. check again
 
         trip_count = 0
 
@@ -1209,25 +1182,12 @@ class GenericScanKernel(_GenericScanKernelBase):
         # not sure where these go, but roughly this much seems unavailable.
         avail_local_mem -= 0x400
 
-        # FIXME: Get rid of these
-        is_gpu = True
-        is_cpu = False
-
-        #if is_cpu:
-            # (about the widest vector a CPU can support, also taking
-            # into account that CPUs don't hide latency by large work groups
-        #    max_scan_wg_size = 16
-        #    wg_size_multiples = 4
-        #else:
-        #    max_scan_wg_size = drv.device_attribute.MAX_THREADS_PER_BLOCK
-        #    wg_size_multiples = 64
-        # FIXME: Change the name of this variable
         max_scan_wg_size = dev.get_attribute(
                 drv.device_attribute.MAX_THREADS_PER_BLOCK)
         wg_size_multiples = 64
 
         use_bank_conflict_avoidance = (
-                self.dtype.itemsize > 4 and self.dtype.itemsize % 8 == 0 and is_gpu)
+                self.dtype.itemsize > 4 and self.dtype.itemsize % 8 == 0)
 
         # k_group_size should be a power of two because of in-kernel
         # division by that number.
@@ -1243,54 +1203,47 @@ class GenericScanKernel(_GenericScanKernelBase):
                 if lmem_use <= avail_local_mem:
                     solutions.append((wg_size*k_group_size, k_group_size, wg_size))
 
-        if is_gpu:
-            from pytools import any
-            for wg_size_floor in [256, 192, 128]:
-                have_sol_above_floor = any(wg_size >= wg_size_floor
-                        for _, _, wg_size in solutions)
+        from pytools import any
+        for wg_size_floor in [256, 192, 128]:
+            have_sol_above_floor = any(wg_size >= wg_size_floor
+                    for _, _, wg_size in solutions)
 
-                if have_sol_above_floor:
-                    # delete all solutions not meeting the wg size floor
-                    solutions = [(total, try_k_group_size, try_wg_size)
-                            for total, try_k_group_size, try_wg_size in solutions
-                            if try_wg_size >= wg_size_floor]
-                    break
+            if have_sol_above_floor:
+                # delete all solutions not meeting the wg size floor
+                solutions = [(total, try_k_group_size, try_wg_size)
+                        for total, try_k_group_size, try_wg_size in solutions
+                        if try_wg_size >= wg_size_floor]
+                break
 
         _, k_group_size, max_scan_wg_size = max(solutions)
-        #k_group_size = 8
 
-        # FIXME: Not being checked
-        #while True:
-        candidate_scan_gen_info = self.generate_scan_kernel(
-                max_scan_wg_size, self.parsed_args,
-                _process_code_for_macro(self.input_expr),
-                self.is_segment_start_expr,
-                input_fetch_exprs=self.input_fetch_exprs,
-                is_first_level=True,
-                store_segment_start_flags=self.store_segment_start_flags,
-                k_group_size=k_group_size,
-                use_bank_conflict_avoidance=use_bank_conflict_avoidance)
+        while True:
+            candidate_scan_gen_info = self.generate_scan_kernel(
+                    max_scan_wg_size, self.parsed_args,
+                    _process_code_for_macro(self.input_expr),
+                    self.is_segment_start_expr,
+                    input_fetch_exprs=self.input_fetch_exprs,
+                    is_first_level=True,
+                    store_segment_start_flags=self.store_segment_start_flags,
+                    k_group_size=k_group_size,
+                    use_bank_conflict_avoidance=use_bank_conflict_avoidance)
 
-        candidate_scan_info = candidate_scan_gen_info.build(
-                self.options)
+            candidate_scan_info = candidate_scan_gen_info.build(
+                    self.options)
 
-        # Will this device actually let us execute this kernel
-        # at the desired work group size? Building it is the
-        # only way to find out.
-        # FIXME: What is this?
-        #kernel_max_wg_size = min(
-        #        candidate_scan_info.kernel.get_work_group_info(
-        #            cl.kernel_work_group_info.WORK_GROUP_SIZE,
-        #            dev)
-        #        for dev in self.devices)
+            # Will this device actually let us execute this kernel
+            # at the desired work group size? Building it is the
+            # only way to find out.
+            kernel_max_wg_size = candidate_scan_info.kernel.get_attribute(
+                    drv.function_attribute.MAX_THREADS_PER_BLOCK)
 
-        #if candidate_scan_info.wg_size <= kernel_max_wg_size:
-        #    break
-        #else:
-        #    max_scan_wg_size = min(kernel_max_wg_size, max_scan_wg_size)
+            if candidate_scan_info.wg_size <= kernel_max_wg_size:
+                break
+            else:
+                max_scan_wg_size = min(kernel_max_wg_size, max_scan_wg_size)
 
-        #trip_count += 1
-        #assert trip_count <= 20
+            trip_count += 1
+            assert trip_count <= 20
 
         self.first_level_scan_gen_info = candidate_scan_gen_info
         assert (_round_down_to_power_of_2(candidate_scan_info.wg_size)
@@ -1367,7 +1320,8 @@ class GenericScanKernel(_GenericScanKernelBase):
 
     # {{{ scan kernel build/properties
 
-    def get_local_mem_use(self, k_group_size, wg_size, use_bank_conflict_avoidance):
+    def get_local_mem_use(self, k_group_size, wg_size,
+            use_bank_conflict_avoidance):
         arg_dtypes = {}
         for arg in self.parsed_args:
             arg_dtypes[arg.name] = arg.dtype
@@ -1461,8 +1415,6 @@ class GenericScanKernel(_GenericScanKernelBase):
             n, = first_array.shape
 
         if n == 0:
-            # We're done here. (But pretend to return an event.)
-            # FIXME: Not returning an event to wait for ?
             return
 
         data_args = []
@@ -1478,10 +1430,6 @@ class GenericScanKernel(_GenericScanKernelBase):
         l1_info = self.first_level_scan_info
         l2_info = self.second_level_scan_info
 
-        # see CL source above for terminology
-        # NOTE
-        # k_group_size => scan_wg_seq_batches
-        # wg_size => scan_wg_size
         unit_size = l1_info.wg_size * l1_info.k_group_size
         dev = drv.Context.get_device()
         max_intervals = 3*dev.get_attribute(
@@ -1511,7 +1459,8 @@ class GenericScanKernel(_GenericScanKernelBase):
         # {{{ first level scan of interval (one interval per block)
 
         scan1_args = data_args + [
-                partial_scan_buffer.gpudata, n, interval_size, interval_results.gpudata,
+                partial_scan_buffer.gpudata, n, interval_size,
+                interval_results.gpudata,
                 ]
 
         if self.is_segmented:
