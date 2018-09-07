@@ -22,6 +22,26 @@ if have_pycuda():
     from pycuda.compiler import SourceModule
 
 
+scan_test_counts = [
+    10,
+    2 ** 8 - 1,
+    2 ** 8,
+    2 ** 8 + 1,
+    2 ** 10 - 5,
+    2 ** 10,
+    2 ** 10 + 5,
+    2 ** 12 - 5,
+    2 ** 12,
+    2 ** 12 + 5,
+    2 ** 20 - 2 ** 18,
+    2 ** 20 - 2 ** 18 + 5,
+    2 ** 20 + 1,
+    2 ** 20,
+    2 ** 23 + 3,
+    # larger sizes cause out of memory on low-end AMD APUs
+    ]
+
+
 class TestGPUArray:
     disabled = not have_pycuda()
 
@@ -763,6 +783,101 @@ class TestGPUArray:
                     desired_result -= host_data
 
                 assert (gpu_data.get() == desired_result).all()
+
+    @mark_cuda_test
+    def test_segmented_scan(ctx_factory):
+        from pytest import importorskip
+        importorskip("mako")
+
+        from pycuda.tools import dtype_to_ctype
+        from pycuda.scan import GenericScanKernel
+        dtype = np.int32
+        ctype = dtype_to_ctype(dtype)
+
+        #for is_exclusive in [False, True]:
+        for is_exclusive in [True, False]:
+            if is_exclusive:
+                output_statement = "out[i] = prev_item"
+            else:
+                output_statement = "out[i] = item"
+
+            knl = GenericScanKernel(dtype,
+                    arguments="%s *ary, char *segflags, "
+                        "%s *out" % (ctype, ctype),
+                    input_expr="ary[i]",
+                    scan_expr="across_seg_boundary ? b : (a+b)", neutral="0",
+                    is_segment_start_expr="segflags[i]",
+                    output_statement=output_statement,
+                    options=[])
+
+            np.set_printoptions(threshold=2000)
+            from random import randrange
+            from pycuda.curandom import rand as curand
+            for n in scan_test_counts:
+                a_dev = 10 * curand((n,), dtype=dtype)
+                a = a_dev.get()
+
+                if 10 <= n < 20:
+                    seg_boundaries_values = [
+                            [0, 9],
+                            [0, 3],
+                            [4, 6],
+                            ]
+                else:
+                    seg_boundaries_values = []
+                    for i in range(10):
+                        seg_boundary_count = max(2, min(100, randrange(0, int(0.4*n))))
+                        seg_boundaries = [
+                                randrange(n) for i in range(seg_boundary_count)]
+                        if n >= 1029:
+                            seg_boundaries.insert(0, 1028)
+                        seg_boundaries.sort()
+                        seg_boundaries_values.append(seg_boundaries)
+
+                for seg_boundaries in seg_boundaries_values:
+                    #print "BOUNDARIES", seg_boundaries
+                    #print a
+
+                    seg_boundary_flags = np.zeros(n, dtype=np.uint8)
+                    seg_boundary_flags[seg_boundaries] = 1
+                    seg_boundary_flags_dev = gpuarray.to_gpu(
+                            seg_boundary_flags)
+
+                    seg_boundaries.insert(0, 0)
+
+                    result_host = a.copy()
+                    for i, seg_start in enumerate(seg_boundaries):
+                        if i+1 < len(seg_boundaries):
+                            seg_end = seg_boundaries[i+1]
+                        else:
+                            seg_end = None
+
+                        if is_exclusive:
+                            result_host[seg_start+1:seg_end] = np.cumsum(
+                                    a[seg_start:seg_end][:-1])
+                            result_host[seg_start] = 0
+                        else:
+                            result_host[seg_start:seg_end] = np.cumsum(
+                                    a[seg_start:seg_end])
+
+                    #print "REF", result_host
+
+                    result_dev = gpuarray.empty_like(a_dev)
+                    knl(a_dev, seg_boundary_flags_dev, result_dev)
+
+                    #print "RES", result_dev
+                    is_correct = (result_dev.get() == result_host).all()
+                    if not is_correct:
+                        diff = result_dev.get() - result_host
+                        print("RES-REF", diff)
+                        print("ERRWHERE", np.where(diff))
+                        print(n, list(seg_boundaries))
+
+                    assert is_correct
+                    from gc import collect
+                    collect()
+
+                print("%d excl:%s done" % (n, is_exclusive))
 
     @mark_cuda_test
     def test_stride_preservation(self):

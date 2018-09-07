@@ -23,7 +23,10 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 
+
 Derived from code within the Thrust project, https://github.com/thrust/thrust/
+
+
 """
 
 import numpy as np
@@ -759,16 +762,16 @@ _IGNORED_WORDS = set("""
 
         typedef for endfor if void while endwhile endfor endif else const printf
         None return bool n char true false ifdef pycu_printf str range assert
-        np iinfo max itemsize __packed__ struct
+        np iinfo max itemsize __packed__ struct extern C
 
         set iteritems len setdefault
 
         GLOBAL_MEM LOCAL_MEM_ARG WITHIN_KERNEL LOCAL_MEM KERNEL REQD_WG_SIZE
         local_barrier
-        CLK_LOCAL_MEM_FENCE
-        pragma __attribute__
-        get_local_size get_local_id cl_khr_fp64 reqd_work_group_size
-        get_num_groups barrier get_group_id
+        __syncthreads
+        pragma __attribute__ __global__ __device__ __shared__ __launch_bounds__
+        threadIdx blockIdx blockDim gridDim
+        barrier
 
         _final_update _debug_scan kernel_name
 
@@ -1513,6 +1516,179 @@ class GenericScanKernel(_GenericScanKernelBase):
                 *upd_args)
 
         # }}}
+
+# }}}
+
+
+# {{{ debug kernel
+
+DEBUG_SCAN_TEMPLATE = SHARED_PREAMBLE + r"""//CL//
+
+KERNEL
+REQD_WG_SIZE(1, 1, 1)
+void ${name_prefix}_debug_scan(
+    GLOBAL_MEM scan_type *scan_tmp,
+    ${argument_signature},
+    const index_type N)
+{
+    scan_type current = ${neutral};
+    scan_type prev;
+
+    for (index_type i = 0; i < N; ++i)
+    {
+        %for name, arg_name, ife_offset in input_fetch_exprs:
+            ${arg_ctypes[arg_name]} ${name};
+            %if ife_offset < 0:
+                if (i+${ife_offset} >= 0)
+                    ${name} = ${arg_name}[i+${ife_offset}];
+            %else:
+                ${name} = ${arg_name}[i];
+            %endif
+        %endfor
+
+        scan_type my_val = INPUT_EXPR(i);
+
+        prev = current;
+        %if is_segmented:
+            bool is_seg_start = IS_SEG_START(i, my_val);
+        %endif
+
+        current = SCAN_EXPR(prev, my_val,
+            %if is_segmented:
+                is_seg_start
+            %else:
+                false
+            %endif
+            );
+        scan_tmp[i] = current;
+    }
+
+    scan_type last_item = scan_tmp[N-1];
+
+    for (index_type i = 0; i < N; ++i)
+    {
+        scan_type item = scan_tmp[i];
+        scan_type prev_item;
+        if (i)
+            prev_item = scan_tmp[i-1];
+        else
+            prev_item = ${neutral};
+
+        {
+            ${output_statement};
+        }
+    }
+}
+"""
+
+
+class GenericDebugScanKernel(_GenericScanKernelBase):
+    def finish_setup(self):
+        scan_tpl = _make_template(DEBUG_SCAN_TEMPLATE)
+        scan_src = str(scan_tpl.render(
+            output_statement=self.output_statement,
+            argument_signature=", ".join(
+                arg.declarator() for arg in self.parsed_args),
+            is_segment_start_expr=self.is_segment_start_expr,
+            input_expr=_process_code_for_macro(self.input_expr),
+            input_fetch_exprs=self.input_fetch_exprs,
+            wg_size=1,
+            **self.code_variables))
+
+        scan_prg = SourceModule(scan_src, options=self.options)
+        self.kernel = scan_prg.get_function(self.name_prefix+"_debug_scan")
+        scalar_arg_dtypes = (
+                [None]
+                + get_arg_list_scalar_arg_dtypes(self.parsed_args)
+                + [self.index_dtype])
+        self.kernel.set_scalar_arg_dtypes(scalar_arg_dtypes)
+
+    def __call__(self, *args, **kwargs):
+        # {{{ argument processing
+
+        allocator = kwargs.get("allocator")
+        n = kwargs.get("size")
+        stream = kwargs.get("stream")
+
+        if len(args) != len(self.parsed_args):
+            raise TypeError("expected %d arguments, got %d" %
+                    (len(self.parsed_args), len(args)))
+
+        first_array = args[self.first_array_idx]
+        allocator = allocator or first_array.allocator
+
+        if n is None:
+            n, = first_array.shape
+
+        scan_tmp = gpuarray.empty(n, dtype=self.dtype, allocator=allocator)
+
+        data_args = [scan_tmp.gpudata]
+        from pycuda.tools import VectorArg
+        for arg_descr, arg_val in zip(self.parsed_args, args):
+            if isinstance(arg_descr, VectorArg):
+                data_args.append(arg_val.gpudata)
+            else:
+                data_args.append(arg_val)
+
+        # }}}
+
+        return self.kernel.prepared_async_call(
+                (1, 1), (1, 1, 1), stream, *(data_args + [n]))
+
+
+# }}}
+
+
+# {{{ compatibility interface
+
+class _LegacyScanKernelBase(GenericScanKernel):
+    def __init__(self, dtype,
+            scan_expr, neutral=None,
+            name_prefix="scan", options=[], preamble=""):
+        scan_ctype = dtype_to_ctype(dtype)
+        GenericScanKernel.__init__(self,
+                dtype,
+                arguments="%s *input_ary, %s *output_ary" % (
+                    scan_ctype, scan_ctype),
+                input_expr="input_ary[i]",
+                scan_expr=scan_expr,
+                neutral=neutral,
+                output_statement=self.ary_output_statement,
+                options=options, preamble=preamble)
+
+    def __call__(self, input_ary, output_ary=None, allocator=None):
+        allocator = allocator or input_ary.allocator
+
+        if output_ary is None:
+            output_ary = input_ary
+
+        if isinstance(output_ary, (str, six.text_type)) and output_ary == "new":
+            output_ary = gpuarray.empty_like(input_ary, allocator=allocator)
+
+        if input_ary.shape != output_ary.shape:
+            raise ValueError("input and output must have the same shape")
+
+        if not input_ary.flags.forc:
+            raise RuntimeError("ScanKernel cannot "
+                    "deal with non-contiguous arrays")
+
+        n, = input_ary.shape
+
+        if not n:
+            return output_ary
+
+        GenericScanKernel.__call__(self,
+                input_ary, output_ary, allocator=allocator)
+
+        return output_ary
+
+
+class InclusiveScanKernel(_LegacyScanKernelBase):
+    ary_output_statement = "output_ary[i] = item;"
+
+
+class ExclusiveScanKernel(_LegacyScanKernelBase):
+    ary_output_statement = "output_ary[i] = prev_item;"
 
 # }}}
 
