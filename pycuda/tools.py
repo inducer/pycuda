@@ -437,15 +437,17 @@ def get_arg_list_scalar_arg_dtypes(arg_types):
 
 # }}}
 
-def _process_code_for_macro(code):
-    # FIXME: Replace this with something else ?
-    #code = code.replace("//CL//", "\n")
 
+# {{{ code generation/templating helper
+
+def _process_code_for_macro(code):
     if "//" in code:
         raise RuntimeError("end-of-line comments ('//') may not be used in "
                 "code snippets")
 
     return code.replace("\n", " \\\n")
+
+# }}}
 
 
 # {{{ context-dep memoization

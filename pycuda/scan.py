@@ -25,8 +25,6 @@ limitations under the License.
 
 
 Derived from code within the Thrust project, https://github.com/thrust/thrust/
-
-
 """
 
 import numpy as np
