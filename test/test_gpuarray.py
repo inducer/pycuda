@@ -7,6 +7,7 @@ import sys
 from pycuda.tools import mark_cuda_test
 from pycuda.characterize import has_double_support
 from six.moves import range
+import pytest
 
 
 def have_pycuda():
@@ -20,6 +21,47 @@ if have_pycuda():
     import pycuda.gpuarray as gpuarray
     import pycuda.driver as drv
     from pycuda.compiler import SourceModule
+    from pycuda.scan import InclusiveScanKernel, ExclusiveScanKernel
+
+
+def summarize_error(obtained, desired, orig, thresh=1e-5):
+    from pytest import importorskip
+    importorskip("mako")
+
+    err = obtained - desired
+    ok_count = 0
+    bad_count = 0
+
+    bad_limit = 200
+
+    def summarize_counts():
+        if ok_count:
+            entries.append("<%d ok>" % ok_count)
+        if bad_count >= bad_limit:
+            entries.append("<%d more bad>" % (bad_count-bad_limit))
+
+    entries = []
+    for i, val in enumerate(err):
+        if abs(val) > thresh:
+            if ok_count:
+                summarize_counts()
+                ok_count = 0
+
+            bad_count += 1
+
+            if bad_count < bad_limit:
+                entries.append("%r (want: %r, got: %r, orig: %r)" % (
+                    obtained[i], desired[i], obtained[i], orig[i]))
+        else:
+            if bad_count:
+                summarize_counts()
+                bad_count = 0
+
+            ok_count += 1
+
+    summarize_counts()
+
+    return " ".join(entries)
 
 
 scan_test_counts = [
@@ -760,28 +802,33 @@ class TestGPUArray:
 
     @mark_cuda_test
     def test_scan(self):
-        from pycuda.scan import ExclusiveScanKernel, InclusiveScanKernel
-        for cls in [ExclusiveScanKernel, InclusiveScanKernel]:
-            scan_kern = cls(np.int32, "a+b", "0")
+        from pytest import importorskip
+        importorskip("mako")
 
-            for n in [
-                    10, 2**10-5, 2**10,
-                    2**20-2**18,
-                    2**20-2**18+5,
-                    2**10+5,
-                    2**20+5,
-                    2**20, 2**24
-                    ]:
-                host_data = np.random.randint(0, 10, n).astype(np.int32)
-                gpu_data = gpuarray.to_gpu(host_data)
+        for scan_cls in [ExclusiveScanKernel, InclusiveScanKernel]:
+            for dtype in [np.int32, np.int64]:
+                knl = scan_cls(dtype, "a+b", "0")
 
-                scan_kern(gpu_data)
+                for n in scan_test_counts:
+                    host_data = np.random.randint(0, 10, n).astype(dtype)
+                    dev_data = gpuarray.to_gpu(host_data)
 
-                desired_result = np.cumsum(host_data, axis=0)
-                if cls is ExclusiveScanKernel:
-                    desired_result -= host_data
+                    # /!\ fails on Nv GT2?? for some drivers
+                    assert (host_data == dev_data.get()).all()
 
-                assert (gpu_data.get() == desired_result).all()
+                    knl(dev_data)
+
+                    desired_result = np.cumsum(host_data, axis=0)
+                    if scan_cls is ExclusiveScanKernel:
+                        desired_result -= host_data
+
+                    is_ok = (dev_data.get() == desired_result).all()
+                    if 1 and not is_ok:
+                        print("something went wrong, summarizing error...")
+                        print(summarize_error(dev_data.get(), desired_result, host_data))
+
+                    print("dtype:%s n:%d %s worked:%s" % (dtype, n, scan_cls, is_ok))
+                    assert is_ok
 
     @mark_cuda_test
     def test_segmented_scan(self):

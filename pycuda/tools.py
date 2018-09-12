@@ -488,7 +488,7 @@ def clear_context_caches():
 
 # }}}
 
-# {{{ py.test interaction
+# {{{ pytest interaction
 
 def mark_cuda_test(inner_f):
     def f(*args, **kwargs):
@@ -512,7 +512,7 @@ def mark_cuda_test(inner_f):
             collect()
 
     try:
-        from py.test import mark as mark_test
+        from pytest import mark as mark_test
     except ImportError:
         return f
 
