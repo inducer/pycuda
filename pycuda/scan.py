@@ -133,18 +133,18 @@ KERNEL
 REQD_WG_SIZE(WG_SIZE, 1, 1)
 void ${kernel_name}(
     ${argument_signature},
-    GLOBAL_MEM scan_type *partial_scan_buffer,
+    GLOBAL_MEM scan_type* RESTRICT partial_scan_buffer,
     const index_type N,
     const index_type interval_size
     %if is_first_level:
-        , GLOBAL_MEM scan_type *interval_results
+        , GLOBAL_MEM scan_type* RESTRICT interval_results
     %endif
     %if is_segmented and is_first_level:
         // NO_SEG_BOUNDARY if no segment boundary in interval.
-        , GLOBAL_MEM index_type *g_first_segment_start_in_interval
+        , GLOBAL_MEM index_type* RESTRICT g_first_segment_start_in_interval
     %endif
     %if store_segment_start_flags:
-        , GLOBAL_MEM char *g_segment_start_flags
+        , GLOBAL_MEM char* RESTRICT g_segment_start_flags
     %endif
     )
 {
@@ -590,13 +590,13 @@ void ${name_prefix}_final_update(
     ${argument_signature},
     const index_type N,
     const index_type interval_size,
-    GLOBAL_MEM scan_type *interval_results,
-    GLOBAL_MEM scan_type *partial_scan_buffer
+    GLOBAL_MEM scan_type* RESTRICT interval_results,
+    GLOBAL_MEM scan_type* RESTRICT partial_scan_buffer
     %if is_segmented:
-        , GLOBAL_MEM index_type *g_first_segment_start_in_interval
+        , GLOBAL_MEM index_type* RESTRICT g_first_segment_start_in_interval
     %endif
     %if is_segmented and use_lookbehind_update:
-        , GLOBAL_MEM char *g_segment_start_flags
+        , GLOBAL_MEM char* RESTRICT g_segment_start_flags
     %endif
     )
 {
@@ -762,15 +762,15 @@ _IGNORED_WORDS = set("""
 
         typedef for endfor if void while endwhile endfor endif else const printf
         None return bool n char true false ifdef pycu_printf str range assert
-        np iinfo max itemsize __packed__ struct extern C
+        np iinfo max itemsize __packed__ struct __restrict__ extern C
 
         set iteritems len setdefault
 
-        GLOBAL_MEM LOCAL_MEM_ARG WITHIN_KERNEL LOCAL_MEM KERNEL REQD_WG_SIZE
+        GLOBAL_MEM LOCAL_MEM_ARG WITHIN_KERNEL LOCAL_MEM RESTRICT KERNEL REQD_WG_SIZE
         local_barrier
         __syncthreads
         pragma __attribute__ __global__ __device__ __shared__ __launch_bounds__
-        threadIdx blockIdx blockDim gridDim
+        threadIdx blockIdx blockDim gridDim x y z
         barrier
 
         _final_update _debug_scan kernel_name
@@ -1116,16 +1116,17 @@ class GenericScanKernel(_GenericScanKernelBase):
 
     Usage example::
 
-        import pycuda as cu
+        import pycuda.gpuarray as gpuarray
         from pycuda.scan import GenericScanKernel
+
         knl = GenericScanKernel(
                 np.int32,
                 arguments="int *ary",
                 input_expr="ary[i]",
                 scan_expr="a+b", neutral="0",
-                output_statement="ary[i+1] = item;")
+                output_statement="ary[i] = item;")
 
-        a = cu.gpuarray.arange(10000, dtype=np.int32)
+        a = gpuarray.arange(10000, dtype=np.int32)
         knl(a)
 
     """
