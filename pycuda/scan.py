@@ -926,7 +926,7 @@ class _GenericScanKernelBase(object):
         """
         :arg dtype: the :class:`numpy.dtype` with which the scan will
             be performed. May be a structured type if that type was registered
-            through :func:`pyopencl.tools.get_or_register_dtype`.
+            through :func:`pycuda.tools.get_or_register_dtype`.
         :arg arguments: A string of comma-separated C argument declarations.
             If *arguments* is specified, then *input_expr* must also be
             specified. All types used here must be known to PyCUDA.
@@ -1523,7 +1523,7 @@ class GenericScanKernel(_GenericScanKernelBase):
 
 # {{{ debug kernel
 
-DEBUG_SCAN_TEMPLATE = SHARED_PREAMBLE + r"""//CL//
+DEBUG_SCAN_TEMPLATE = SHARED_PREAMBLE + r"""
 
 KERNEL
 REQD_WG_SIZE(1, 1, 1)
