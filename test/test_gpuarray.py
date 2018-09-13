@@ -830,6 +830,9 @@ class TestGPUArray:
                     print("dtype:%s n:%d %s worked:%s" % (dtype, n, scan_cls, is_ok))
                     assert is_ok
 
+                    from gc import collect
+                    collect()
+
     @mark_cuda_test
     def test_segmented_scan(self):
         from pytest import importorskip

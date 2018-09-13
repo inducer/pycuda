@@ -46,7 +46,9 @@ from pytools.persistent_dict import WriteOncePersistentDict
 import logging
 logger = logging.getLogger(__name__)
 
-######################################################################################################
+
+# {{{ preamble
+
 SHARED_PREAMBLE = CLUDA_PREAMBLE + """
 #define WG_SIZE ${wg_size}
 
@@ -160,9 +162,8 @@ void ${kernel_name}(
         {
             scan_type value;
         };
-
-        // padded in WG_SIZE to avoid bank conflicts
     %endif
+    // padded in WG_SIZE to avoid bank conflicts
     LOCAL_MEM struct wrapped_scan_type ldata[K + 1][WG_SIZE + 1];
 
     %if is_segmented:
@@ -546,9 +547,11 @@ void ${kernel_name}(
                         index_type remainder =
                             linear_index - linear_scan_data_idx * scan_types_per_int;
 
-                        dest[linear_index] = ( &(ldata
+                        int* src = (int*) &(ldata
                                 [linear_scan_data_idx % K]
-                                [linear_scan_data_idx / K].value))[remainder];
+                                [linear_scan_data_idx / K].value);
+
+                        dest[linear_index] = src[remainder];
                     }
                 %endfor
             }
