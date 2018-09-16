@@ -1,10 +1,8 @@
-from __future__ import division
-from __future__ import absolute_import
-from __future__ import print_function
+from __future__ import division, absolute_import, print_function
 import numpy as np
 import numpy.linalg as la
 from pycuda.tools import mark_cuda_test, dtype_to_ctype
-import pytest
+import pytest  # noqa
 from six.moves import range
 
 
@@ -12,7 +10,7 @@ def have_pycuda():
     try:
         import pycuda  # noqa
         return True
-    except:
+    except Exception:
         return False
 
 
@@ -98,7 +96,7 @@ class TestDriver:
         a = gpuarray.vec.make_float3(1, 2, 3)
         dest = np.empty((400), gpuarray.vec.float3)
 
-        set_them(drv.Out(dest), a, block=(400,1,1))
+        set_them(drv.Out(dest), a, block=(400, 1, 1))
         assert (dest == a).all()
 
     @mark_cuda_test
@@ -905,7 +903,7 @@ class TestDriver:
             drv.memcpy_dtoh(e, e_gpu)
             drv.memcpy_dtoh(f, f_gpu)
 
-            #print(c,d,e,f)
+            # print(c,d,e,f)
 
         a = np.random.randint(10, size=100)
         b = np.random.randint(10, size=100)
@@ -918,6 +916,7 @@ class TestDriver:
 
     @mark_cuda_test
     def test_jit_link_module(self):
+        from pycuda.compiler import DEFAULT_NVCC_FLAGS
         if drv.Context.get_device().compute_capability() < (3, 5):
             from pytest import skip
             skip("need compute capability 3.5 or higher for dynamic parallelism")
@@ -936,13 +935,17 @@ class TestDriver:
 
         from pycuda.compiler import DynamicModule
         mod = DynamicModule()
-        mod.add_source(test_outer_cu, nvcc_options=['-rdc=true', '-lcudadevrt'])
-        mod.add_source(test_inner_cu, nvcc_options=['-rdc=true', '-lcudadevrt'])
+        mod.add_source(
+                test_outer_cu, nvcc_options=(
+                    ['-rdc=true', '-lcudadevrt']+DEFAULT_NVCC_FLAGS))
+        mod.add_source(
+                test_inner_cu, nvcc_options=(
+                    ['-rdc=true', '-lcudadevrt']+DEFAULT_NVCC_FLAGS))
         mod.add_stdlib('cudadevrt')
         mod.link()
 
         test_kernel = mod.get_function('test_kernel')
-        test_kernel(grid=(2,1), block=(1,1,1))
+        test_kernel(grid=(2, 1), block=(1, 1, 1))
 
 
 def test_import_pyopencl_before_pycuda():

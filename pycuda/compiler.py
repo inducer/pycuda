@@ -95,7 +95,7 @@ def compile_plain(source, options, keep, nvcc, cache_dir, target="cubin"):
             finally:
                 cache_file.close()
 
-        except:
+        except Exception:
             pass
 
     from tempfile import mkdtemp
@@ -221,7 +221,6 @@ def compile(source, nvcc="nvcc", options=None, keep=False,
         cache_dir = False
 
     if cache_dir is None:
-        from os.path import join
         import appdirs
         cache_dir = os.path.join(appdirs.user_cache_dir("pycuda", "pycuda"),
                 "compiler-cache-v1")
@@ -254,6 +253,7 @@ def compile(source, nvcc="nvcc", options=None, keep=False,
 
     return compile_plain(source, options, keep, nvcc, cache_dir, target)
 
+
 class CudaModule(object):
     def _check_arch(self, arch):
         if arch is None:
@@ -265,7 +265,7 @@ class CudaModule(object):
                 from warnings import warn
                 warn("trying to compile for a compute capability "
                         "higher than selected GPU")
-        except:
+        except Exception:
             pass
 
     def _bind_module(self):

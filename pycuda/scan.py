@@ -345,7 +345,7 @@ void ${name_prefix}_final_update(
 class _ScanKernelBase(object):
     def __init__(self, dtype,
             scan_expr, neutral=None,
-            name_prefix="scan", options=[], preamble="", devices=None):
+            name_prefix="scan", options=None, preamble="", devices=None):
 
         if isinstance(self, ExclusiveScanKernel) and neutral is None:
             raise ValueError("neutral element is required for exclusive scan")
