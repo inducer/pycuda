@@ -451,13 +451,15 @@ class DynamicSourceModule(DynamicModule):
     - source is linked against the CUDA device runtime library cudadevrt
     - library cudadevrt is statically linked into the generated Module
     '''
-    def __init__(self, source, nvcc="nvcc", options=[], keep=False,
+    def __init__(self, source, nvcc="nvcc", options=None, keep=False,
             no_extern_c=False, arch=None, code=None, cache_dir=None,
             include_dirs=[], cuda_libdir=None):
         super(DynamicSourceModule, self).__init__(nvcc=nvcc,
             link_options=None, keep=keep, no_extern_c=no_extern_c,
             arch=arch, code=code, cache_dir=cache_dir,
             include_dirs=include_dirs, cuda_libdir=cuda_libdir)
+        if options is None:
+            options = DEFAULT_NVCC_FLAGS
         options = options[:]
         if '-rdc=true' not in options:
             options.append('-rdc=true')
