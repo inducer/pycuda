@@ -922,7 +922,7 @@ class _GenericScanKernelBase(object):
             arguments, input_expr, scan_expr, neutral, output_statement,
             is_segment_start_expr=None, input_fetch_exprs=[],
             index_dtype=np.int32,
-            name_prefix="scan", options=[], preamble=""):
+            name_prefix="scan", options=None, preamble=""):
         """
         :arg dtype: the :class:`numpy.dtype` with which the scan will
             be performed. May be a structured type if that type was registered
@@ -1645,7 +1645,7 @@ class GenericDebugScanKernel(_GenericScanKernelBase):
 class _LegacyScanKernelBase(GenericScanKernel):
     def __init__(self, dtype,
             scan_expr, neutral=None,
-            name_prefix="scan", options=[], preamble=""):
+            name_prefix="scan", options=None, preamble=""):
         scan_ctype = dtype_to_ctype(dtype)
         GenericScanKernel.__init__(self,
                 dtype,

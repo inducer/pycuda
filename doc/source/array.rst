@@ -1250,9 +1250,6 @@ Simple / Legacy Interface
 
     Works like :class:`ExclusiveScanKernel`.
 
-    .. versionchanged:: 2013.1
-        *neutral* is now always required.
-
 For the array `[1,2,3]`, inclusive scan results in `[1,3,6]`, and exclusive
 scan results in `[0,1,3]`.
 
