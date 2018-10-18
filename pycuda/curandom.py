@@ -608,8 +608,8 @@ class _PseudoRandomNumberGeneratorBase(_RandomNumberGeneratorBase):
         if seed_getter is None:
             seed = array.to_gpu(
                     np.asarray(
-                        np.random.random_integers(
-                            0, (1 << 31) - 2, generator_count),
+                        np.random.randint(
+                            0, (1 << 31) - 1, generator_count),
                         dtype=np.int32))
         else:
             seed = seed_getter(generator_count)
