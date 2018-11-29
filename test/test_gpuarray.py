@@ -933,6 +933,9 @@ class TestGPUArray:
 
     @mark_cuda_test
     def test_sum_allocator(self):
+        from pytest import skip
+        skip("https://github.com/inducer/pycuda/issues/163")
+
         import pycuda.tools
         pool = pycuda.tools.DeviceMemoryPool()
 
