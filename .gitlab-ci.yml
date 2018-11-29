@@ -28,9 +28,9 @@ Python 2.7 K40:
   except:
   - tags
 
-Python 3.5 Titan:
+Python 3.6 Titan X:
   script:
-  - py_version=3.5
+  - py_version=3.6
   - EXTRA_INSTALL="numpy mako"
   - export PYCUDA_DEFAULT_NVCC_FLAGS="-ccbin g++-7"
   - echo "CUDADRV_LIB_DIR = ['/usr/lib/x86_64-linux-gnu/nvidia/current']" > siteconf.py
@@ -38,14 +38,14 @@ Python 3.5 Titan:
   - "export LD_LIBRARY_PATH=/usr/local/cuda/lib64:$LD_LIBRARY_PATH"
   - ". ./build-and-test-py-project.sh"
   tags:
-  - python3.5
+  - python3.6
   - nvidia-titan-x
   except:
   - tags
 
-Python 3.5 K40:
+Python 3.6 Titan V:
   script:
-  - py_version=3.5
+  - py_version=3.6
   - EXTRA_INSTALL="numpy mako"
   - export PYCUDA_DEFAULT_NVCC_FLAGS="-ccbin g++-7"
   - echo "CUDADRV_LIB_DIR = ['/usr/lib/x86_64-linux-gnu/nvidia/current']" > siteconf.py
@@ -53,7 +53,22 @@ Python 3.5 K40:
   - "export LD_LIBRARY_PATH=/usr/local/cuda/lib64:$LD_LIBRARY_PATH"
   - ". ./build-and-test-py-project.sh"
   tags:
-  - python3.5
+  - python3.6
+  - nvidia-titan-v
+  except:
+  - tags
+
+Python 3.6 K40:
+  script:
+  - py_version=3.6
+  - EXTRA_INSTALL="numpy mako"
+  - export PYCUDA_DEFAULT_NVCC_FLAGS="-ccbin g++-7"
+  - echo "CUDADRV_LIB_DIR = ['/usr/lib/x86_64-linux-gnu/nvidia/current']" > siteconf.py
+  - curl -L -O -k https://gitlab.tiker.net/inducer/ci-support/raw/master/build-and-test-py-project.sh
+  - "export LD_LIBRARY_PATH=/usr/local/cuda/lib64:$LD_LIBRARY_PATH"
+  - ". ./build-and-test-py-project.sh"
+  tags:
+  - python3.6
   - nvidia-k40
   except:
   - tags

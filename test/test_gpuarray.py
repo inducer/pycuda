@@ -933,8 +933,11 @@ class TestGPUArray:
 
     @mark_cuda_test
     def test_sum_allocator(self):
+        # FIXME
         from pytest import skip
         skip("https://github.com/inducer/pycuda/issues/163")
+        # crashes with  terminate called after throwing an instance of 'pycuda::error'
+        # what():  explicit_context_dependent failed: invalid device context - no currently active context?
 
         import pycuda.tools
         pool = pycuda.tools.DeviceMemoryPool()
@@ -955,6 +958,7 @@ class TestGPUArray:
 
     @mark_cuda_test
     def test_dot_allocator(self):
+        # FIXME
         from pytest import skip
         skip("https://github.com/inducer/pycuda/issues/163")
 
