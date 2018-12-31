@@ -101,9 +101,33 @@ def get_config_schema():
 def main():
     import sys
 
+    from setuptools import Extension
+    from setuptools.command.build_ext import build_ext
     from aksetup_helper import (hack_distutils, get_config, setup,
-            NumpyExtension, set_up_shipped_boost_if_requested,
-            check_git_submodules)
+            set_up_shipped_boost_if_requested, check_git_submodules)
+
+    class NumpyExtension(Extension):
+        pass
+
+    class custom_build_ext(build_ext):
+
+        def build_extension(self, extension):
+            # We add the numpy include dir right before building the
+            # extension, in order to avoid having to import numpy when
+            # the setup script is imported, which would prevent
+            # installation before manual installation of numpy.
+            if isinstance(extension, NumpyExtension):
+                numpy_incpath = self.get_numpy_incpath()
+                if numpy_incpath not in extension.include_dirs:
+                    extension.include_dirs.append(numpy_incpath)
+            super().build_extension(extension)
+
+        def get_numpy_incpath(self):
+            from imp import find_module
+            # avoid actually importing numpy, it screws up distutils
+            file, pathname, descr = find_module("numpy")
+            from os.path import join
+            return join(pathname, "core", "include")
 
     check_git_submodules()
 
@@ -236,7 +260,7 @@ def main():
                     extra_link_args=conf["LDFLAGS"],
                     ),
                 ],
-
+            cmdclass={"build_ext": custom_build_ext},
             include_package_data=True,
             package_data={
                     "pycuda": [
