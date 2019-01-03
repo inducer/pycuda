@@ -22,9 +22,9 @@ def search_on_path(filenames):
 
 
 def get_config_schema():
-    from aksetup_helper import ConfigSchema, Option, \
-            IncludeDir, LibraryDir, Libraries, BoostLibraries, \
-            Switch, StringListOption, make_boost_base_options
+    from aksetup_helper import (ConfigSchema, Option,
+            IncludeDir, LibraryDir, Libraries, BoostLibraries,
+            Switch, StringListOption, make_boost_base_options)
 
     nvcc_path = search_on_path(["nvcc", "nvcc.exe"])
     if nvcc_path is None:
@@ -102,8 +102,8 @@ def main():
     import sys
 
     from aksetup_helper import (hack_distutils, get_config, setup,
-            NumpyExtension, set_up_shipped_boost_if_requested,
-            check_git_submodules)
+            ExtensionUsingNumpy, set_up_shipped_boost_if_requested,
+            check_git_submodules, NumpyBuildExtCommand)
 
     check_git_submodules()
 
@@ -216,7 +216,7 @@ def main():
 
             ext_package="pycuda",
             ext_modules=[
-                NumpyExtension("_driver",
+                ExtensionUsingNumpy("_driver",
                     [
                         "src/cpp/cuda.cpp",
                         "src/cpp/bitlog.cpp",
@@ -230,13 +230,13 @@ def main():
                     extra_compile_args=conf["CXXFLAGS"],
                     extra_link_args=conf["LDFLAGS"],
                     ),
-                NumpyExtension("_pvt_struct",
+                ExtensionUsingNumpy("_pvt_struct",
                     [pvt_struct_source],
                     extra_compile_args=conf["CXXFLAGS"],
                     extra_link_args=conf["LDFLAGS"],
                     ),
                 ],
-
+            cmdclass={'build_ext': NumpyBuildExtCommand},
             include_package_data=True,
             package_data={
                     "pycuda": [

@@ -1,6 +1,8 @@
 import setuptools  # noqa
 from setuptools import Extension
 import sys
+from setuptools.command.build_ext import (  # noqa: N812
+        build_ext as BaseBuildExtCommand)
 
 
 def count_down_delay(delay):
@@ -32,6 +34,14 @@ def setup(*args, **kwargs):
         raise
 
 
+def get_numpy_incpath():
+    from imp import find_module
+    # avoid actually importing numpy, it screws up distutils
+    file, pathname, descr = find_module("numpy")
+    from os.path import join
+    return join(pathname, "core", "include")
+
+
 class NumpyExtension(Extension):
     # nicked from
     # http://mail.python.org/pipermail/distutils-sig/2007-September/008253.html
@@ -41,15 +51,8 @@ class NumpyExtension(Extension):
         self._include_dirs = self.include_dirs
         del self.include_dirs  # restore overwritten property
 
-    def get_numpy_incpath(self):
-        from imp import find_module
-        # avoid actually importing numpy, it screws up distutils
-        file, pathname, descr = find_module("numpy")
-        from os.path import join
-        return join(pathname, "core", "include")
-
     def get_additional_include_dirs(self):
-        return [self.get_numpy_incpath()]
+        return [get_numpy_incpath()]
 
     def get_include_dirs(self):
         return self._include_dirs + self.get_additional_include_dirs()
@@ -63,35 +66,44 @@ class NumpyExtension(Extension):
     include_dirs = property(get_include_dirs, set_include_dirs, del_include_dirs)
 
 
-class PyUblasExtension(NumpyExtension):
-    def get_module_include_path(self, name):
-        from pkg_resources import Requirement, resource_filename
-        return resource_filename(Requirement.parse(name), "%s/include" % name)
+class ExtensionUsingNumpy(Extension):
+    """Unlike :class:`NumpyExtension`, this class does not require numpy to be
+    importable upon extension module creation, allowing ``setup_requires=["numpy"]``
+    to work. On the other hand, it requires the use of::
 
-    def get_additional_include_dirs(self):
-        return (NumpyExtension.get_additional_include_dirs(self)
-                + [self.get_module_include_path("pyublas")])
+        setup(...,
+            cmdclass={'build_ext': NumpyBuildExtCommand})
+
+    or
+
+        setup(...,
+            cmdclass={'build_ext': PybindBuildExtCommand})
+    """
 
 
-class HedgeExtension(PyUblasExtension):
-    @property
-    def include_dirs(self):
-        return self._include_dirs + [
-                self.get_numpy_incpath(),
-                self.get_module_include_path("pyublas"),
-                self.get_module_include_path("hedge"),
-                ]
+class NumpyBuildExtCommand(BaseBuildExtCommand):
+    def build_extension(self, extension):
+        # We add the numpy include dir right before building the
+        # extension, in order to avoid having to import numpy when
+        # the setup script is imported, which would prevent
+        # installation before manual installation of numpy.
+        if isinstance(extension, ExtensionUsingNumpy):
+            numpy_incpath = get_numpy_incpath()
+            if numpy_incpath not in extension.include_dirs:
+                extension.include_dirs.append(numpy_incpath)
+
+        BaseBuildExtCommand.build_extension(self, extension)
 
 
 # {{{ tools
 
-def flatten(list):
+def flatten(lst):
     """For an iterable of sub-iterables, generate each member of each
     sub-iterable in turn, i.e. a flattened version of that super-iterable.
 
     Example: Turn [[a,b,c],[d,e,f]] into [a,b,c,d,e,f].
     """
-    for sublist in list:
+    for sublist in lst:
         for j in sublist:
             yield j
 
@@ -504,6 +516,10 @@ class Libraries(StringListOption):
                 help=help or ("Library names for %s (without lib or .so)"
                 % (human_name or humanize(lib_name))))
 
+# }}}
+
+
+# {{{ configure options for specific software
 
 class BoostLibraries(Libraries):
     def __init__(self, lib_base_name, default_lib_name=None):
@@ -628,6 +644,10 @@ def make_boost_base_options():
             help="The compiler with which Boost C++ was compiled, e.g. gcc43"),
         ]
 
+# }}}
+
+
+# {{{ configure frontend
 
 def configure_frontend():
     from optparse import OptionParser
@@ -679,6 +699,8 @@ def configure_frontend():
 
         substitute(substs, "Makefile")
 
+# }}}
+
 
 def substitute(substitutions, fname):
     import re
@@ -722,6 +744,8 @@ def substitute(substitutions, fname):
     infile_stat_res = stat(fname_in)
     chmod(fname, infile_stat_res.st_mode)
 
+
+# {{{ git bits
 
 def _run_git_command(cmd):
     git_error = None
@@ -828,6 +852,10 @@ def check_git_submodules():
                     print("git submodules initialized successfully")
                     print(DASH_SEPARATOR)
 
+# }}}
+
+
+# {{{ pybind11
 
 def check_pybind11():
     try:
@@ -848,3 +876,83 @@ def check_pybind11():
 
         from aksetup_helper import count_down_delay
         count_down_delay(delay=10)
+
+
+# {{{ (modified) boilerplate from https://github.com/pybind/python_example/blob/2ed5a68759cd6ff5d2e5992a91f08616ef457b5c/setup.py  # noqa
+
+class get_pybind_include(object):  # noqa: N801
+    """Helper class to determine the pybind11 include path
+
+    The purpose of this class is to postpone importing pybind11
+    until it is actually installed, so that the ``get_include()``
+    method can be invoked. """
+
+    def __init__(self, user=False):
+        self.user = user
+
+    def __str__(self):
+        import pybind11
+        return pybind11.get_include(self.user)
+
+
+# As of Python 3.6, CCompiler has a `has_flag` method.
+# cf http://bugs.python.org/issue26689
+def has_flag(compiler, flagname):
+    """Return a boolean indicating whether a flag name is supported on
+    the specified compiler.
+    """
+    import tempfile
+    with tempfile.NamedTemporaryFile('w', suffix='.cpp', delete=False) as f:
+        f.write('int main (int argc, char **argv) { return 0; }')
+        fname = f.name
+    try:
+        compiler.compile([fname], extra_postargs=[flagname])
+    except setuptools.distutils.errors.CompileError:
+        return False
+    return True
+
+
+def cpp_flag(compiler):
+    """Return the -std=c++[11/14] compiler flag.
+
+    The c++14 is prefered over c++11 (when it is available).
+    """
+    if has_flag(compiler, '-std=c++14'):
+        return '-std=c++14'
+    elif has_flag(compiler, '-std=c++11'):
+        return '-std=c++11'
+    else:
+        raise RuntimeError('Unsupported compiler -- at least C++11 support '
+                           'is needed!')
+
+
+class PybindBuildExtCommand(NumpyBuildExtCommand):
+    """A custom build extension for adding compiler-specific options."""
+    c_opts = {
+        'msvc': ['/EHsc'],
+        'unix': [],
+    }
+
+    if sys.platform == 'darwin':
+        c_opts['unix'] += ['-stdlib=libc++', '-mmacosx-version-min=10.7']
+
+    def build_extensions(self):
+        ct = self.compiler.compiler_type
+        opts = self.c_opts.get(ct, [])
+        if ct in ['unix', 'mingw32']:
+            opts.append('-DVERSION_INFO="%s"' % self.distribution.get_version())
+            opts.append(cpp_flag(self.compiler))
+            if has_flag(self.compiler, '-fvisibility=hidden'):
+                opts.append('-fvisibility=hidden')
+        elif ct == 'msvc':
+            opts.append('/DVERSION_INFO=\\"%s\\"' % self.distribution.get_version())
+        for ext in self.extensions:
+            ext.extra_compile_args = ext.extra_compile_args + opts
+
+        NumpyBuildExtCommand.build_extensions(self)
+
+# }}}
+
+# }}}
+
+# vim: foldmethod=marker
