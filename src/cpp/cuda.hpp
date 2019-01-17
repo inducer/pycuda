@@ -497,7 +497,7 @@ namespace pycuda
   inline
   void init(unsigned int flags)
   {
-    CUDAPP_CALL_GUARDED(cuInit, (flags));
+    CUDAPP_CALL_GUARDED_THREADED(cuInit, (flags));
   }
 
   inline
@@ -822,7 +822,7 @@ namespace pycuda
     context::prepare_context_switch();
 
     CUcontext ctx;
-    CUDAPP_CALL_GUARDED(cuCtxCreate, (&ctx, flags, m_device));
+    CUDAPP_CALL_GUARDED_THREADED(cuCtxCreate, (&ctx, flags, m_device));
     boost::shared_ptr<context> result(new context(ctx));
     context_stack::get().push(result);
     return result;
