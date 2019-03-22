@@ -247,7 +247,7 @@ class DeviceData:
 
         if dev.compute_capability() >= (3, 0):
             self.warps_per_mp = 64
-        if dev.compute_capability() >= (2, 0):
+        elif dev.compute_capability() >= (2, 0):
             self.warps_per_mp = 48
         elif dev.compute_capability() >= (1, 2):
             self.warps_per_mp = 32
