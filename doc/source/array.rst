@@ -1121,7 +1121,7 @@ Custom Reductions
     uses the formal values "a" and "b" to indicate two operands of a binary
     reduction operation. If you do not specify a *map_expr*, "in[i]" -- and
     therefore the presence of only one input argument -- is automatically
-    assumed.
+    assumed. *reduce_expr* must be associative.
 
     *dtype_out* specifies the :class:`numpy.dtype` in which the reduction is
     performed and in which the result is returned. *neutral* is
