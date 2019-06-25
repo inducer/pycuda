@@ -1,6 +1,19 @@
 Changes
 =======
 
+Version 2019.1
+--------------
+
+* Build improvements.
+* Bug fixes.
+
+Version 2018.1
+--------------
+
+* Update Boost.Python for better PyPy support
+* Add :meth:`pycuda.elementwise.ElementwiseKernel.get_texref`.
+* Bug fixes.
+
 Version 2017.2
 --------------
 
