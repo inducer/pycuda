@@ -97,7 +97,7 @@ namespace
 
 
 
-  device_allocation *mem_alloc_wrap(unsigned long bytes)
+  device_allocation *mem_alloc_wrap(size_t bytes)
   {
     return new device_allocation(pycuda::mem_alloc_gc(bytes));
   }
@@ -114,7 +114,7 @@ namespace
   };
 
   py::tuple mem_alloc_pitch_wrap(
-      unsigned int width, unsigned int height, unsigned int access_size)
+      size_t width, size_t height, unsigned int access_size)
   {
     std::auto_ptr<device_allocation> da;
     Py_ssize_t pitch = mem_alloc_pitch(
@@ -125,61 +125,61 @@ namespace
 
   // {{{ memory set
 
-  void  py_memset_d8(CUdeviceptr dst, unsigned char uc, unsigned int n )
+  void  py_memset_d8(CUdeviceptr dst, unsigned char uc, size_t n )
   { CUDAPP_CALL_GUARDED_THREADED(cuMemsetD8, (dst, uc, n )); }
-  void  py_memset_d16(CUdeviceptr dst, unsigned short us, unsigned int n )
+  void  py_memset_d16(CUdeviceptr dst, unsigned short us, size_t n )
   { CUDAPP_CALL_GUARDED_THREADED(cuMemsetD16, (dst, us, n )); }
-  void  py_memset_d32(CUdeviceptr dst, unsigned int ui, unsigned int n )
+  void  py_memset_d32(CUdeviceptr dst, unsigned int ui, size_t n )
   { CUDAPP_CALL_GUARDED_THREADED(cuMemsetD32, (dst, ui, n )); }
 
-  void  py_memset_d2d8(CUdeviceptr dst, unsigned int dst_pitch,
-      unsigned char uc, unsigned int width, unsigned int height )
+  void  py_memset_d2d8(CUdeviceptr dst, size_t dst_pitch,
+      unsigned char uc, size_t width, size_t height )
   { CUDAPP_CALL_GUARDED_THREADED(cuMemsetD2D8, (dst, dst_pitch, uc, width, height)); }
 
-  void  py_memset_d2d16(CUdeviceptr dst, unsigned int dst_pitch,
-      unsigned short us, unsigned int width, unsigned int height )
+  void  py_memset_d2d16(CUdeviceptr dst, size_t dst_pitch,
+      unsigned short us, size_t width, size_t height )
   { CUDAPP_CALL_GUARDED_THREADED(cuMemsetD2D16, (dst, dst_pitch, us, width, height)); }
 
-  void  py_memset_d2d32(CUdeviceptr dst, unsigned int dst_pitch,
-      unsigned int ui, unsigned int width, unsigned int height )
+  void  py_memset_d2d32(CUdeviceptr dst, size_t dst_pitch,
+      unsigned int ui, size_t width, size_t height )
   { CUDAPP_CALL_GUARDED_THREADED(cuMemsetD2D32, (dst, dst_pitch, ui, width, height)); }
 
   // }}}
 
   // {{{ memory set async
 
-  void  py_memset_d8_async(CUdeviceptr dst, unsigned char uc, unsigned int n, py::object stream_py )
+  void  py_memset_d8_async(CUdeviceptr dst, unsigned char uc, size_t n, py::object stream_py )
   {
       PYCUDA_PARSE_STREAM_PY;
       CUDAPP_CALL_GUARDED_THREADED(cuMemsetD8Async, (dst, uc, n, s_handle));
   }
-  void  py_memset_d16_async(CUdeviceptr dst, unsigned short us, unsigned int n, py::object stream_py )
+  void  py_memset_d16_async(CUdeviceptr dst, unsigned short us, size_t n, py::object stream_py )
   {
       PYCUDA_PARSE_STREAM_PY;
       CUDAPP_CALL_GUARDED_THREADED(cuMemsetD16Async, (dst, us, n, s_handle));
   }
-  void  py_memset_d32_async(CUdeviceptr dst, unsigned int ui, unsigned int n, py::object stream_py )
+  void  py_memset_d32_async(CUdeviceptr dst, unsigned int ui, size_t n, py::object stream_py )
   {
       PYCUDA_PARSE_STREAM_PY;
       CUDAPP_CALL_GUARDED_THREADED(cuMemsetD32Async, (dst, ui, n, s_handle));
   }
 
-  void  py_memset_d2d8_async(CUdeviceptr dst, unsigned int dst_pitch,
-      unsigned char uc, unsigned int width, unsigned int height, py::object stream_py )
+  void  py_memset_d2d8_async(CUdeviceptr dst, size_t dst_pitch,
+      unsigned char uc, size_t width, size_t height, py::object stream_py )
   {
       PYCUDA_PARSE_STREAM_PY;
       CUDAPP_CALL_GUARDED_THREADED(cuMemsetD2D8Async, (dst, dst_pitch, uc, width, height, s_handle));
   }
 
-  void  py_memset_d2d16_async(CUdeviceptr dst, unsigned int dst_pitch,
-      unsigned short us, unsigned int width, unsigned int height, py::object stream_py )
+  void  py_memset_d2d16_async(CUdeviceptr dst, size_t dst_pitch,
+      unsigned short us, size_t width, size_t height, py::object stream_py )
   {
       PYCUDA_PARSE_STREAM_PY;
       CUDAPP_CALL_GUARDED_THREADED(cuMemsetD2D16Async, (dst, dst_pitch, us, width, height, s_handle));
   }
 
-  void  py_memset_d2d32_async(CUdeviceptr dst, unsigned int dst_pitch,
-      unsigned int ui, unsigned int width, unsigned int height, py::object stream_py )
+  void  py_memset_d2d32_async(CUdeviceptr dst, size_t dst_pitch,
+      unsigned int ui, size_t width, size_t height, py::object stream_py )
   {
       PYCUDA_PARSE_STREAM_PY;
       CUDAPP_CALL_GUARDED_THREADED(cuMemsetD2D32Async, (dst, dst_pitch, ui, width, height, s_handle));
