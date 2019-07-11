@@ -208,10 +208,13 @@ def main():
 
             install_requires=[
                 "pytools>=2011.2",
-                "pytest>=2",
                 "decorator>=3.2.0",
                 "appdirs>=1.4.0",
                 "mako",
+                ],
+
+            test_requires=[
+                "pytest>=2",
                 ],
 
             ext_package="pycuda",
