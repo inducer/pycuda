@@ -7,7 +7,7 @@
 #include <cuda.hpp>
 #include <boost/python.hpp>
 #include <numeric>
-#include "numpy_init.hpp"
+#include <numpy/arrayobject.h>
 
 
 

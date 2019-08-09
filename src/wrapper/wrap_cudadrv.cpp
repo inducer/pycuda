@@ -1,3 +1,5 @@
+#define PY_ARRAY_UNIQUE_SYMBOL pycuda_ARRAY_API
+
 #include <cuda.hpp>
 
 #include <utility>
@@ -656,8 +658,18 @@ void pycuda_expose_curand();
 
 
 
+static bool import_numpy_helper()
+{
+  import_array1(false);
+  return true;
+}
+
+
 BOOST_PYTHON_MODULE(_driver)
 {
+  if (!import_numpy_helper())
+    throw py::error_already_set();
+
   py::def("get_version", cuda_version);
 #if CUDAPP_CUDA_VERSION >= 2020
   py::def("get_driver_version", pycuda::get_driver_version);

@@ -7,13 +7,15 @@
  * for packing complex values and only supports native packing.
  * (the minimum that's needed for PyOpenCL/PyCUDA.) */
 
+#define PY_ARRAY_UNIQUE_SYMBOL pycuda_pvt_struct_v2_ARRAY_API
+
 #define PY_SSIZE_T_CLEAN
 
 #include "Python.h"
+#include <numpy/arrayobject.h>
 #include "structseq.h"
 #include "structmember.h"
 #include <ctype.h>
-#include "numpy_init.hpp"
 
 // static PyTypeObject PyStructType;
 
@@ -1570,6 +1572,8 @@ The variable struct.error is an exception raised on errors.\n");
 PyMODINIT_FUNC
 init_pvt_struct(void)
 {
+	import_array();
+
 	PyObject *ver, *m;
 
 	ver = PyString_FromString("0.2");
