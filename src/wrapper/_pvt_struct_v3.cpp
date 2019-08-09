@@ -3,12 +3,14 @@
 /* New version supporting byte order, alignment and size options,
    character strings, and unsigned numbers */
 
+#define PY_ARRAY_UNIQUE_SYMBOL pycuda_pvt_struct_v2_ARRAY_API
+
 #define PY_SSIZE_T_CLEAN
 
 #include "Python.h"
+#include <numpy/arrayobject.h>
 #include "structmember.h"
 #include <ctype.h>
-#include "numpy_init.hpp"
 
 namespace {
 extern PyTypeObject PyStructType;
@@ -1720,6 +1722,8 @@ extern "C"
 PyMODINIT_FUNC
 PyInit__pvt_struct(void)
 {
+    import_array();
+
     PyObject *m;
 
     m = PyModule_Create(&_structmodule);
