@@ -2,7 +2,6 @@
 
 Device Interface
 ================
-
 .. module:: pycuda
 .. moduleauthor:: Andreas Kloeckner <inform@tiker.net>
 
@@ -550,7 +549,7 @@ Constants
 
     .. attribute:: STACK_SIZE
     .. attribute:: PRINTF_FIFO_SIZE
-    .. attribute:: MALLOC_HEAP_SIE
+    .. attribute:: MALLOC_HEAP_SIZE
 
         CUDA 3.2 and above.
 
