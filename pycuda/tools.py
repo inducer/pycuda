@@ -40,6 +40,7 @@ import numpy as np
 bitlog2 = _drv.bitlog2
 DeviceMemoryPool = _drv.DeviceMemoryPool
 PageLockedMemoryPool = _drv.PageLockedMemoryPool
+PageLockedAllocator = _drv.PageLockedAllocator
 
 from pycuda.compyte.dtypes import (
         register_dtype, get_or_register_dtype, _fill_dtype_registry,
