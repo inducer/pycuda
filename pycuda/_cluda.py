@@ -6,6 +6,7 @@ CLUDA_PREAMBLE = """
 #define GLOBAL_MEM /* empty */
 #define LOCAL_MEM __shared__
 #define LOCAL_MEM_ARG /* empty */
+#define RESTRICT __restrict__
 #define REQD_WG_SIZE(X,Y,Z) __launch_bounds__(X*Y*Z, 1)
 
 #define LID_0 threadIdx.x

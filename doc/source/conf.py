@@ -28,6 +28,7 @@ from __future__ import absolute_import
 extensions = [
     'sphinx.ext.intersphinx',
     'sphinx.ext.mathjax',
+    'sphinx.ext.autodoc',
     ]
 
 # Add any paths that contain templates here, relative to this directory.

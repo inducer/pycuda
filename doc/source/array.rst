@@ -1145,10 +1145,90 @@ Here's a usage example::
 
     my_dot_prod = krnl(a, b).get()
 
-Parallel Scan / Prefix Sum
---------------------------
+Prefix Sums ("scan")
+--------------------
 
 .. module:: pycuda.scan
+
+A prefix sum is a running sum of an array, as provided by
+e.g. :mod:`numpy.cumsum`::
+
+    >>> import numpy as np
+    >>> a = [1,1,1,1,1,2,2,2,2,2]
+    >>> np.cumsum(a)
+    array([ 1,  2,  3,  4,  5,  7,  9, 11, 13, 15])
+
+This is a very simple example of what a scan can do. It turns out that scans
+are significantly more versatile. They are a basic building block of many
+non-trivial parallel algorithms. Many of the operations enabled by scans seem
+difficult to parallelize because of loop-carried dependencies.
+
+.. seealso::
+
+    `Prefix sums and their applications <http://citeseerx.ist.psu.edu/viewdoc/summary?doi=10.1.1.128.6230>`_, by Guy Blelloch.
+        This article gives an overview of some surprising applications of scans.
+
+    :ref:`predefined-scans`
+        These operations built into PyCUDA are realized using :class:`GenericScanKernel`.
+
+Usage Example
+^^^^^^^^^^^^^
+
+This example illustrates the implementation of a kernel 
+which copies integers from an array into the (variable-size) output if they are
+greater than 300::
+
+    knl = GenericScanKernel(
+            np.int32,
+            arguments="int *ary, int *out",
+            input_expr="(ary[i] > 300) ? 1 : 0",
+            scan_expr="a+b", neutral="0",
+            output_statement="""
+                if (prev_item != item) out[item-1] = ary[i];
+                """)
+
+    out = a.copy()
+    knl(a, out)
+
+    a_host = a.get()
+    out_host = a_host[a_host > 300]
+
+    assert (out_host == out.get()[:len(out_host)]).all()
+
+The value being scanned over is a number of flags indicating whether each array
+element is greater than 300. These flags are computed by *input_expr*. The
+prefix sum over this array gives a running count of array items greater than
+300. The *output_statement* the compares `prev_item` (the previous item's scan
+result, i.e. index) to `item` (the current item's scan result, i.e.
+index). If they differ, i.e. if the predicate was satisfied at this
+position, then the item is stored in the output at the computed index.
+
+Making Custom Scan Kernels
+^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+.. autoclass:: GenericScanKernel
+
+    .. method:: __call__(*args, allocator=None, size=None, stream=None)
+
+        *allocator* defaults to the one provided on the first
+        :class:`pycuda.array.GPUArray` in *args*. *size* may specify the
+        length of the scan to be carried out. If not given, this length
+        is inferred from the first array argument passed.
+
+Debugging aids
+~~~~~~~~~~~~~~
+
+.. class:: GenericDebugScanKernel
+
+    Performs the same function and has the same interface as
+    :class:`GenericScanKernel`, but uses a dead-simple, sequential scan.  Works
+    best on CPU platforms, and helps isolate bugs in scans by removing the
+    potential for issues originating in parallel execution.
+
+.. _predefined-scans:
+
+Simple / Legacy Interface
+^^^^^^^^^^^^^^^^^^^^^^^^^
 
 .. class:: ExclusiveScanKernel(dtype, scan_expr, neutral, name_prefix="scan", options=[], preamble="")
 
@@ -1164,12 +1244,14 @@ Parallel Scan / Prefix Sum
     when building. *preamble* specifies a string of code that is
     inserted before the actual kernels.
 
-    .. method:: __call__(self, input_ary, output_ary=None, allocator=None, queue=None)
+    .. method:: __call__(self, input_ary, output_ary=None, allocator=None, stream=None)
 
-.. class:: InclusiveScanKernel(dtype, scan_expr, neutral=None, name_prefix="scan", options=[], preamble="", devices=None)
+.. class:: InclusiveScanKernel(dtype, scan_expr, neutral=None, name_prefix="scan", options=[], preamble="")
 
-    Works like :class:`ExclusiveScanKernel`. Unlike the exclusive case,
-    *neutral* is not required.
+    Works like :class:`ExclusiveScanKernel`.
+
+For the array `[1,2,3]`, inclusive scan results in `[1,3,6]`, and exclusive
+scan results in `[0,1,3]`.
 
 Here's a usage example::
 
@@ -1177,7 +1259,7 @@ Here's a usage example::
 
     n = 2**20-2**18+5
     host_data = np.random.randint(0, 10, n).astype(np.int32)
-    dev_data = gpuarray.to_gpu(queue, host_data)
+    dev_data = gpuarray.to_gpu(host_data)
 
     knl(dev_data)
     assert (dev_data.get() == np.cumsum(host_data, axis=0)).all()
