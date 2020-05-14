@@ -228,6 +228,7 @@ class ReductionKernel:
             s2_func = kernel_wrapper(s2_func)
 
         stream = kwargs.get("stream")
+        out = kwargs.pop("out", None)
 
         from .gpuarray import empty
 
@@ -267,7 +268,9 @@ class ReductionKernel:
                 macroblock_size = block_count*self.block_size
                 seq_count = (sz + macroblock_size - 1) // macroblock_size
 
-            if block_count == 1:
+            if block_count == 1 and out is not None:
+                result = out
+            elif block_count == 1:
                 result = empty((), self.dtype_out, allocator=allocator)
             else:
                 result = empty((block_count,), self.dtype_out, allocator=allocator)
