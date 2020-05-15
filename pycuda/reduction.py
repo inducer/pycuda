@@ -269,6 +269,8 @@ class ReductionKernel:
                 seq_count = (sz + macroblock_size - 1) // macroblock_size
 
             if block_count == 1 and out is not None:
+                assert out.dtype == self.dtype_out, \
+                    "ReductionKernel: out must have the same dtype as the reduction"
                 result = out
             elif block_count == 1:
                 result = empty((), self.dtype_out, allocator=allocator)

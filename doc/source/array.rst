@@ -1132,7 +1132,17 @@ Custom Reductions
     unmodified to :class:`pycuda.compiler.SourceModule`. *preamble* is specified
     as a string of code.
 
-    .. method __call__(*args, stream=None)
+    .. method:: __call__(*args, stream=None, out=None)
+
+        Invoke the generated reduction kernel. The arguments may either be scalars or
+        :class:`GPUArray` instances. The reduction will be done on each entry of
+        the first vector argument.
+
+        If *stream* is given, it must be a :class:`pycuda.driver.Stream` object,
+        where the execution will be serialized.
+
+        With *out* the resulting single-entry :class:`GPUArray` can be specified.
+        Because offsets are supported one can store results anywhere (e.g. out=a[3]).
 
 Here's a usage example::
 
@@ -1144,6 +1154,19 @@ Here's a usage example::
             arguments="float *x, float *y")
 
     my_dot_prod = krnl(a, b).get()
+
+Or by specifying the output::
+
+    from pycuda.curandom import rand as curand
+    a = curand((10, 200), dtype=np.float32)
+    red = ReductionKernel(np.float32, neutral=0,
+                               reduce_expr="a+b",
+                               arguments="float *in")
+    a_sum = gpuarray.empty(10, dtype=np.float32)
+    for i in range(10):
+        red(a[i], out=a_sum[i])
+    assert(np.allclose(a_sum.get(), a.get().sum(axis=1)))
+
 
 Parallel Scan / Prefix Sum
 --------------------------
