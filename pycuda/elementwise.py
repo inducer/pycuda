@@ -47,6 +47,7 @@ def get_elwise_module(arguments, operation,
 
         %(preamble)s
 
+        extern "C"
         __global__ void %(name)s(%(arguments)s)
         {
 
@@ -72,7 +73,7 @@ def get_elwise_module(arguments, operation,
             "loop_prep": loop_prep,
             "after_loop": after_loop,
             },
-        options=options, keep=keep)
+        options=options, keep=keep, no_extern_c=True)
 
 
 def get_elwise_range_module(arguments, operation,
@@ -84,6 +85,7 @@ def get_elwise_range_module(arguments, operation,
 
         %(preamble)s
 
+        extern "C"
         __global__ void %(name)s(%(arguments)s)
         {
           unsigned tid = threadIdx.x;
@@ -120,7 +122,7 @@ def get_elwise_range_module(arguments, operation,
             "loop_prep": loop_prep,
             "after_loop": after_loop,
             },
-        options=options, keep=keep)
+        options=options, keep=keep, no_extern_c=True)
 
 
 def get_elwise_kernel_and_types(arguments, operation,
