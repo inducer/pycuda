@@ -932,6 +932,22 @@ class TestGPUArray:
         assert minmax["cur_max"] == np.max(a)
 
     @mark_cuda_test
+    def test_reduce_out(self):
+        from pycuda.curandom import rand as curand
+        a_gpu = curand((10, 200), dtype=np.float32)
+        a = a_gpu.get()
+
+        from pycuda.reduction import ReductionKernel
+        red = ReductionKernel(np.float32, neutral=0,
+                              reduce_expr="max(a,b)",
+                              arguments="float *in")
+        max_gpu = gpuarray.empty(10, dtype=np.float32)
+        for i in range(10):
+            red(a_gpu[i], out=max_gpu[i])
+
+        assert np.alltrue(a.max(axis=1) == max_gpu.get())
+
+    @mark_cuda_test
     def test_sum_allocator(self):
         # FIXME
         from pytest import skip
