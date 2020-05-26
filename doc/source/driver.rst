@@ -657,6 +657,16 @@ Devices and Contexts
 
         Also make the newly-created context the current context.
 
+    .. method:: retain_primary_context(flags=ctx_flags.SCHED_AUTO)
+
+        Return the :class:`Context` obtained by retaining the device's
+        primary context, which is the one used by the CUDA runtime API,
+        and sets the context's flags using the :class:`ctx_flags` values.
+
+        Also make the newly-retained context the current context.
+
+        CUDA 7.0 and newer.
+
     .. method:: can_access_peer(dev)
 
         CUDA 4.0 and newer.

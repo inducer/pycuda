@@ -407,6 +407,7 @@ namespace pycuda
 
   // {{{ device
   class context;
+  class primaryContext;
 
   class device
   {
@@ -479,6 +480,9 @@ namespace pycuda
       }
 
       boost::shared_ptr<context> make_context(unsigned int flags);
+#if CUDAPP_CUDA_VERSION >= 7000
+      boost::shared_ptr<context> retain_primary_context(unsigned int flags);
+#endif
 
       CUdevice handle() const
       { return m_device; }
@@ -490,10 +494,6 @@ namespace pycuda
         CUDAPP_CALL_GUARDED(cuDeviceCanAccessPeer, (&result, handle(), other.handle()));
         return result;
       }
-#endif
-#if CUDAPP_CUDA_VERSION >= 7000
-      boost::shared_ptr<context> retain_primary_context();
-      void release_primary_context();
 #endif
 
   };
@@ -563,7 +563,14 @@ namespace pycuda
       { return m_stack.top(); }
 
       void pop()
-      { m_stack.pop(); }
+      {
+        if (m_stack.empty())
+        {
+          throw error("m_stack::pop", CUDA_ERROR_INVALID_CONTEXT,
+              "cannot pop context from empty stack");
+        }
+        m_stack.pop();
+      }
 
       void push(value_type v)
       { m_stack.push(v); }
@@ -579,7 +586,7 @@ namespace pycuda
 
   class context : boost::noncopyable
   {
-    private:
+    protected:
       CUcontext m_context;
       bool m_valid;
       unsigned m_use_count;
@@ -641,7 +648,7 @@ namespace pycuda
         return result;
       }
 
-      void detach()
+      virtual void detach()
       {
         if (m_valid)
         {
@@ -815,10 +822,76 @@ namespace pycuda
       friend void context_push(boost::shared_ptr<context> ctx);
       friend boost::shared_ptr<context>
           gl::make_gl_context(device const &dev, unsigned int flags);
+      friend class primaryContext;
   };
 
+  class primaryContext : public context
+  {
+   protected:
+      CUdevice m_device;
 
+    public:
+      primaryContext(CUcontext ctx, CUdevice dev)
+        : context (ctx), m_device(dev)
+      { }
 
+      ~primaryContext()
+      {
+        if (m_valid)
+        {
+          /* It's possible that we get here with a non-zero m_use_count. Since the context
+            * stack holds shared_ptrs, this must mean that the context stack itself is getting
+            * destroyed, which means it's ok for this context to sign off, too.
+            */
+          detach();
+        }
+      }
+
+      // Primary context was created with retainPrimaryContext.
+      void detach() {
+          if (m_valid)
+          {
+            bool active_before_destruction = current_context().get() == this;
+            if (active_before_destruction)
+            {
+              CUcontext below;
+              CUDAPP_CALL_GUARDED_CLEANUP(cuCtxPopCurrent, (&below));
+              CUDAPP_CALL_GUARDED_CLEANUP(cuDevicePrimaryCtxRelease, (m_device));
+            }
+            else
+            {
+              if (m_thread == boost::this_thread::get_id())
+              {
+                CUDAPP_CALL_GUARDED_CLEANUP(cuDevicePrimaryCtxRelease, (m_device));
+              }
+              else
+              {
+                // In all likelihood, this context's managing thread has exited, and
+                // therefore this context has already been deleted. No need to harp
+                // on the fact that we still thought there was cleanup to do.
+
+                // std::cerr << "PyCUDA WARNING: leaked out-of-thread context " << std::endl;
+              }
+            }
+
+            m_valid = false; // This will also avoid calling context.detach() in parent class
+
+            if (active_before_destruction)
+            {
+              boost::shared_ptr<context> new_active = current_context(this);
+              if (new_active.get())
+              {
+                CUDAPP_CALL_GUARDED(cuCtxPushCurrent, (new_active->m_context));
+              }
+            }
+          }
+          else
+            throw error("context::detach", CUDA_ERROR_INVALID_CONTEXT,
+                "cannot detach from invalid context");
+      }
+      friend class device;
+      friend void context_push(boost::shared_ptr<context> ctx);
+  };
 
   inline
   boost::shared_ptr<context> device::make_context(unsigned int flags)
@@ -833,30 +906,20 @@ namespace pycuda
   }
 
 
-
-
-
 #if CUDAPP_CUDA_VERSION >= 7000
-  inline boost::shared_ptr<context> device::retain_primary_context()
+  inline boost::shared_ptr<context> device::retain_primary_context(unsigned int flags)
   {
     context::prepare_context_switch();
 
     CUcontext ctx;
-    CUDAPP_CALL_GUARDED_THREADED(cuDevicePrimaryCtxRetain, (&ctx, m_device));
-    boost::shared_ptr<context> result(new context(ctx));
+    CUDAPP_CALL_GUARDED(cuDevicePrimaryCtxRetain, (&ctx, m_device));
+    CUDAPP_CALL_GUARDED(cuDevicePrimaryCtxSetFlags, (m_device, flags));
+    boost::shared_ptr<context> result(new primaryContext(ctx, m_device));
     context_stack::get().push(result);
     CUDAPP_CALL_GUARDED(cuCtxPushCurrent, (ctx));
     return result;
   }
-
-  inline void device::release_primary_context()
-  {
-    CUDAPP_CALL_GUARDED(cuDevicePrimaryCtxRelease, (m_device));
-  }
 #endif
-
-
-
 
 
 #if CUDAPP_CUDA_VERSION >= 2000
