@@ -529,11 +529,18 @@ Quasirandom numbers are more expensive to generate.
 
         .. versionadded:: 2012.2
 
-    .. method:: fill_poisson(data, lambda_value, stream=None)
+    .. method:: fill_poisson(data, lambda_value=None, stream=None)
 
         Fills in :class:`GPUArray` *data* with Poisson distributed
-        pseudorandom values with lambda *lambda_value*. *data* must
-        be of type 32-bit unsigned int.
+        pseudorandom values.
+
+        If *lambda_value* is not None, it is used as lambda,
+        and *data* must be of type 32-bit unsigned int.
+
+        If *lambda_value* is None, the lambda value is read
+        from each *data* array element (similarly to numpy.random.poisson),
+        and the array is overwritten by the pseudorandom values.
+        *data* must be of type 32-bit unsigned int, 32 or 64-bit float.
 
         CUDA 5.0 and above.
 
@@ -621,8 +628,15 @@ Quasirandom numbers are more expensive to generate.
     .. method:: fill_poisson(data, lambda_value, stream=None)
 
         Fills in :class:`GPUArray` *data* with Poisson distributed
-        pseudorandom values with lambda *lambda_value*. *data* must
-        be of type 32-bit unsigned int.
+        pseudorandom values.
+
+        If *lambda_value* is not None, it is used as lambda,
+        and *data* must be of type 32-bit unsigned int.
+
+        If *lambda_value* is None, the lambda value is read
+        from each *data* array element (similarly to numpy.random.poisson),
+        and the array is overwritten by the pseudorandom values.
+        *data* must be of type 32-bit unsigned int, 32 or 64-bit float.
 
         CUDA 5.0 and above.
 
@@ -735,8 +749,15 @@ Quasirandom numbers are more expensive to generate.
     .. method:: fill_poisson(data, lambda_value, stream=None)
 
         Fills in :class:`GPUArray` *data* with Poisson distributed
-        pseudorandom values with lambda *lambda_value*. *data* must
-        be of type 32-bit unsigned int.
+        pseudorandom values.
+
+        If *lambda_value* is not None, it is used as lambda,
+        and *data* must be of type 32-bit unsigned int.
+
+        If *lambda_value* is None, the lambda value is read
+        from each *data* array element (similarly to numpy.random.poisson),
+        and the array is overwritten by the pseudorandom values.
+        *data* must be of type 32-bit unsigned int, 32 or 64-bit float.
 
         CUDA 5.0 and above.
 
@@ -826,8 +847,15 @@ Quasirandom numbers are more expensive to generate.
     .. method:: fill_poisson(data, lambda_value, stream=None)
 
         Fills in :class:`GPUArray` *data* with Poisson distributed
-        pseudorandom values with lambda *lambda_value*. *data* must
-        be of type 32-bit unsigned int.
+        pseudorandom values.
+
+        If *lambda_value* is not None, it is used as lambda,
+        and *data* must be of type 32-bit unsigned int.
+
+        If *lambda_value* is None, the lambda value is read
+        from each *data* array element (similarly to numpy.random.poisson),
+        and the array is overwritten by the pseudorandom values.
+        *data* must be of type 32-bit unsigned int, 32 or 64-bit float.
 
         CUDA 5.0 and above.
 
@@ -914,8 +942,15 @@ Quasirandom numbers are more expensive to generate.
     .. method:: fill_poisson(data, lambda_value, stream=None)
 
         Fills in :class:`GPUArray` *data* with Poisson distributed
-        pseudorandom values with lambda *lambda_value*. *data* must
-        be of type 32-bit unsigned int.
+        pseudorandom values.
+
+        If *lambda_value* is not None, it is used as lambda,
+        and *data* must be of type 32-bit unsigned int.
+
+        If *lambda_value* is None, the lambda value is read
+        from each *data* array element (similarly to numpy.random.poisson),
+        and the array is overwritten by the pseudorandom values.
+        *data* must be of type 32-bit unsigned int, 32 or 64-bit float.
 
         CUDA 5.0 and above.
 
@@ -1005,8 +1040,15 @@ Quasirandom numbers are more expensive to generate.
     .. method:: fill_poisson(data, lambda_value, stream=None)
 
         Fills in :class:`GPUArray` *data* with Poisson distributed
-        pseudorandom values with lambda *lambda_value*. *data* must
-        be of type 32-bit unsigned int.
+        pseudorandom values.
+
+        If *lambda_value* is not None, it is used as lambda,
+        and *data* must be of type 32-bit unsigned int.
+
+        If *lambda_value* is None, the lambda value is read
+        from each *data* array element (similarly to numpy.random.poisson),
+        and the array is overwritten by the pseudorandom values.
+        *data* must be of type 32-bit unsigned int, 32 or 64-bit float.
 
         CUDA 5.0 and above.
 

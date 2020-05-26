@@ -296,6 +296,17 @@ __global__ void %(name)s(%(state_type)s *s, %(out_type)s *d, double lambda, cons
 }
 """
 
+gen_poisson_inplace_template = """
+__global__ void %(name)s(%(state_type)s *s, %(inout_type)s *d, const int n)
+{
+  const int tidx = blockIdx.x*blockDim.x+threadIdx.x;
+  const int delta = blockDim.x*gridDim.x;
+  for (int idx = tidx; idx < n; idx += delta)
+    d[idx] = (%(inout_type)s)(curand_poisson%(suffix)s(&s[tidx], double(d[idx])));
+}
+"""
+
+
 random_source = """
 // Uses C++ features (templates); do not surround with extern C
 #include <curand_kernel.h>
@@ -373,6 +384,12 @@ class _RandomNumberGeneratorBase(object):
         ("poisson_int", "unsigned int", ""),
         ]
 
+    gen_poisson_inplace_info = [
+        ("poisson_inplace_float", "float", ""),
+        ("poisson_inplace_double", "double", ""),
+        ("poisson_inplace_int", "unsigned int", ""),
+        ]
+
     def __init__(self, state_type, vector_type, generator_bits,
         additional_source, scramble_type=None):
         if get_curand_version() < (3, 2, 0):
@@ -409,6 +426,10 @@ class _RandomNumberGeneratorBase(object):
                     (name, out_type, suffix)
                     for name, out_type, suffix in self.gen_poisson_info
                     if do_generate(out_type)]
+            my_poisson_inplace_generators = [
+                    (name, inout_type, suffix)
+                    for name, inout_type, suffix in self.gen_poisson_inplace_info
+                    if do_generate(inout_type)]
 
         generator_sources = [
                 gen_template % {
@@ -429,6 +450,11 @@ class _RandomNumberGeneratorBase(object):
                         "name": name, "out_type": out_type, "suffix": suffix,
                         "state_type": state_type, }
                     for name, out_type, suffix in my_poisson_generators])
+            generator_sources.extend([
+                    gen_poisson_inplace_template % {
+                        "name": name, "inout_type": inout_type, "suffix": suffix,
+                        "state_type": state_type, }
+                    for name, inout_type, suffix in my_poisson_inplace_generators])
 
         source = (random_source + additional_source) % {
             "state_type": state_type,
@@ -456,6 +482,10 @@ class _RandomNumberGeneratorBase(object):
             for name, out_type, suffix  in my_poisson_generators:
                 gen_func = module.get_function(name)
                 gen_func.prepare("PPdi")
+                self.generators[name] = gen_func
+            for name, inout_type, suffix  in my_poisson_inplace_generators:
+                gen_func = module.get_function(name)
+                gen_func.prepare("PPi")
                 self.generators[name] = gen_func
 
         self.generator_bits = generator_bits
@@ -566,17 +596,32 @@ class _RandomNumberGeneratorBase(object):
             return result
 
     if get_curand_version() >= (5, 0, 0):
-        def fill_poisson(self, data, lambda_value, stream=None):
-            if data.dtype == np.uint32:
-                func_name = "poisson_int"
+        def fill_poisson(self, data, lambda_value=None, stream=None):
+            if lambda_value is None:
+                if data.dtype == np.float32:
+                    func_name = "poisson_inplace_float"
+                elif data.dtype == np.float64:
+                    func_name = "poisson_inplace_double"
+                elif data.dtype == np.uint32:
+                    func_name = "poisson_inplace_int"
+                else:
+                    raise NotImplementedError
             else:
-                raise NotImplementedError
+                if data.dtype == np.uint32:
+                    func_name = "poisson_int"
+                else:
+                    raise NotImplementedError
 
             func = self.generators[func_name]
 
-            func.prepared_async_call(
+            if lambda_value is None:
+                func.prepared_async_call(
                     (self.block_count, 1), (self.generators_per_block, 1, 1), stream,
-                    self.state, data.gpudata, lambda_value, data.size)
+                    self.state, data.gpudata, data.size)
+            else:
+                func.prepared_async_call(
+                        (self.block_count, 1), (self.generators_per_block, 1, 1), stream,
+                        self.state, data.gpudata, lambda_value, data.size)
 
         def gen_poisson(self, shape, dtype, lambda_value, stream=None):
             result = array.empty(shape, dtype)

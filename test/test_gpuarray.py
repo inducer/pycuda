@@ -298,6 +298,15 @@ class TestGPUArray:
             gen.gen_uniform(10000, np.uint32)
             if get_curand_version() >= (5, 0, 0):
                 gen.gen_poisson(10000, np.uint32, 13.0)
+                for dtype in dtypes + [np.uint32]:
+                    a = gpuarray.empty(1000000, dtype=dtype)
+                    v = 10
+                    a.fill(v)
+                    gen.fill_poisson(a)
+                    # Check Poisson statistics (need 1e6 values)
+                    # Compare with scipy.stats.poisson.pmf(v - 1, v)
+                    tmp = (a.get() == (v-1)).sum() / a.size
+                    assert np.isclose(0.12511, tmp, atol=0.002)
 
     @mark_cuda_test
     def test_array_gt(self):
