@@ -2,7 +2,6 @@ Python 2.7 Titan:
   script:
   - py_version=2.7
   - EXTRA_INSTALL="numpy mako"
-  - export PYCUDA_DEFAULT_NVCC_FLAGS="-ccbin g++-7"
   - echo "CUDADRV_LIB_DIR = ['/usr/lib/x86_64-linux-gnu/nvidia/current']" > siteconf.py
   - curl -L -O -k https://gitlab.tiker.net/inducer/ci-support/raw/master/build-and-test-py-project.sh
   - "export LD_LIBRARY_PATH=/usr/local/cuda/lib64:$LD_LIBRARY_PATH"
@@ -17,7 +16,6 @@ Python 2.7 K40:
   script:
   - py_version=2.7
   - EXTRA_INSTALL="numpy mako"
-  - export PYCUDA_DEFAULT_NVCC_FLAGS="-ccbin g++-7"
   - echo "CUDADRV_LIB_DIR = ['/usr/lib/x86_64-linux-gnu/nvidia/current']" > siteconf.py
   - curl -L -O -k https://gitlab.tiker.net/inducer/ci-support/raw/master/build-and-test-py-project.sh
   - "export LD_LIBRARY_PATH=/usr/local/cuda/lib64:$LD_LIBRARY_PATH"
@@ -32,7 +30,6 @@ Python 3 Titan X:
   script:
   - py_version=3
   - EXTRA_INSTALL="numpy mako"
-  - export PYCUDA_DEFAULT_NVCC_FLAGS="-ccbin g++-7"
   - echo "CUDADRV_LIB_DIR = ['/usr/lib/x86_64-linux-gnu/nvidia/current']" > siteconf.py
   - curl -L -O -k https://gitlab.tiker.net/inducer/ci-support/raw/master/build-and-test-py-project.sh
   - "export LD_LIBRARY_PATH=/usr/local/cuda/lib64:$LD_LIBRARY_PATH"
@@ -47,7 +44,6 @@ Python 3 Titan V:
   script:
   - py_version=3
   - EXTRA_INSTALL="numpy mako"
-  - export PYCUDA_DEFAULT_NVCC_FLAGS="-ccbin g++-7"
   - echo "CUDADRV_LIB_DIR = ['/usr/lib/x86_64-linux-gnu/nvidia/current']" > siteconf.py
   - curl -L -O -k https://gitlab.tiker.net/inducer/ci-support/raw/master/build-and-test-py-project.sh
   - "export LD_LIBRARY_PATH=/usr/local/cuda/lib64:$LD_LIBRARY_PATH"
@@ -62,7 +58,6 @@ Python 3 K40:
   script:
   - py_version=3
   - EXTRA_INSTALL="numpy mako"
-  - export PYCUDA_DEFAULT_NVCC_FLAGS="-ccbin g++-7"
   - echo "CUDADRV_LIB_DIR = ['/usr/lib/x86_64-linux-gnu/nvidia/current']" > siteconf.py
   - curl -L -O -k https://gitlab.tiker.net/inducer/ci-support/raw/master/build-and-test-py-project.sh
   - "export LD_LIBRARY_PATH=/usr/local/cuda/lib64:$LD_LIBRARY_PATH"
