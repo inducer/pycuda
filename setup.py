@@ -206,6 +206,7 @@ def main():
                 "numpy>=1.6",
                 ],
 
+            python_requires="~=3.6",
             install_requires=[
                 "pytools>=2011.2",
                 "decorator>=3.2.0",
