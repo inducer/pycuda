@@ -1,6 +1,12 @@
 Changes
 =======
 
+Version 2020.1
+--------------
+
+* Removes support for Python 2.7.
+
+
 Version 2019.1
 --------------
 
