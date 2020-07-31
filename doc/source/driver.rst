@@ -657,13 +657,11 @@ Devices and Contexts
 
         Also make the newly-created context the current context.
 
-    .. method:: retain_primary_context(flags=ctx_flags.SCHED_AUTO)
+    .. method:: retain_primary_context()
 
         Return the :class:`Context` obtained by retaining the device's
-        primary context, which is the one used by the CUDA runtime API,
-        and sets the context's flags using the :class:`ctx_flags` values.
-
-        Also make the newly-retained context the current context.
+        primary context, which is the one used by the CUDA runtime API.
+        Unlike :meth:`Context.make_context`, the newly-created context is not made current.
 
         CUDA 7.0 and newer.
 

@@ -1102,7 +1102,7 @@ BOOST_PYTHON_MODULE(_driver)
 #endif
 #if CUDAPP_CUDA_VERSION >= 7000
       .def("retain_primary_context", &cl::retain_primary_context,
-          (py::args("self"), py::args("flags")=0))
+          (py::args("self")))
 #endif
       ;
   }

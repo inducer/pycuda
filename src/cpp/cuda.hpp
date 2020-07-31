@@ -407,7 +407,7 @@ namespace pycuda
 
   // {{{ device
   class context;
-  class primaryContext;
+  class primary_context;
 
   class device
   {
@@ -481,7 +481,7 @@ namespace pycuda
 
       boost::shared_ptr<context> make_context(unsigned int flags);
 #if CUDAPP_CUDA_VERSION >= 7000
-      boost::shared_ptr<context> retain_primary_context(unsigned int flags);
+      boost::shared_ptr<context> retain_primary_context();
 #endif
 
       CUdevice handle() const
@@ -889,8 +889,7 @@ namespace pycuda
             throw error("context::detach", CUDA_ERROR_INVALID_CONTEXT,
                 "cannot detach from invalid context");
       }
-      friend class device;
-      friend void context_push(boost::shared_ptr<context> ctx);
+      // friend void context_push(boost::shared_ptr<context> ctx);
   };
 
   inline
@@ -907,16 +906,11 @@ namespace pycuda
 
 
 #if CUDAPP_CUDA_VERSION >= 7000
-  inline boost::shared_ptr<context> device::retain_primary_context(unsigned int flags)
+  inline boost::shared_ptr<context> device::retain_primary_context()
   {
-    context::prepare_context_switch();
-
     CUcontext ctx;
     CUDAPP_CALL_GUARDED(cuDevicePrimaryCtxRetain, (&ctx, m_device));
-    CUDAPP_CALL_GUARDED(cuDevicePrimaryCtxSetFlags, (m_device, flags));
     boost::shared_ptr<context> result(new primaryContext(ctx, m_device));
-    context_stack::get().push(result);
-    CUDAPP_CALL_GUARDED(cuCtxPushCurrent, (ctx));
     return result;
   }
 #endif
