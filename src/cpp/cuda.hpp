@@ -598,7 +598,7 @@ namespace pycuda
         m_thread(boost::this_thread::get_id())
       { }
 
-      ~context()
+      virtual ~context()
       {
         if (m_valid)
         {
@@ -648,6 +648,13 @@ namespace pycuda
         return result;
       }
 
+    protected:
+      virtual void detach_internal()
+      {
+        CUDAPP_CALL_GUARDED_CLEANUP(cuCtxDetach, (m_context));
+      }
+
+    public:
       virtual void detach()
       {
         if (m_valid)
@@ -655,14 +662,14 @@ namespace pycuda
           bool active_before_destruction = current_context().get() == this;
           if (active_before_destruction)
           {
-            CUDAPP_CALL_GUARDED_CLEANUP(cuCtxDetach, (m_context));
+            detach_internal();
           }
           else
           {
             if (m_thread == boost::this_thread::get_id())
             {
               CUDAPP_CALL_GUARDED_CLEANUP(cuCtxPushCurrent, (m_context));
-              CUDAPP_CALL_GUARDED_CLEANUP(cuCtxDetach, (m_context));
+              detach_internal();
               /* pop is implicit in detach */
             }
             else
@@ -835,61 +842,12 @@ namespace pycuda
         : context (ctx), m_device(dev)
       { }
 
-      ~primary_context()
+    protected:
+      virtual void detach_internal()
       {
-        if (m_valid)
-        {
-          /* It's possible that we get here with a non-zero m_use_count. Since the context
-            * stack holds shared_ptrs, this must mean that the context stack itself is getting
-            * destroyed, which means it's ok for this context to sign off, too.
-            */
-          detach();
-        }
+        // Primary context comes from retainPrimaryContext.
+        CUDAPP_CALL_GUARDED_CLEANUP(cuDevicePrimaryCtxRelease, (m_device));
       }
-
-      // Primary context was created with retainPrimaryContext.
-      void detach() {
-          if (m_valid)
-          {
-            bool active_before_destruction = current_context().get() == this;
-            if (active_before_destruction)
-            {
-              CUcontext below;
-              CUDAPP_CALL_GUARDED_CLEANUP(cuCtxPopCurrent, (&below));
-              CUDAPP_CALL_GUARDED_CLEANUP(cuDevicePrimaryCtxRelease, (m_device));
-            }
-            else
-            {
-              if (m_thread == boost::this_thread::get_id())
-              {
-                CUDAPP_CALL_GUARDED_CLEANUP(cuDevicePrimaryCtxRelease, (m_device));
-              }
-              else
-              {
-                // In all likelihood, this context's managing thread has exited, and
-                // therefore this context has already been deleted. No need to harp
-                // on the fact that we still thought there was cleanup to do.
-
-                // std::cerr << "PyCUDA WARNING: leaked out-of-thread context " << std::endl;
-              }
-            }
-
-            m_valid = false; // This will also avoid calling context.detach() in parent class
-
-            if (active_before_destruction)
-            {
-              boost::shared_ptr<context> new_active = current_context(this);
-              if (new_active.get())
-              {
-                CUDAPP_CALL_GUARDED(cuCtxPushCurrent, (new_active->m_context));
-              }
-            }
-          }
-          else
-            throw error("context::detach", CUDA_ERROR_INVALID_CONTEXT,
-                "cannot detach from invalid context");
-      }
-      // friend void context_push(boost::shared_ptr<context> ctx);
   };
 
   inline
