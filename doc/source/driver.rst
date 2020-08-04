@@ -665,6 +665,8 @@ Devices and Contexts
 
         CUDA 7.0 and newer.
 
+        .. versionadded:: 2020.1
+
     .. method:: can_access_peer(dev)
 
         CUDA 4.0 and newer.
