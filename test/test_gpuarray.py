@@ -298,6 +298,16 @@ class TestGPUArray:
             gen.gen_uniform(10000, np.uint32)
             if get_curand_version() >= (5, 0, 0):
                 gen.gen_poisson(10000, np.uint32, 13.0)
+                for dtype in dtypes + [np.uint32]:
+                    a = gpuarray.empty(1000000, dtype=dtype)
+                    v = 10
+                    a.fill(v)
+                    gen.fill_poisson(a)
+                    tmp = (a.get() == (v-1)).sum() / a.size
+                    # Commented out for CI on the off chance it'd fail
+                    # # Check Poisson statistics (need 1e6 values)
+                    # # Compare with scipy.stats.poisson.pmf(v - 1, v)
+                    # assert np.isclose(0.12511, tmp, atol=0.002)
 
     @mark_cuda_test
     def test_array_gt(self):
@@ -930,6 +940,22 @@ class TestGPUArray:
 
         assert minmax["cur_min"] == np.min(a)
         assert minmax["cur_max"] == np.max(a)
+
+    @mark_cuda_test
+    def test_reduce_out(self):
+        from pycuda.curandom import rand as curand
+        a_gpu = curand((10, 200), dtype=np.float32)
+        a = a_gpu.get()
+
+        from pycuda.reduction import ReductionKernel
+        red = ReductionKernel(np.float32, neutral=0,
+                              reduce_expr="max(a,b)",
+                              arguments="float *in")
+        max_gpu = gpuarray.empty(10, dtype=np.float32)
+        for i in range(10):
+            red(a_gpu[i], out=max_gpu[i])
+
+        assert np.alltrue(a.max(axis=1) == max_gpu.get())
 
     @mark_cuda_test
     def test_sum_allocator(self):
