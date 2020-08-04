@@ -822,20 +822,20 @@ namespace pycuda
       friend void context_push(boost::shared_ptr<context> ctx);
       friend boost::shared_ptr<context>
           gl::make_gl_context(device const &dev, unsigned int flags);
-      friend class primaryContext;
+      friend class primary_context;
   };
 
-  class primaryContext : public context
+  class primary_context : public context
   {
    protected:
       CUdevice m_device;
 
     public:
-      primaryContext(CUcontext ctx, CUdevice dev)
+      primary_context(CUcontext ctx, CUdevice dev)
         : context (ctx), m_device(dev)
       { }
 
-      ~primaryContext()
+      ~primary_context()
       {
         if (m_valid)
         {
@@ -910,7 +910,7 @@ namespace pycuda
   {
     CUcontext ctx;
     CUDAPP_CALL_GUARDED(cuDevicePrimaryCtxRetain, (&ctx, m_device));
-    boost::shared_ptr<context> result(new primaryContext(ctx, m_device));
+    boost::shared_ptr<context> result(new primary_context(ctx, m_device));
     return result;
   }
 #endif
