@@ -34,6 +34,10 @@ Python 3 K40:
   - curl -L -O -k https://gitlab.tiker.net/inducer/ci-support/raw/master/build-and-test-py-project.sh
   - "export LD_LIBRARY_PATH=/usr/local/cuda/lib64:$LD_LIBRARY_PATH"
   - ". ./build-and-test-py-project.sh"
+  
+  # https://github.com/illinois-scicomp/machine-shop-maintenance/issues/7
+  allow_failure: true
+
   tags:
   - python3
   - nvidia-k40
