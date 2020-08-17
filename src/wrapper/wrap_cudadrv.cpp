@@ -1100,6 +1100,10 @@ BOOST_PYTHON_MODULE(_driver)
 #if CUDAPP_CUDA_VERSION >= 4000
       .DEF_SIMPLE_METHOD(can_access_peer)
 #endif
+#if CUDAPP_CUDA_VERSION >= 7000
+      .def("retain_primary_context", &cl::retain_primary_context,
+          (py::args("self")))
+#endif
       ;
   }
   // }}}

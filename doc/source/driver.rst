@@ -657,6 +657,16 @@ Devices and Contexts
 
         Also make the newly-created context the current context.
 
+    .. method:: retain_primary_context()
+
+        Return the :class:`Context` obtained by retaining the device's
+        primary context, which is the one used by the CUDA runtime API.
+        Unlike :meth:`Context.make_context`, the newly-created context is not made current.
+
+        CUDA 7.0 and newer.
+
+        .. versionadded:: 2020.1
+
     .. method:: can_access_peer(dev)
 
         CUDA 4.0 and newer.

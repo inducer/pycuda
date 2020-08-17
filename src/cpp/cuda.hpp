@@ -407,6 +407,7 @@ namespace pycuda
 
   // {{{ device
   class context;
+  class primary_context;
 
   class device
   {
@@ -479,6 +480,9 @@ namespace pycuda
       }
 
       boost::shared_ptr<context> make_context(unsigned int flags);
+#if CUDAPP_CUDA_VERSION >= 7000
+      boost::shared_ptr<context> retain_primary_context();
+#endif
 
       CUdevice handle() const
       { return m_device; }
@@ -559,7 +563,14 @@ namespace pycuda
       { return m_stack.top(); }
 
       void pop()
-      { m_stack.pop(); }
+      {
+        if (m_stack.empty())
+        {
+          throw error("m_stack::pop", CUDA_ERROR_INVALID_CONTEXT,
+              "cannot pop context from empty stack");
+        }
+        m_stack.pop();
+      }
 
       void push(value_type v)
       { m_stack.push(v); }
@@ -575,7 +586,7 @@ namespace pycuda
 
   class context : boost::noncopyable
   {
-    private:
+    protected:
       CUcontext m_context;
       bool m_valid;
       unsigned m_use_count;
@@ -587,7 +598,7 @@ namespace pycuda
         m_thread(boost::this_thread::get_id())
       { }
 
-      ~context()
+      virtual ~context()
       {
         if (m_valid)
         {
@@ -637,21 +648,28 @@ namespace pycuda
         return result;
       }
 
-      void detach()
+    protected:
+      virtual void detach_internal()
+      {
+        CUDAPP_CALL_GUARDED_CLEANUP(cuCtxDetach, (m_context));
+      }
+
+    public:
+      virtual void detach()
       {
         if (m_valid)
         {
           bool active_before_destruction = current_context().get() == this;
           if (active_before_destruction)
           {
-            CUDAPP_CALL_GUARDED_CLEANUP(cuCtxDetach, (m_context));
+            detach_internal();
           }
           else
           {
             if (m_thread == boost::this_thread::get_id())
             {
               CUDAPP_CALL_GUARDED_CLEANUP(cuCtxPushCurrent, (m_context));
-              CUDAPP_CALL_GUARDED_CLEANUP(cuCtxDetach, (m_context));
+              detach_internal();
               /* pop is implicit in detach */
             }
             else
@@ -811,10 +829,26 @@ namespace pycuda
       friend void context_push(boost::shared_ptr<context> ctx);
       friend boost::shared_ptr<context>
           gl::make_gl_context(device const &dev, unsigned int flags);
+      friend class primary_context;
   };
 
+  class primary_context : public context
+  {
+   protected:
+      CUdevice m_device;
 
+    public:
+      primary_context(CUcontext ctx, CUdevice dev)
+        : context (ctx), m_device(dev)
+      { }
 
+    protected:
+      virtual void detach_internal()
+      {
+        // Primary context comes from retainPrimaryContext.
+        CUDAPP_CALL_GUARDED_CLEANUP(cuDevicePrimaryCtxRelease, (m_device));
+      }
+  };
 
   inline
   boost::shared_ptr<context> device::make_context(unsigned int flags)
@@ -829,10 +863,15 @@ namespace pycuda
   }
 
 
-
-
-
-
+#if CUDAPP_CUDA_VERSION >= 7000
+  inline boost::shared_ptr<context> device::retain_primary_context()
+  {
+    CUcontext ctx;
+    CUDAPP_CALL_GUARDED(cuDevicePrimaryCtxRetain, (&ctx, m_device));
+    boost::shared_ptr<context> result(new primary_context(ctx, m_device));
+    return result;
+  }
+#endif
 
 
 #if CUDAPP_CUDA_VERSION >= 2000

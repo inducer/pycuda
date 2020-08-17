@@ -645,6 +645,23 @@ class TestDriver:
         ctx2.detach()
 
     @mark_cuda_test
+    def test_additional_primary_context(self):
+        if drv.get_version() < (2, 0, 0):
+            return
+        if drv.get_version() >= (2, 2, 0) and drv.get_version() < (8,):
+            if drv.Context.get_device().compute_mode == drv.compute_mode.EXCLUSIVE:
+                return
+
+        mem_a = drv.mem_alloc(50)
+        pctx = drv.Context.get_device().retain_primary_context()
+        pctx.push()
+        mem_b = drv.mem_alloc(60)
+
+        del mem_a
+        del mem_b
+        pctx.detach()
+
+    @mark_cuda_test
     def test_3d_texture(self):
         # adapted from code by Nicolas Pinto
         w = 2
