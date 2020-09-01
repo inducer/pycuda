@@ -34,7 +34,7 @@ Python 3 K40:
   - curl -L -O -k https://gitlab.tiker.net/inducer/ci-support/raw/master/build-and-test-py-project.sh
   - "export LD_LIBRARY_PATH=/usr/local/cuda/lib64:$LD_LIBRARY_PATH"
   - ". ./build-and-test-py-project.sh"
-  
+
   # https://github.com/illinois-scicomp/machine-shop-maintenance/issues/7
   allow_failure: true
 
@@ -47,10 +47,10 @@ Python 3 K40:
 Documentation:
   script:
   - EXTRA_INSTALL="numpy mako"
-  - curl -L -O -k https://gitlab.tiker.net/inducer/ci-support/raw/master/build-docs.sh
-  - ". ./build-docs.sh"
+  - curl -L -O -k https://gitlab.tiker.net/inducer/ci-support/raw/master/ci-support.sh
+  - ". ./ci-support.sh"
+  -  build_py_project_in_venv
+  -  build_docs --no-check
   tags:
   - python3
   - nvidia-titan-x
-  only:
-  - master
