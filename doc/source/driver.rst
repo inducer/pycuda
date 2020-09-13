@@ -1626,6 +1626,7 @@ Structured Memory Transfers
         copy bandwidth.
 
     .. method:: __call__(stream)
+        :noindex:
 
         Perform the memory copy asynchronously, serialized via the :class:`Stream`
         *stream*. Any host memory involved in the transfer must be page-locked.
@@ -2032,8 +2033,8 @@ Just-in-time Compilation
     Unless *no_extern_c* is *True*, the given source code is wrapped in
     *extern "C" { ... }* to prevent C++ name mangling.
 
-    `arch` and `code` specify the values to be passed for the :option:`-arch`
-    and :option:`-code` options on the :program:`nvcc` command line. If `arch` is
+    `arch` and `code` specify the values to be passed for the ``-arch``
+    and ``-code`` options on the :program:`nvcc` command line. If `arch` is
     `None`, it defaults to the current context's device's compute capability.
     If `code` is `None`, it will not be specified.
 
