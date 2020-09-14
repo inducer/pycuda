@@ -54,4 +54,5 @@ Documentation:
      maybe_upload_docs
   tags:
   - python3
-  - linux
+  # needs CUDA headers to compile
+  - nvidia-titan-x
