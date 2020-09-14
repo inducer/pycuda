@@ -45,12 +45,14 @@ Python 3 K40:
   - tags
 
 Documentation:
-  script:
-  - EXTRA_INSTALL="numpy mako"
-  - curl -L -O -k https://gitlab.tiker.net/inducer/ci-support/raw/master/ci-support.sh
-  - ". ./ci-support.sh"
-  -  build_py_project_in_venv
-  -  build_docs --no-check
+  script: |
+    EXTRA_INSTALL="numpy mako"
+    curl -L -O -k https://gitlab.tiker.net/inducer/ci-support/raw/master/ci-support.sh
+    . ./ci-support.sh
+     build_py_project_in_venv
+     build_docs --no-check
+     maybe_upload_docs
   tags:
   - python3
+  # needs CUDA headers to compile
   - nvidia-titan-x
