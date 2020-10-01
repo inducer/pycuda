@@ -53,7 +53,7 @@ Here's an example, to give you an impression::
           drv.Out(dest), drv.In(a), drv.In(b),
           block=(400,1,1), grid=(1,1))
 
-  print dest-a*b
+  print(dest-a*b)
 
 (This example is :file:`examples/hello_gpu.py` in the PyCUDA
 source distribution.)
