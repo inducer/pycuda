@@ -65,11 +65,21 @@ from pycuda.tools import dtype_to_ctype
 import numpy as np
 
 
-def get_reduction_module(out_type, block_size,
-        neutral, reduce_expr, map_expr, arguments,
-        name="reduce_kernel", keep=False, options=None, preamble=""):
+def get_reduction_module(
+    out_type,
+    block_size,
+    neutral,
+    reduce_expr,
+    map_expr,
+    arguments,
+    name="reduce_kernel",
+    keep=False,
+    options=None,
+    preamble="",
+):
 
     from pycuda.compiler import SourceModule
+
     src = """
         #include <pycuda-complex.hpp>
 
@@ -138,23 +148,31 @@ def get_reduction_module(out_type, block_size,
           if (tid == 0) out[blockIdx.x] = sdata[0];
         }
         """ % {
-            "out_type": out_type,
-            "arguments": arguments,
-            "block_size": block_size,
-            "neutral": neutral,
-            "reduce_expr": reduce_expr,
-            "map_expr": map_expr,
-            "name": name,
-            "preamble": preamble
-            }
+        "out_type": out_type,
+        "arguments": arguments,
+        "block_size": block_size,
+        "neutral": neutral,
+        "reduce_expr": reduce_expr,
+        "map_expr": map_expr,
+        "name": name,
+        "preamble": preamble,
+    }
     return SourceModule(src, options=options, keep=keep, no_extern_c=True)
 
 
-
-
-def get_reduction_kernel_and_types(stage, out_type, block_size,
-        neutral, reduce_expr, map_expr=None, arguments=None,
-        name="reduce_kernel", keep=False, options=None, preamble=""):
+def get_reduction_kernel_and_types(
+    stage,
+    out_type,
+    block_size,
+    neutral,
+    reduce_expr,
+    map_expr=None,
+    arguments=None,
+    name="reduce_kernel",
+    keep=False,
+    options=None,
+    preamble="",
+):
 
     if stage == 1:
         if map_expr is None:
@@ -173,11 +191,21 @@ def get_reduction_kernel_and_types(stage, out_type, block_size,
     else:
         assert False
 
-    mod = get_reduction_module(out_type, block_size,
-            neutral, reduce_expr, map_expr, arguments,
-            name, keep, options, preamble)
+    mod = get_reduction_module(
+        out_type,
+        block_size,
+        neutral,
+        reduce_expr,
+        map_expr,
+        arguments,
+        name,
+        keep,
+        options,
+        preamble,
+    )
 
     from pycuda.tools import get_arg_type
+
     func = mod.get_function(name)
     arg_types = [get_arg_type(arg) for arg in arguments.split(",")]
     func.prepare("P%sII" % "".join(arg_types))
@@ -185,35 +213,58 @@ def get_reduction_kernel_and_types(stage, out_type, block_size,
     return func, arg_types
 
 
-
-
 class ReductionKernel:
-    def __init__(self, dtype_out,
-            neutral, reduce_expr, map_expr=None, arguments=None,
-            name="reduce_kernel", keep=False, options=None, preamble=""):
+    def __init__(
+        self,
+        dtype_out,
+        neutral,
+        reduce_expr,
+        map_expr=None,
+        arguments=None,
+        name="reduce_kernel",
+        keep=False,
+        options=None,
+        preamble="",
+    ):
 
         self.dtype_out = np.dtype(dtype_out)
 
         self.block_size = 512
 
         s1_func, self.stage1_arg_types = get_reduction_kernel_and_types(
-                1, dtype_to_ctype(dtype_out), self.block_size,
-                neutral, reduce_expr, map_expr,
-                arguments, name=name+"_stage1", keep=keep, options=options,
-                preamble=preamble)
+            1,
+            dtype_to_ctype(dtype_out),
+            self.block_size,
+            neutral,
+            reduce_expr,
+            map_expr,
+            arguments,
+            name=name + "_stage1",
+            keep=keep,
+            options=options,
+            preamble=preamble,
+        )
         self.stage1_func = s1_func.prepared_async_call
 
         # stage 2 has only one input and no map expression
         s2_func, self.stage2_arg_types = get_reduction_kernel_and_types(
-                2, dtype_to_ctype(dtype_out), self.block_size,
-                neutral, reduce_expr, arguments=arguments,
-                name=name+"_stage2", keep=keep, options=options,
-                preamble=preamble)
+            2,
+            dtype_to_ctype(dtype_out),
+            self.block_size,
+            neutral,
+            reduce_expr,
+            arguments=arguments,
+            name=name + "_stage2",
+            keep=keep,
+            options=options,
+            preamble=preamble,
+        )
         self.stage2_func = s2_func.prepared_async_call
 
-        assert [i for i, arg_tp in enumerate(self.stage1_arg_types) if arg_tp == "P"], \
-                "ReductionKernel can only be used with functions that have at least one " \
-                "vector argument"
+        assert [i for i, arg_tp in enumerate(self.stage1_arg_types) if arg_tp == "P"], (
+            "ReductionKernel can only be used with functions that have at least one "
+            "vector argument"
+        )
 
     def __call__(self, *args, **kwargs):
         MAX_BLOCK_COUNT = 1024
@@ -244,8 +295,9 @@ class ReductionKernel:
             for arg, arg_tp in zip(args, arg_types):
                 if arg_tp == "P":
                     if not arg.flags.forc:
-                        raise RuntimeError("ReductionKernel cannot "
-                                "deal with non-contiguous arrays")
+                        raise RuntimeError(
+                            "ReductionKernel cannot " "deal with non-contiguous arrays"
+                        )
 
                     vectors.append(arg)
                     invocation_args.append(arg.gpudata)
@@ -259,13 +311,13 @@ class ReductionKernel:
             if allocator is None:
                 allocator = repr_vec.allocator
 
-            if sz <= self.block_size*SMALL_SEQ_COUNT*MAX_BLOCK_COUNT:
-                total_block_size = SMALL_SEQ_COUNT*self.block_size
+            if sz <= self.block_size * SMALL_SEQ_COUNT * MAX_BLOCK_COUNT:
+                total_block_size = SMALL_SEQ_COUNT * self.block_size
                 block_count = (sz + total_block_size - 1) // total_block_size
                 seq_count = SMALL_SEQ_COUNT
             else:
                 block_count = MAX_BLOCK_COUNT
-                macroblock_size = block_count*self.block_size
+                macroblock_size = block_count * self.block_size
                 seq_count = (sz + macroblock_size - 1) // macroblock_size
 
             if block_count == 1 and out is not None:
@@ -279,12 +331,16 @@ class ReductionKernel:
             else:
                 result = empty((block_count,), self.dtype_out, allocator=allocator)
 
-            kwargs = dict(shared_size=self.block_size*self.dtype_out.itemsize)
+            kwargs = dict(shared_size=self.block_size * self.dtype_out.itemsize)
 
             # print block_count, seq_count, self.block_size, sz
-            f((block_count, 1), (self.block_size, 1, 1), stream,
-                    *([result.gpudata]+invocation_args+[seq_count, sz]),
-                    **kwargs)
+            f(
+                (block_count, 1),
+                (self.block_size, 1, 1),
+                stream,
+                *([result.gpudata] + invocation_args + [seq_count, sz]),
+                **kwargs
+            )
 
             if block_count == 1:
                 return result
@@ -294,17 +350,17 @@ class ReductionKernel:
                 args = (result,) + stage1_args
 
 
-
-
 @context_dependent_memoize
 def get_sum_kernel(dtype_out, dtype_in):
     if dtype_out is None:
         dtype_out = dtype_in
 
-    return ReductionKernel(dtype_out, "0", "a+b",
-            arguments="const %(tp)s *in" % {"tp": dtype_to_ctype(dtype_in)})
-
-
+    return ReductionKernel(
+        dtype_out,
+        "0",
+        "a+b",
+        arguments="const %(tp)s *in" % {"tp": dtype_to_ctype(dtype_in)},
+    )
 
 
 @context_dependent_memoize
@@ -312,27 +368,33 @@ def get_subset_sum_kernel(dtype_out, dtype_subset, dtype_in):
     if dtype_out is None:
         dtype_out = dtype_in
 
-    return ReductionKernel(dtype_out, "0", "a+b",
-            map_expr="in[lookup_tbl[i]]",
-            arguments="const %(tp_lut)s *lookup_tbl, const %(tp)s *in"
-            % {
-                "tp": dtype_to_ctype(dtype_in),
-                "tp_lut": dtype_to_ctype(dtype_subset),
-                })
-
-
+    return ReductionKernel(
+        dtype_out,
+        "0",
+        "a+b",
+        map_expr="in[lookup_tbl[i]]",
+        arguments="const %(tp_lut)s *lookup_tbl, const %(tp)s *in"
+        % {
+            "tp": dtype_to_ctype(dtype_in),
+            "tp_lut": dtype_to_ctype(dtype_subset),
+        },
+    )
 
 
 @context_dependent_memoize
 def get_dot_kernel(dtype_out, dtype_a, dtype_b):
-    return ReductionKernel(dtype_out, neutral="0",
-            reduce_expr="a+b", map_expr="a[i]*b[i]",
-            arguments="const %(tp_a)s *a, const %(tp_b)s *b" % {
-                "tp_a": dtype_to_ctype(dtype_a),
-                "tp_b": dtype_to_ctype(dtype_b),
-                }, keep=True)
-
-
+    return ReductionKernel(
+        dtype_out,
+        neutral="0",
+        reduce_expr="a+b",
+        map_expr="a[i]*b[i]",
+        arguments="const %(tp_a)s *a, const %(tp_b)s *b"
+        % {
+            "tp_a": dtype_to_ctype(dtype_a),
+            "tp_b": dtype_to_ctype(dtype_b),
+        },
+        keep=True,
+    )
 
 
 @context_dependent_memoize
@@ -350,16 +412,19 @@ def get_subset_dot_kernel(dtype_out, dtype_subset, dtype_a=None, dtype_b=None):
         dtype_a = dtype_out
 
     # important: lookup_tbl must be first--it controls the length
-    return ReductionKernel(dtype_out, neutral="0",
-            reduce_expr="a+b", map_expr="a[lookup_tbl[i]]*b[lookup_tbl[i]]",
-            arguments="const %(tp_lut)s *lookup_tbl, "
-            "const %(tp_a)s *a, const %(tp_b)s *b" % {
+    return ReductionKernel(
+        dtype_out,
+        neutral="0",
+        reduce_expr="a+b",
+        map_expr="a[lookup_tbl[i]]*b[lookup_tbl[i]]",
+        arguments="const %(tp_lut)s *lookup_tbl, "
+        "const %(tp_a)s *a, const %(tp_b)s *b"
+        % {
             "tp_a": dtype_to_ctype(dtype_a),
             "tp_b": dtype_to_ctype(dtype_b),
             "tp_lut": dtype_to_ctype(dtype_subset),
-            })
-
-
+        },
+    )
 
 
 def get_minmax_neutral(what, dtype):
@@ -380,8 +445,6 @@ def get_minmax_neutral(what, dtype):
             raise ValueError("what is not min or max.")
 
 
-
-
 @context_dependent_memoize
 def get_minmax_kernel(what, dtype):
     if dtype == np.float64:
@@ -393,14 +456,16 @@ def get_minmax_kernel(what, dtype):
     else:
         raise TypeError("unsupported dtype specified")
 
-    return ReductionKernel(dtype,
-            neutral=get_minmax_neutral(what, dtype),
-            reduce_expr="%(reduce_expr)s" % {"reduce_expr": reduce_expr},
-            arguments="const %(tp)s *in" % {
-                "tp": dtype_to_ctype(dtype),
-                }, preamble="#define MY_INFINITY (1./0)")
-
-
+    return ReductionKernel(
+        dtype,
+        neutral=get_minmax_neutral(what, dtype),
+        reduce_expr="%(reduce_expr)s" % {"reduce_expr": reduce_expr},
+        arguments="const %(tp)s *in"
+        % {
+            "tp": dtype_to_ctype(dtype),
+        },
+        preamble="#define MY_INFINITY (1./0)",
+    )
 
 
 @context_dependent_memoize
@@ -414,12 +479,16 @@ def get_subset_minmax_kernel(what, dtype, dtype_subset):
     else:
         raise TypeError("unsupported dtype specified")
 
-    return ReductionKernel(dtype,
-            neutral=get_minmax_neutral(what, dtype),
-            reduce_expr="%(reduce_expr)s" % {"reduce_expr": reduce_expr},
-            map_expr="in[lookup_tbl[i]]",
-            arguments="const %(tp_lut)s *lookup_tbl, "
-            "const %(tp)s *in"  % {
+    return ReductionKernel(
+        dtype,
+        neutral=get_minmax_neutral(what, dtype),
+        reduce_expr="%(reduce_expr)s" % {"reduce_expr": reduce_expr},
+        map_expr="in[lookup_tbl[i]]",
+        arguments="const %(tp_lut)s *lookup_tbl, "
+        "const %(tp)s *in"
+        % {
             "tp": dtype_to_ctype(dtype),
             "tp_lut": dtype_to_ctype(dtype_subset),
-            }, preamble="#define MY_INFINITY (1./0)")
+        },
+        preamble="#define MY_INFINITY (1./0)",
+    )

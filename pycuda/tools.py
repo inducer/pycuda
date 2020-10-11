@@ -37,14 +37,17 @@ import pycuda._driver as _drv
 import numpy as np
 
 
+from pycuda.compyte.dtypes import (  # noqa: F401
+    register_dtype,
+    get_or_register_dtype,
+    _fill_dtype_registry,
+    dtype_to_ctype as base_dtype_to_ctype,
+)
+
 bitlog2 = _drv.bitlog2
 DeviceMemoryPool = _drv.DeviceMemoryPool
 PageLockedMemoryPool = _drv.PageLockedMemoryPool
 PageLockedAllocator = _drv.PageLockedAllocator
-
-from pycuda.compyte.dtypes import (
-        register_dtype, get_or_register_dtype, _fill_dtype_registry,
-        dtype_to_ctype as base_dtype_to_ctype)
 
 _fill_dtype_registry(respect_windows=True)
 get_or_register_dtype("pycuda::complex<float>", np.complex64)
@@ -52,6 +55,7 @@ get_or_register_dtype("pycuda::complex<double>", np.complex128)
 
 
 # {{{ debug memory pool
+
 
 class DebugMemoryPool(DeviceMemoryPool):
     def __init__(self, interactive=True, logfile=None):
@@ -61,19 +65,23 @@ class DebugMemoryPool(DeviceMemoryPool):
 
         if logfile is None:
             import sys
+
             logfile = sys.stdout
 
         self.logfile = logfile
 
         from weakref import WeakKeyDictionary
+
         self.blocks = WeakKeyDictionary()
 
         if interactive:
             from pytools.diskdict import DiskDict
+
             self.stacktrace_mnemonics = DiskDict("pycuda-stacktrace-mnemonics")
 
     def allocate(self, size):
         from traceback import extract_stack
+
         stack = tuple(frm[2] for frm in extract_stack())
         description = self.describe(stack, size)
 
@@ -82,21 +90,27 @@ class DebugMemoryPool(DeviceMemoryPool):
             histogram[bsize, descr] = histogram.get((bsize, descr), 0) + 1
 
         from pytools import common_prefix
+
         cpfx = common_prefix(descr for bsize, descr in histogram)
 
         print(
-                "\n  Allocation of size %d occurring "
-                "(mem: last_free:%d, free: %d, total:%d) (pool: held:%d, active:%d):"
-                "\n      at: %s" % (
-                    (size, self.last_free) + cuda.mem_get_info()
-                    + (self.held_blocks, self.active_blocks,
-                    description)),
-                file=self.logfile)
+            "\n  Allocation of size %d occurring "
+            "(mem: last_free:%d, free: %d, total:%d) (pool: held:%d, active:%d):"
+            "\n      at: %s"
+            % (
+                (size, self.last_free)
+                + cuda.mem_get_info()
+                + (self.held_blocks, self.active_blocks, description)
+            ),
+            file=self.logfile,
+        )
 
         hist_items = sorted(list(six.iteritems(histogram)))
         for (bsize, descr), count in hist_items:
-            print("  %s (%d bytes): %dx" % (descr[len(cpfx):], bsize, count),
-                    file=self.logfile)
+            print(
+                "  %s (%d bytes): %dx" % (descr[len(cpfx):], bsize, count),
+                file=self.logfile,
+            )
 
         if self.interactive:
             input("  [Enter]")
@@ -116,33 +130,43 @@ class DebugMemoryPool(DeviceMemoryPool):
                 print(size, stack)
                 while True:
                     mnemonic = input("Enter mnemonic or [Enter] for more info:")
-                    if mnemonic == '':
+                    if mnemonic == "":
                         from traceback import print_stack
+
                         print_stack()
                     else:
                         break
                 self.stacktrace_mnemonics[stack, size] = mnemonic
                 return mnemonic
 
+
 # }}}
 
 
 # {{{ default device/context
 
+
 def get_default_device(default=0):
     from warnings import warn
-    warn("get_default_device() is deprecated; "
-            "use make_default_context() instead", DeprecationWarning)
+
+    warn(
+        "get_default_device() is deprecated; " "use make_default_context() instead",
+        DeprecationWarning,
+    )
 
     from pycuda.driver import Device
     import os
+
     dev = os.environ.get("CUDA_DEVICE")
 
     if dev is None:
         try:
-            dev = (open(os.path.join(os.path.expanduser("~"), ".cuda_device"))
-                    .read().strip())
-        except:
+            dev = (
+                open(os.path.join(os.path.expanduser("~"), ".cuda_device"))
+                .read()
+                .strip()
+            )
+        except Exception:
             pass
 
     if dev is None:
@@ -151,24 +175,28 @@ def get_default_device(default=0):
     try:
         dev = int(dev)
     except TypeError:
-        raise TypeError("CUDA device number (CUDA_DEVICE or ~/.cuda-device) "
-                "must be an integer")
+        raise TypeError(
+            "CUDA device number (CUDA_DEVICE or ~/.cuda-device) " "must be an integer"
+        )
 
     return Device(dev)
 
 
 def make_default_context(ctx_maker=None):
     if ctx_maker is None:
+
         def ctx_maker(dev):
             return dev.make_context()
 
     ndevices = cuda.Device.count()
     if ndevices == 0:
-        raise RuntimeError("No CUDA enabled device found. "
-                "Please check your installation.")
+        raise RuntimeError(
+            "No CUDA enabled device found. " "Please check your installation."
+        )
 
     # Is CUDA_DEVICE set?
     import os
+
     devn = os.environ.get("CUDA_DEVICE")
 
     # Is $HOME/.cuda_device set ?
@@ -176,9 +204,8 @@ def make_default_context(ctx_maker=None):
         try:
             homedir = os.environ.get("HOME")
             assert homedir is not None
-            devn = (open(os.path.join(homedir, ".cuda_device"))
-                    .read().strip())
-        except:
+            devn = open(os.path.join(homedir, ".cuda_device")).read().strip()
+        except Exception:
             pass
 
     # If either CUDA_DEVICE or $HOME/.cuda_device is set, try to use it
@@ -186,8 +213,10 @@ def make_default_context(ctx_maker=None):
         try:
             devn = int(devn)
         except TypeError:
-            raise TypeError("CUDA device number (CUDA_DEVICE or ~/.cuda_device)"
-                    " must be an integer")
+            raise TypeError(
+                "CUDA device number (CUDA_DEVICE or ~/.cuda_device)"
+                " must be an integer"
+            )
 
         dev = cuda.Device(devn)
         return ctx_maker(dev)
@@ -201,13 +230,17 @@ def make_default_context(ctx_maker=None):
             except cuda.Error:
                 pass
 
-        raise RuntimeError("make_default_context() wasn't able to create a context "
-                "on any of the %d detected devices" % ndevices)
+        raise RuntimeError(
+            "make_default_context() wasn't able to create a context "
+            "on any of the %d detected devices" % ndevices
+        )
+
 
 # }}}
 
 
 # {{{ rounding helpers
+
 
 def _exact_div(dividend, divisor):
     quot, rem = divmod(dividend, divisor)
@@ -220,7 +253,8 @@ def _int_ceiling(value, multiple_of=1):
     # Mimicks the Excel "floor" function (for code stolen from occupancy calculator)
 
     from math import ceil
-    return int(ceil(value/multiple_of))*multiple_of
+
+    return int(ceil(value / multiple_of)) * multiple_of
 
 
 def _int_floor(value, multiple_of=1):
@@ -228,12 +262,15 @@ def _int_floor(value, multiple_of=1):
     # Mimicks the Excel "floor" function (for code stolen from occupancy calculator)
 
     from math import floor
-    return int(floor(value/multiple_of))*multiple_of
+
+    return int(floor(value / multiple_of)) * multiple_of
+
 
 # }}}
 
 
 # {{{ device data
+
 
 class DeviceData:
     def __init__(self, dev=None):
@@ -242,8 +279,7 @@ class DeviceData:
         if dev is None:
             dev = cuda.Context.get_device()
 
-        self.max_threads = dev.get_attribute(
-                drv.device_attribute.MAX_THREADS_PER_BLOCK)
+        self.max_threads = dev.get_attribute(drv.device_attribute.MAX_THREADS_PER_BLOCK)
         self.warp_size = dev.get_attribute(drv.device_attribute.WARP_SIZE)
 
         if dev.compute_capability() >= (3, 0):
@@ -256,10 +292,10 @@ class DeviceData:
             self.warps_per_mp = 24
 
         self.thread_blocks_per_mp = 8
-        self.registers = dev.get_attribute(
-                drv.device_attribute.MAX_REGISTERS_PER_BLOCK)
+        self.registers = dev.get_attribute(drv.device_attribute.MAX_REGISTERS_PER_BLOCK)
         self.shared_memory = dev.get_attribute(
-                drv.device_attribute.MAX_SHARED_MEMORY_PER_BLOCK)
+            drv.device_attribute.MAX_SHARED_MEMORY_PER_BLOCK
+        )
 
         if dev.compute_capability() >= (2, 0):
             self.smem_alloc_granularity = 128
@@ -277,8 +313,7 @@ class DeviceData:
         return _int_ceiling(bytes, self.align_bytes(word_size))
 
     def align_dtype(self, elements, dtype_size):
-        return _int_ceiling(elements,
-                self.align_words(dtype_size))
+        return _int_ceiling(elements, self.align_words(dtype_size))
 
     def align_words(self, word_size):
         return _exact_div(self.align_bytes(word_size), word_size)
@@ -298,16 +333,18 @@ class DeviceData:
 
     @staticmethod
     def make_valid_tex_channel_count(size):
-        valid_sizes = [1,2,4]
+        valid_sizes = [1, 2, 4]
         for vs in valid_sizes:
             if size <= vs:
                 return vs
 
         raise ValueError("could not enlarge argument to valid channel count")
 
+
 # }}}
 
 # {{{ occupancy
+
 
 class OccupancyRecord:
     def __init__(self, devdata, threads, shared_mem=0, registers=0):
@@ -315,14 +352,16 @@ class OccupancyRecord:
             raise ValueError("too many threads")
 
         # copied literally from occupancy calculator
-        alloc_warps = _int_ceiling(threads/devdata.warp_size)
+        alloc_warps = _int_ceiling(threads / devdata.warp_size)
         alloc_smem = _int_ceiling(shared_mem, devdata.smem_alloc_granularity)
         if devdata.register_allocation_unit == "warp":
-            alloc_regs = alloc_warps*32*registers
+            alloc_regs = alloc_warps * 32 * registers
         elif devdata.register_allocation_unit == "block":
-            alloc_regs = _int_ceiling(alloc_warps*2, 4)*16*registers
+            alloc_regs = _int_ceiling(alloc_warps * 2, 4) * 16 * registers
         else:
-            raise ValueError("Improper register allocation unit:"+devdata.register_allocation_unit)
+            raise ValueError(
+                "Improper register allocation unit:" + devdata.register_allocation_unit
+            )
 
         if alloc_regs > devdata.registers:
             raise ValueError("too many registers")
@@ -330,22 +369,29 @@ class OccupancyRecord:
         if alloc_smem > devdata.shared_memory:
             raise ValueError("too much smem")
 
-        self.tb_per_mp_limits = [(devdata.thread_blocks_per_mp, "device"),
-                (_int_floor(devdata.warps_per_mp/alloc_warps), "warps")
-                ]
+        self.tb_per_mp_limits = [
+            (devdata.thread_blocks_per_mp, "device"),
+            (_int_floor(devdata.warps_per_mp / alloc_warps), "warps"),
+        ]
         if registers > 0:
-            self.tb_per_mp_limits.append((_int_floor(devdata.registers/alloc_regs), "regs"))
+            self.tb_per_mp_limits.append(
+                (_int_floor(devdata.registers / alloc_regs), "regs")
+            )
         if shared_mem > 0:
-            self.tb_per_mp_limits.append((_int_floor(devdata.shared_memory/alloc_smem), "smem"))
+            self.tb_per_mp_limits.append(
+                (_int_floor(devdata.shared_memory / alloc_smem), "smem")
+            )
 
         self.tb_per_mp, self.limited_by = min(self.tb_per_mp_limits)
 
         self.warps_per_mp = self.tb_per_mp * alloc_warps
         self.occupancy = self.warps_per_mp / devdata.warps_per_mp
 
+
 # }}}
 
 # {{{ C types <-> dtypes
+
 
 class Argument:
     def __init__(self, dtype, name):
@@ -353,10 +399,7 @@ class Argument:
         self.name = name
 
     def __repr__(self):
-        return "%s(%r, %s)" % (
-                self.__class__.__name__,
-                self.name,
-                self.dtype)
+        return "%s(%r, %s)" % (self.__class__.__name__, self.name, self.dtype)
 
 
 def dtype_to_ctype(dtype, with_fp_tex_hack=False):
@@ -383,6 +426,7 @@ class VectorArg(Argument):
 
     struct_char = "P"
 
+
 class ScalarArg(Argument):
     def declarator(self):
         return "%s %s" % (dtype_to_ctype(self.dtype), self.name)
@@ -396,22 +440,21 @@ class ScalarArg(Argument):
         return result
 
 
-
-
 def parse_c_arg(c_arg):
     from pycuda.compyte.dtypes import parse_c_arg_backend
+
     return parse_c_arg_backend(c_arg, ScalarArg, VectorArg)
+
 
 def get_arg_type(c_arg):
     return parse_c_arg(c_arg).struct_char
+
 
 # }}}
 
 # {{{ context-dep memoization
 
 context_dependent_memoized_functions = []
-
-
 
 
 @decorator
@@ -435,7 +478,6 @@ def context_dependent_memoize(func, *args):
         return result
 
 
-
 def clear_context_caches():
     for func in context_dependent_memoized_functions:
         try:
@@ -445,13 +487,16 @@ def clear_context_caches():
         else:
             ctx_dict.clear()
 
+
 # }}}
 
 # {{{ py.test interaction
 
+
 def mark_cuda_test(inner_f):
     def f(*args, **kwargs):
         import pycuda.driver
+
         # appears to be idempotent, i.e. no harm in calling it more than once
         pycuda.driver.init()
 
@@ -465,9 +510,11 @@ def mark_cuda_test(inner_f):
             ctx.pop()
 
             from pycuda.tools import clear_context_caches
+
             clear_context_caches()
 
             from gc import collect
+
             collect()
 
     try:
@@ -477,8 +524,8 @@ def mark_cuda_test(inner_f):
 
     return mark_test.cuda(f)
 
-# }}}
 
+# }}}
 
 
 # vim: foldmethod=marker

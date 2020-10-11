@@ -1,7 +1,7 @@
 from __future__ import absolute_import
 import pycuda._driver as _drv
 
-if not _drv.have_gl_ext(): 
+if not _drv.have_gl_ext():
     raise ImportError("PyCUDA was compiled without GL extension support")
 
 init = _drv.gl_init

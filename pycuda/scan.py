@@ -10,7 +10,6 @@ Copyright 2008-2011 NVIDIA Corporation
 """
 
 
-
 __license__ = """
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -28,8 +27,6 @@ Derived from code within the Thrust project, https://github.com/thrust/thrust/
 """
 
 
-
-
 import numpy as np
 
 import pycuda.driver as driver
@@ -40,9 +37,9 @@ import pycuda._mymako as mako
 from pycuda._cluda import CLUDA_PREAMBLE
 
 
-
-
-SHARED_PREAMBLE = CLUDA_PREAMBLE + """
+SHARED_PREAMBLE = (
+    CLUDA_PREAMBLE
+    + """
 #define WG_SIZE ${wg_size}
 #define SCAN_EXPR(a, b) ${scan_expr}
 
@@ -50,11 +47,12 @@ ${preamble}
 
 typedef ${scan_type} scan_type;
 """
+)
 
 
-
-
-SCAN_INTERVALS_SOURCE = mako.template.Template(SHARED_PREAMBLE + """//CL//
+SCAN_INTERVALS_SOURCE = mako.template.Template(
+    SHARED_PREAMBLE
+    + """//CL//
 #define K ${wg_seq_batches}
 
 <%def name="make_group_scan(name, with_bounds_check)">
@@ -237,12 +235,13 @@ void ${name_prefix}_scan_intervals(
         group_results[GID_0] = output[interval_end - 1];
     }
 }
-""")
+"""
+)
 
 
-
-
-INCLUSIVE_UPDATE_SOURCE = mako.template.Template(SHARED_PREAMBLE + """//CL//
+INCLUSIVE_UPDATE_SOURCE = mako.template.Template(
+    SHARED_PREAMBLE
+    + """//CL//
 KERNEL
 REQD_WG_SIZE(WG_SIZE, 1, 1)
 void ${name_prefix}_final_update(
@@ -275,12 +274,13 @@ void ${name_prefix}_final_update(
         }
     }
 }
-""")
+"""
+)
 
 
-
-
-EXCLUSIVE_UPDATE_SOURCE = mako.template.Template(SHARED_PREAMBLE + """//CL//
+EXCLUSIVE_UPDATE_SOURCE = mako.template.Template(
+    SHARED_PREAMBLE
+    + """//CL//
 KERNEL
 REQD_WG_SIZE(WG_SIZE, 1, 1)
 void ${name_prefix}_final_update(
@@ -337,15 +337,21 @@ void ${name_prefix}_final_update(
         local_barrier();
     }
 }
-""")
-
-
+"""
+)
 
 
 class _ScanKernelBase(object):
-    def __init__(self, dtype,
-            scan_expr, neutral=None,
-            name_prefix="scan", options=None, preamble="", devices=None):
+    def __init__(
+        self,
+        dtype,
+        scan_expr,
+        neutral=None,
+        name_prefix="scan",
+        options=None,
+        preamble="",
+        devices=None,
+    ):
 
         if isinstance(self, ExclusiveScanKernel) and neutral is None:
             raise ValueError("neutral element is required for exclusive scan")
@@ -363,30 +369,37 @@ class _ScanKernelBase(object):
             name_prefix=name_prefix,
             scan_type=dtype_to_ctype(dtype),
             scan_expr=scan_expr,
-            neutral=neutral)
+            neutral=neutral,
+        )
 
-        scan_intervals_src = str(SCAN_INTERVALS_SOURCE.render(
-            wg_size=self.scan_wg_size,
-            wg_seq_batches=self.scan_wg_seq_batches,
-            **kw_values))
+        scan_intervals_src = str(
+            SCAN_INTERVALS_SOURCE.render(
+                wg_size=self.scan_wg_size,
+                wg_seq_batches=self.scan_wg_seq_batches,
+                **kw_values
+            )
+        )
         scan_intervals_prg = SourceModule(
-                scan_intervals_src, options=options, no_extern_c=True)
+            scan_intervals_src, options=options, no_extern_c=True
+        )
         self.scan_intervals_knl = scan_intervals_prg.get_function(
-                name_prefix+"_scan_intervals")
+            name_prefix + "_scan_intervals"
+        )
         self.scan_intervals_knl.prepare("PIIPP")
 
-        final_update_src = str(self.final_update_tp.render(
-            wg_size=self.update_wg_size,
-            **kw_values))
+        final_update_src = str(
+            self.final_update_tp.render(wg_size=self.update_wg_size, **kw_values)
+        )
 
         final_update_prg = SourceModule(
-                final_update_src, options=options, no_extern_c=True)
+            final_update_src, options=options, no_extern_c=True
+        )
         self.final_update_knl = final_update_prg.get_function(
-                name_prefix+"_final_update")
+            name_prefix + "_final_update"
+        )
         self.final_update_knl.prepare("PIIP")
 
-    def __call__(self, input_ary, output_ary=None, allocator=None,
-            stream=None):
+    def __call__(self, input_ary, output_ary=None, allocator=None, stream=None):
         allocator = allocator or input_ary.allocator
 
         if output_ary is None:
@@ -399,56 +412,68 @@ class _ScanKernelBase(object):
             raise ValueError("input and output must have the same shape")
 
         if not input_ary.flags.forc:
-            raise RuntimeError("ScanKernel cannot "
-                    "deal with non-contiguous arrays")
+            raise RuntimeError("ScanKernel cannot " "deal with non-contiguous arrays")
 
-        n, = input_ary.shape
+        (n,) = input_ary.shape
 
         if not n:
             return output_ary
 
-        unit_size  = self.scan_wg_size * self.scan_wg_seq_batches
+        unit_size = self.scan_wg_size * self.scan_wg_seq_batches
         dev = driver.Context.get_device()
-        max_groups = 3*dev.get_attribute(
-                driver.device_attribute.MULTIPROCESSOR_COUNT)
+        max_groups = 3 * dev.get_attribute(driver.device_attribute.MULTIPROCESSOR_COUNT)
 
         from pytools import uniform_interval_splitting
-        interval_size, num_groups = uniform_interval_splitting(
-                n, unit_size, max_groups);
 
-        block_results = allocator(self.dtype.itemsize*num_groups)
+        interval_size, num_groups = uniform_interval_splitting(n, unit_size, max_groups)
+
+        block_results = allocator(self.dtype.itemsize * num_groups)
         dummy_results = allocator(self.dtype.itemsize)
 
         # first level scan of interval (one interval per block)
         self.scan_intervals_knl.prepared_async_call(
-                (num_groups, 1), (self.scan_wg_size, 1, 1), stream,
-                input_ary.gpudata,
-                n, interval_size,
-                output_ary.gpudata,
-                block_results)
+            (num_groups, 1),
+            (self.scan_wg_size, 1, 1),
+            stream,
+            input_ary.gpudata,
+            n,
+            interval_size,
+            output_ary.gpudata,
+            block_results,
+        )
 
         # second level inclusive scan of per-block results
         self.scan_intervals_knl.prepared_async_call(
-                (1,1), (self.scan_wg_size, 1, 1), stream,
-                block_results,
-                num_groups, interval_size,
-                block_results,
-                dummy_results)
+            (1, 1),
+            (self.scan_wg_size, 1, 1),
+            stream,
+            block_results,
+            num_groups,
+            interval_size,
+            block_results,
+            dummy_results,
+        )
 
         # update intervals with result of second level scan
         self.final_update_knl.prepared_async_call(
-                (num_groups, 1,), (self.update_wg_size, 1, 1), stream,
-                output_ary.gpudata,
-                n, interval_size,
-                block_results)
+            (
+                num_groups,
+                1,
+            ),
+            (self.update_wg_size, 1, 1),
+            stream,
+            output_ary.gpudata,
+            n,
+            interval_size,
+            block_results,
+        )
 
         return output_ary
 
 
-
-
 class InclusiveScanKernel(_ScanKernelBase):
     final_update_tp = INCLUSIVE_UPDATE_SOURCE
+
 
 class ExclusiveScanKernel(_ScanKernelBase):
     final_update_tp = EXCLUSIVE_UPDATE_SOURCE
