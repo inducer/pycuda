@@ -7,11 +7,6 @@ class OperatorBase(object):
     def shape(self):
         raise NotImplementedError
 
-    def __neg__(self):
-        return NegOperator(self)
-
-
-
 
 class IdentityOperator(OperatorBase):
     def __init__(self, dtype, n):
@@ -30,8 +25,6 @@ class IdentityOperator(OperatorBase):
         return operand
 
 
-
-
 class DiagonalPreconditioner(OperatorBase):
     def __init__(self, diagonal):
         self.diagonal = diagonal
@@ -46,8 +39,4 @@ class DiagonalPreconditioner(OperatorBase):
         return n, n
 
     def __call__(self, operand):
-        return self.diagonal*operand
-
-
-
-
+        return self.diagonal * operand

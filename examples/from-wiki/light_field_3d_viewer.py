@@ -1,5 +1,3 @@
-
-
 #!python 
 """
 3D display of Light Field images.
@@ -18,7 +16,6 @@ Prerequisites:
 Author: Amit Aides. amitibo at technion . ac . il
 """
 
-from __future__ import division
 
 from enthought.traits.api import HasTraits, Range, on_trait_change
 from enthought.traits.ui.api import View, Item
@@ -110,7 +107,7 @@ class LFapplication(HasTraits):
         )
 
     def __init__(self, img_path):
-        super(LFapplication, self).__init__()
+        super().__init__()
 
         #
         # Load image data
@@ -119,12 +116,12 @@ class LFapplication(HasTraits):
         lenslet_path = base_path + '-lenslet.txt'
         optics_path = base_path + '-optics.txt'
 
-        with open(lenslet_path, 'r') as f:
+        with open(lenslet_path) as f:
             tmp = eval(f.readline())
             x_offset, y_offset, right_dx, right_dy, down_dx, down_dy = \
               np.array(tmp, dtype=np.float32)
 
-        with open(optics_path, 'r') as f:
+        with open(optics_path) as f:
             for line in f:
                 name, val = line.strip().split()
                 try:

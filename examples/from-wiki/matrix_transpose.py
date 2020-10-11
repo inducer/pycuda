@@ -1,12 +1,9 @@
-
-
 #!python 
 # Exercise 1 from http://webapp.dam.brown.edu/wiki/SciComp/CudaExercises
 
 # Transposition of a matrix
 # by Hendrik Riedmann <riedmann@dam.brown.edu>
 
-from __future__ import division, print_function
 
 import pycuda.driver as cuda
 import pycuda.gpuarray as gpuarray

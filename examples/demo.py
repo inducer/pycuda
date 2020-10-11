@@ -1,6 +1,4 @@
 # Sample source code from the Tutorial Introduction in the documentation.
-from __future__ import print_function
-from __future__ import absolute_import
 import pycuda.driver as cuda
 import pycuda.autoinit  # noqa
 from pycuda.compiler import SourceModule

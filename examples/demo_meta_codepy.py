@@ -1,10 +1,8 @@
-from __future__ import absolute_import
 import pycuda.driver as cuda
 import pycuda.autoinit
 import numpy
 import numpy.linalg as la
 from pycuda.compiler import SourceModule
-from six.moves import range
 
 thread_strides = 16
 block_size = 256

@@ -3,12 +3,10 @@ from __future__ import absolute_import
 import pycuda.driver as drv
 import pycuda.gpuarray as gpuarray
 
-
+import atexit
 
 
 STREAM_POOL = []
-
-
 
 
 def get_stream():
@@ -16,9 +14,6 @@ def get_stream():
         return STREAM_POOL.pop()
     else:
         return drv.Stream()
-
-
-
 
 
 class AsyncInnerProduct:
@@ -36,11 +31,11 @@ class AsyncInnerProduct:
                 self.gpu_finished = True
                 self.copy_stream = get_stream()
                 self.host_dest = self.pagelocked_allocator(
-                        self.gpu_result.shape, self.gpu_result.dtype,
-                        self.copy_stream)
-                drv.memcpy_dtoh_async(self.host_dest,
-                        self.gpu_result.gpudata,
-                        self.copy_stream)
+                    self.gpu_result.shape, self.gpu_result.dtype, self.copy_stream
+                )
+                drv.memcpy_dtoh_async(
+                    self.host_dest, self.gpu_result.gpudata, self.copy_stream
+                )
                 self.copy_finished_evt = drv.Event()
                 self.copy_finished_evt.record()
         else:
@@ -49,11 +44,8 @@ class AsyncInnerProduct:
                 return self.host_dest
 
 
-
-
 def _at_exit():
     STREAM_POOL[:] = []
 
-import atexit
-atexit.register(_at_exit)
 
+atexit.register(_at_exit)

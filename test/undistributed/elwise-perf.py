@@ -1,5 +1,6 @@
 from __future__ import absolute_import
 from __future__ import print_function
+
 #! /usr/bin/env python
 import pycuda.driver as drv
 import pycuda.autoinit
@@ -8,10 +9,9 @@ import numpy.linalg as la
 from six.moves import range
 
 
-
-
 def main():
     from pytools import Table
+
     tbl = Table()
     tbl.add_row(("size [MiB]", "time [s]", "mem.bw [GB/s]"))
 
@@ -19,7 +19,7 @@ def main():
 
     # they're floats, i.e. 4 bytes each
     for power in range(10, 28):
-        size = 1<<power
+        size = 1 << power
         print(size)
 
         a = gpuarray.empty((size,), dtype=numpy.float32)
@@ -40,17 +40,15 @@ def main():
         for i in range(count):
             a.mul_add(1, b, 2, add_timer)
 
-        bytes = a.nbytes*count*3
-        bytes = a.nbytes*count*3
+        bytes = a.nbytes * count * 3
+        bytes = a.nbytes * count * 3
 
-        tbl.add_row((a.nbytes/(1<<20), elapsed[0]/count, bytes/elapsed[0]/1e9))
+        tbl.add_row(
+            (a.nbytes / (1 << 20), elapsed[0] / count, bytes / elapsed[0] / 1e9)
+        )
 
     print(tbl)
-        
-
-
 
 
 if __name__ == "__main__":
     main()
-

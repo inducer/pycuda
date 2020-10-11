@@ -1,5 +1,3 @@
-
-
 #!python 
 #! /usr/bin/env python
 # DO NOT USE THIS AS A BENCHMARK. See

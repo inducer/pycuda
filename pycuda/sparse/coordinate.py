@@ -7,8 +7,6 @@ from pycuda.compiler import SourceModule
 import numpy as np
 
 
-
-
 COO_FLAT_KERNEL_TEMPLATE = """
 #include <pycuda-helpers.hpp>
 
@@ -122,7 +120,6 @@ spmv_coo_flat_kernel(const index_type num_nonzeros,
 """
 
 
-
 COO_SERIAL_KERNEL_TEMPLATE = """
 typedef %(value_type)s value_type;
 typedef %(index_type)s index_type;
@@ -141,8 +138,6 @@ spmv_coo_serial_kernel(const index_type num_nonzeros,
 """
 
 
-
-
 class CoordinateSpMV:
     def __init__(self, mat, dtype):
         self.dtype = np.dtype(dtype)
@@ -152,6 +147,7 @@ class CoordinateSpMV:
         self.block_size = 128
 
         from scipy.sparse import coo_matrix
+
         coo_mat = coo_matrix(mat, dtype=self.dtype)
 
         self.row_gpu = gpuarray.to_gpu(coo_mat.row.astype(self.index_dtype))
@@ -160,43 +156,49 @@ class CoordinateSpMV:
         self.nnz = coo_mat.nnz
 
         from pycuda.tools import DeviceData
+
         dev = drv.Context.get_device()
         devdata = DeviceData()
-        max_threads = (devdata.warps_per_mp*devdata.warp_size*
-                dev.multiprocessor_count)
-        max_blocks = 4*max_threads // self.block_size
+        max_threads = (
+            devdata.warps_per_mp * devdata.warp_size * dev.multiprocessor_count
+        )
+        max_blocks = 4 * max_threads // self.block_size
         warps_per_block = self.block_size // dev.warp_size
 
         if self.nnz:
-            def divide_into(x, y):
-                return (x+y-1)//y
 
-            num_units  = self.nnz // dev.warp_size
-            num_warps  = min(num_units, warps_per_block * max_blocks)
+            def divide_into(x, y):
+                return (x + y - 1) // y
+
+            num_units = self.nnz // dev.warp_size
+            num_warps = min(num_units, warps_per_block * max_blocks)
             self.num_blocks = divide_into(num_warps, warps_per_block)
-            num_iters  = divide_into(num_units, num_warps)
+            num_iters = divide_into(num_units, num_warps)
 
             self.interval_size = dev.warp_size * num_iters
             self.tail = num_units * dev.warp_size
-
 
     @memoize_method
     def get_flat_kernel(self):
         from pycuda.tools import dtype_to_ctype
 
         mod = SourceModule(
-                COO_FLAT_KERNEL_TEMPLATE % {
-                    "value_type": dtype_to_ctype(self.dtype),
-                    "tex_value_type": dtype_to_ctype(
-                        self.dtype, with_fp_tex_hack=True),
-                    "index_type": dtype_to_ctype(self.index_dtype),
-                    "block_size": self.block_size,
-                    "warp_size": drv.Context.get_device().warp_size,
-                    })
+            COO_FLAT_KERNEL_TEMPLATE
+            % {
+                "value_type": dtype_to_ctype(self.dtype),
+                "tex_value_type": dtype_to_ctype(self.dtype, with_fp_tex_hack=True),
+                "index_type": dtype_to_ctype(self.index_dtype),
+                "block_size": self.block_size,
+                "warp_size": drv.Context.get_device().warp_size,
+            }
+        )
         func = mod.get_function("spmv_coo_flat_kernel")
         x_texref = mod.get_texref("tex_x")
-        func.prepare(self.index_dtype.char*2 + "PPPP",
-            (self.block_size, 1, 1), texrefs=[x_texref])
+        func.prepare(
+            self.index_dtype.char * 2 + "PPPP",
+            (self.block_size, 1, 1),
+            texrefs=[x_texref],
+        )
         return func, x_texref
 
     @memoize_method
@@ -204,37 +206,43 @@ class CoordinateSpMV:
         from pycuda.tools import dtype_to_ctype
 
         mod = SourceModule(
-                COO_SERIAL_KERNEL_TEMPLATE % {
-                    "value_type": dtype_to_ctype(self.dtype),
-                    "index_type": dtype_to_ctype(self.index_dtype),
-                    })
+            COO_SERIAL_KERNEL_TEMPLATE
+            % {
+                "value_type": dtype_to_ctype(self.dtype),
+                "index_type": dtype_to_ctype(self.index_dtype),
+            }
+        )
         func = mod.get_function("spmv_coo_serial_kernel")
         func.prepare(self.index_dtype.char + "PPPPP", (1, 1, 1))
         return func
 
     def __call__(self, x, y=None):
         if y is None:
-            y = gpuarray.zeros(self.shape[0], dtype=self.dtype,
-                    allocator=x.allocator)
+            y = gpuarray.zeros(self.shape[0], dtype=self.dtype, allocator=x.allocator)
 
         if self.nnz == 0:
             return y
 
         flat_func, x_texref = self.get_flat_kernel()
         x.bind_to_texref_ext(x_texref, allow_double_hack=True)
-        flat_func.prepared_call((self.num_blocks, 1),
-                self.tail, self.interval_size,
-                self.row_gpu.gpudata,
-                self.col_gpu.gpudata,
-                self.data_gpu.gpudata,
-                y.gpudata)
+        flat_func.prepared_call(
+            (self.num_blocks, 1),
+            self.tail,
+            self.interval_size,
+            self.row_gpu.gpudata,
+            self.col_gpu.gpudata,
+            self.data_gpu.gpudata,
+            y.gpudata,
+        )
 
         self.get_serial_kernel().prepared_call(
-                (1, 1),
-                self.nnz - self.tail,
-                self.row_gpu[self.tail:].gpudata,
-                self.col_gpu[self.tail:].gpudata,
-                self.data_gpu[self.tail:].gpudata,
-                x.gpudata, y.gpudata)
+            (1, 1),
+            self.nnz - self.tail,
+            self.row_gpu[self.tail:].gpudata,
+            self.col_gpu[self.tail:].gpudata,
+            self.data_gpu[self.tail:].gpudata,
+            x.gpudata,
+            y.gpudata,
+        )
 
         return y

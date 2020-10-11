@@ -1,5 +1,3 @@
-
-
 #!python 
 # Interactive Mandelbrot Set Accelerated using PyCUDA
 # Classical Iteration Method
@@ -108,21 +106,21 @@ def zoom_on_square(eclick, erelease):
 def key_selector(event):
     global N,side,x0,y0,myobj,M,power,L,i_cmap,n_grid
     #print(' Key pressed.')
-    if event.key == u'up':  # Increase max number of iterations
+    if event.key == 'up':  # Increase max number of iterations
         L=int(L*1.2);
         print("Maximum number of iterations changed to %d" % L)
         func(np.float64(x0),np.float64(y0),np.float64(side), np.int32(L),np.int32(power),drv.Out(M),block=(n_block,n_block,1),grid=(n_grid,n_grid,1))        
         myobj = plt.imshow(M,cmap=cmaps[i_cmap],origin='lower')
         ax.set_title('Side=%.2e, x=%.2e, y=%.2e, %s, L=%d'%(side,x0,y0,cmaps[i_cmap],L))
         plt.draw()
-    if event.key == u'down':  # Decrease max number of iterations
+    if event.key == 'down':  # Decrease max number of iterations
         L=int(L/1.2);
         print("Maximum number of iterations changed to %d" % L)
         func(np.float64(x0),np.float64(y0),np.float64(side), np.int32(L),np.int32(power),drv.Out(M),block=(n_block,n_block,1),grid=(n_grid,n_grid,1))        
         myobj = plt.imshow(M,cmap=cmaps[i_cmap],origin='lower')
         ax.set_title('Side=%.2e, x=%.2e, y=%.2e, %s, L=%d'%(side,x0,y0,cmaps[i_cmap],L))
         plt.draw()
-    if event.key == u'right':  # Increase  number of pixels
+    if event.key == 'right':  # Increase  number of pixels
         N=int(N*1.2);
         n_grid=int(N/16.);
         N=n_block*n_grid;
@@ -132,7 +130,7 @@ def key_selector(event):
         myobj = plt.imshow(M,cmap=cmaps[i_cmap],origin='lower')
         ax.set_title('Side=%.2e, x=%.2e, y=%.2e, %s, L=%d'%(side,x0,y0,cmaps[i_cmap],L))
         plt.draw()
-    if event.key == u'left':  # Decrease  number of pixels
+    if event.key == 'left':  # Decrease  number of pixels
         N=int(N/1.2);
         n_grid=int(N/16.);
         N=n_block*n_grid;

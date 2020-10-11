@@ -1,14 +1,9 @@
-from __future__ import absolute_import, print_function
-
 import os
-import sys
-
-import six
-
 import numpy as np
 
 
 # {{{ add cuda lib dir to Python DLL path
+
 
 def _search_on_path(filenames):
     """Find file on system path."""
@@ -32,7 +27,7 @@ def _add_cuda_libdir_to_dll_path():
     cuda_path = os.environ.get("CUDA_PATH")
 
     if cuda_path is not None:
-        os.add_dll_directory(join(cuda_path, 'bin'))
+        os.add_dll_directory(join(cuda_path, "bin"))
         return
 
     nvcc_path = _search_on_path(["nvcc.exe"])
@@ -40,10 +35,13 @@ def _add_cuda_libdir_to_dll_path():
         os.add_dll_directory(dirname(nvcc_path))
 
     from warnings import warn
-    warn("Unable to discover CUDA installation directory "
-            "while attempting to add it to Python's DLL path. "
-            "Either set the 'CUDA_PATH' environment variable "
-            "or ensure that 'nvcc.exe' is on the path.")
+
+    warn(
+        "Unable to discover CUDA installation directory "
+        "while attempting to add it to Python's DLL path. "
+        "Either set the 'CUDA_PATH' environment variable "
+        "or ensure that 'nvcc.exe' is on the path."
+    )
 
 
 try:
@@ -63,18 +61,17 @@ try:
 except ImportError as e:
     if "_v2" in str(e):
         from warnings import warn
-        warn("Failed to import the CUDA driver interface, with an error "
-                "message indicating that the version of your CUDA header "
-                "does not match the version of your CUDA driver.")
+
+        warn(
+            "Failed to import the CUDA driver interface, with an error "
+            "message indicating that the version of your CUDA header "
+            "does not match the version of your CUDA driver."
+        )
     raise
 
 
-if sys.version_info >= (3,):
-    _memoryview = memoryview
-    _my_bytes = bytes
-else:
-    _memoryview = buffer
-    _my_bytes = str
+_memoryview = memoryview
+_my_bytes = bytes
 
 
 try:
@@ -83,7 +80,7 @@ except NameError:
     # Provide ManagedAllocationOrStub if not on CUDA 6.
     # This avoids having to do a version check in a high-traffic code path below.
 
-    class ManagedAllocationOrStub(object):
+    class ManagedAllocationOrStub:
         pass
 
 
@@ -117,7 +114,7 @@ class CompileError(Error):
         return result
 
 
-class ArgumentHandler(object):
+class ArgumentHandler:
     def __init__(self, ary):
         self.array = ary
         self.dev_alloc = None
@@ -127,7 +124,10 @@ class ArgumentHandler(object):
             try:
                 self.dev_alloc = mem_alloc_like(self.array)
             except AttributeError:
-                raise TypeError("could not determine array length of '%s': unsupported array type or not an array" % type(self.array))
+                raise TypeError(
+                    "could not determine array length of '%s': unsupported array type or not an array"
+                    % type(self.array)
+                )
         return self.dev_alloc
 
     def pre_call(self, stream):
@@ -155,7 +155,6 @@ class InOut(In, Out):
 
 
 def _add_functionality():
-
     def device_get_attributes(dev):
         result = {}
 
@@ -169,8 +168,11 @@ def _add_functionality():
                 att_value = dev.get_attribute(att_id)
             except LogicError as e:
                 from warnings import warn
-                warn("CUDA driver raised '%s' when querying '%s' on '%s'"
-                        % (e, att_name, dev))
+
+                warn(
+                    "CUDA driver raised '%s' when querying '%s' on '%s'"
+                    % (e, att_name, dev)
+                )
             else:
                 result[att_id] = att_value
 
@@ -216,6 +218,7 @@ def _add_functionality():
                     format += "P"
 
         from pycuda._pvt_struct import pack
+
         return handlers, pack(format, *arg_data)
 
     # {{{ pre-CUDA 4 call interface (stateful)
@@ -240,8 +243,8 @@ def _add_functionality():
 
         if kwargs:
             raise ValueError(
-                    "extra keyword arguments: %s"
-                    % (",".join(six.iterkeys(kwargs))))
+                "extra keyword arguments: %s" % (",".join(kwargs.keys()))
+            )
 
         if block is None:
             raise ValueError("must specify block size")
@@ -257,22 +260,23 @@ def _add_functionality():
         for texref in texrefs:
             func.param_set_texref(texref)
 
-        post_handlers = [handler
-                for handler in handlers
-                if hasattr(handler, "post_call")]
+        post_handlers = [
+            handler for handler in handlers if hasattr(handler, "post_call")
+        ]
 
         if stream is None:
             if time_kernel:
                 Context.synchronize()
 
                 from time import time
+
                 start_time = time()
             func._launch_grid(*grid)
             if post_handlers or time_kernel:
                 Context.synchronize()
 
                 if time_kernel:
-                    run_time = time()-start_time
+                    run_time = time() - start_time
 
                 for handler in post_handlers:
                     handler.post_call(stream)
@@ -280,25 +284,32 @@ def _add_functionality():
                 if time_kernel:
                     return run_time
         else:
-            assert not time_kernel, \
-                    "Can't time the kernel on an asynchronous invocation"
+            assert (
+                not time_kernel
+            ), "Can't time the kernel on an asynchronous invocation"
             func._launch_grid_async(grid[0], grid[1], stream)
 
             if post_handlers:
                 for handler in post_handlers:
                     handler.post_call(stream)
 
-    def function_prepare_pre_v4(func, arg_types, block=None,
-            shared=None, texrefs=[]):
+    def function_prepare_pre_v4(func, arg_types, block=None, shared=None, texrefs=[]):
         from warnings import warn
+
         if block is not None:
-            warn("setting the block size in Function.prepare is deprecated",
-                    DeprecationWarning, stacklevel=2)
+            warn(
+                "setting the block size in Function.prepare is deprecated",
+                DeprecationWarning,
+                stacklevel=2,
+            )
             func._set_block_shape(*block)
 
         if shared is not None:
-            warn("setting the shared memory size in Function.prepare is deprecated",
-                    DeprecationWarning, stacklevel=2)
+            warn(
+                "setting the shared memory size in Function.prepare is deprecated",
+                DeprecationWarning,
+                stacklevel=2,
+            )
             func._set_shared_size(shared)
 
         func.texrefs = texrefs
@@ -306,8 +317,11 @@ def _add_functionality():
         func.arg_format = ""
 
         for i, arg_type in enumerate(arg_types):
-            if (isinstance(arg_type, type)
-                    and np is not None and np.number in arg_type.__mro__):
+            if (
+                isinstance(arg_type, type)
+                and np is not None
+                and np.number in arg_type.__mro__
+            ):
                 func.arg_format += np.dtype(arg_type).char
             elif isinstance(arg_type, str):
                 func.arg_format += arg_type
@@ -315,6 +329,7 @@ def _add_functionality():
                 func.arg_format += np.dtype(np.uintp).char
 
         from pycuda._pvt_struct import calcsize
+
         func._param_set_size(calcsize(func.arg_format))
 
         return func
@@ -324,8 +339,13 @@ def _add_functionality():
             func._set_block_shape(*block)
         else:
             from warnings import warn
-            warn("Not passing the block size to prepared_call is deprecated as of "
-                    "version 2011.1.", DeprecationWarning, stacklevel=2)
+
+            warn(
+                "Not passing the block size to prepared_call is deprecated as of "
+                "version 2011.1.",
+                DeprecationWarning,
+                stacklevel=2,
+            )
             args = (block,) + args
 
         shared_size = kwargs.pop("shared_size", None)
@@ -333,10 +353,12 @@ def _add_functionality():
             func._set_shared_size(shared_size)
 
         if kwargs:
-            raise TypeError("unknown keyword arguments: "
-                    + ", ".join(six.iterkeys(kwargs)))
+            raise TypeError(
+                "unknown keyword arguments: " + ", ".join(kwargs.keys())
+            )
 
         from pycuda._pvt_struct import pack
+
         func._param_setv(0, pack(func.arg_format, *args))
 
         for texref in func.texrefs:
@@ -349,9 +371,13 @@ def _add_functionality():
             func._set_block_shape(*block)
         else:
             from warnings import warn
-            warn("Not passing the block size to prepared_timed_call is "
-                    "deprecated as of version 2011.1.",
-                    DeprecationWarning, stacklevel=2)
+
+            warn(
+                "Not passing the block size to prepared_timed_call is "
+                "deprecated as of version 2011.1.",
+                DeprecationWarning,
+                stacklevel=2,
+            )
             args = (block,) + args
 
         shared_size = kwargs.pop("shared_size", None)
@@ -359,10 +385,12 @@ def _add_functionality():
             func._set_shared_size(shared_size)
 
         if kwargs:
-            raise TypeError("unknown keyword arguments: "
-                    + ", ".join(six.iterkeys(kwargs)))
+            raise TypeError(
+                "unknown keyword arguments: " + ", ".join(kwargs.keys())
+            )
 
         from pycuda._pvt_struct import pack
+
         func._param_setv(0, pack(func.arg_format, *args))
 
         for texref in func.texrefs:
@@ -377,19 +405,22 @@ def _add_functionality():
 
         def get_call_time():
             end.synchronize()
-            return end.time_since(start)*1e-3
+            return end.time_since(start) * 1e-3
 
         return get_call_time
 
-    def function_prepared_async_call_pre_v4(func, grid, block, stream,
-            *args, **kwargs):
+    def function_prepared_async_call_pre_v4(func, grid, block, stream, *args, **kwargs):
         if isinstance(block, tuple):
             func._set_block_shape(*block)
         else:
             from warnings import warn
-            warn("Not passing the block size to prepared_async_call is "
-                    "deprecated as of version 2011.1.",
-                    DeprecationWarning, stacklevel=2)
+
+            warn(
+                "Not passing the block size to prepared_async_call is "
+                "deprecated as of version 2011.1.",
+                DeprecationWarning,
+                stacklevel=2,
+            )
             args = (stream,) + args
             stream = block
 
@@ -398,10 +429,12 @@ def _add_functionality():
             func._set_shared_size(shared_size)
 
         if kwargs:
-            raise TypeError("unknown keyword arguments: "
-                    + ", ".join(six.iterkeys(kwargs)))
+            raise TypeError(
+                "unknown keyword arguments: " + ", ".join(kwargs.keys())
+            )
 
         from pycuda._pvt_struct import pack
+
         func._param_setv(0, pack(func.arg_format, *args))
 
         for texref in func.texrefs:
@@ -427,8 +460,8 @@ def _add_functionality():
 
         if kwargs:
             raise ValueError(
-                    "extra keyword arguments: %s"
-                    % (",".join(six.iterkeys(kwargs))))
+                "extra keyword arguments: %s" % (",".join(kwargs.keys()))
+            )
 
         if block is None:
             raise ValueError("must specify block size")
@@ -442,15 +475,16 @@ def _add_functionality():
         for texref in texrefs:
             func.param_set_texref(texref)
 
-        post_handlers = [handler
-                for handler in handlers
-                if hasattr(handler, "post_call")]
+        post_handlers = [
+            handler for handler in handlers if hasattr(handler, "post_call")
+        ]
 
         if stream is None:
             if time_kernel:
                 Context.synchronize()
 
                 from time import time
+
                 start_time = time()
 
             func._launch_kernel(grid, block, arg_buf, shared, None)
@@ -459,7 +493,7 @@ def _add_functionality():
                 Context.synchronize()
 
                 if time_kernel:
-                    run_time = time()-start_time
+                    run_time = time() - start_time
 
                 for handler in post_handlers:
                     handler.post_call(stream)
@@ -467,8 +501,9 @@ def _add_functionality():
                 if time_kernel:
                     return run_time
         else:
-            assert not time_kernel, \
-                    "Can't time the kernel on an asynchronous invocation"
+            assert (
+                not time_kernel
+            ), "Can't time the kernel on an asynchronous invocation"
             func._launch_kernel(grid, block, arg_buf, shared, stream)
 
             if post_handlers:
@@ -481,8 +516,7 @@ def _add_functionality():
         func.arg_format = ""
 
         for i, arg_type in enumerate(arg_types):
-            if (isinstance(arg_type, type)
-                    and np.number in arg_type.__mro__):
+            if isinstance(arg_type, type) and np.number in arg_type.__mro__:
                 func.arg_format += np.dtype(arg_type).char
             elif isinstance(arg_type, np.dtype):
                 if arg_type.char == "V":
@@ -501,17 +535,24 @@ def _add_functionality():
             func._set_block_shape(*block)
         else:
             from warnings import warn
-            warn("Not passing the block size to prepared_call is deprecated as of "
-                    "version 2011.1.", DeprecationWarning, stacklevel=2)
+
+            warn(
+                "Not passing the block size to prepared_call is deprecated as of "
+                "version 2011.1.",
+                DeprecationWarning,
+                stacklevel=2,
+            )
             args = (block,) + args
 
         shared_size = kwargs.pop("shared_size", 0)
 
         if kwargs:
-            raise TypeError("unknown keyword arguments: "
-                    + ", ".join(six.iterkeys(kwargs)))
+            raise TypeError(
+                "unknown keyword arguments: " + ", ".join(kwargs.keys())
+            )
 
         from pycuda._pvt_struct import pack
+
         arg_buf = pack(func.arg_format, *args)
 
         for texref in func.texrefs:
@@ -522,10 +563,12 @@ def _add_functionality():
     def function_prepared_timed_call(func, grid, block, *args, **kwargs):
         shared_size = kwargs.pop("shared_size", 0)
         if kwargs:
-            raise TypeError("unknown keyword arguments: "
-                    + ", ".join(six.iterkeys(kwargs)))
+            raise TypeError(
+                "unknown keyword arguments: " + ", ".join(kwargs.keys())
+            )
 
         from pycuda._pvt_struct import pack
+
         arg_buf = pack(func.arg_format, *args)
 
         for texref in func.texrefs:
@@ -540,7 +583,7 @@ def _add_functionality():
 
         def get_call_time():
             end.synchronize()
-            return end.time_since(start)*1e-3
+            return end.time_since(start) * 1e-3
 
         return get_call_time
 
@@ -549,19 +592,25 @@ def _add_functionality():
             func._set_block_shape(*block)
         else:
             from warnings import warn
-            warn("Not passing the block size to prepared_async_call is "
-                    "deprecated as of version 2011.1.",
-                    DeprecationWarning, stacklevel=2)
+
+            warn(
+                "Not passing the block size to prepared_async_call is "
+                "deprecated as of version 2011.1.",
+                DeprecationWarning,
+                stacklevel=2,
+            )
             args = (stream,) + args
             stream = block
 
         shared_size = kwargs.pop("shared_size", 0)
 
         if kwargs:
-            raise TypeError("unknown keyword arguments: "
-                    + ", ".join(six.iterkeys(kwargs)))
+            raise TypeError(
+                "unknown keyword arguments: " + ", ".join(kwargs.keys())
+            )
 
         from pycuda._pvt_struct import pack
+
         arg_buf = pack(func.arg_format, *args)
 
         for texref in func.texrefs:
@@ -587,9 +636,13 @@ def _add_functionality():
     def mark_func_method_deprecated(func):
         def new_func(*args, **kwargs):
             from warnings import warn
-            warn("'%s' has been deprecated in version 2011.1. Please use "
-                    "the stateless launch interface instead." % func.__name__[1:],
-                    DeprecationWarning, stacklevel=2)
+
+            warn(
+                "'%s' has been deprecated in version 2011.1. Please use "
+                "the stateless launch interface instead." % func.__name__[1:],
+                DeprecationWarning,
+                stacklevel=2,
+            )
             return func(*args, **kwargs)
 
         try:
@@ -599,7 +652,7 @@ def _add_functionality():
         else:
             try:
                 update_wrapper(new_func, func)
-            except:
+            except Exception:
                 # User won't see true signature. Oh well.
                 pass
 
@@ -622,12 +675,23 @@ def _add_functionality():
         Function.prepared_timed_call = function_prepared_timed_call_pre_v4
         Function.prepared_async_call = function_prepared_async_call_pre_v4
 
-        for meth_name in ["set_block_shape", "set_shared_size",
-                "param_set_size", "param_set", "param_seti", "param_setf",
-                "param_setv",
-                "launch", "launch_grid", "launch_grid_async"]:
-            setattr(Function, meth_name, mark_func_method_deprecated(
-                    getattr(Function, "_"+meth_name)))
+        for meth_name in [
+            "set_block_shape",
+            "set_shared_size",
+            "param_set_size",
+            "param_set",
+            "param_seti",
+            "param_setf",
+            "param_setv",
+            "launch",
+            "launch_grid",
+            "launch_grid_async",
+        ]:
+            setattr(
+                Function,
+                meth_name,
+                mark_func_method_deprecated(getattr(Function, "_" + meth_name)),
+            )
 
     Function.__getattr__ = function___getattr__
 
@@ -636,6 +700,7 @@ _add_functionality()
 
 
 # {{{ pagelocked numpy arrays
+
 
 def pagelocked_zeros(shape, dtype, order="C", mem_flags=0):
     result = pagelocked_empty(shape, dtype, order, mem_flags)
@@ -659,10 +724,12 @@ def pagelocked_zeros_like(array, mem_flags=0):
     result.fill(0)
     return result
 
+
 # }}}
 
 
 # {{{ aligned numpy arrays
+
 
 def aligned_zeros(shape, dtype, order="C", alignment=4096):
     result = aligned_empty(shape, dtype, order, alignment)
@@ -686,10 +753,12 @@ def aligned_zeros_like(array, alignment=4096):
     result.fill(0)
     return result
 
+
 # }}}
 
 
 # {{{ managed numpy arrays (CUDA Unified Memory)
+
 
 def managed_zeros(shape, dtype, order="C", mem_flags=0):
     result = managed_empty(shape, dtype, order, mem_flags)
@@ -713,6 +782,7 @@ def managed_zeros_like(array, mem_flags=0):
     result.fill(0)
     return result
 
+
 # }}}
 
 
@@ -721,6 +791,7 @@ def mem_alloc_like(ary):
 
 
 # {{{ array handling
+
 
 def dtype_to_array_format(dtype):
     if dtype == np.uint8:
@@ -738,9 +809,7 @@ def dtype_to_array_format(dtype):
     elif dtype == np.float32:
         return array_format.FLOAT
     else:
-        raise TypeError(
-                "cannot convert dtype '%s' to array format"
-                % dtype)
+        raise TypeError("cannot convert dtype '%s' to array format" % dtype)
 
 
 def matrix_to_array(matrix, order, allow_double_hack=False):
@@ -771,22 +840,24 @@ def matrix_to_array(matrix, order, allow_double_hack=False):
     copy = Memcpy2D()
     copy.set_src_host(matrix)
     copy.set_dst_array(ary)
-    copy.width_in_bytes = copy.src_pitch = copy.dst_pitch = \
-            matrix.strides[stride]
+    copy.width_in_bytes = copy.src_pitch = copy.dst_pitch = matrix.strides[stride]
     copy.height = h
     copy(aligned=True)
 
     return ary
 
-def np_to_array(nparray, order, allowSurfaceBind=False):
-    case = order in ["C","F"]
+
+def np_to_array(nparray, order, allowSurfaceBind=False):  # noqa: N803
+    case = order in ["C", "F"]
     if not case:
         raise LogicError("order must be either F or C")
 
     dimension = len(nparray.shape)
     if dimension == 2:
-        if order == "C": stride = 0
-        if order == "F": stride = -1
+        if order == "C":
+            stride = 0
+        if order == "F":
+            stride = -1
         h, w = nparray.shape
         d = 1
         if allowSurfaceBind:
@@ -799,35 +870,46 @@ def np_to_array(nparray, order, allowSurfaceBind=False):
             descrArr.width = w
             descrArr.height = h
     elif dimension == 3:
-        if order == "C": stride = 1
-        if order == "F": stride = 1
+        if order == "C":
+            stride = 1
+        if order == "F":
+            stride = 1
         d, h, w = nparray.shape
         descrArr = ArrayDescriptor3D()
         descrArr.width = w
         descrArr.height = h
         descrArr.depth = d
     else:
-        raise LogicError("CUDArrays dimensions 2 or 3 supported in CUDA at the moment ... ")
+        raise LogicError(
+            "CUDArrays dimensions 2 or 3 supported in CUDA at the moment ... "
+        )
 
     if nparray.dtype == np.complex64:
-        descrArr.format = array_format.SIGNED_INT32 # Reading data as int2 (hi=re,lo=im) structure
+        descrArr.format = (
+            array_format.SIGNED_INT32
+        )  # Reading data as int2 (hi=re,lo=im) structure
         descrArr.num_channels = 2
     elif nparray.dtype == np.float64:
-        descrArr.format = array_format.SIGNED_INT32 # Reading data as int2 (hi,lo) structure
+        descrArr.format = (
+            array_format.SIGNED_INT32
+        )  # Reading data as int2 (hi,lo) structure
         descrArr.num_channels = 2
     elif nparray.dtype == np.complex128:
-        descrArr.format = array_format.SIGNED_INT32 # Reading data as int4 (re=(hi,lo),im=(hi,lo)) structure
+        descrArr.format = (
+            array_format.SIGNED_INT32
+        )  # Reading data as int4 (re=(hi,lo),im=(hi,lo)) structure
         descrArr.num_channels = 4
     else:
         descrArr.format = dtype_to_array_format(nparray.dtype)
         descrArr.num_channels = 1
 
     if allowSurfaceBind:
-        if dimension==2:  descrArr.flags |= array3d_flags.ARRAY3D_LAYERED
+        if dimension == 2:
+            descrArr.flags |= array3d_flags.ARRAY3D_LAYERED
         descrArr.flags |= array3d_flags.SURFACE_LDST
 
     cudaArray = Array(descrArr)
-    if allowSurfaceBind or dimension==3:
+    if allowSurfaceBind or dimension == 3:
         copy3D = Memcpy3D()
         copy3D.set_src_host(nparray)
         copy3D.set_dst_array(cudaArray)
@@ -845,15 +927,18 @@ def np_to_array(nparray, order, allowSurfaceBind=False):
         copy2D(aligned=True)
         return cudaArray
 
-def gpuarray_to_array(gpuarray, order, allowSurfaceBind=False):
-    case = order in ["C","F"]
+
+def gpuarray_to_array(gpuarray, order, allowSurfaceBind=False):  # noqa: N803
+    case = order in ["C", "F"]
     if not case:
         raise LogicError("order must be either F or C")
 
     dimension = len(gpuarray.shape)
     if dimension == 2:
-        if order == "C": stride = 0
-        if order == "F": stride = -1
+        if order == "C":
+            stride = 0
+        if order == "F":
+            stride = -1
         h, w = gpuarray.shape
         d = 1
         if allowSurfaceBind:
@@ -866,35 +951,46 @@ def gpuarray_to_array(gpuarray, order, allowSurfaceBind=False):
             descrArr.width = int(w)
             descrArr.height = int(h)
     elif dimension == 3:
-        if order == "C": stride = 1
-        if order == "F": stride = 1
+        if order == "C":
+            stride = 1
+        if order == "F":
+            stride = 1
         d, h, w = gpuarray.shape
         descrArr = ArrayDescriptor3D()
         descrArr.width = int(w)
         descrArr.height = int(h)
         descrArr.depth = int(d)
     else:
-        raise LogicError("CUDArray dimensions 2 and 3 supported in CUDA at the moment ... ")
+        raise LogicError(
+            "CUDArray dimensions 2 and 3 supported in CUDA at the moment ... "
+        )
 
     if gpuarray.dtype == np.complex64:
-        descrArr.format = array_format.SIGNED_INT32 # Reading data as int2 (hi=re,lo=im) structure
+        descrArr.format = (
+            array_format.SIGNED_INT32
+        )  # Reading data as int2 (hi=re,lo=im) structure
         descrArr.num_channels = 2
     elif gpuarray.dtype == np.float64:
-        descrArr.format = array_format.SIGNED_INT32 # Reading data as int2 (hi,lo) structure
+        descrArr.format = (
+            array_format.SIGNED_INT32
+        )  # Reading data as int2 (hi,lo) structure
         descrArr.num_channels = 2
     elif gpuarray.dtype == np.complex128:
-        descrArr.format = array_format.SIGNED_INT32 # Reading data as int4 (re=(hi,lo),im=(hi,lo)) structure
+        descrArr.format = (
+            array_format.SIGNED_INT32
+        )  # Reading data as int4 (re=(hi,lo),im=(hi,lo)) structure
         descrArr.num_channels = 4
     else:
         descrArr.format = dtype_to_array_format(gpuarray.dtype)
         descrArr.num_channels = 1
 
     if allowSurfaceBind:
-        if dimension==2:  descrArr.flags |= array3d_flags.ARRAY3D_LAYERED
+        if dimension == 2:
+            descrArr.flags |= array3d_flags.ARRAY3D_LAYERED
         descrArr.flags |= array3d_flags.SURFACE_LDST
 
     cudaArray = Array(descrArr)
-    if allowSurfaceBind or dimension==3:
+    if allowSurfaceBind or dimension == 3:
         copy3D = Memcpy3D()
         copy3D.set_src_device(gpuarray.ptr)
         copy3D.set_dst_array(cudaArray)
@@ -911,6 +1007,7 @@ def gpuarray_to_array(gpuarray, order, allowSurfaceBind=False):
         copy2D.src_height = copy2D.height = int(h)
         copy2D(aligned=True)
         return cudaArray
+
 
 def make_multichannel_2d_array(ndarray, order):
     """Channel count has to be the first dimension of the C{ndarray}."""
@@ -936,8 +1033,7 @@ def make_multichannel_2d_array(ndarray, order):
     copy = Memcpy2D()
     copy.set_src_host(ndarray)
     copy.set_dst_array(ary)
-    copy.width_in_bytes = copy.src_pitch = copy.dst_pitch = \
-            ndarray.strides[stride]
+    copy.width_in_bytes = copy.src_pitch = copy.dst_pitch = ndarray.strides[stride]
     copy.height = h
     copy(aligned=True)
 
@@ -950,6 +1046,7 @@ def bind_array_to_texref(ary, texref):
     texref.set_address_mode(1, address_mode.CLAMP)
     texref.set_filter_mode(filter_mode.POINT)
 
+
 # }}}
 
 
@@ -959,8 +1056,10 @@ def matrix_to_texref(matrix, texref, order):
 
 # {{{ device copies
 
+
 def to_device(bf_obj):
     import sys
+
     if sys.version_info >= (2, 7):
         bf = memoryview(bf_obj).tobytes()
     else:
@@ -980,6 +1079,7 @@ def from_device_like(devptr, other_ary):
     result = np.empty_like(other_ary)
     memcpy_dtoh(result, devptr)
     return result
+
 
 # }}}
 

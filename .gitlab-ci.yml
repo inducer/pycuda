@@ -53,3 +53,12 @@ Documentation:
   - python3
   # needs CUDA headers to compile
   - nvidia-titan-x
+
+Flake8:
+  script:
+  - curl -L -O -k https://gitlab.tiker.net/inducer/ci-support/raw/master/prepare-and-run-flake8.sh
+  - . ./prepare-and-run-flake8.sh "$CI_PROJECT_NAME" test/*.py
+  tags:
+  - python3
+  except:
+  - tags

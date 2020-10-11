@@ -1,5 +1,3 @@
-
-
 #!python 
 # Mandelbrot calculate using GPU, Serial numpy and faster numpy
 # Use to show the speed difference between CPU and GPU calculations
