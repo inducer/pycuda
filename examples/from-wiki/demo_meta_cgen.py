@@ -1,5 +1,3 @@
-
-
 #!python 
 import pycuda.driver as cuda
 import pycuda.autoinit

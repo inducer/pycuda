@@ -1,5 +1,3 @@
-
-
 #!python 
 import pycuda.gpuarray as gpuarray
 import pycuda.driver as cuda

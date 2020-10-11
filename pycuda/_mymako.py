@@ -1,5 +1,3 @@
-from __future__ import absolute_import
-
 try:
     import mako.template  # noqa: F401
 except ImportError:

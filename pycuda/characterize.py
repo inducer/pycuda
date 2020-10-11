@@ -1,6 +1,3 @@
-from __future__ import division
-from __future__ import absolute_import
-
 from pycuda.tools import context_dependent_memoize
 import numpy as np
 

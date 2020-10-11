@@ -1,7 +1,4 @@
-
-
 #!python 
-from __future__ import division
 import pycuda.autoinit
 import pycuda.driver as drv
 import pycuda.gpuarray as gpuarray

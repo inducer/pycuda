@@ -1,9 +1,5 @@
 """Scan primitive."""
 
-from __future__ import division
-from __future__ import absolute_import
-import six
-
 __copyright__ = """
 Copyright 2011 Andreas Kloeckner
 Copyright 2008-2011 NVIDIA Corporation
@@ -341,7 +337,7 @@ void ${name_prefix}_final_update(
 )
 
 
-class _ScanKernelBase(object):
+class _ScanKernelBase:
     def __init__(
         self,
         dtype,
@@ -405,7 +401,7 @@ class _ScanKernelBase(object):
         if output_ary is None:
             output_ary = input_ary
 
-        if isinstance(output_ary, (str, six.text_type)) and output_ary == "new":
+        if isinstance(output_ary, (str, str)) and output_ary == "new":
             output_ary = gpuarray.empty_like(input_ary, allocator=allocator)
 
         if input_ary.shape != output_ary.shape:

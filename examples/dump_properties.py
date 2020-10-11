@@ -1,7 +1,4 @@
-from __future__ import print_function
-from __future__ import absolute_import
 import pycuda.driver as drv
-from six.moves import range
 
 
 
@@ -18,5 +15,5 @@ for ordinal in range(drv.Device.count()):
     atts.sort()
     
     for att, value in atts:
-        print("  %s: %s" % (att, value))
+        print(f"  {att}: {value}")
 

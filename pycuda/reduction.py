@@ -1,8 +1,5 @@
 """Computation of reductions on vectors."""
 
-from __future__ import division
-from __future__ import absolute_import
-from six.moves import zip
 
 __copyright__ = "Copyright (C) 2009 Andreas Kloeckner"
 
@@ -359,7 +356,7 @@ def get_sum_kernel(dtype_out, dtype_in):
         dtype_out,
         "0",
         "a+b",
-        arguments="const %(tp)s *in" % {"tp": dtype_to_ctype(dtype_in)},
+        arguments="const {tp} *in".format(tp=dtype_to_ctype(dtype_in)),
     )
 
 
@@ -459,7 +456,7 @@ def get_minmax_kernel(what, dtype):
     return ReductionKernel(
         dtype,
         neutral=get_minmax_neutral(what, dtype),
-        reduce_expr="%(reduce_expr)s" % {"reduce_expr": reduce_expr},
+        reduce_expr=f"{reduce_expr}",
         arguments="const %(tp)s *in"
         % {
             "tp": dtype_to_ctype(dtype),
@@ -482,7 +479,7 @@ def get_subset_minmax_kernel(what, dtype, dtype_subset):
     return ReductionKernel(
         dtype,
         neutral=get_minmax_neutral(what, dtype),
-        reduce_expr="%(reduce_expr)s" % {"reduce_expr": reduce_expr},
+        reduce_expr=f"{reduce_expr}",
         map_expr="in[lookup_tbl[i]]",
         arguments="const %(tp_lut)s *lookup_tbl, "
         "const %(tp)s *in"

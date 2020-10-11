@@ -1,5 +1,3 @@
-
-
 #!python 
 import numpy
 import scipy.misc

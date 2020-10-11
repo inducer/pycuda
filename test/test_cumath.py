@@ -1,9 +1,6 @@
-from __future__ import division
-from __future__ import absolute_import
 import math
 import numpy as np
 from pycuda.tools import mark_cuda_test
-from six.moves import range
 
 
 import pycuda.gpuarray as gpuarray

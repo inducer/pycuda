@@ -1,5 +1,3 @@
-
-
 #!python 
 # Derived from a test case by Chris Heuser
 # Also see FAQ about PyCUDA and threads.

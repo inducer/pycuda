@@ -1,9 +1,7 @@
-from __future__ import division, absolute_import, print_function
 import numpy as np
 import numpy.linalg as la
 from pycuda.tools import mark_cuda_test, dtype_to_ctype
 import pytest  # noqa
-from six.moves import range
 
 
 import pycuda.gpuarray as gpuarray
@@ -69,7 +67,7 @@ class TestDriver:
             drv.Out(dest), np.intp(a_gpu) + a.itemsize, b_gpu, block=(399, 1, 1)
         )
 
-        assert la.norm((dest[:-1] - a[1:] * b[:-1])) == 0
+        assert la.norm(dest[:-1] - a[1:] * b[:-1]) == 0
 
     @mark_cuda_test
     def test_vector_types(self):

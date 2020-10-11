@@ -1,10 +1,4 @@
-from __future__ import absolute_import, print_function
-
 import os
-import sys
-
-import six
-
 import numpy as np
 
 
@@ -76,12 +70,8 @@ except ImportError as e:
     raise
 
 
-if sys.version_info >= (3,):
-    _memoryview = memoryview
-    _my_bytes = bytes
-else:
-    _memoryview = buffer
-    _my_bytes = str
+_memoryview = memoryview
+_my_bytes = bytes
 
 
 try:
@@ -90,7 +80,7 @@ except NameError:
     # Provide ManagedAllocationOrStub if not on CUDA 6.
     # This avoids having to do a version check in a high-traffic code path below.
 
-    class ManagedAllocationOrStub(object):
+    class ManagedAllocationOrStub:
         pass
 
 
@@ -124,7 +114,7 @@ class CompileError(Error):
         return result
 
 
-class ArgumentHandler(object):
+class ArgumentHandler:
     def __init__(self, ary):
         self.array = ary
         self.dev_alloc = None
@@ -253,7 +243,7 @@ def _add_functionality():
 
         if kwargs:
             raise ValueError(
-                "extra keyword arguments: %s" % (",".join(six.iterkeys(kwargs)))
+                "extra keyword arguments: %s" % (",".join(kwargs.keys()))
             )
 
         if block is None:
@@ -364,7 +354,7 @@ def _add_functionality():
 
         if kwargs:
             raise TypeError(
-                "unknown keyword arguments: " + ", ".join(six.iterkeys(kwargs))
+                "unknown keyword arguments: " + ", ".join(kwargs.keys())
             )
 
         from pycuda._pvt_struct import pack
@@ -396,7 +386,7 @@ def _add_functionality():
 
         if kwargs:
             raise TypeError(
-                "unknown keyword arguments: " + ", ".join(six.iterkeys(kwargs))
+                "unknown keyword arguments: " + ", ".join(kwargs.keys())
             )
 
         from pycuda._pvt_struct import pack
@@ -440,7 +430,7 @@ def _add_functionality():
 
         if kwargs:
             raise TypeError(
-                "unknown keyword arguments: " + ", ".join(six.iterkeys(kwargs))
+                "unknown keyword arguments: " + ", ".join(kwargs.keys())
             )
 
         from pycuda._pvt_struct import pack
@@ -470,7 +460,7 @@ def _add_functionality():
 
         if kwargs:
             raise ValueError(
-                "extra keyword arguments: %s" % (",".join(six.iterkeys(kwargs)))
+                "extra keyword arguments: %s" % (",".join(kwargs.keys()))
             )
 
         if block is None:
@@ -558,7 +548,7 @@ def _add_functionality():
 
         if kwargs:
             raise TypeError(
-                "unknown keyword arguments: " + ", ".join(six.iterkeys(kwargs))
+                "unknown keyword arguments: " + ", ".join(kwargs.keys())
             )
 
         from pycuda._pvt_struct import pack
@@ -574,7 +564,7 @@ def _add_functionality():
         shared_size = kwargs.pop("shared_size", 0)
         if kwargs:
             raise TypeError(
-                "unknown keyword arguments: " + ", ".join(six.iterkeys(kwargs))
+                "unknown keyword arguments: " + ", ".join(kwargs.keys())
             )
 
         from pycuda._pvt_struct import pack
@@ -616,7 +606,7 @@ def _add_functionality():
 
         if kwargs:
             raise TypeError(
-                "unknown keyword arguments: " + ", ".join(six.iterkeys(kwargs))
+                "unknown keyword arguments: " + ", ".join(kwargs.keys())
             )
 
         from pycuda._pvt_struct import pack

@@ -1,11 +1,5 @@
 """Miscallenous helper functionality."""
 
-from __future__ import division, print_function
-from __future__ import absolute_import
-import six
-from six.moves import range
-from six.moves import input
-
 __copyright__ = "Copyright (C) 2008 Andreas Kloeckner"
 
 __license__ = """
@@ -86,7 +80,7 @@ class DebugMemoryPool(DeviceMemoryPool):
         description = self.describe(stack, size)
 
         histogram = {}
-        for bsize, descr in six.itervalues(self.blocks):
+        for bsize, descr in self.blocks.values():
             histogram[bsize, descr] = histogram.get((bsize, descr), 0) + 1
 
         from pytools import common_prefix
@@ -105,7 +99,7 @@ class DebugMemoryPool(DeviceMemoryPool):
             file=self.logfile,
         )
 
-        hist_items = sorted(list(six.iteritems(histogram)))
+        hist_items = sorted(list(histogram.items()))
         for (bsize, descr), count in hist_items:
             print(
                 "  %s (%d bytes): %dx" % (descr[len(cpfx):], bsize, count),
@@ -399,7 +393,7 @@ class Argument:
         self.name = name
 
     def __repr__(self):
-        return "%s(%r, %s)" % (self.__class__.__name__, self.name, self.dtype)
+        return f"{self.__class__.__name__}({self.name!r}, {self.dtype})"
 
 
 def dtype_to_ctype(dtype, with_fp_tex_hack=False):
@@ -422,14 +416,14 @@ def dtype_to_ctype(dtype, with_fp_tex_hack=False):
 
 class VectorArg(Argument):
     def declarator(self):
-        return "%s *%s" % (dtype_to_ctype(self.dtype), self.name)
+        return "{} *{}".format(dtype_to_ctype(self.dtype), self.name)
 
     struct_char = "P"
 
 
 class ScalarArg(Argument):
     def declarator(self):
-        return "%s %s" % (dtype_to_ctype(self.dtype), self.name)
+        return "{} {}".format(dtype_to_ctype(self.dtype), self.name)
 
     @property
     def struct_char(self):

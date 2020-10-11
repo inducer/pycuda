@@ -1,5 +1,3 @@
-
-
 #!python 
 # simple module to show the plotting of random data
 

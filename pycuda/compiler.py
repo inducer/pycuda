@@ -1,5 +1,3 @@
-from __future__ import absolute_import
-from __future__ import print_function
 from pytools import memoize
 
 # don't import pycuda.driver here--you'll create an import loop
@@ -10,7 +8,6 @@ from tempfile import mkstemp
 from os import unlink
 
 from pytools.prefork import call_capture_output
-from six.moves import map
 
 
 @memoize
@@ -136,7 +133,7 @@ def compile_plain(source, options, keep, nvcc, cache_dir, target="cubin"):
 
     try:
         result_f = open(join(file_dir, file_root + "." + target), "rb")
-    except IOError:
+    except OSError:
         no_output = True
     else:
         no_output = False
@@ -301,7 +298,7 @@ def compile(
     return compile_plain(source, options, keep, nvcc, cache_dir, target)
 
 
-class CudaModule(object):
+class CudaModule:
     def _check_arch(self, arch):
         if arch is None:
             return
@@ -570,7 +567,7 @@ class DynamicSourceModule(DynamicModule):
         include_dirs=[],
         cuda_libdir=None,
     ):
-        super(DynamicSourceModule, self).__init__(
+        super().__init__(
             nvcc=nvcc,
             link_options=None,
             keep=keep,

@@ -1,12 +1,10 @@
 #! /usr/bin/env python
 
-from __future__ import absolute_import, print_function
 import numpy as np
 import numpy.linalg as la
 import sys
 from pycuda.tools import mark_cuda_test
 from pycuda.characterize import has_double_support
-from six.moves import range
 
 
 import pycuda.gpuarray as gpuarray
@@ -661,7 +659,7 @@ class TestGPUArray:
         min_a_b_gpu = gpuarray.minimum(a_gpu, b_gpu)
 
         print(max_a_b_gpu)
-        print((np.maximum(a, b)))
+        print(np.maximum(a, b))
 
         assert la.norm(max_a_b_gpu.get() - np.maximum(a, b)) == 0
         assert la.norm(min_a_b_gpu.get() - np.minimum(a, b)) == 0
@@ -837,7 +835,7 @@ class TestGPUArray:
         # using -1 as unknown dimension
         assert a_gpu.reshape(-1, 32).shape == (4, 32)
         assert a_gpu.reshape((32, -1)).shape == (32, 4)
-        assert a_gpu.reshape(((8, -1, 4))).shape == (8, 4, 4)
+        assert a_gpu.reshape((8, -1, 4)).shape == (8, 4, 4)
 
         throws_exception = False
         try:

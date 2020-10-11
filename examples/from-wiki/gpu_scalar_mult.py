@@ -1,5 +1,3 @@
-
-
 #!python 
 import numpy
 import pycuda.autoinit

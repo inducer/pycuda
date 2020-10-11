@@ -1,5 +1,3 @@
-
-
 #!python 
 # SimpleSpeedTest.py
 

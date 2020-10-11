@@ -1,12 +1,8 @@
-from __future__ import division
-from __future__ import absolute_import
-
 import numpy as np
 import pycuda.compiler
 import pycuda.driver as drv
 import pycuda.gpuarray as array
 from pytools import memoize_method
-import six
 
 
 # {{{ MD5-based random number generation
@@ -369,7 +365,7 @@ __global__ void skip_ahead_array(%(state_type)s *s, const int n, const unsigned 
 """
 
 
-class _RandomNumberGeneratorBase(object):
+class _RandomNumberGeneratorBase:
     """
     Class surrounding CURAND kernels from CUDA 3.2.
     It allows for generating random numbers with uniform
@@ -413,7 +409,7 @@ class _RandomNumberGeneratorBase(object):
         scramble_type=None,
     ):
         if get_curand_version() < (3, 2, 0):
-            raise EnvironmentError("Need at least CUDA 3.2")
+            raise OSError("Need at least CUDA 3.2")
 
         dev = drv.Context.get_device()
 
@@ -557,7 +553,7 @@ class _RandomNumberGeneratorBase(object):
         self.skip_ahead_array.prepare("PiP")
 
     def _kernels(self):
-        return list(six.itervalues(self.generators)) + [
+        return list(self.generators.values()) + [
             self.skip_ahead,
             self.skip_ahead_array,
         ]
@@ -751,7 +747,7 @@ class _PseudoRandomNumberGeneratorBase(_RandomNumberGeneratorBase):
         scramble_type=None,
     ):
 
-        super(_PseudoRandomNumberGeneratorBase, self).__init__(
+        super().__init__(
             state_type, vector_type, generator_bits, additional_source
         )
 
@@ -898,7 +894,7 @@ if get_curand_version() >= (3, 2, 0):
               :class:`GPUArray` of seeds.
             """
 
-            super(XORWOWRandomNumberGenerator, self).__init__(
+            super().__init__(
                 seed_getter,
                 offset,
                 "curandStateXORWOW",
@@ -969,7 +965,7 @@ if get_curand_version() >= (4, 1, 0):
               :class:`GPUArray` of seeds.
             """
 
-            super(MRG32k3aRandomNumberGenerator, self).__init__(
+            super().__init__(
                 seed_getter,
                 offset,
                 "curandStateMRG32k3a",
@@ -981,7 +977,7 @@ if get_curand_version() >= (4, 1, 0):
             )
 
         def _prepare_skipahead(self):
-            super(MRG32k3aRandomNumberGenerator, self)._prepare_skipahead()
+            super()._prepare_skipahead()
             self.skip_ahead_subsequence = self.module.get_function(
                 "skip_ahead_subsequence"
             )
@@ -1085,7 +1081,7 @@ class _SobolRandomNumberGeneratorBase(_RandomNumberGeneratorBase):
         generator_bits,
         sobol_random_source,
     ):
-        super(_SobolRandomNumberGeneratorBase, self).__init__(
+        super().__init__(
             state_type, vector_type, generator_bits, sobol_random_source
         )
 
@@ -1174,7 +1170,7 @@ class _ScrambledSobolRandomNumberGeneratorBase(_RandomNumberGeneratorBase):
         scramble_type,
         sobol_random_source,
     ):
-        super(_ScrambledSobolRandomNumberGeneratorBase, self).__init__(
+        super().__init__(
             state_type, vector_type, generator_bits, sobol_random_source, scramble_type
         )
 
@@ -1249,7 +1245,7 @@ if get_curand_version() >= (3, 2, 0):
         """
 
         def __init__(self, dir_vector=None, offset=0):
-            super(Sobol32RandomNumberGenerator, self).__init__(
+            super().__init__(
                 dir_vector,
                 np.uint32,
                 32,
@@ -1274,7 +1270,7 @@ if get_curand_version() >= (4, 0, 0):
         """
 
         def __init__(self, dir_vector=None, scramble_vector=None, offset=0):
-            super(ScrambledSobol32RandomNumberGenerator, self).__init__(
+            super().__init__(
                 dir_vector,
                 np.uint32,
                 32,
@@ -1300,7 +1296,7 @@ if get_curand_version() >= (4, 0, 0):
         """
 
         def __init__(self, dir_vector=None, offset=0):
-            super(Sobol64RandomNumberGenerator, self).__init__(
+            super().__init__(
                 dir_vector,
                 np.uint64,
                 64,
@@ -1325,7 +1321,7 @@ if get_curand_version() >= (4, 0, 0):
         """
 
         def __init__(self, dir_vector=None, scramble_vector=None, offset=0):
-            super(ScrambledSobol64RandomNumberGenerator, self).__init__(
+            super().__init__(
                 dir_vector,
                 np.uint64,
                 64,

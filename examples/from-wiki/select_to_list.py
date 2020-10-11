@@ -1,12 +1,9 @@
-
-
 #!python 
 # Exercise 2 from http://webapp.dam.brown.edu/wiki/SciComp/CudaExercises
 
 # Generate an array of random numbers between 0 and 1
 # List the indices of those numbers that are greater than a given limit
 
-from __future__ import division
 import pycuda.driver as cuda
 import pycuda.autoinit
 import pycuda.gpuarray as gpuarray

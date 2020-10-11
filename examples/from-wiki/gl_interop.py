@@ -1,5 +1,3 @@
-
-
 #!python 
 # GL interoperability example, by Peter Berrington.
 # Draws a rotating teapot, using cuda to invert the RGB value

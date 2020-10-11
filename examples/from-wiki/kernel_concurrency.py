@@ -1,5 +1,3 @@
-
-
 #!python 
 #! /usr/bin/env python
 # A simple program to illustrate kernel concurrency with PyCuda.
@@ -52,7 +50,7 @@ stream, event = [], []
 marker_names = ['kernel_begin', 'kernel_end']
 for k in range(n):
     stream.append(drv.Stream())
-    event.append(dict([(marker_names[l], drv.Event()) for l in range(len(marker_names))]))
+    event.append({marker_names[l]: drv.Event() for l in range(len(marker_names))})
 
 # Transfer to device.
 for k in range(n):

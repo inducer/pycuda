@@ -1,7 +1,6 @@
 from __future__ import absolute_import
 import numpy as np
 import pycuda.gpuarray as gpuarray
-from six.moves import range
 
 
 def build_pkt_data_structure(

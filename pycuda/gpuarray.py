@@ -1,5 +1,3 @@
-from __future__ import division, absolute_import
-
 import numpy as np
 import pycuda.elementwise as elementwise
 from pytools import memoize, memoize_method
@@ -12,11 +10,10 @@ from pycuda.compyte.array import (
     get_common_dtype as _get_common_dtype_base,
 )
 from pycuda.characterize import has_double_support
-import six
-from six.moves import range, zip, reduce
+from functools import reduce
 import numbers
 
-import six.moves.copyreg
+import copyreg
 
 
 def _get_common_dtype(obj1, obj2):
@@ -181,7 +178,7 @@ def _make_binary_op(operator):
     return func
 
 
-class GPUArray(object):
+class GPUArray:
     """A GPUArray is used to do array-based calculation on the GPU.
 
     This is mostly supposed to be a numpy-workalike. Operators
@@ -1317,7 +1314,7 @@ def arange(*args, **kwargs):
         raise ValueError("too many arguments")
 
     admissible_names = ["start", "stop", "step", "dtype"]
-    for k, v in six.iteritems(kwargs):
+    for k, v in kwargs.items():
         if k in admissible_names:
             if getattr(inf, k) is None:
                 setattr(inf, k, v)
@@ -1485,7 +1482,7 @@ def _memcpy_discontig(dst, src, async_=False, stream=None):
         copy = drv.Memcpy3D()
     else:
         raise ValueError(
-            "more than 2 discontiguous axes not supported %s" % (tuple(sorted(axes)),)
+            "more than 2 discontiguous axes not supported {}".format(tuple(sorted(axes)))
         )
 
     if isinstance(src, GPUArray):
@@ -1528,7 +1525,7 @@ def _memcpy_discontig(dst, src, async_=False, stream=None):
 
 # {{{ pickle support
 
-six.moves.copyreg.pickle(GPUArray, lambda data: (to_gpu, (data.get(),)), to_gpu)
+copyreg.pickle(GPUArray, lambda data: (to_gpu, (data.get(),)), to_gpu)
 
 # }}}
 

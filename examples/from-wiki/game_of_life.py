@@ -1,5 +1,3 @@
-
-
 #!python 
 # Conway's Game of Life Accelerated with PyCUDA
 # Luis Villasenor

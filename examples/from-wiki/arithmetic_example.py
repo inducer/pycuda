@@ -1,5 +1,3 @@
-
-
 #!python 
 #!python
 import pycuda.driver as cuda

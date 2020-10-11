@@ -1,10 +1,7 @@
-
-
 #!python 
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
-from __future__ import division
 
 """ 
 Multiples two square matrices together using multiple blocks and shared memory. 

@@ -1,5 +1,3 @@
-from __future__ import print_function
-from __future__ import absolute_import
 import pycuda.driver as drv
 import pycuda.tools
 import pycuda.autoinit
