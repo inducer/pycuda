@@ -24,7 +24,7 @@ class GPUThread(threading.Thread):
         cuda.memcpy_htod(self.array_gpu, some_array)
 
         test_kernel(self.array_gpu)
-        print "successful exit from thread %d" % self.number
+        print("successful exit from thread %d" % self.number)
         self.ctx.pop()
 
         del self.array_gpu

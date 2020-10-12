@@ -404,15 +404,15 @@ def loadImage(fn=None):
     try:
         im = Image.open(fn) # Open the image
     except IOError:
-        print "Usage:", os.path.basename(sys.argv[0]), "[IMAGE=defaultimage.jpg]"
-        print "Can't open", fn
+        print("Usage:", os.path.basename(sys.argv[0]), "[IMAGE=defaultimage.jpg]")
+        print("Can't open", fn)
         sys.exit(1)
     imWidth, imHeight = im.size # Window size is set to image size
     wWidth, wHeight = im.size
     im.draft("L", im.size) # L-flag is for Luminance
     pixels = np.fromstring(im.tostring(), dtype=np.uint8) # Got the array
     pixels.resize((imHeight, imWidth)) # Resize to 2d array
-    print "Reading image:", fn, "size:", imWidth, "x", imHeight
+    print("Reading image:", fn, "size:", imWidth, "x", imHeight)
 
 def initData(fn=None):
     global pixels, array, pbo_buffer, cuda_pbo_resource, imWidth, imHeight, texid
@@ -525,7 +525,7 @@ def main(argv):
 
     initGL()
     initData(fn)
-    print """
+    print("""
     Q: Exit
     I: display image
     T: display Sobel edge detection (computed with tex)
@@ -535,7 +535,7 @@ def main(argv):
 
     TESTED WITH IMAGE SIZE OF 512x512... just like the original demo.
     Other image sizes may not work
-    """
+    """)
     glutDisplayFunc(display)
     glutKeyboardFunc(keyboard)
     glutReshapeFunc(reshape)

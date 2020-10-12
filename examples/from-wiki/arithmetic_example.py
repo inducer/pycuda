@@ -45,10 +45,10 @@ end.record()
 end.synchronize()
 secs = start.time_till(end)*1e-3
 
-print "SourceModule time"
-print "%fs" % (secs)
-print 'x:       ', x[N-1]
-print 'Func(x): ', x_gpu.get()[N-1],'Actual: ',(values[N-1]-0)/(h_denom)
+print("SourceModule time")
+print("%fs" % (secs))
+print('x:       ', x[N-1])
+print('Func(x): ', x_gpu.get()[N-1],'Actual: ',(values[N-1]-0)/(h_denom))
 x_colors=x_gpu.get()
 
 

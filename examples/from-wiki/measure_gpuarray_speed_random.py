@@ -24,7 +24,7 @@ def main():
 
     for power in range(10, 25): # 24
         size = 1<<power
-        print size
+        print(size)
         sizes.append(size)
         a = gpuarray.zeros((size,), dtype=numpy.float32)
 
@@ -85,7 +85,7 @@ def main():
     tbl.add_row(("Size", "Time GPU", "Size/Time GPU", "Time CPU","Size/Time CPU","GPU vs CPU speedup"))
     for s, t, f,tCpu,fCpu in zip(sizes, times, flops,timesCPU,flopsCPU):
         tbl.add_row((s,t,f,tCpu,fCpu,f/fCpu))
-    print tbl
+    print(tbl)
 
 
 if __name__ == "__main__":

@@ -365,10 +365,10 @@ def test_convolution_cuda():
     destImage[:] = numpy.nan
     destImage = convolution_cuda(original,  filterx,  filterx)
     # You probably want to display the result image using the tool of your choice here.
-    print 'Done running the convolution kernel!'
+    print('Done running the convolution kernel!')
 
 if __name__ == '__main__':
     test_convolution_cuda()
     #test_derivative_of_gaussian_kernel()
-    boo = raw_input('Pausing so you can look at results... <Enter> to finish...')
+    boo = input('Pausing so you can look at results... <Enter> to finish...')
 

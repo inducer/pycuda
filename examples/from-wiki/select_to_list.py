@@ -134,7 +134,7 @@ stop.synchronize()
 elems_in_selec = len(numpy.nonzero(selec >= 0))
 
 elapsed_seconds = stop.time_since(start) * 1e-3
-print "mem bw:", (a.nbytes + elems_in_selec * 4) / elapsed_seconds / 1e9 * count
+print("mem bw:", (a.nbytes + elems_in_selec * 4) / elapsed_seconds / 1e9 * count)
 
 filtered_set = sorted(list(item for item in selec if item != -1))
 reference_set = sorted(list(i for i, x in enumerate(a) if x >= limit))

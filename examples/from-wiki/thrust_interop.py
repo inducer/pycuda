@@ -72,9 +72,9 @@ host_mod.add_function(
 
 #Print out generated code, to see what we're actually compiling
 print("---------------------- Host code ----------------------")
-print(host_mod.generate())
+print((host_mod.generate()))
 print("--------------------- Device code ---------------------")
-print(nvcc_mod.generate())
+print((nvcc_mod.generate()))
 print("-------------------------------------------------------")
 
 
@@ -96,6 +96,6 @@ b = gpuarray.to_gpu(a)
 # Call Thrust!!
 c = module.host_entry(b)
 print("----------------------- Sorted ------------------------")
-print c.get()
+print(c.get())
 print("-------------------------------------------------------")
 

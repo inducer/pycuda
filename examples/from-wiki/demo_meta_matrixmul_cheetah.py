@@ -87,7 +87,7 @@ def matrixmul_opt(mat_a, mat_b,
     matrixmul_func = module.get_function("matrixMul")
 
     # some info about the module
-    print "number of registers used:", matrixmul_func.num_regs
+    print("number of registers used:", matrixmul_func.num_regs)
 
     # block of threads
     # ATTENTION: block is (threadDim.x, threadDim.y, threadDim.z) 
@@ -148,12 +148,12 @@ if __name__ == "__main__":
     error = np.absolute(diff).max()
     assert error <= 1e-2
     l2norm = np.linalg.norm(diff)
-    print "l2norm: ", l2norm
+    print("l2norm: ", l2norm)
 
     # print some stats
-    print "gpu time:", gpu_time
+    print("gpu time:", gpu_time)
     gflop = mat_c.size * (a_width * 2.) / (1000**3.)
     gflops = gflop / gpu_time
-    print "gflops:", gflops
+    print("gflops:", gflops)
 
 

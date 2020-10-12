@@ -82,21 +82,21 @@ matrixmul(
     )
 
 # print the results
-print "-" * 80
-print "Matrix A (GPU):"
-print a_gpu.get()
+print("-" * 80)
+print("Matrix A (GPU):")
+print(a_gpu.get())
 
-print "-" * 80
-print "Matrix B (GPU):"
-print b_gpu.get()
+print("-" * 80)
+print("Matrix B (GPU):")
+print(b_gpu.get())
 
-print "-" * 80
-print "Matrix C (GPU):"
-print c_gpu.get()
+print("-" * 80)
+print("Matrix C (GPU):")
+print(c_gpu.get())
 
-print "-" * 80
-print "CPU-GPU difference:"
-print c_cpu - c_gpu.get()
+print("-" * 80)
+print("CPU-GPU difference:")
+print(c_cpu - c_gpu.get())
 
 np.allclose(c_cpu, c_gpu.get())
 

@@ -50,7 +50,7 @@ def main():
                                  random.uniform(-width, width)), n, r)
     end.record()
     end.synchronize()
-    print(start.time_till(end))
+    print((start.time_till(end)))
     print(r)
 
 if __name__ == '__main__':

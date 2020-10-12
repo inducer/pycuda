@@ -48,11 +48,11 @@ def diffusion(res):
 def run(res, step):
 
     diffusion(res)
-    print res
+    print(res)
 
 res   = numpy.array([[0 \
-                        for _ in xrange(0, w)]\
-                        for _ in xrange(0, w)], dtype='int32')
-print res
+                        for _ in range(0, w)]\
+                        for _ in range(0, w)], dtype='int32')
+print(res)
 run(res, 0)
 

@@ -56,12 +56,12 @@ blocks = 64
 block_size = 128
 nbr_values = blocks * block_size
 
-print "Using nbr_values ==", nbr_values
+print("Using nbr_values ==", nbr_values)
 
 # Number of iterations for the calculations,
 # 100 is very quick, 2000000 will take a while
 n_iter = 100000
-print "Calculating %d iterations" % (n_iter)
+print("Calculating %d iterations" % (n_iter))
 
 # create two timers so we can speed-test each approach
 start = drv.Event()
@@ -95,8 +95,8 @@ end.record() # end timing
 # calculate the run length
 end.synchronize()
 secs = start.time_till(end)*1e-3
-print "SourceModule time and first three results:"
-print "%fs, %s" % (secs, str(dest[:3]))
+print("SourceModule time and first three results:")
+print("%fs, %s" % (secs, str(dest[:3])))
 
 
 #####################
@@ -115,8 +115,8 @@ end.record() # end timing
 # calculate the run length
 end.synchronize()
 secs = start.time_till(end)*1e-3
-print "Elementwise time and first three results:"
-print "%fs, %s" % (secs, str(a_gpu.get()[:3]))
+print("Elementwise time and first three results:")
+print("%fs, %s" % (secs, str(a_gpu.get()[:3])))
 
 
 ####################################
@@ -136,8 +136,8 @@ end.record() # end timing
 # calculate the run length
 end.synchronize()
 secs = start.time_till(end)*1e-3
-print "Elementwise Python looping time and first three results:"
-print "%fs, %s" % (secs, str(a_gpu.get()[:3]))
+print("Elementwise Python looping time and first three results:")
+print("%fs, %s" % (secs, str(a_gpu.get()[:3])))
 
 
 ##################
@@ -153,8 +153,8 @@ end.record() # end timing
 # calculate the run length
 end.synchronize()
 secs = start.time_till(end)*1e-3
-print "GPUArray time and first three results:"
-print "%fs, %s" % (secs, str(a_gpu.get()[:3]))
+print("GPUArray time and first three results:")
+print("%fs, %s" % (secs, str(a_gpu.get()[:3])))
 
 
 #############
@@ -172,6 +172,6 @@ end.record() # end timing
 # calculate the run length
 end.synchronize()
 secs = start.time_till(end)*1e-3
-print "CPU time and first three results:"
-print "%fs, %s" % (secs, str(a[:3]))
+print("CPU time and first three results:")
+print("%fs, %s" % (secs, str(a[:3])))
 
