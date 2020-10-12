@@ -204,8 +204,8 @@ def run_benchmark():
         times.append(elapsed_seconds)
 
     slow_sizes = [s for s, bw in zip(sizes, bandwidths) if bw < 40e9]
-    print("Sizes for which bandwidth was low:", slow_sizes)
-    print("Ditto, mod 64:", [s % 64 for s in slow_sizes])
+    print(("Sizes for which bandwidth was low:", slow_sizes))
+    print(("Ditto, mod 64:", [s % 64 for s in slow_sizes]))
     from matplotlib.pyplot import semilogx, loglog, show, savefig, clf, xlabel, ylabel
     xlabel('matrix size')
     ylabel('bandwidth')

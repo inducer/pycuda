@@ -61,7 +61,7 @@ M_gpu = gpuarray.to_gpu( M )
 for k in range(n_iter):
   func(C_gpu,M_gpu,block=(n_block,n_block,1),grid=(n_grid,n_grid,1))
   C_gpu, M_gpu = M_gpu, C_gpu
-print("%d live cells after %d iterations" %(np.sum(C_gpu.get()),n_iter))
+print(("%d live cells after %d iterations" %(np.sum(C_gpu.get()),n_iter)))
 fig = plt.figure(figsize=(12,12))
 ax = fig.add_subplot(111)
 fig.suptitle("Conway's Game of Life Accelerated with PyCUDA")

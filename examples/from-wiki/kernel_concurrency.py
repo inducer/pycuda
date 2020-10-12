@@ -74,14 +74,14 @@ for k in range(n):
 
 print('\n=== Device attributes')
 dev = pycuda.autoinit.device
-print('Name:', dev.name())
-print('Compute capability:', dev.compute_capability())
-print('Concurrent Kernels:', \
-    bool(dev.get_attribute(drv.device_attribute.CONCURRENT_KERNELS)))
+print(('Name:', dev.name()))
+print(('Compute capability:', dev.compute_capability()))
+print(('Concurrent Kernels:', \
+    bool(dev.get_attribute(drv.device_attribute.CONCURRENT_KERNELS))))
 
 print('\n=== Checking answers')
 for k in range(n):
-    print('Dataset', k, ':',)
+    print(('Dataset', k, ':',))
     if (np.linalg.norm((data_check[k] * 2**(j+1)) - data[k]) == 0.0):
         print('passed.')
     else:
@@ -89,7 +89,7 @@ for k in range(n):
 
 print('\n=== Timing info (for last set of kernel launches)')
 for k in range(n):
-    print('Dataset', k) 
+    print(('Dataset', k)) 
     for l in range(len(marker_names)):
-        print(marker_names[l], ':', ref.time_till(event[k][marker_names[l]]))
+        print((marker_names[l], ':', ref.time_till(event[k][marker_names[l]])))
 

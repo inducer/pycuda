@@ -108,14 +108,14 @@ def key_selector(event):
     #print(' Key pressed.')
     if event.key == 'up':  # Increase max number of iterations
         L=int(L*1.2);
-        print("Maximum number of iterations changed to %d" % L)
+        print(("Maximum number of iterations changed to %d" % L))
         func(np.float64(x0),np.float64(y0),np.float64(side), np.int32(L),np.int32(power),drv.Out(M),block=(n_block,n_block,1),grid=(n_grid,n_grid,1))        
         myobj = plt.imshow(M,cmap=cmaps[i_cmap],origin='lower')
         ax.set_title('Side=%.2e, x=%.2e, y=%.2e, %s, L=%d'%(side,x0,y0,cmaps[i_cmap],L))
         plt.draw()
     if event.key == 'down':  # Decrease max number of iterations
         L=int(L/1.2);
-        print("Maximum number of iterations changed to %d" % L)
+        print(("Maximum number of iterations changed to %d" % L))
         func(np.float64(x0),np.float64(y0),np.float64(side), np.int32(L),np.int32(power),drv.Out(M),block=(n_block,n_block,1),grid=(n_grid,n_grid,1))        
         myobj = plt.imshow(M,cmap=cmaps[i_cmap],origin='lower')
         ax.set_title('Side=%.2e, x=%.2e, y=%.2e, %s, L=%d'%(side,x0,y0,cmaps[i_cmap],L))
@@ -125,7 +125,7 @@ def key_selector(event):
         n_grid=int(N/16.);
         N=n_block*n_grid;
         M = np.zeros((N,N)).astype(np.int32)
-        print("Number of pixels per dimension changed to %d" % N)
+        print(("Number of pixels per dimension changed to %d" % N))
         func(np.float64(x0),np.float64(y0),np.float64(side), np.int32(L),np.int32(power),drv.Out(M),block=(n_block,n_block,1),grid=(n_grid,n_grid,1))        
         myobj = plt.imshow(M,cmap=cmaps[i_cmap],origin='lower')
         ax.set_title('Side=%.2e, x=%.2e, y=%.2e, %s, L=%d'%(side,x0,y0,cmaps[i_cmap],L))
@@ -135,7 +135,7 @@ def key_selector(event):
         n_grid=int(N/16.);
         N=n_block*n_grid;
         M = np.zeros((N,N)).astype(np.int32)
-        print("Number of pixels per dimension changed to %d" % N)
+        print(("Number of pixels per dimension changed to %d" % N))
         func(np.float64(x0),np.float64(y0),np.float64(side), np.int32(L),np.int32(power),drv.Out(M),block=(n_block,n_block,1),grid=(n_grid,n_grid,1))        
         myobj = plt.imshow(M,cmap=cmaps[i_cmap],origin='lower')
         ax.set_title('Side=%.2e, x=%.2e, y=%.2e, %s, L=%d'%(side,x0,y0,cmaps[i_cmap],L))
@@ -143,7 +143,7 @@ def key_selector(event):
     if event.key in ['1','2','3','4','5','6','7','8','9'] :  # Decrease  number of pixels
         power=int(event.key)
         if power <10 and power >0 : 
-            print("Power index set to %d" % power)
+            print(("Power index set to %d" % power))
             i_cmap=49
             side=3.0; x0=-.5;y0=0.;L=200;
             func(np.float64(x0),np.float64(y0),np.float64(side), np.int32(L),np.int32(power),drv.Out(M),block=(n_block,n_block,1),grid=(n_grid,n_grid,1))            

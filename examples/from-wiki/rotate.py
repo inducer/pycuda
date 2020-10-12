@@ -73,8 +73,8 @@ def rotate_image( a, resize = 1.5, angle = 20., interpolation = "linear", blocks
     a = a.astype("float32")
 
     # Calculate the dimensions of the new image
-    calc_x = lambda (x,y): (x*a.shape[1]/2.*cos(angle)-y*a.shape[0]/2.*sin(angle))
-    calc_y = lambda (x,y): (x*a.shape[1]/2.*sin(angle)+y*a.shape[0]/2.*cos(angle))
+    calc_x = lambda x_y: (x_y[0]*a.shape[1]/2.*cos(angle)-x_y[1]*a.shape[0]/2.*sin(angle))
+    calc_y = lambda x_y1: (x_y1[0]*a.shape[1]/2.*sin(angle)+x_y1[1]*a.shape[0]/2.*cos(angle))
 
     xs = [ calc_x(p) for p in [ (-1.,-1.),(1.,-1.),(1.,1.),(-1.,1.) ] ]
     ys = [ calc_y(p) for p in [ (-1.,-1.),(1.,-1.),(1.,1.),(-1.,1.) ] ]
@@ -117,7 +117,7 @@ if __name__ == '__main__':
     
     def main( ):
         if len(sys.argv) != 2:
-            print "You should really read the source...\n\nUsage: rotate.py <Imagename>\n"
+            print("You should really read the source...\n\nUsage: rotate.py <Imagename>\n")
             sys.exit(-1)
 
         # Open, convert to grayscale, convert to numpy array

@@ -26,7 +26,7 @@ def main_cg():
 
     inv_mat_diag = 1/csr_mat.diagonal()
 
-    print "building..."
+    print("building...")
     from pycuda.sparse.packeted import PacketedSpMV
     spmv = PacketedSpMV(csr_mat, options.is_symmetric, csr_mat.dtype)
     rhs = numpy.random.rand(spmv.shape[0]).astype(spmv.dtype)
@@ -40,7 +40,7 @@ def main_cg():
         precon = None
 
     from pycuda.sparse.cg import solve_pkt_with_cg
-    print "start solve"
+    print("start solve")
     for i in range(4):
         start = drv.Event()
         stop = drv.Event()
@@ -63,12 +63,12 @@ def main_cg():
         if precon is not None:
             est_flops += csr_mat.shape[0] * it_count
 
-        print "residual norm: %g" % (la.norm(csr_mat*res - rhs)/la.norm(rhs))
-        print ("size: %d, elapsed: %g s, %d it, %d residual, it/second: %g, "
+        print("residual norm: %g" % (la.norm(csr_mat*res - rhs)/la.norm(rhs)))
+        print(("size: %d, elapsed: %g s, %d it, %d residual, it/second: %g, "
                 "%g gflops/s" % (
                     csr_mat.shape[0],
                     elapsed, it_count, res_count, it_count/elapsed,
-                    est_flops/elapsed/1e9))
+                    est_flops/elapsed/1e9)))
 
     # TODO: mixed precision
     # TODO: benchmark
@@ -80,7 +80,7 @@ def main_cg():
 
 
 if __name__ == "__main__":
-    print "starting..."
+    print("starting...")
     main_cg()
 
 

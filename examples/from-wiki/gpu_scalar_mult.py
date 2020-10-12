@@ -39,7 +39,7 @@ def main(dtype):
         stop.record()
         stop.synchronize()
 
-        print size, size_exp, stop.time_since(start)
+        print(size, size_exp, stop.time_since(start))
 
 
 
@@ -112,7 +112,7 @@ def main_no_tex(dtype):
         stop.record()
         stop.synchronize()
 
-        print size, size_exp, stop.time_since(start)
+        print(size, size_exp, stop.time_since(start))
 
 
 
@@ -121,6 +121,6 @@ if __name__ == "__main__":
     dtype = numpy.float32
 
     main(dtype)
-    print
+    print()
     main_no_tex(dtype)
 

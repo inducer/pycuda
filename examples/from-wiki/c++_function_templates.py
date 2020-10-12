@@ -31,6 +31,6 @@ x_orig = x.copy()
 x_gpu = gpuarray.to_gpu(x)
 
 func(x_gpu.gpudata, np.uint32(N), block=(N, 1, 1))
-print 'x:       ', x
-print 'incr(x): ', x_gpu.get()
+print('x:       ', x)
+print('incr(x): ', x_gpu.get())
 

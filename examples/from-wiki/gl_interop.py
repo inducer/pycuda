@@ -39,18 +39,18 @@ def create_PBOs(w,h):
     glBindBuffer(GL_ARRAY_BUFFER, source_pbo)
     glBufferData(GL_ARRAY_BUFFER, data, GL_DYNAMIC_DRAW)
     glBindBuffer(GL_ARRAY_BUFFER, 0)
-    pycuda_source_pbo = cuda_gl.BufferObject(long(source_pbo))
+    pycuda_source_pbo = cuda_gl.BufferObject(int(source_pbo))
     dest_pbo = glGenBuffers(1)
     glBindBuffer(GL_ARRAY_BUFFER, dest_pbo)
     glBufferData(GL_ARRAY_BUFFER, data, GL_DYNAMIC_DRAW)
     glBindBuffer(GL_ARRAY_BUFFER, 0)
-    pycuda_dest_pbo = cuda_gl.BufferObject(long(dest_pbo))
+    pycuda_dest_pbo = cuda_gl.BufferObject(int(dest_pbo))
 
 def destroy_PBOs():
     global source_pbo, dest_pbo, pycuda_source_pbo, pycuda_dest_pbo
     for pbo in [source_pbo, dest_pbo]:
-        glBindBuffer(GL_ARRAY_BUFFER, long(pbo))
-        glDeleteBuffers(1, long(pbo))
+        glBindBuffer(GL_ARRAY_BUFFER, int(pbo))
+        glDeleteBuffers(1, int(pbo))
         glBindBuffer(GL_ARRAY_BUFFER, 0)
     source_pbo,dest_pbo,pycuda_source_pbo,pycuda_dest_pbo = [None]*4
 
@@ -170,7 +170,7 @@ def process_image():
     pycuda_source_pbo.unregister()
 
     # activate destination buffer
-    glBindBufferARB(GL_PIXEL_PACK_BUFFER_ARB, long(source_pbo))
+    glBindBufferARB(GL_PIXEL_PACK_BUFFER_ARB, int(source_pbo))
 
     # read data into pbo. note: use BGRA format for optimal performance
     glReadPixels(
@@ -182,13 +182,13 @@ def process_image():
              GL_UNSIGNED_BYTE,   #output type
              ctypes.c_void_p(0))
 
-    pycuda_source_pbo = cuda_gl.BufferObject(long(source_pbo))
+    pycuda_source_pbo = cuda_gl.BufferObject(int(source_pbo))
 
     # run the Cuda kernel
     process(image_width, image_height)
     # blit convolved texture onto the screen
     # download texture from PBO
-    glBindBuffer(GL_PIXEL_UNPACK_BUFFER_ARB, long(dest_pbo))
+    glBindBuffer(GL_PIXEL_UNPACK_BUFFER_ARB, int(dest_pbo))
     glBindTexture(GL_TEXTURE_2D, output_texture)
 
     glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0,

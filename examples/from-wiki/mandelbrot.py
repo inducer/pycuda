@@ -10,7 +10,7 @@
 import sys
 import numpy as nm
 
-import Tkinter as tk
+import tkinter as tk
 import Image          # PIL
 import ImageTk        # PIL
 
@@ -98,7 +98,7 @@ def calculate_z_serial(q, maxiter, z):
     for i in range(len(q)):
         if i % 100 == 0:
             # print out some progress info since it is so slow...
-            print "%0.2f%% complete" % (1.0/len(q) * i * 100)
+            print("%0.2f%% complete" % (1.0/len(q) * i * 100))
         for iter in range(maxiter):
             z[i] = z[i]*z[i] + q[i]
             if abs(z[i]) > 2.0:
@@ -117,12 +117,12 @@ if len(sys.argv) > 1:
         show_instructions = True
 
 if show_instructions:
-    print "Usage: python mandelbrot.py [gpu|gpuarray|numpy|python]"
-    print "Where:"
-    print " gpu is a pure CUDA solution on the GPU"
-    print " gpuarray uses a numpy-like CUDA wrapper in Python on the GPU"
-    print " numpy is a pure Numpy (C-based) solution on the CPU"
-    print " python is a pure Python solution on the CPU with numpy arrays"
+    print("Usage: python mandelbrot.py [gpu|gpuarray|numpy|python]")
+    print("Where:")
+    print(" gpu is a pure CUDA solution on the GPU")
+    print(" gpuarray uses a numpy-like CUDA wrapper in Python on the GPU")
+    print(" numpy is a pure Numpy (C-based) solution on the CPU")
+    print(" python is a pure Python solution on the CPU with numpy arrays")
     sys.exit(0)
 
 routine = {'gpuarray':calculate_z_numpy_gpu,
@@ -178,7 +178,7 @@ class Mandelbrot(object):
         end_main.record()
         end_main.synchronize()
         secs = start_main.time_till(end_main)*1e-3
-        print "Main took", secs
+        print("Main took", secs)
 
         output = (output + (256*output) + (256**2)*output) * 8
         # convert output to a string

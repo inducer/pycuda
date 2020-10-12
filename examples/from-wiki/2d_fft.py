@@ -24,7 +24,7 @@ class GPUMulti(multiprocessing.Process):
         self.dev = drv.Device(self.number)
         self.ctx = self.dev.make_context()
 #TO VERIFY WHETHER ALL THE MEMORY IS FREED BEFORE NEXT ALLOCATION (THIS DOES NOT HAPPEN IN MULTITHREADING)
-        print drv.mem_get_info()
+        print(drv.mem_get_info())
         self.gpu_a = garray.empty((self.input_cpu.size,), dtype=numpy.complex64)
         self.gpu_b = garray.zeros_like(self.gpu_a)
         self.gpu_a = garray.to_gpu(self.input_cpu)
@@ -38,7 +38,7 @@ class GPUMulti(multiprocessing.Process):
         del self.gpu_b
         del self.ctx
 
-        print "till the end %d" %self.number
+        print("till the end %d" %self.number)
 
 
 p = 8192; # INPUT IMAGE SIZE (8192 * 8192)

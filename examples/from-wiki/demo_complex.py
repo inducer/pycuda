@@ -25,7 +25,7 @@ complex_mul(a_gpu, b_gpu, c_gpu)
 
 import numpy.linalg as la
 error = la.norm(c_gpu.get() - (a*b))
-print error
+print(error)
 assert error < 1e-5
 
 
