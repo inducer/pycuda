@@ -1530,9 +1530,9 @@ namespace pycuda
   {
     public:
       virtual ~pointer_holder_base() { }
-      virtual CUdeviceptr get_pointer() = 0;
+      virtual CUdeviceptr get_pointer() const = 0;
 
-      operator CUdeviceptr()
+      operator CUdeviceptr() const
       { return get_pointer(); }
 
       py::object as_buffer(size_t size, size_t offset)
