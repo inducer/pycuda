@@ -1049,9 +1049,9 @@ class WrappedAllocation(drv.PointerHolderBase):
 
 
 def test_pointer_holder_base():
-    alloc = WrappedAllocation(pycuda.driver.mem_alloc(1024))
-    gpuarray = pycuda.gpuarray.GPUArray((1024,), np.uint8, gpudata=alloc)
-    print(gpuarray.get())
+    alloc = WrappedAllocation(drv.mem_alloc(1024))
+    ary = gpuarray.GPUArray((1024,), np.uint8, gpudata=alloc)
+    print(ary.get())
 
 
 def test_import_pyopencl_before_pycuda():
