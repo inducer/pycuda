@@ -1039,6 +1039,21 @@ class TestDriver:
         test_kernel(grid=(2, 1), block=(1, 1, 1))
 
 
+class WrappedAllocation(drv.PointerHolderBase):
+    def __init__(self, wrapped):
+        self.wrapped = wrapped
+        super().__init__()
+
+    def get_pointer(self):
+        return int(self.wrapped)
+
+
+def test_pointer_holder_base():
+    alloc = WrappedAllocation(drv.mem_alloc(1024))
+    ary = gpuarray.GPUArray((1024,), np.uint8, gpudata=alloc)
+    print(ary.get())
+
+
 def test_import_pyopencl_before_pycuda():
     try:
         import pyopencl  # noqa

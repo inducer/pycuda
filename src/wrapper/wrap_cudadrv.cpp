@@ -109,7 +109,7 @@ namespace
     public py::wrapper<pointer_holder_base>
   {
     public:
-      CUdeviceptr get_pointer()
+      CUdeviceptr get_pointer() const
       {
         return this->get_override("get_pointer")();
       }
@@ -260,7 +260,7 @@ namespace
     py_buffer_wrapper buf_wrapper;
     buf_wrapper.get(dest.ptr(), PyBUF_ANY_CONTIGUOUS | PyBUF_WRITABLE);
 
-    CUDAPP_CALL_GUARDED_THREADED(cuMemcpyAtoH, 
+    CUDAPP_CALL_GUARDED_THREADED(cuMemcpyAtoH,
         (buf_wrapper.m_buf.buf, ary.handle(), index, buf_wrapper.m_buf.len));
   }
 
@@ -1271,6 +1271,9 @@ BOOST_PYTHON_MODULE(_driver)
       .def("get_pointer", py::pure_virtual(&cl::get_pointer))
       .def("as_buffer", &cl::as_buffer,
           (py::arg("size"), py::arg("offset")=0))
+      .def("__int__", &cl::operator CUdeviceptr)
+      .def("__long__", mem_obj_to_long<cl>)
+      .def("__index__", mem_obj_to_long<cl>)
       ;
 
     py::implicitly_convertible<pointer_holder_base, CUdeviceptr>();
@@ -1280,8 +1283,8 @@ BOOST_PYTHON_MODULE(_driver)
     typedef device_allocation cl;
     py::class_<cl, boost::noncopyable>("DeviceAllocation", py::no_init)
       .def("__int__", &cl::operator CUdeviceptr)
-      .def("__long__", mem_obj_to_long<device_allocation>)
-      .def("__index__", mem_obj_to_long<device_allocation>)
+      .def("__long__", mem_obj_to_long<cl>)
+      .def("__index__", mem_obj_to_long<cl>)
       .def("as_buffer", &cl::as_buffer,
           (py::arg("size"), py::arg("offset")=0))
       .DEF_SIMPLE_METHOD(free)
@@ -1296,7 +1299,8 @@ BOOST_PYTHON_MODULE(_driver)
     py::class_<cl, boost::noncopyable>("IPCMemoryHandle",
         py::init<py::object, py::optional<CUipcMem_flags> >())
       .def("__int__", &cl::operator CUdeviceptr)
-      .def("__long__", mem_obj_to_long<ipc_mem_handle>)
+      .def("__long__", mem_obj_to_long<cl>)
+      .def("__index__", mem_obj_to_long<cl>)
       .DEF_SIMPLE_METHOD(close)
       ;
 
@@ -1352,7 +1356,7 @@ BOOST_PYTHON_MODULE(_driver)
 
     wrp
       .DEF_SIMPLE_METHOD(get_device_pointer)
-      .def("attach", &cl::attach, 
+      .def("attach", &cl::attach,
         (py::arg("mem_flags"), py::arg("stream")=py::object()))
       ;
   }
