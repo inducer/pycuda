@@ -1042,6 +1042,7 @@ class TestDriver:
 class WrappedAllocation(drv.PointerHolderBase):
     def __init__(self, wrapped):
         self.wrapped = wrapped
+        super().__init__()
 
     def get_pointer(self):
         return int(self.wrapped)
