@@ -951,6 +951,12 @@ Global Device Memory
 
         .. versionadded:: 2014.1
 
+    .. note::
+
+        If your subclass provides its own :meth:`!__init__`, it must call
+        the base class :meth:`!__init__`. Failure to do so will lead to
+        :exc:`Boost.Python.ArgumentError` being raised when it is used.
+
 .. _pagelocked_memory :
 
 Pagelocked Host Memory
