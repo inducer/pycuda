@@ -24,6 +24,7 @@
 extensions = [
     "sphinx.ext.intersphinx",
     "sphinx.ext.mathjax",
+    "sphinx_copybutton",
 ]
 
 # Add any paths that contain templates here, relative to this directory.
@@ -85,23 +86,10 @@ pygments_style = "sphinx"
 # Options for HTML output
 # -----------------------
 
-html_theme = "alabaster"
+html_theme = "furo"
 
 html_theme_options = {
-    "extra_nav_links": {
-        "🚀 Github": "https://github.com/inducer/pycuda",
-        "💾 Download Releases": "https://pypi.python.org/pypi/pycuda",
-    }
-}
-
-html_sidebars = {
-    "**": [
-        "about.html",
-        "navigation.html",
-        "relations.html",
-        "searchbox.html",
-    ]
-}
+        }
 
 # The style sheet to use for HTML and HTML Help pages. A file of that name
 # must exist either in Sphinx' static/ path, or in one of the custom paths
@@ -187,7 +175,7 @@ latex_documents = [
 # latex_use_modindex = True
 
 intersphinx_mapping = {
-    "http://docs.python.org/dev": None,
-    "http://docs.scipy.org/doc/numpy/": None,
+    "https://docs.python.org/3": None,
+    "https://numpy.org/doc/stable/": None,
     "https://documen.tician.de/codepy/": None,
 }
