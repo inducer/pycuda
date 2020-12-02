@@ -6,7 +6,7 @@ PyCUDA gives you easy, Pythonic access to `Nvidia <http://nvidia.com>`_'s `CUDA
 CUDA API already exist--so why the need for PyCUDA?
 
 * Object cleanup tied to lifetime of objects. This idiom,
-  often called 
+  often called
   `RAII <http://en.wikipedia.org/wiki/Resource_Acquisition_Is_Initialization>`_
   in C++, makes it much easier to write correct, leak- and
   crash-free code. PyCUDA knows about dependencies, too, so (for example)
@@ -18,7 +18,7 @@ CUDA API already exist--so why the need for PyCUDA?
   than with Nvidia's C-based runtime.
 
 * Completeness. PyCUDA puts the full power of CUDA's driver API at your
-  disposal, if you wish. 
+  disposal, if you wish.
 
 * Automatic Error Checking. All CUDA errors are automatically translated
   into Python exceptions.
@@ -61,8 +61,8 @@ source distribution.)
 On the surface, this program will print a screenful of zeros. Behind
 the scenes, a lot more interesting stuff is going on:
 
-* PyCUDA has compiled the CUDA source code and uploaded it to the card. 
-  
+* PyCUDA has compiled the CUDA source code and uploaded it to the card.
+
   .. note:: This code doesn't have to be a constant--you can easily have Python
     generate the code you want to compile. See :ref:`metaprog`.
 
@@ -93,6 +93,8 @@ Contents
     array
     metaprog
     misc
+    🚀 Github <https://github.com/inducer/pycuda>
+    💾 Download Releases <https://pypi.python.org/pypi/pycuda>
 
 Note that this guide will not explain CUDA programming and technology.  Please
 refer to Nvidia's `programming documentation
