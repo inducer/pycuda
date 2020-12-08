@@ -546,8 +546,6 @@ def get_binary_minmax_kernel(func, dtype_x, dtype_y, dtype_z, use_scalar):
     if np.float64 not in [dtype_x, dtype_y]:
         func = func + "f"
 
-    from pytools import any
-
     if any(dt.kind == "f" for dt in [dtype_x, dtype_y, dtype_z]):
         func = "f" + func
 
