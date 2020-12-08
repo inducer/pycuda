@@ -606,11 +606,12 @@ def get_imag_kernel(dtype, real_dtype):
 
 
 @context_dependent_memoize
-def get_conj_kernel(dtype):
+def get_conj_kernel(dtype, conj_dtype):
     return get_elwise_kernel(
-        "%(tp)s *y, %(tp)s *z"
+        "%(tp)s *y, %(conj_tp)s *z"
         % {
             "tp": dtype_to_ctype(dtype),
+            "conj_tp": dtype_to_ctype(conj_dtype)
         },
         "z[i] = pycuda::conj(y[i])",
         "conj",
