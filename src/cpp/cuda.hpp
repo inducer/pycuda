@@ -407,8 +407,9 @@ namespace pycuda
 
   // {{{ device
   class context;
+#if CUDAPP_CUDA_VERSION >= 7000
   class primary_context;
-
+#endif
   class device
   {
     private:
@@ -829,9 +830,12 @@ namespace pycuda
       friend void context_push(boost::shared_ptr<context> ctx);
       friend boost::shared_ptr<context>
           gl::make_gl_context(device const &dev, unsigned int flags);
+#if CUDAPP_CUDA_VERSION >= 7000
       friend class primary_context;
+#endif
   };
 
+#if CUDAPP_CUDA_VERSION >= 7000
   class primary_context : public context
   {
    protected:
@@ -846,9 +850,13 @@ namespace pycuda
       virtual void detach_internal()
       {
         // Primary context comes from retainPrimaryContext.
+        // Leo: commenting out
+//#if CUDAPP_CUDA_VERSION >= 7000
         CUDAPP_CALL_GUARDED_CLEANUP(cuDevicePrimaryCtxRelease, (m_device));
+//#endif
       }
   };
+#endif
 
   inline
   boost::shared_ptr<context> device::make_context(unsigned int flags)
