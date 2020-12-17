@@ -850,10 +850,7 @@ namespace pycuda
       virtual void detach_internal()
       {
         // Primary context comes from retainPrimaryContext.
-        // Leo: commenting out
-//#if CUDAPP_CUDA_VERSION >= 7000
         CUDAPP_CALL_GUARDED_CLEANUP(cuDevicePrimaryCtxRelease, (m_device));
-//#endif
       }
   };
 #endif
