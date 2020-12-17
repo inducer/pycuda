@@ -533,9 +533,9 @@ class BoostLibraries(Libraries):
     def __init__(self, lib_base_name, default_lib_name=None):
         if default_lib_name is None:
             if lib_base_name == "python":
-                default_lib_name = "boost_python%d%d" % sys.version_info[:2]
+                default_lib_name = "boost_python-py%d%d" % sys.version_info[:2]
             else:
-                default_lib_name = "boost_%s-mt" % lib_base_name
+                default_lib_name = "boost_%s" % lib_base_name
         #print(lib_base_name) #python, thread
         Libraries.__init__(self, "BOOST_%s" % lib_base_name.upper(),
                 [default_lib_name],
