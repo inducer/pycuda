@@ -22,7 +22,6 @@ def search_on_path(filenames):
 
 
 def get_config_schema():
-    from os import getenv
     from aksetup_helper import (
         ConfigSchema,
         Option,
@@ -60,10 +59,7 @@ def get_config_schema():
     elif "darwin" in sys.platform:
         import glob
         root_candidates = glob.glob("/Developer/NVIDIA/CUDA-*")
-        if getenv("CUDA_ROOT"):
-            cuda_root_default = getenv("CUDA_ROOT")
-            lib64 = "lib"
-        else:
+        if root_candidates:
             cuda_root_default = root_candidates[-1]
             lib64 = "lib"
 
