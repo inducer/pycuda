@@ -1,12 +1,7 @@
-from __future__ import absolute_import
-from __future__ import print_function
-
-#! /usr/bin/env python
 import pycuda.driver as drv
 import pycuda.autoinit
 import numpy
 import numpy.linalg as la
-from six.moves import range
 
 
 def main():
