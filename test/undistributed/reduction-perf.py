@@ -1,11 +1,7 @@
-from __future__ import division
-from __future__ import absolute_import
-from __future__ import print_function
 import pycuda.autoinit
 import pycuda.gpuarray as gpuarray
 import pycuda.driver as cuda
 import numpy
-from six.moves import range
 
 
 def main():
@@ -13,8 +9,6 @@ def main():
 
     tbl = Table()
     tbl.add_row(("type", "size [MiB]", "time [ms]", "mem.bw [GB/s]"))
-
-    from random import shuffle
 
     for dtype_out in [numpy.float32, numpy.float64]:
         for ex in range(15, 27):
@@ -28,7 +22,7 @@ def main():
             assert sz == a_gpu.shape[0]
             assert len(a_gpu.shape) == 1
 
-            from pycuda.reduction import get_sum_kernel, get_dot_kernel
+            from pycuda.reduction import get_dot_kernel
 
             krnl = get_dot_kernel(dtype_out, a_gpu.dtype)
 
