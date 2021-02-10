@@ -732,6 +732,10 @@ class TestGPUArray:
             assert la.norm(z.get().real - z.real.get()) == 0
             assert la.norm(z.get().imag - z.imag.get()) == 0
             assert la.norm(z.get().conj() - z.conj().get()) == 0
+            # verify conj with out parameter
+            z_out = z.astype(np.complex64)
+            assert z_out is z.conj(out=z_out)
+            assert la.norm(z.get().conj() - z_out.get()) < 1e-7
 
             # verify contiguity is preserved
             for order in ["C", "F"]:

@@ -1141,7 +1141,7 @@ class GPUArray:
         else:
             return zeros_like(self)
 
-    def conj(self):
+    def conj(self, out=None):
         dtype = self.dtype
         if issubclass(self.dtype.type, np.complexfloating):
             if not self.flags.forc:
@@ -1154,9 +1154,12 @@ class GPUArray:
                 order = "F"
             else:
                 order = "C"
-            result = self._new_like_me(order=order)
+            if out is None:
+                result = self._new_like_me(order=order)
+            else:
+                result = out
 
-            func = elementwise.get_conj_kernel(dtype)
+            func = elementwise.get_conj_kernel(dtype, result.dtype)
             func.prepared_async_call(
                 self._grid,
                 self._block,
@@ -1169,6 +1172,8 @@ class GPUArray:
             return result
         else:
             return self
+
+    conjugate = conj
 
     # }}}
 

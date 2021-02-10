@@ -189,11 +189,25 @@ The :class:`GPUArray` Array Class
 
         .. versionadded: 0.94
 
-    .. method :: conj()
+    .. method :: conj(out=None)
 
-        Return the complex conjugate of *self*, or *self* if it is real.
+        Return the complex conjugate of *self*, or *self* if it is real. If *out*
+        is not given, a newly allocated :class:`GPUArray` will returned. Use
+        *out=self* to get conjugate in-place.
 
         .. versionadded: 0.94
+
+        .. versionchanged:: 2020.1.1
+
+            add *out* parameter
+
+
+    .. method :: conjugate(out=None)
+
+        alias of :meth:`conj`
+
+        .. versionadded:: 2020.1.1
+
 
     .. method:: bind_to_texref(texref, allow_offset=False)
 
