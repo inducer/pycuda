@@ -627,6 +627,10 @@ class GPUArray:
 
     def fill(self, value, stream=None):
         """fills the array with the specified value"""
+        if not self.flags.forc:
+            raise RuntimeError(
+                "only contiguous arrays may be used as arguments to this operation")
+
         func = elementwise.get_fill_kernel(self.dtype)
         func.prepared_async_call(
             self._grid, self._block, stream, value, self.gpudata, self.mem_size
@@ -650,8 +654,7 @@ class GPUArray:
     ):
         if not self.flags.forc:
             raise RuntimeError(
-                "only contiguous arrays may " "be used as arguments to this operation"
-            )
+                "only contiguous arrays may be used as arguments to this operation")
 
         if self.dtype == np.float64 and allow_double_hack:
             if channels != 1:

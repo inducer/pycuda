@@ -1192,6 +1192,9 @@ class TestGPUArray:
 
                 contig = arr.flags.c_contiguous or arr.flags.f_contiguous
 
+                if not contig:
+                    continue
+
                 # Output matches order of input.
                 # Non-contiguous becomes C-contiguous
                 new_z = func(arr, order="A")
