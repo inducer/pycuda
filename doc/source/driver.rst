@@ -1476,6 +1476,8 @@ Initializing Device Memory
 .. function:: memset_d16(dest, data, count)
 .. function:: memset_d32(dest, data, count)
 
+    Fill array with *data*.
+
     .. note::
 
         *count* is the number of elements, not bytes.
@@ -1483,6 +1485,25 @@ Initializing Device Memory
 .. function:: memset_d2d8(dest, pitch, data, width, height)
 .. function:: memset_d2d16(dest, pitch, data, width, height)
 .. function:: memset_d2d32(dest, pitch, data, width, height)
+
+    Fill a two-dimensional array with *data*.
+
+.. function:: memset_d8_async(dest, data, count, stream=None)
+.. function:: memset_d16_async(dest, data, count, stream=None)
+.. function:: memset_d32_async(dest, data, count, stream=None)
+
+    Fill array with *data* asynchronously, optionally serialized via *stream*.
+
+    .. versionadded:: 2015.1
+
+.. function:: memset_d2d8_async(dest, pitch, data, width, height, stream=None)
+.. function:: memset_d2d16_async(dest, pitch, data, width, height, stream=None)
+.. function:: memset_d2d32_async(dest, pitch, data, width, height, stream=None)
+
+    Fill a two-dimensional array with *data* asynchronously, optionally
+    serialized via *stream*.
+
+    .. versionadded:: 2015.1
 
 Unstructured Memory Transfers
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
