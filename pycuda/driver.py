@@ -1,3 +1,8 @@
+__copyright__ = """
+Copyright 2008-2021 Andreas Kloeckner
+Copyright 2021 NVIDIA Corporation
+"""
+
 import os
 import numpy as np
 
@@ -207,6 +212,9 @@ def _add_functionality():
             elif isinstance(arg, np.void):
                 arg_data.append(_my_bytes(_memoryview(arg)))
                 format += "%ds" % arg.itemsize
+            elif hasattr(arg, '__cuda_array_interface__'):
+                arg_data.append(arg.__cuda_array_interface__['data'][0])
+                format += "P"
             else:
                 try:
                     gpudata = np.uintp(arg.gpudata)

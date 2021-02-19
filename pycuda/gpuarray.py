@@ -1,3 +1,8 @@
+__copyright__ = """
+Copyright 2008-2021 Andreas Kloeckner
+Copyright 2021 NVIDIA Corporation
+"""
+
 import numpy as np
 import pycuda.elementwise as elementwise
 from pytools import memoize, memoize_method
@@ -251,6 +256,24 @@ class GPUArray:
         self.base = base
 
         self._grid, self._block = splay(self.mem_size)
+
+    @property
+    def __cuda_array_interface__(self):
+        """Returns a CUDA Array Interface dictionary describing this array's
+        data."""
+        if self.gpudata is not None:
+            ptr = int(self.gpudata)
+        else:
+            ptr = 0
+
+        return {
+            'shape': self.shape,
+            'strides': self.strides,
+            'data': (ptr, False),
+            'typestr': self.dtype.str,
+            'stream': None,
+            'version': 3
+        }
 
     @property
     def ndim(self):

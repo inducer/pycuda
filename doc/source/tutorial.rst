@@ -191,6 +191,35 @@ only the second::
   func(numpy.intp(do2_ptr), block = (32, 1, 1), grid=(1, 1))
   print("doubled second only", array1, array2, "\n")
 
+Interoperability With Other Libraries Using The CUDA Array Interface
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Kernel calls can be passed arrays from other CUDA libraries that support the
+`CUDA Array Interface
+<https://numba.readthedocs.io/en/stable/cuda/cuda_array_interface.html>`_. For
+example, to double a `CuPy <https://docs.cupy.dev/en/stable/>`_ array::
+
+  import cupy as cp
+
+  cupy_a = cp.random.randn(4, 4).astype(cp.float32)
+  func = mod.get_function("double_array")
+  func(cupy_a, block=(4, 4, 1), grid=(1, 1))
+
+PyCUDA GPU Arrays implement the CUDA Array Interface, so they can be passed
+into functions from other libraries that support it. For example, to double a
+PyCUDA GPU Array using a `Numba <https://numba.readthedocs.io/>`_ kernel::
+
+  from numba import cuda
+
+  a_gpu = gpuarray.to_gpu(numpy.random.randn(4, 4).astype(numpy.float32))
+
+  @cuda.jit
+  def double(x):
+      i, j = cuda.grid(2)
+      x[i, j] *= 2
+
+  double[(4, 4), (1, 1)](a_gpu)
+
 Where to go from here
 ---------------------
 
