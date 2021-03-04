@@ -212,8 +212,8 @@ def _add_functionality():
             elif isinstance(arg, np.void):
                 arg_data.append(_my_bytes(_memoryview(arg)))
                 format += "%ds" % arg.itemsize
-            elif hasattr(arg, '__cuda_array_interface__'):
-                arg_data.append(arg.__cuda_array_interface__['data'][0])
+            elif hasattr(arg, "__cuda_array_interface__"):
+                arg_data.append(arg.__cuda_array_interface__["data"][0])
                 format += "P"
             else:
                 try:

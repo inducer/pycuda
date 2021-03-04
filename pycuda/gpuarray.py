@@ -267,12 +267,12 @@ class GPUArray:
             ptr = 0
 
         return {
-            'shape': self.shape,
-            'strides': self.strides,
-            'data': (ptr, False),
-            'typestr': self.dtype.str,
-            'stream': None,
-            'version': 3
+            "shape": self.shape,
+            "strides": self.strides,
+            "data": (ptr, False),
+            "typestr": self.dtype.str,
+            "stream": None,
+            "version": 3
         }
 
     @property

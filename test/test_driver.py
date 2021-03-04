@@ -154,17 +154,17 @@ class TestDriver:
         a = np.zeros(10, dtype=np.float32)
         a_g = gpuarray.to_gpu(a)
         cai = a_g.__cuda_array_interface__
-        ptr = cai['data'][0]
-        masked = cai['data'][1]
+        ptr = cai["data"][0]
+        masked = cai["data"][1]
 
-        assert cai['shape'] == a.shape
-        assert cai['strides'] == a.strides
-        assert cai['typestr'] == a.dtype.str
+        assert cai["shape"] == a.shape
+        assert cai["strides"] == a.strides
+        assert cai["typestr"] == a.dtype.str
         assert isinstance(ptr, int)
         assert ptr != 0
         assert not masked
-        assert cai['stream'] is None
-        assert cai['version'] == 3
+        assert cai["stream"] is None
+        assert cai["version"] == 3
 
     @mark_cuda_test
     def donottest_cublas_mixing(self):
@@ -1088,12 +1088,12 @@ class CudaArrayInterfaceImpl:
     @property
     def __cuda_array_interface__(self):
         return {
-            'shape': self._shape,
-            'strides': self._strides,
-            'typestr': self._typestr,
-            'data': (int(self._ptr), False),
-            'stream': None,
-            'version': 3
+            "shape": self._shape,
+            "strides": self._strides,
+            "typestr": self._typestr,
+            "data": (int(self._ptr), False),
+            "stream": None,
+            "version": 3
         }
 
     @property
