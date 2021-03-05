@@ -269,6 +269,8 @@ class GPUArray:
         return {
             "shape": self.shape,
             "strides": self.strides,
+            # data is a tuple: (ptr, readonly) - always export GPUArray
+            # instances as read-write
             "data": (ptr, False),
             "typestr": self.dtype.str,
             "stream": None,
