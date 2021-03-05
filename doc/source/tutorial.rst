@@ -205,9 +205,10 @@ example, to double a `CuPy <https://docs.cupy.dev/en/stable/>`_ array::
   func = mod.get_function("double_array")
   func(cupy_a, block=(4, 4, 1), grid=(1, 1))
 
-PyCUDA GPU Arrays implement the CUDA Array Interface, so they can be passed
-into functions from other libraries that support it. For example, to double a
-PyCUDA GPU Array using a `Numba <https://numba.readthedocs.io/>`_ kernel::
+:class:`~pycuda.gpuarray.GPUArray` implements the CUDA Array Interface, so its
+instances can be passed into functions from other libraries that support it.
+For example, to double a PyCUDA GPU Array using a `Numba
+<https://numba.readthedocs.io/>`_ kernel::
 
   from numba import cuda
 
