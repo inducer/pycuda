@@ -4,7 +4,9 @@
 from numba import cuda
 
 import pycuda.driver as pycuda
-import pycuda.autoinit  # noqa
+# We use autoprimaryctx instead of autoinit because Numba can only operate on a
+# primary context
+import pycuda.autoprimaryctx  # noqa
 import pycuda.gpuarray as gpuarray
 
 import numpy
@@ -14,11 +16,6 @@ import numpy
 a_gpu = gpuarray.to_gpu(numpy.random.randn(4, 4).astype(numpy.float32))
 print("original array:")
 print(a_gpu)
-
-# Retain PyCUDA context as primary and make current so that Numba is happy
-pyc_dev = pycuda.autoinit.device
-pyc_ctx = pyc_dev.retain_primary_context()
-pyc_ctx.push()
 
 
 # A standard Numba kernel that doubles its input array
@@ -35,6 +32,3 @@ def double(x):
 double[(4, 4), (1, 1)](a_gpu)
 print("doubled with numba:")
 print(a_gpu)
-
-# Pop context to allow PyCUDA to clean up
-pyc_ctx.pop()

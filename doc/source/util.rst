@@ -21,6 +21,12 @@ It uses :func:`pycuda.tools.make_default_context` to create a compute context.
   on :data:`device`. This context is created by calling
   :func:`pycuda.tools.make_default_context`.
 
+.. module:: pycuda.autoprimaryctx
+
+The module :mod:`pycuda.autoprimaryctx` is similar to :mod:`pycuda.autoinit`,
+except that it retains the device primary context instead of creating a new
+context in :func:`pycuda.tools.make_default_context`.
+
 Choice of Device
 ----------------
 
