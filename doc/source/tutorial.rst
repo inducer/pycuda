@@ -196,7 +196,7 @@ Interoperability With Other Libraries Using The CUDA Array Interface
 
 Kernel calls can be passed arrays from other CUDA libraries that support the
 `CUDA Array Interface
-<https://numba.readthedocs.io/en/stable/cuda/cuda_array_interface.html>`_. For
+<https://numba.readthedocs.io/en/stable/cuda/cuda_array_interface.html>`__. For
 example, to double a `CuPy <https://docs.cupy.dev/en/stable/>`_ array::
 
   import cupy as cp
