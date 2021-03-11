@@ -1,3 +1,8 @@
+__copyright__ = """
+Copyright 2008-2021 Andreas Kloeckner
+Copyright 2021 NVIDIA Corporation
+"""
+
 import numpy as np
 import numpy.linalg as la
 from pycuda.tools import mark_cuda_test, dtype_to_ctype
@@ -143,6 +148,23 @@ class TestDriver:
 
         diff = (a_g * b_g).get() - a * b
         assert la.norm(diff) == 0
+
+    @mark_cuda_test
+    def test_gpuarray_cai(self):
+        a = np.zeros(10, dtype=np.float32)
+        a_g = gpuarray.to_gpu(a)
+        cai = a_g.__cuda_array_interface__
+        ptr = cai["data"][0]
+        masked = cai["data"][1]
+
+        assert cai["shape"] == a.shape
+        assert cai["strides"] == a.strides
+        assert cai["typestr"] == a.dtype.str
+        assert isinstance(ptr, int)
+        assert ptr != 0
+        assert not masked
+        assert cai["stream"] is None
+        assert cai["version"] == 3
 
     @mark_cuda_test
     def donottest_cublas_mixing(self):
@@ -1052,6 +1074,55 @@ def test_pointer_holder_base():
     alloc = WrappedAllocation(drv.mem_alloc(1024))
     ary = gpuarray.GPUArray((1024,), np.uint8, gpudata=alloc)
     print(ary.get())
+
+
+# A class to emulate an object from outside PyCUDA that implements the CUDA
+# Array Interface
+class CudaArrayInterfaceImpl:
+    def __init__(self, size, itemsize, dtype):
+        self._shape = (size,)
+        self._strides = (itemsize,)
+        self._typestr = dtype.str
+        self._ptr = drv.mem_alloc(size * itemsize)
+
+    @property
+    def __cuda_array_interface__(self):
+        return {
+            "shape": self._shape,
+            "strides": self._strides,
+            "typestr": self._typestr,
+            "data": (int(self._ptr), False),
+            "stream": None,
+            "version": 3
+        }
+
+    @property
+    def ptr(self):
+        return self._ptr
+
+
+def test_pass_cai_array():
+    dtype = np.int32
+    size = 1024
+    np_array = np.arange(size, dtype=dtype)
+    cai_array = CudaArrayInterfaceImpl(size, np_array.itemsize, np_array.dtype)
+
+    mod = SourceModule(
+        """
+    __global__ void gpu_arange(int *x)
+    {
+      const int i = threadIdx.x;
+      x[i] = i;
+    }
+    """
+    )
+
+    gpu_arange = mod.get_function("gpu_arange")
+    gpu_arange(cai_array, grid=(1,), block=(size, 1, 1))
+
+    host_array = np.empty_like(np_array)
+    drv.memcpy_dtoh(host_array, cai_array.ptr)
+    assert (host_array == np_array).all()
 
 
 def test_import_pyopencl_before_pycuda():

@@ -1,3 +1,8 @@
+__copyright__ = """
+Copyright 2008-2021 Andreas Kloeckner
+Copyright 2021 NVIDIA Corporation
+"""
+
 import os
 import numpy as np
 
@@ -208,6 +213,12 @@ def _add_functionality():
                 arg_data.append(_my_bytes(_memoryview(arg)))
                 format += "%ds" % arg.itemsize
             else:
+                cai = getattr(arg, "__cuda_array_interface__", None)
+                if cai:
+                    arg_data.append(cai["data"][0])
+                    format += "P"
+                    continue
+
                 try:
                     gpudata = np.uintp(arg.gpudata)
                 except AttributeError:

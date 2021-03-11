@@ -80,6 +80,12 @@ The :class:`GPUArray` Array Class
 
         .. versionadded: 2011.1
 
+    .. attribute :: __cuda_array_interface__
+
+        Return a `CUDA Array Interface
+        <https://numba.readthedocs.io/en/stable/cuda/cuda_array_interface.html>`_
+        dict describing this array's data.
+
     .. method :: __len__()
 
         Returns the size of the leading dimension of *self*.
