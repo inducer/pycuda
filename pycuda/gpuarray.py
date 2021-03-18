@@ -15,6 +15,13 @@ import numbers
 
 import copyreg
 
+from functools import lru_cache
+from typing    import Union
+
+
+from pycuda.tools import dtype_to_ctype
+from pycuda.elementwise import ElementwiseKernel
+
 
 def _get_common_dtype(obj1, obj2):
     return _get_common_dtype_base(obj1, obj2, has_double_support())
@@ -130,7 +137,21 @@ def splay(n, dev=None):
 # {{{ main GPUArray class
 
 
-def _make_binary_op(operator):
+def _handle_other(other):
+    """ Handles the other object if it is of Enum type.
+
+    :param other: either a numerical type or a subclass of Enum
+    """
+
+    from enum import Enum
+
+    if not isinstance(other, Enum):
+        return other
+
+    return other.value  # value of that enum
+
+
+def _make_binary_op(operator, force_return_dtype=None):
     def func(self, other):
         if not self.flags.forc:
             raise RuntimeError(
@@ -146,7 +167,7 @@ def _make_binary_op(operator):
                     "be used as arguments to this operation"
                 )
 
-            result = self._new_like_me(dtype=bool)  # create bool array
+            result = self._new_like_me(dtype=force_return_dtype)  # create bool array
             func = elementwise.get_binary_op_kernel(
                 self.dtype, other.dtype, result.dtype, operator
             )
@@ -162,14 +183,15 @@ def _make_binary_op(operator):
 
             return result
         else:  # scalar operator
-            result = self._new_like_me(dtype=bool)
+            result = self._new_like_me(dtype=force_return_dtype)
             func = elementwise.get_scalar_op_kernel(self.dtype, result.dtype, operator)
             func.prepared_async_call(
                 self._grid,
                 self._block,
                 None,
                 self.gpudata,
-                other,
+                # other,
+                _handle_other(other),
                 result.gpudata,
                 self.mem_size,
             )
@@ -187,6 +209,8 @@ class GPUArray:
 
     __array_priority__ = 100
 
+    _object_size = 2  # TODO: SIZE OF A SHORT OBJECT
+
     def __init__(
         self,
         shape,
@@ -197,6 +221,8 @@ class GPUArray:
         strides=None,
         order="C",
     ):
+
+        self.orig_dtype = dtype  # before conversion to np.dtype
         dtype = np.dtype(dtype)
 
         try:
@@ -219,6 +245,8 @@ class GPUArray:
             s = np.asscalar(s)
 
         if strides is None:
+            stride_size = dtype.itemsize if not dtype.hasobject else self._object_size
+
             if order == "F":
                 strides = _f_contiguous_strides(dtype.itemsize, shape)
             elif order == "C":
@@ -233,15 +261,17 @@ class GPUArray:
 
         self.shape = tuple(shape)
         self.dtype = dtype
+        self.dtype_has_object = dtype.hasobject
+        self.dtype_itemsize = self.dtype.itemsize if not self.dtype_has_object else self._object_size
         self.strides = strides
         self.mem_size = self.size = s
-        self.nbytes = self.dtype.itemsize * self.size
-        self.itemsize = self.dtype.itemsize
+        self.nbytes = self.dtype_itemsize * self.size
+        self.itemsize = self.dtype_itemsize
 
         self.allocator = allocator
         if gpudata is None:
             if self.size:
-                self.gpudata = self.allocator(self.size * self.dtype.itemsize)
+                self.gpudata = self.allocator(self.size * self.dtype_itemsize)
             else:
                 self.gpudata = None
 
@@ -314,9 +344,10 @@ class GPUArray:
 
         if ary is None:
             if pagelocked:
+                # TODO: TO BE CORRECTED AS WELL
                 ary = drv.pagelocked_empty(self.shape, self.dtype)
             else:
-                ary = np.empty(self.shape, self.dtype)
+                ary = np.empty(self.shape, self.dtype if not self.dtype_has_object else np.short)  # np.short type
 
             strides = _compact_strides(self)
             ary = _as_strided(ary, strides=strides)
@@ -339,12 +370,18 @@ class GPUArray:
 
         if self.size:
             _memcpy_discontig(ary, self, async_=async_, stream=stream)
-        return ary
+
+
+        if (not self.dtype_has_object) or (self.orig_dtype is np.dtype('O')):
+            return ary
+
+        # it is an Enum object, return a reconstructed object.
+        return np.vectorize(lambda x: self.orig_dtype(x))(ary)
 
     def get_async(self, stream=None, ary=None):
         return self.get(ary=ary, async_=True, stream=stream)
 
-    def copy(self):
+    def copy(self):  # TODO: THIS HAS TO BE FIXED
         new = GPUArray(self.shape, self.dtype, self.allocator)
         _memcpy_discontig(new, self)
         return new
@@ -641,7 +678,7 @@ class GPUArray:
     def bind_to_texref(self, texref, allow_offset=False):
         return (
             texref.set_address(self.gpudata, self.nbytes, allow_offset=allow_offset)
-            / self.dtype.itemsize
+            / self.dtype_itemsize
         )
 
     def bind_to_texref_ext(
@@ -695,7 +732,7 @@ class GPUArray:
         if read_as_int:
             texref.set_flags(texref.get_flags() | drv.TRSF_READ_AS_INTEGER)
 
-        return offset / self.dtype.itemsize
+        return offset / self.dtype_itemsize
 
     def __len__(self):
         """Return the size of the leading dimension of self."""
@@ -902,7 +939,7 @@ class GPUArray:
         if dtype is None:
             dtype = self.dtype
 
-        old_itemsize = self.dtype.itemsize
+        old_itemsize = self.dtype_itemsize
         itemsize = np.dtype(dtype).itemsize
 
         from pytools import argmin2
@@ -1179,15 +1216,17 @@ class GPUArray:
 
     # {{{ rich comparisons
 
-    __eq__ = _make_binary_op("==")
-    __ne__ = _make_binary_op("!=")
-    __le__ = _make_binary_op("<=")
-    __ge__ = _make_binary_op(">=")
-    __lt__ = _make_binary_op("<")
-    __gt__ = _make_binary_op(">")
+    __eq__ = _make_binary_op("==", force_return_dtype = bool)
+    __ne__ = _make_binary_op("!=", force_return_dtype = bool)
+    __le__ = _make_binary_op("<=", force_return_dtype = bool)
+    __ge__ = _make_binary_op(">=", force_return_dtype = bool)
+    __lt__ = _make_binary_op("<" , force_return_dtype = bool)
+    __gt__ = _make_binary_op(">" , force_return_dtype = bool)
 
     # }}}
 
+    __and__ = _make_binary_op('&', force_return_dtype = bool)
+    __or__  = _make_binary_op('|', force_return_dtype = bool)
 
 # }}}
 
@@ -1195,9 +1234,9 @@ class GPUArray:
 # {{{ creation helpers
 
 
-def to_gpu(ary, allocator=drv.mem_alloc):
+def to_gpu(ary, allocator=drv.mem_alloc, orig_dtype=None):
     """converts a numpy array to a GPUArray"""
-    result = GPUArray(ary.shape, ary.dtype, allocator, strides=_compact_strides(ary))
+    result = GPUArray(ary.shape, ary.dtype if orig_dtype is None else orig_dtype, allocator, strides=_compact_strides(ary))
     result.set(ary)
     return result
 
@@ -1384,6 +1423,23 @@ def _compact_strides(a):
     )
 
     strides = [None] * len(a.shape)
+    stride = a.dtype.itemsize if not a.dtype.hasobject else 2  # itemsieze of np.short TODO: FIX THIS
+
+    for _, dim, axis in info:
+        strides[axis] = stride
+        stride *= dim
+
+    return strides
+
+
+# ORIGINAL _compact_strides
+def _compact_strides_old(a):
+    # Compute strides to have same order as self, but packed
+    info = sorted(
+        (a.strides[axis], a.shape[axis], axis) for axis in range(len(a.shape))
+    )
+
+    strides = [None] * len(a.shape)
     stride = a.dtype.itemsize
     for _, dim, axis in info:
         strides[axis] = stride
@@ -1405,34 +1461,40 @@ def _memcpy_discontig(dst, src, async_=False, stream=None):
         raise TypeError("dst must be GPUArray or ndarray")
     if src.shape != dst.shape:
         raise ValueError("src and dst must be same shape")
-    if src.dtype != dst.dtype:
-        raise TypeError("src and dst must have same dtype")
+
+    if (not hasattr(dst, 'dtype_has_object')) and (not hasattr(src, 'dtype_has_object')):
+        if src.dtype != dst.dtype:
+            raise TypeError("src and dst must have same dtype")
 
     # ndarray -> ndarray
     if isinstance(src, np.ndarray) and isinstance(dst, np.ndarray):
         dst[...] = src
         return
 
+    src_object   = src.dtype.hasobject  # is the source array of objects
+    src_itemsize = src.dtype.itemsize if not src.dtype.hasobject else 2  # default for objects
+
     if src.flags.forc and dst.flags.forc:
         shape = [src.size]
-        src_strides = dst_strides = [src.dtype.itemsize]
+        src_strides = dst_strides = [src_itemsize]
     else:
         # put src in Fortran order (which should put dst in Fortran order too)
         # and remove singleton axes
         src_info = sorted(
-            (src.strides[axis], axis)
+            (src.strides[axis] if not src_object else 2, axis)  # strides for the object src
             for axis in range(len(src.shape))
             if src.shape[axis] > 1
         )
         axes = [axis for _, axis in src_info]
         shape = [src.shape[axis] for axis in axes]
-        src_strides = [src.strides[axis] for axis in axes]
+        src_strides = [src.strides[axis] if not src_object else 2
+                       for axis in axes]
         dst_strides = [dst.strides[axis] for axis in axes]
 
         # copy functions require contiguity in minor axis, so add new axis if needed
         if (
             len(shape) == 0
-            or src_strides[0] != src.dtype.itemsize
+            or src_strides[0] != (src.dtype.itemsize if not src_object else 2)
             or dst_strides[0] != dst.dtype.itemsize
         ):
             shape[0:0] = [1]
@@ -1466,24 +1528,31 @@ def _memcpy_discontig(dst, src, async_=False, stream=None):
                     )
                 else:
                     drv.memcpy_dtod(dst.gpudata, src.gpudata, src.nbytes)
-            else:
+            else:  # src is gpuarray, dst is np.array
                 # The arrays might be contiguous in the sense of
                 # having no gaps, but the axes could be transposed
                 # so that the order is neither Fortran or C.
                 # So, we attempt to get a contiguous view of dst.
-                dst = _as_strided(dst, shape=(dst.size,), strides=(dst.dtype.itemsize,))
+
+                # dst = _as_strided(dst, shape=(dst.size,), strides=(dst.dtype.itemsize,))
+                dst = _as_strided(dst, shape=(dst.size,), strides=(dst.dtype.itemsize if not dst.dtype.hasobject else 2,))  # TODO: FIX 2 here
+
                 if async_:
                     drv.memcpy_dtoh_async(dst, src.gpudata, stream=stream)
                 else:
                     drv.memcpy_dtoh(dst, src.gpudata)
         else:
-            src = _as_strided(src, shape=(src.size,), strides=(src.dtype.itemsize,))
+            #src = _as_strided(src, shape=(src.size,), strides=(src.dtype.itemsize if not src_object else 2,))
+            new_src = src if not src_object else np.array([x.value for x in src.tolist()], dtype=np.short)
+            new_src = _as_strided(new_src, shape=(new_src.size,), strides=(new_src.dtype.itemsize, ))
+
             if async_:
-                drv.memcpy_htod_async(dst.gpudata, src, stream=stream)
+                drv.memcpy_htod_async(dst.gpudata, new_src, stream=stream)
             else:
-                drv.memcpy_htod(dst.gpudata, src)
+                drv.memcpy_htod(dst.gpudata, new_src)
         return
 
+    # TODO: OBJECT ONLY DONE FOR
     if len(shape) == 2:
         copy = drv.Memcpy2D()
     elif len(shape) == 3:
@@ -1503,7 +1572,7 @@ def _memcpy_discontig(dst, src, async_=False, stream=None):
     else:
         copy.set_dst_host(dst)
 
-    copy.width_in_bytes = src.dtype.itemsize * shape[0]
+    copy.width_in_bytes = (src.dtype.itemsize if not src_object else 2) * shape[0]
 
     copy.src_pitch = src_strides[1]
     copy.dst_pitch = dst_strides[1]
@@ -1902,6 +1971,65 @@ def _make_subset_minmax_kernel(what):
 
 subset_min = _make_subset_minmax_kernel("min")
 subset_max = _make_subset_minmax_kernel("max")
+
+
+# selection kernel section
+@lru_cache(128)
+def _get_selection_kernel(dtype_):
+
+    ctype = dtype_to_ctype(dtype_)
+
+    return ElementwiseKernel( f'bool *cond, {ctype} *cond_true, {ctype} *cond_false, {ctype} *result'
+                            , 'result[i] = cond[i] ? cond_true[i] : cond_false[i];'
+                            , name = 'selection_kernel_k' )
+
+
+@lru_cache(128)
+def _get_selection_kernel_single(dtype_):
+    """ Gets the selection kernel for the required type.
+
+    :param dtype_: dtype of the kernel requeusted.
+    """
+
+    ctype = dtype_to_ctype(dtype_)
+
+    return  ElementwiseKernel( f'bool *cond, {ctype} cond_true, {ctype} cond_false, {ctype} *result'
+                             , 'result[i] = cond[i] ? cond_true : cond_false;'
+                             , name = 'selection_kernel_singles_k' )
+
+
+@lru_cache(128)
+def _get_selection_kernel_one_single_k(dtype_, invert=False):
+
+    ctype = dtype_to_ctype(dtype_)
+
+    return ElementwiseKernel( f'bool *cond, {ctype} cond_true, {ctype} *cond_false, {ctype} *result'
+                            , f"result[i] = {'!' if invert else ''}cond[i] ? cond_true : cond_false[i];"
+                            , name = 'selection_kernel_one_single_k' )
+
+
+def where( cond       : GPUArray
+         , cond_true  : Union[float, int, np.short, GPUArray]
+         , cond_false : Union[float, int, np.short, GPUArray] ) -> GPUArray:
+
+    if (not isinstance(cond_true, GPUArray)) and (not isinstance(cond_false, GPUArray)):
+        res = empty(cond.size, dtype=type(cond_true))
+        _get_selection_kernel_single(type(cond_true))(cond, cond_true, cond_false, res)
+
+    elif (not isinstance(cond_true, GPUArray)) and isinstance(cond_false, GPUArray):
+        res = empty_like(cond_false)
+        _get_selection_kernel_one_single_k(cond_false.dtype)(cond, cond_true, cond_false, res)
+
+    elif (isinstance(cond_true, GPUArray)) and (not isinstance(cond_false, GPUArray)):  # cond_true is GPUArray, cond_false is not
+        res = empty_like(cond_true)
+        _get_selection_kernel_one_single_k(cond_true.dtype, invert=True)(cond, cond_false, cond_true, res)
+
+    else:
+        res = empty_like(cond_true)
+        _get_selection_kernel(cond_true.dtype)(cond, cond_true, cond_false, res)
+
+    return res
+
 
 # }}}
 

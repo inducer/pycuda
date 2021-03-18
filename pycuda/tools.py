@@ -400,6 +400,10 @@ def dtype_to_ctype(dtype, with_fp_tex_hack=False):
     if dtype is None:
         raise ValueError("dtype may not be None")
 
+    # TODO: ONLY WORKS FOR OBJECT OF ENUM
+    if dtype.hasobject:  # Object type
+        return 'short'  # short type for Enums
+
     dtype = np.dtype(dtype)
     if with_fp_tex_hack:
         if dtype == np.float32:
