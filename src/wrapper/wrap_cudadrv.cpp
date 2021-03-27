@@ -268,7 +268,7 @@ namespace
 
 
   void  py_memcpy_dtod(CUdeviceptr dest, CUdeviceptr src,
-      size_t int byte_count)
+      size_t byte_count)
   { CUDAPP_CALL_GUARDED_THREADED(cuMemcpyDtoD, (dest, src, byte_count)); }
 
 
