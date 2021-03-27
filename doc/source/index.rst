@@ -79,6 +79,19 @@ the scenes, a lot more interesting stuff is going on:
 
 Curious? Let's get started.
 
+Other software that uses/enhances PyCUDA
+========================================
+
+This list is by definition incomplete! If you know of other software you
+feel should be listed here, please submit a PR!
+
+* `pyvkfft <https://github.com/vincefn/pyvkfft>`__
+* `scikit-cuda <https://scikit-cuda.readthedocs.io/en/latest/>`__
+* `reikna <https://pypi.org/project/reikna/>`__
+* `reikna <https://pypi.org/project/reikna/>`__
+* `compyle <https://pypi.org/project/compyle/>`__
+* `pynufft <https://pypi.org/project/pynufft/>`__
+
 Contents
 =========
 
