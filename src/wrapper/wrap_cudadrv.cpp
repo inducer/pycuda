@@ -268,7 +268,7 @@ namespace
 
 
   void  py_memcpy_dtod(CUdeviceptr dest, CUdeviceptr src,
-      unsigned int byte_count)
+      size_t int byte_count)
   { CUDAPP_CALL_GUARDED_THREADED(cuMemcpyDtoD, (dest, src, byte_count)); }
 
 
@@ -276,7 +276,7 @@ namespace
 
 #if CUDAPP_CUDA_VERSION >= 3000
   void  py_memcpy_dtod_async(CUdeviceptr dest, CUdeviceptr src,
-      unsigned int byte_count, py::object stream_py)
+      size_t byte_count, py::object stream_py)
   {
     PYCUDA_PARSE_STREAM_PY;
 
@@ -287,7 +287,7 @@ namespace
 
 #if CUDAPP_CUDA_VERSION >= 4000
   void  py_memcpy_peer(CUdeviceptr dest, CUdeviceptr src,
-      unsigned int byte_count,
+      size_t byte_count,
       py::object dest_context_py, py::object src_context_py
       )
   {
@@ -307,7 +307,7 @@ namespace
   }
 
   void  py_memcpy_peer_async(CUdeviceptr dest, CUdeviceptr src,
-      unsigned int byte_count,
+      size_t byte_count,
       py::object dest_context_py, py::object src_context_py,
       py::object stream_py)
   {
