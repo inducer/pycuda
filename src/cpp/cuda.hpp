@@ -1624,18 +1624,18 @@ namespace pycuda
   }
 
   inline
-  void memcpy_dtoa(array const &ary, unsigned int index, CUdeviceptr src, unsigned int len)
+  void memcpy_dtoa(array const &ary, unsigned int index, CUdeviceptr src, size_t len)
   { CUDAPP_CALL_GUARDED_THREADED(cuMemcpyDtoA, (ary.handle(), index, src, len)); }
 
   inline
-  void memcpy_atod(CUdeviceptr dst, array const &ary, unsigned int index, unsigned int len)
+  void memcpy_atod(CUdeviceptr dst, array const &ary, unsigned int index, size_t len)
   { CUDAPP_CALL_GUARDED_THREADED(cuMemcpyAtoD, (dst, ary.handle(), index, len)); }
 
   inline
   void memcpy_atoa(
       array const &dst, unsigned int dst_index,
       array const &src, unsigned int src_index,
-      unsigned int len)
+      size_t len)
   { CUDAPP_CALL_GUARDED_THREADED(cuMemcpyAtoA, (dst.handle(), dst_index, src.handle(), src_index, len)); }
 
   // }}}
