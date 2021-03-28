@@ -150,17 +150,6 @@ namespace
 
 
 
-  PyObject *pooled_device_allocation_to_long(pooled_device_allocation const &da)
-  {
-#if defined(_WIN32) && defined(_WIN64)
-    return PyLong_FromUnsignedLongLong(da.ptr());
-#else
-    return PyLong_FromUnsignedLong(da.ptr());
-#endif
-  }
-
-
-
   class pooled_host_allocation
     : public pycuda::pooled_allocation<pycuda::memory_pool<host_allocator> >
   {
@@ -285,12 +274,9 @@ void pycuda_expose_tools()
 
   {
     typedef pooled_device_allocation cl;
-    py::class_<cl, boost::noncopyable>(
+    py::class_<cl, boost::noncopyable, py::bases<pointer_holder_base> >(
         "PooledDeviceAllocation", py::no_init)
       .DEF_SIMPLE_METHOD(free)
-      .def("__int__", &cl::ptr)
-      .def("__long__", pooled_device_allocation_to_long)
-      .def("__index__", pooled_device_allocation_to_long)
       .def("__len__", &cl::size)
       ;
 
