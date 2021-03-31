@@ -234,8 +234,6 @@ namespace
       .DEF_SIMPLE_METHOD(alloc_size)
       .DEF_SIMPLE_METHOD(free_held)
       .DEF_SIMPLE_METHOD(stop_holding)
-      .staticmethod("bin_number")
-      .staticmethod("alloc_size")
       ;
   }
 }

@@ -669,14 +669,15 @@ class TestDriver:
     def test_mempool_2(self):
         from pycuda.tools import DeviceMemoryPool
         from random import randrange
+        pool = DeviceMemoryPool()
 
         for i in range(2000):
             s = randrange(1 << 31) >> randrange(32)
-            bin_nr = DeviceMemoryPool.bin_number(s)
-            asize = DeviceMemoryPool.alloc_size(bin_nr)
+            bin_nr = pool.bin_number(s)
+            asize = pool.alloc_size(bin_nr)
 
             assert asize >= s, s
-            assert DeviceMemoryPool.bin_number(asize) == bin_nr, s
+            assert pool.bin_number(asize) == bin_nr, s
             assert asize < asize * (1 + 1 / 8)
 
     @mark_cuda_test
