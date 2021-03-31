@@ -102,7 +102,7 @@ namespace
 
 
   template<class Allocator>
-  class context_dependent_memory_pool : 
+  class context_dependent_memory_pool :
     public pycuda::memory_pool<Allocator>,
     public pycuda::explicit_context_dependent
   {
@@ -117,12 +117,12 @@ namespace
 
 
 
-  class pooled_device_allocation 
-    : public pycuda::context_dependent, 
+  class pooled_device_allocation
+    : public pycuda::context_dependent,
     public pycuda::pooled_allocation<context_dependent_memory_pool<device_allocator> >
-  { 
+  {
     private:
-      typedef 
+      typedef
         pycuda::pooled_allocation<context_dependent_memory_pool<device_allocator> >
         super;
 
@@ -159,12 +159,12 @@ namespace
   }
 
 
-  
-  class pooled_host_allocation 
+
+  class pooled_host_allocation
     : public pycuda::pooled_allocation<pycuda::memory_pool<host_allocator> >
   {
     private:
-      typedef 
+      typedef
         pycuda::pooled_allocation<pycuda::memory_pool<host_allocator> >
         super;
 
@@ -193,7 +193,7 @@ namespace
         back_inserter(dims));
 
     std::auto_ptr<pooled_host_allocation> alloc(
-        new pooled_host_allocation( 
+        new pooled_host_allocation(
           pool, tp_descr->elsize*pycuda::size_from_dims(dims.size(), &dims.front())));
 
     NPY_ORDER order = PyArray_CORDER;
@@ -228,12 +228,12 @@ namespace
     wrapper
       .add_property("held_blocks", &cl::held_blocks)
       .add_property("active_blocks", &cl::active_blocks)
+      .add_property("managed_bytes", &cl::managed_bytes)
+      .add_property("active_bytes", &cl::active_bytes)
       .DEF_SIMPLE_METHOD(bin_number)
       .DEF_SIMPLE_METHOD(alloc_size)
       .DEF_SIMPLE_METHOD(free_held)
       .DEF_SIMPLE_METHOD(stop_holding)
-      .staticmethod("bin_number")
-      .staticmethod("alloc_size")
       ;
   }
 }
@@ -249,7 +249,7 @@ void pycuda_expose_tools()
     typedef context_dependent_memory_pool<device_allocator> cl;
 
     py::class_<
-      cl, boost::noncopyable, 
+      cl, boost::noncopyable,
       boost::shared_ptr<cl> > wrapper("DeviceMemoryPool");
     wrapper
       .def("allocate", device_pool_allocate,
@@ -269,7 +269,7 @@ void pycuda_expose_tools()
     typedef pycuda::memory_pool<host_allocator> cl;
 
     py::class_<
-      cl, boost::noncopyable, 
+      cl, boost::noncopyable,
       boost::shared_ptr<cl> > wrapper(
           "PageLockedMemoryPool",
           py::init<py::optional<host_allocator const &> >()
