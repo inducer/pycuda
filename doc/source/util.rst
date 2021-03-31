@@ -6,18 +6,18 @@ Automatic Initialization
 
 .. module:: pycuda.autoinit
 
-The module :mod:`pycuda.autoinit`,  when imported, automatically performs 
+The module :mod:`pycuda.autoinit`,  when imported, automatically performs
 all the steps necessary to get CUDA ready for submission of compute kernels.
 It uses :func:`pycuda.tools.make_default_context` to create a compute context.
 
 .. data:: device
 
   An instance of :class:`pycuda.driver.Device` that was used for automatic
-  initialization. 
+  initialization.
 
 .. data:: context
 
-  A default-constructed instance of :class:`pycuda.driver.Context` 
+  A default-constructed instance of :class:`pycuda.driver.Context`
   on :data:`device`. This context is created by calling
   :func:`pycuda.tools.make_default_context`.
 
@@ -74,7 +74,7 @@ Kernel Caching
 
 .. function:: context_dependent_memoize(func)
 
-    This decorator caches the result of the decorated function, *if* a 
+    This decorator caches the result of the decorated function, *if* a
     subsequent occurs in the same :class:`pycuda.driver.Context`.
     This is useful for caching of kernels.
 
@@ -98,7 +98,7 @@ Device Metadata and Occupancy
 -----------------------------
 
 .. class:: DeviceData(dev=None)
-  
+
   Gives access to more information on a device than is available through
   :meth:`pycuda.driver.Device.get_attribute`. If `dev` is `None`, it defaults
   to the device returned by :meth:`pycuda.driver.Context.get_device`.
@@ -120,7 +120,7 @@ Device Metadata and Occupancy
 
   .. method:: align_bytes(word_size=4)
 
-    The distance between global memory base addresses that 
+    The distance between global memory base addresses that
     allow accesses of word-size `word_size` bytes to get coalesced.
 
   .. method:: align(bytes, word_size=4)
@@ -134,7 +134,7 @@ Device Metadata and Occupancy
 
   .. method:: align_dtype(elements, dtype_size)
 
-    Round up `elements` to the next alignment boundary 
+    Round up `elements` to the next alignment boundary
     as given by :meth:`align_bytes`, where each element is assumed to be
     `dtype_size` bytes large.
 
@@ -146,7 +146,7 @@ Device Metadata and Occupancy
 
 .. class:: OccupancyRecord(devdata, threads, shared_mem=0, registers=0)
 
-  Calculate occupancy for a given kernel workload characterized by 
+  Calculate occupancy for a given kernel workload characterized by
 
   * thread count of `threads`
   * shared memory use of `shared_mem` bytes
@@ -183,7 +183,7 @@ fresh memory area is allocated for each intermediate result. Memory pools are a
 remedy for this problem based on the observation that often many of the block
 allocations are of the same sizes as previously used ones.
 
-Then, instead of fully returning the memory to the system and incurring the 
+Then, instead of fully returning the memory to the system and incurring the
 associated reallocation overhead, the pool holds on to the memory and uses it
 to satisfy future allocations of similarly-sized blocks. The pool reacts
 appropriately to out-of-memory conditions as long as all memory allocations
@@ -198,8 +198,8 @@ Device-based Memory Pool
 
     An object representing a :class:`DeviceMemoryPool`-based allocation of
     linear device memory.  Once this object is deleted, its associated device
-    memory is freed. 
-    :class:`PooledDeviceAllocation` instances can be cast to :class:`int` 
+    memory is freed.
+    :class:`PooledDeviceAllocation` instances can be cast to :class:`int`
     (and :class:`long`), yielding the starting address of the device memory
     allocated.
 
@@ -213,7 +213,7 @@ Device-based Memory Pool
 
 .. class:: DeviceMemoryPool
 
-    A memory pool for linear device memory as allocated using 
+    A memory pool for linear device memory as allocated using
     :func:`pycuda.driver.mem_alloc`. (see :ref:`mempool`)
 
     .. attribute:: held_blocks
@@ -224,6 +224,20 @@ Device-based Memory Pool
 
         The number of blocks in active use that have been allocated
         through this pool.
+
+    .. attribute:: managed_bytes
+
+        "Managed" memory is "active" and "held" memory.
+
+        .. versionadded: 2021.1
+
+    .. attribute:: active_bytes
+
+        "Active" bytes are bytes under the control of the application.
+        This may be smaller than the actual allocated size reflected
+        in :attr:`managed_bytes`.
+
+        .. versionadded: 2021.1
 
     .. method:: allocate(size)
 
@@ -248,7 +262,7 @@ Memory Pool for pagelocked memory
 
     An object representing a :class:`PageLockedMemoryPool`-based allocation of
     linear device memory.  Once this object is deleted, its associated device
-    memory is freed. 
+    memory is freed.
 
     .. method:: free
 
@@ -260,12 +274,12 @@ Memory Pool for pagelocked memory
 
 .. class:: PageLockedAllocator(flags=0)
 
-    Specifies the set of :class:`pycuda.driver.host_alloc_flags` used in its 
+    Specifies the set of :class:`pycuda.driver.host_alloc_flags` used in its
     associated :class:`PageLockedMemoryPool`.
 
 .. class:: PageLockedMemoryPool(allocator=PageLockedAllocator())
 
-    A memory pool for pagelocked host memory as allocated using 
+    A memory pool for pagelocked host memory as allocated using
     :func:`pycuda.driver.pagelocked_empty`. (see :ref:`mempool`)
 
     .. attribute:: held_blocks
@@ -279,7 +293,7 @@ Memory Pool for pagelocked memory
 
     .. method:: allocate(shape, dtype, order="C")
 
-        Return an uninitialized ("empty") :class:`numpy.ndarray` with the given 
+        Return an uninitialized ("empty") :class:`numpy.ndarray` with the given
         *shape*, *dtype*, and *order*. This array will be backed by a
         :class:`PooledHostAllocation`, which can be found as the ``.base``
         attribute of the array.
