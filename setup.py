@@ -225,7 +225,6 @@ def main():
         python_requires="~=3.6",
         install_requires=[
             "pytools>=2011.2",
-            "decorator>=3.2.0",
             "appdirs>=1.4.0",
             "mako",
         ],
