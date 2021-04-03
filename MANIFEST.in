@@ -5,8 +5,7 @@ include src/cpp/*.cpp
 include src/wrapper/*.hpp
 include src/wrapper/*.cpp
 include test/*.py
-include examples/*.py
-include examples/MORE*
+recursive-include examples *.py
 
 include doc/source/*.rst
 include doc/Makefile
