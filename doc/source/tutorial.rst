@@ -20,7 +20,7 @@ Transferring Data
 The next step in most programs is to transfer data onto the device.
 In PyCuda, you will mostly transfer data from :mod:`numpy` arrays
 on the host. (But indeed, everything that satisfies the Python buffer
-interface will work, even a :class:`str`.) Let's make a 4x4 array
+interface will work, even :class:`bytes`.) Let's make a 4x4 array
 of random numbers::
 
   import numpy
