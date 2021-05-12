@@ -331,6 +331,42 @@ Constants
         CUDA 6.0 and above.
 
         .. versionadded:: 2014.1
+        
+    .. attribute :: HOST_NATIVE_ATOMIC_SUPPORTED
+        SINGLE_TO_DOUBLE_PRECISION_PERF_RATIO
+        PAGEABLE_MEMORY_ACCESS
+        CONCURRENT_MANAGED_ACCESS
+        COMPUTE_PREEMPTION_SUPPORTED
+        CAN_USE_HOST_POINTER_FOR_REGISTERED_MEM
+
+        CUDA 8.0 and above.
+
+    .. attribute :: MAX_SHARED_MEMORY_PER_BLOCK_OPTIN
+
+        CUDA 9.0 and above.
+
+    .. attribute :: PAGEABLE_MEMORY_ACCESS_USES_HOST_PAGE_TABLES
+        DIRECT_MANAGED_MEM_ACCESS_FROM_HOST
+
+        CUDA 9.2 and above.
+
+    .. attribute :: HANDLE_TYPE_POSIX_FILE_DESCRIPTOR_SUPPORTED
+        HANDLE_TYPE_WIN32_HANDLE_SUPPORTED
+        HANDLE_TYPE_WIN32_KMT_HANDLE_SUPPORTED
+
+        CUDA 10.2 and above.
+
+    .. attribute :: MAX_PERSISTING_L2_CACHE_SIZE
+        MAX_BLOCKS_PER_MULTIPROCESSOR
+        GENERIC_COMPRESSION_SUPPORTED
+        RESERVED_SHARED_MEMORY_PER_BLOCK
+
+        CUDA 11.0 and above.
+
+    .. attribute :: READ_ONLY_HOST_REGISTER_SUPPORTED
+        MEMORY_POOLS_SUPPORTED
+
+        CUDA 11.2 and above.
 
 .. class:: pointer_attribute
 
