@@ -88,7 +88,6 @@ feel should be listed here, please submit a PR!
 * `pyvkfft <https://github.com/vincefn/pyvkfft>`__
 * `scikit-cuda <https://scikit-cuda.readthedocs.io/en/latest/>`__
 * `reikna <https://pypi.org/project/reikna/>`__
-* `reikna <https://pypi.org/project/reikna/>`__
 * `compyle <https://pypi.org/project/compyle/>`__
 * `pynufft <https://pypi.org/project/pynufft/>`__
 
