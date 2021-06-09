@@ -11,7 +11,7 @@
 
 # Point and click with the right buttom to magnify by a factor of 10
 
-# Click with the left button on the rigth side of the 
+# Click with the left button on the right side of the 
 # image to randomly change the colormap
 
 # Click with right button on the right side of the image to set the default colormap
