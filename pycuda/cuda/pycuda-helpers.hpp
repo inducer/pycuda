@@ -102,7 +102,7 @@ extern "C++" {
     return pycuda::complex<double>(__hiloint2double(v.y, v.x), __hiloint2double(v.w, v.z));
   }
 
-  // FP_Surfaces with complex supprt
+  // FP_Surfaces with complex support
 
   __device__ void fp_surf2DLayeredwrite(double var,surface<void, cudaSurfaceType2DLayered> surf, int i, int j, int layer, enum cudaSurfaceBoundaryMode mode)
   {

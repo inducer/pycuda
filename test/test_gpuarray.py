@@ -154,7 +154,7 @@ class TestGPUArray:
 
     @mark_cuda_test
     def test_substract_array(self):
-        """Test the substraction of two arrays."""
+        """Test the subtraction of two arrays."""
         # test data
         a = np.array([1, 2, 3, 4, 5, 6, 7, 8, 9, 10]).astype(np.float32)
         b = np.array([10, 20, 30, 40, 50, 60, 70, 80, 90, 100]).astype(np.float32)
@@ -170,7 +170,7 @@ class TestGPUArray:
 
     @mark_cuda_test
     def test_substract_scalar(self):
-        """Test the substraction of an array and a scalar."""
+        """Test the subtraction of an array and a scalar."""
 
         # test data
         a = np.array([1, 2, 3, 4, 5, 6, 7, 8, 9, 10]).astype(np.float32)
