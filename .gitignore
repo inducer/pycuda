@@ -8,6 +8,7 @@
 *.pyc
 *.pyo
 build
+_build
 *.prof
 siteconf.py
 doc/hedge-notes.pdf
