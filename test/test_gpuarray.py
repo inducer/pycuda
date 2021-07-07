@@ -468,6 +468,46 @@ class TestGPUArray:
         a = gpuarray.arange(12, dtype=np.float32)
         assert (np.arange(12, dtype=np.float32) == a.get()).all()
 
+    
+    @mark_cuda_test
+    def test_stack(input_dims,order,queue):
+
+        shape = (2, 2, 2)[:input_dims]
+        axis = -1 if order == "F" else 0
+
+        from numpy.random import default_rng
+        rng = default_rng()
+        x_in = rng.random(size=shape)
+        y_in = rng.random(size=shape)
+        x_in = x_in if order == "C" else np.asfortranarray(x_in)
+        y_in = y_in if order == "C" else np.asfortranarray(y_in)
+
+        ## ask about the queue part 
+
+
+    @mark_cuda_test
+    def test_concatenate(queue):
+
+        from pyopencl.clrandom import rand as clrand
+
+        a_dev = clrand(queue, (5, 15, 20), dtype=np.float32)
+        b_dev = clrand(queue, (4, 15, 20), dtype=np.float32)
+        c_dev = clrand(queue, (3, 15, 20), dtype=np.float32)
+        a = a_dev.get()
+        b = b_dev.get()
+        c = c_dev.get()
+
+        cat_dev = gpuarray.concatenate((a_dev, b_dev, c_dev))
+        cat = np.concatenate((a, b, c))
+
+        assert la.norm(cat - cat_dev.get()) == 0
+
+# }}}
+
+# {{{ conditionals, any, all
+
+
+
     @mark_cuda_test
     def test_reverse(self):
         a = np.array([1, 2, 3, 4, 5, 6, 7, 8, 9, 10]).astype(np.float32)
