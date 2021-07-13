@@ -1238,7 +1238,7 @@ empty = GPUArray
 
 def empty(shape, dtype, allocator=drv.mem_alloc, order="C"):
     """Returns an array of the given shape and dtype which is empty."""
-    result - GPUArray(shape, dtype, alllocator, order=order)
+    result = GPUArray(shape, dtype, allocator=allocator, order=order)
     return result
 
 
@@ -1788,7 +1788,7 @@ def concatenate(arrays, axis=0, allocator=None):
 
     shape = None
 
-    def shape_except_axis(ary: Array) -> ShapeType:
+    def shape_except_axis(ary: GPUArray):
         return ary.shape[:axis] + ary.shape[axis+1:]
 
     for i_ary, ary in enumerate(arrays[1:]):
@@ -1806,7 +1806,7 @@ def concatenate(arrays, axis=0, allocator=None):
                         % (i_ary, len(ary.shape), len(shape)))
 
                 if (array.ndim != arrays[0].ndim
-                        or shape_except_axis(array) != shape_except_axis(arrays[0]):
+                        or shape_except_axis(array) != shape_except_axis(arrays[0])):
                     raise ValueError("%d'th array has residual not matching "
                             "other arrays" % i_ary)
 
@@ -1823,11 +1823,9 @@ def concatenate(arrays, axis=0, allocator=None):
     base_idx = 0
     for ary in arrays:
         my_len = ary.shape[axis]
-        result.setitem(
-                full_slice[:axis]
-                + (slice(base_idx, base_idx+my_len),)
-                + full_slice[axis+1:],
-                ary)
+        print(type(result))
+        result[0] =  full_slice[:axis] + (slice(base_idx, base_idx+my_len),) + full_slice[axis+1:]
+        result[1] = ary
 
         base_idx += my_len
 
@@ -1835,10 +1833,9 @@ def concatenate(arrays, axis=0, allocator=None):
 
 
 def stack(arrays, axis=0, allocator=None):
-
     #impllementation is borrowed from pyopencl.array.stack()
-     """
-     Join a sequence of arrays along a new axis.
+    """
+    Join a sequence of arrays along a new axis.
     
     :arg arrays: A sequnce of :class:`GPUArray`.
     :arg axis: Index of the dimension of the new axis in the result array.
@@ -1846,7 +1843,7 @@ def stack(arrays, axis=0, allocator=None):
     :returns: :class:`GPUArray`
     
     """
-
+    
     if not arrays:
         raise ValueError("need at least one array to stack")
 
@@ -1861,10 +1858,10 @@ def stack(arrays, axis=0, allocator=None):
     if not (0 <= axis <= input_ndim):
         raise ValueError("invalid axis")
 
-     if (axis == 0 and not all(ary.flags.c_contiguous
+    if (axis == 0 and not all(ary.flags.c_contiguous
                                        for ary in arrays)):
          # pycuda.GPUArray.__setitem__ does not support non-contiguous assignments
-         raise NotImplementedError
+        raise NotImplementedError
 
     if (axis == input_ndim and not all(ary.flags.f_contiguous
                                                for ary in arrays)):
