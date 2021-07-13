@@ -1236,6 +1236,11 @@ def to_gpu_async(ary, allocator=drv.mem_alloc, stream=None):
 
 empty = GPUArray
 
+def empty(shape, dtype, allocator=drv.mem_alloc, order="C"):
+    """Returns an array of the given shape and dtype which is empty."""
+    result - GPUArray(shape, dtype, alllocator, order=order)
+    return result
+
 
 def zeros(shape, dtype, allocator=drv.mem_alloc, order="C"):
     """Returns an array of the given shape and dtype filled with 0's."""
@@ -1768,28 +1773,40 @@ def multi_put(arrays, dest_indices, dest_shape=None, out=None, stream=None):
 # {{{ shape manipulation
 
 
-def concatenate(arrays, axis=0, queue=None, allocator=None):
+def concatenate(arrays, axis=0, allocator=None):
 
+    # impllementation is borrowed from pyopencl.array.concatenate()
     # {{{ find properties of result array
+    """
+    Join a sequence of arrays along an existing axis.
+    
+    :arg arrays: A sequnce of :class:`GPUArray`.
+    :arg axis: Index of the dimension of the new axis in the result array.
+        Can be -1, for the new axis to be last dimension.
+    :returns: :class:`GPUArray`
+    """
 
     shape = None
 
-    for i_ary, ary in enumerate(arrays):
-        queue = queue or ary.queue
+    def shape_except_axis(ary: Array) -> ShapeType:
+        return ary.shape[:axis] + ary.shape[axis+1:]
+
+    for i_ary, ary in enumerate(arrays[1:]):
+        
         allocator = allocator or ary.allocator
 
         if shape is None:
             # first array
             shape = list(ary.shape)
+
         else:
             if len(ary.shape) != len(shape):
                 raise ValueError("%d'th array has different number of axes "
                         "(shold have %d, has %d)"
                         % (i_ary, len(ary.shape), len(shape)))
 
-                ary_shape_list = list(ary.shape)
-                if (ary_shape_list[:axis] != shape[:axis]
-                        or ary_shape_list[axis+1:] != shape[axis+1:]):
+                if (array.ndim != arrays[0].ndim
+                        or shape_except_axis(array) != shape_except_axis(arrays[0]):
                     raise ValueError("%d'th array has residual not matching "
                             "other arrays" % i_ary)
 
@@ -1799,7 +1816,7 @@ def concatenate(arrays, axis=0, queue=None, allocator=None):
 
     shape = tuple(shape)
     dtype = np.find_common_type([ary.dtype for ary in arrays], [])
-    result = empty(queue, shape, dtype, allocator=allocator)
+    result = empty(shape, dtype, allocator=allocator)
 
     full_slice = (slice(None),) * len(shape)
 
@@ -1817,14 +1834,16 @@ def concatenate(arrays, axis=0, queue=None, allocator=None):
     return result
 
 
-def stack(arrays, axis=0, queue=None):
+def stack(arrays, axis=0, allocator=None):
+
+    #impllementation is borrowed from pyopencl.array.stack()
      """
      Join a sequence of arrays along a new axis.
     
-    :arg arrays: A sequnce of :class:`Array`.
+    :arg arrays: A sequnce of :class:`GPUArray`.
     :arg axis: Index of the dimension of the new axis in the result array.
         Can be -1, for the new axis to be last dimension.
-    :returns: :class:`Array`
+    :returns: :class:`GPUArray`
     
     """
 
@@ -1835,11 +1854,6 @@ def stack(arrays, axis=0, queue=None):
     input_ndim = arrays[0].ndim
     axis = input_ndim if axis == -1 else axis
 
-    if queue is None:
-        for ary in arrays:
-            if ary.queue is not None:
-                queue = ary.queue
-                break
 
     if not all(ary.shape == input_shape for ary in arrays[1:]):
         raise ValueError("arrays must have the same shape")
@@ -1860,12 +1874,8 @@ def stack(arrays, axis=0, queue=None):
 
     result_shape = input_shape[:axis] + (len(arrays),) + input_shape[axis:]
 
-    result = empty(queue, result_shape, np.result_type(*(ary.dtype
-                                                         for ary in arrays)),
-
-                       # TODO: reconsider once arrays support non-contiguous
-                       # assignments
-                      order="C" if axis == 0 else "F")
+    
+    result = empty(shape = result_shape, dtype = np.result_type(*(ary.dtype for ary in arrays)), allocator = allocator, order="C" if axis == 0 else "F")
 
     for i, ary in enumerate(arrays):
         idx = (slice(None),)*axis + (i,) + (slice(None),)*(input_ndim-axis)
