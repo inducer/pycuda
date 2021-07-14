@@ -1772,14 +1772,12 @@ def multi_put(arrays, dest_indices, dest_shape=None, out=None, stream=None):
 
 # {{{ shape manipulation
 
-
 def concatenate(arrays, axis=0, allocator=None):
 
     # impllementation is borrowed from pyopencl.array.concatenate()
     # {{{ find properties of result array
     """
     Join a sequence of arrays along an existing axis.
-    
     :arg arrays: A sequnce of :class:`GPUArray`.
     :arg axis: Index of the dimension of the new axis in the result array.
         Can be -1, for the new axis to be last dimension.
@@ -1823,13 +1821,11 @@ def concatenate(arrays, axis=0, allocator=None):
     base_idx = 0
     for ary in arrays:
         my_len = ary.shape[axis]
-        print(type(result))
-        result[0] =  full_slice[:axis] + (slice(base_idx, base_idx+my_len),) + full_slice[axis+1:]
-        result[1] = ary
-
+        result[full_slice[:axis] + (slice(base_idx, base_idx+my_len),) + full_slice[axis+1:] ] = ary
         base_idx += my_len
 
     return result
+
 
 
 def stack(arrays, axis=0, allocator=None):
