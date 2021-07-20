@@ -11,6 +11,7 @@ import pycuda.gpuarray as gpuarray
 import pycuda.driver as drv
 from pycuda.compiler import SourceModule
 
+import pytest
 
 class TestGPUArray:
     @mark_cuda_test
@@ -467,40 +468,40 @@ class TestGPUArray:
     def test_arange(self):
         a = gpuarray.arange(12, dtype=np.float32)
         assert (np.arange(12, dtype=np.float32) == a.get()).all()
-
+ 
     
     @mark_cuda_test
-    def test_stack(input_dims,order):
-
-        shape = (2, 2, 2)[:input_dims]
-        axis = -1 if order == "F" else 0
-
-        from numpy.random import default_rng
-        rng = default_rng()
-        x_in = rng.random(size=shape)
-        y_in = rng.random(size=shape)
-        x_in = x_in if order == "C" else np.asfortranarray(x_in)
-        y_in = y_in if order == "C" else np.asfortranarray(y_in)
+    def test_stack(self):
         
-        x_gpu = gpuarray.to_gpu(x_in)
-        y_gpu = gpuarray.to_gpu(y_in)
-
-        np.testing.assert_allclose(gpuarray.stack((x_gpu, y_gpu), axis=axis).get(),
-                                np.stack((x_in, y_in), axis=axis))
+        orders = ["F","C"]
+        input_dims = 2
         
-        x_gpu_shape = x_gpu.shape
-        y_gpu_shape = y_gpu.shape
+        for order in orders:
+            shape = (2, 2, 2)[:input_dims]
+            axis = -1 if order == "F" else 0
 
-        np.testing.assert_allclose(x_gpu_shape,shape)
+            from numpy.random import default_rng
+            rng = default_rng()
+            x_in = rng.random(size=shape)
+            y_in = rng.random(size=shape)
+            x_in = x_in if order == "C" else np.asfortranarray(x_in)
+            y_in = y_in if order == "C" else np.asfortranarray(y_in)
+        
+            x_gpu = gpuarray.to_gpu(x_in)
+            y_gpu = gpuarray.to_gpu(y_in)
 
-        np.testing.assert_allclose(y_gpu_shape,shape)
+            np.testing.assert_allclose(gpuarray.stack((x_gpu, y_gpu), axis=axis).get(),
+                    np.stack((x_in, y_in), axis=axis))
+        
+            np.testing.assert_allclose(gpuarray.stack((x_gpu, y_gpu), axis=axis).shape,
+                    np.stack((x_in, y_in), axis=axis).shape)
 
 
     @mark_cuda_test
     def test_concatenate(self):
-
+        
         from pycuda.curandom import rand as curand
-     
+         
         a_dev = curand((5, 15, 20), dtype=np.float32)
         b_dev = curand((4, 15, 20), dtype=np.float32)
         c_dev = curand((3, 15, 20), dtype=np.float32)
@@ -511,12 +512,8 @@ class TestGPUArray:
         cat_dev = gpuarray.concatenate((a_dev, b_dev, c_dev))
         cat = np.concatenate((a, b, c))
 
-        assert la.norm(cat - cat_dev.get()) == 0
+        np.testing.assert_allclose(cat,cat_dev.get())
 
-# }}}
-
-# {{{ conditionals, any, all
-    
 
     @mark_cuda_test
     def test_reverse(self):
