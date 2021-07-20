@@ -1779,6 +1779,7 @@ def concatenate(arrays, axis=0, allocator=None):
     # {{{ find properties of result array
 
     shape = None
+
     def shape_except_axis(ary: GPUArray):
         return ary.shape[:axis] + ary.shape[axis+1:]
 
@@ -1828,7 +1829,7 @@ def stack(arrays, axis=0, allocator=None):
     :returns: :class:`GPUArray`
     """
     # implementation is borrowed from pyopencl.array.stack()
-    allocator = allocator or arrays[0].allocator  
+    allocator = allocator or arrays[0].allocator
 
     if not arrays:
         raise ValueError("need at least one array to stack")
@@ -1844,8 +1845,7 @@ def stack(arrays, axis=0, allocator=None):
         raise ValueError("invalid axis")
 
     result_shape = input_shape[:axis] + (len(arrays),) + input_shape[axis:]
-    
-    result = empty(shape=result_shape, dtype = np.result_type(*(ary.dtype for ary in arrays)), allocator = allocator, order = "C" if axis == 0 else "F")
+    result = empty(shape=result_shape, dtype=np.result_type(*(ary.dtype for ary in arrays)), allocator=allocator, order="C" if axis == 0 else "F")
 
     for i, ary in enumerate(arrays):
 
