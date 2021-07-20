@@ -1768,9 +1768,6 @@ def multi_put(arrays, dest_indices, dest_shape=None, out=None, stream=None):
 # {{{ shape manipulation
 
 def concatenate(arrays, axis=0, allocator=None):
-
-    # impllementation is borrowed from pyopencl.array.concatenate()
-    # {{{ find properties of result array
     """
     Join a sequence of arrays along an existing axis.
     :arg arrays: A sequnce of :class:`GPUArray`.
@@ -1778,6 +1775,9 @@ def concatenate(arrays, axis=0, allocator=None):
         Can be -1, for the new axis to be last dimension.
     :returns: :class:`GPUArray`
     """
+    # implementation is borrowed from pyopencl.array.concatenate()
+    # {{{ find properties of result array
+
     shape = None
     def shape_except_axis(ary: GPUArray):
         return ary.shape[:axis] + ary.shape[axis+1:]
@@ -1803,6 +1803,7 @@ def concatenate(arrays, axis=0, allocator=None):
             shape[axis] += ary.shape[axis]
 
     # }}}
+
     shape = tuple(shape)
     dtype = np.find_common_type([ary.dtype for ary in arrays], [])
     result = empty(shape, dtype, allocator=allocator)
@@ -1820,15 +1821,13 @@ def concatenate(arrays, axis=0, allocator=None):
 
 def stack(arrays, axis=0, allocator=None):
     """
-    implementation is borrowed from pyopencl.array.stack()
-
     Join a sequence of arrays along a new axis.
     :arg arrays: A sequnce of :class:`GPUArray`.
     :arg axis: Index of the dimension of the new axis in the result array.
         Can be -1, for the new axis to be last dimension.
     :returns: :class:`GPUArray`
-    
     """
+    # implementation is borrowed from pyopencl.array.stack()
     allocator = allocator or arrays[0].allocator  
 
     if not arrays:
@@ -1843,16 +1842,6 @@ def stack(arrays, axis=0, allocator=None):
 
     if not (0 <= axis <= input_ndim):
         raise ValueError("invalid axis")
-
-    if (axis == 0 and not all(ary.flags.c_contiguous
-                                       for ary in arrays)):
-        # pycuda.GPUArray.__setitem__ does not support non-contiguous assignments
-        raise NotImplementedError
-
-    if (axis == input_ndim and not all(ary.flags.f_contiguous
-                                               for ary in arrays)):
-        # pycuda.Array.__setitem__ does not support non-contiguous assignments
-        raise NotImplementedError
 
     result_shape = input_shape[:axis] + (len(arrays),) + input_shape[axis:]
     
