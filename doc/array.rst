@@ -345,7 +345,7 @@ Constructing :class:`GPUArray` Instances
 
 .. function:: stack(arrays, axis=0, allocator=None)
 
-   Joing a sequeunce of arrays along a new axis
+   Join a sequence of arrays along a new axis.
 
  
 Conditionals
