@@ -1793,7 +1793,7 @@ def concatenate(arrays, axis=0, allocator=None):
         else:
             if len(ary.shape) != len(shape):
                 raise ValueError("%d'th array has different number of axes "
-                        "(shold have %d, has %d)"
+                        "(should have %d, has %d)"
                         % (i_ary, len(ary.shape), len(shape)))
 
             if (ary.ndim != arrays[0].ndim
@@ -1845,7 +1845,9 @@ def stack(arrays, axis=0, allocator=None):
         raise ValueError("invalid axis")
 
     result_shape = input_shape[:axis] + (len(arrays),) + input_shape[axis:]
-    result = empty(shape=result_shape, dtype=np.result_type(*(ary.dtype for ary in arrays)), allocator=allocator, order="C" if axis == 0 else "F")
+    result = empty(shape=result_shape,
+            dtype=np.result_type(*(ary.dtype for ary in arrays)),
+            allocator=allocator, order="C" if axis == 0 else "F")
 
     for i, ary in enumerate(arrays):
 
