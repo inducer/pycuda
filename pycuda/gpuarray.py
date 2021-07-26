@@ -1779,7 +1779,7 @@ def concatenate(arrays, axis=0, allocator=None):
     # {{{ find properties of result array
 
     shape = None
-    
+
     def shape_except_axis(ary: GPUArray):
         return ary.shape[:axis] + ary.shape[axis+1:]
 
@@ -1820,7 +1820,7 @@ def concatenate(arrays, axis=0, allocator=None):
     return result
 
 
- def stack(arrays, axis=0, allocator=None):
+def stack(arrays, axis=0, allocator=None):
     """
     Join a sequence of arrays along a new axis.
     :arg arrays: A sequnce of :class:`GPUArray`.
