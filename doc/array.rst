@@ -343,7 +343,7 @@ Constructing :class:`GPUArray` Instances
 
     Join a sequence of arrays along an existing axis.
 
- .. function:: stack(arrays, axis=0, allocator=None)
+.. function:: stack(arrays, axis=0, allocator=None)
 
     Join a sequence of arrays along a new axis.
 
