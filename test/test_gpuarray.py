@@ -469,6 +469,53 @@ class TestGPUArray:
         assert (np.arange(12, dtype=np.float32) == a.get()).all()
 
     @mark_cuda_test
+    def test_stack(self):
+
+        orders = ["F", "C"]
+        input_dims_lst = [0, 1, 2]
+
+        for order in orders:
+            for input_dims in input_dims_lst:
+                shape = (2, 2, 2)[:input_dims]
+                axis = -1 if order == "F" else 0
+
+                from numpy.random import default_rng
+                rng = default_rng()
+                x_in = rng.random(size=shape)
+                y_in = rng.random(size=shape)
+                x_in = x_in if order == "C" else np.asfortranarray(x_in)
+                y_in = y_in if order == "C" else np.asfortranarray(y_in)
+
+                x_gpu = gpuarray.to_gpu(x_in)
+                y_gpu = gpuarray.to_gpu(y_in)
+
+                numpy_stack = np.stack((x_in, y_in), axis=axis)
+                gpuarray_stack = gpuarray.stack((x_gpu, y_gpu), axis=axis)
+
+                np.testing.assert_allclose(gpuarray_stack.get(), numpy_stack)
+
+                assert gpuarray_stack.shape == numpy_stack.shape
+
+    @mark_cuda_test
+    def test_concatenate(self):
+
+    from pycuda.curandom import rand as curand
+
+        a_dev = curand((5, 15, 20), dtype=np.float32)
+        b_dev = curand((4, 15, 20), dtype=np.float32)
+        c_dev = curand((3, 15, 20), dtype=np.float32)
+        a = a_dev.get()
+        b = b_dev.get()
+        c = c_dev.get()
+
+        cat_dev = gpuarray.concatenate((a_dev, b_dev, c_dev))
+        cat = np.concatenate((a, b, c))
+
+        np.testing.assert_allclose(cat, cat_dev.get())
+
+        assert cat.shape == cat_dev.shape
+
+    @mark_cuda_test
     def test_reverse(self):
         a = np.array([1, 2, 3, 4, 5, 6, 7, 8, 9, 10]).astype(np.float32)
         a_cpu = gpuarray.to_gpu(a)
