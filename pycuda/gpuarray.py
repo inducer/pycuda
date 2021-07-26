@@ -1767,6 +1767,95 @@ def multi_put(arrays, dest_indices, dest_shape=None, out=None, stream=None):
 
 # {{{ shape manipulation
 
+def concatenate(arrays, axis=0, allocator=None):
+     """
+     Join a sequence of arrays along an existing axis.
+     :arg arrays: A sequnce of :class:`GPUArray`.
+     :arg axis: Index of the dimension of the new axis in the result array.
+         Can be -1, for the new axis to be last dimension.
+     :returns: :class:`GPUArray`
+     """
+     # implementation is borrowed from pyopencl.array.concatenate()
+     # {{{ find properties of result array
+
+     shape = None
+
+     def shape_except_axis(ary: GPUArray):
+         return ary.shape[:axis] + ary.shape[axis+1:]
+
+     for i_ary, ary in enumerate(arrays):
+         allocator = allocator or ary.allocator
+
+         if shape is None:
+             # first array
+             shape = list(ary.shape)
+
+         else:
+             if len(ary.shape) != len(shape):
+                 raise ValueError("%d'th array has different number of axes "
+                         "(should have %d, has %d)"
+                         % (i_ary, len(ary.shape), len(shape)))
+
+             if (ary.ndim != arrays[0].ndim
+                     or shape_except_axis(ary) != shape_except_axis(arrays[0])):
+                 raise ValueError("%d'th array has residual not matching "
+                         "other arrays" % i_ary)
+
+             shape[axis] += ary.shape[axis]
+
+     # }}}
+
+     shape = tuple(shape)
+     dtype = np.find_common_type([ary.dtype for ary in arrays], [])
+     result = empty(shape, dtype, allocator=allocator)
+
+     full_slice = (slice(None),) * len(shape)
+
+     base_idx = 0
+     for ary in arrays:
+         my_len = ary.shape[axis]
+         result[full_slice[:axis] + (slice(base_idx, base_idx+my_len),) + full_slice[axis+1:]] = ary
+         base_idx += my_len
+
+     return result
+
+
+ def stack(arrays, axis=0, allocator=None):
+     """
+     Join a sequence of arrays along a new axis.
+     :arg arrays: A sequnce of :class:`GPUArray`.
+     :arg axis: Index of the dimension of the new axis in the result array.
+         Can be -1, for the new axis to be last dimension.
+     :returns: :class:`GPUArray`
+     """
+     # implementation is borrowed from pyopencl.array.stack()
+     allocator = allocator or arrays[0].allocator
+
+     if not arrays:
+         raise ValueError("need at least one array to stack")
+
+     input_shape = arrays[0].shape
+     input_ndim = arrays[0].ndim
+     axis = input_ndim if axis == -1 else axis
+
+     if not all(ary.shape == input_shape for ary in arrays[1:]):
+         raise ValueError("arrays must have the same shape")
+
+     if not (0 <= axis <= input_ndim):
+         raise ValueError("invalid axis")
+
+     result_shape = input_shape[:axis] + (len(arrays),) + input_shape[axis:]
+     result = empty(shape=result_shape,
+             dtype=np.result_type(*(ary.dtype for ary in arrays)),
+             allocator=allocator, order="C" if axis == 0 else "F")
+
+     for i, ary in enumerate(arrays):
+
+         idx = (slice(None),)*axis + (i,) + (slice(None),)*(input_ndim-axis)
+         result[idx] = ary
+
+     return result
+
 
 def transpose(a, axes=None):
     """Permute the dimensions of an array.
