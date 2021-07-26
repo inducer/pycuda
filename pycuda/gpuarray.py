@@ -1779,7 +1779,7 @@ def concatenate(arrays, axis=0, allocator=None):
     # {{{ find properties of result array
 
     shape = None
-
+    
     def shape_except_axis(ary: GPUArray):
         return ary.shape[:axis] + ary.shape[axis+1:]
 

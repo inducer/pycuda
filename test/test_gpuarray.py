@@ -499,7 +499,7 @@ class TestGPUArray:
     @mark_cuda_test
     def test_concatenate(self):
 
-    from pycuda.curandom import rand as curand
+        from pycuda.curandom import rand as curand
 
         a_dev = curand((5, 15, 20), dtype=np.float32)
         b_dev = curand((4, 15, 20), dtype=np.float32)
