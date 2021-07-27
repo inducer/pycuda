@@ -339,6 +339,15 @@ Constructing :class:`GPUArray` Instances
     Return the :class:`GPUArray` ``[a[indices[0]], ..., a[indices[n]]]``.
     For the moment, *a* must be a type that can be bound to a texture.
 
+.. function:: concatenate(arrays, axis=0, allocator=None)
+
+    Join a sequence of arrays along an existing axis.
+
+.. function:: stack(arrays, axis=0, allocator=None)
+
+    Join a sequence of arrays along a new axis.
+
+
 Conditionals
 ^^^^^^^^^^^^
 
