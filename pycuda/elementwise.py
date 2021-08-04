@@ -665,6 +665,32 @@ def get_pow_array_kernel(dtype_x, dtype_y, dtype_z):
         "pow_method",
     )
 
+@context_dependent_memoize
+def get_rpow_kernel(dtype_x, dtype_y, dtype_z , is_base_array, is_exp_array):
+
+    if is_base_array:
+        x = "x[i]"
+        x_ctype = "%(tp_x)s *x"
+    else:
+        x = "x"
+        x_ctype = "%(tp_x)s x"
+
+    if is_exp_array:
+        y = "y[i]"
+        y_ctype = "%(tp_y)s *y"
+    else:
+        y = "y"
+        y_ctype = "%(tp_y)s y"
+
+
+    return get_elwise_kernel(
+            ("%(tp_z)s *z, " + x_ctype + ", "+y_ctype) % {
+                "tp_x": dtype_to_ctype(dtype_x),
+                "tp_y": dtype_to_ctype(dtype_y),
+                "tp_z": dtype_to_ctype(dtype_z),
+                },
+            "z[i] = %s" % result,
+            name="pow_method")
 
 @context_dependent_memoize
 def get_fmod_kernel():
