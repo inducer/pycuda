@@ -515,6 +515,12 @@ class GPUArray:
 
         return out
 
+    def _rpow_scalar(result, base, exponent):
+        base = np.array(base)
+        return elementwise.get_rpow_kernel(
+                base.dtype, exponent.dtype, result.dtype,
+                is_base_array=False, is_exp_array=True)
+
     def _new_like_me(self, dtype=None, order="C"):
         strides = None
         if dtype is None:
@@ -838,6 +844,14 @@ class GPUArray:
 
         """
         return self._pow(other, new=False)
+
+    def __rpow__(self, other):
+        # other must be a scalar
+        common_dtype = _get_common_dtype(self, other)
+        result = self._new_like_me(common_dtype)
+        result.add_event(
+                self._rpow_scalar(result, common_dtype.type(other), self))
+        return result
 
     def reverse(self, stream=None):
         """Return this array in reversed order. The array is treated
