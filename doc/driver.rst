@@ -331,7 +331,7 @@ Constants
         CUDA 6.0 and above.
 
         .. versionadded:: 2014.1
-        
+
     .. attribute :: HOST_NATIVE_ATOMIC_SUPPORTED
         SINGLE_TO_DOUBLE_PRECISION_PERF_RATIO
         PAGEABLE_MEMORY_ACCESS
@@ -813,7 +813,7 @@ Devices and Contexts
 Concurrency and Streams
 -----------------------
 
-.. class:: Stream(flags=0)
+.. class:: Stream(flags=0, priority=0)
 
     A handle for a queue of operations that will be carried out in order.
 

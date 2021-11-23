@@ -997,8 +997,8 @@ namespace pycuda
       CUstream m_stream;
 
     public:
-      stream(unsigned int flags=0)
-      { CUDAPP_CALL_GUARDED(cuStreamCreate, (&m_stream, flags)); }
+      stream(unsigned int flags=0, int priority=0)
+      { CUDAPP_CALL_GUARDED(cuStreamCreateWithPriority, (&m_stream, flags, priority)); }
 
       ~stream()
       {
