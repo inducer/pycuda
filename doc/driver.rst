@@ -1807,8 +1807,8 @@ Code on the Device: Modules and Functions
         *arg1* through *argn* are the positional C arguments to the kernel. See
         :meth:`param_set` for details. See especially the warnings there.
 
-        *grid* specifies, as a 2-tuple, the number of thread blocks to launch, as a
-        two-dimensional grid.
+        *grid* specifies, as a tuple of up to three integer entries, the number
+        of thread blocks to launch, as a multi-dimensional grid.
         *stream*, if specified, is a :class:`Stream` instance serializing the
         copying of input arguments (if any), execution, and the copying
         of output arguments (again, if any).
@@ -1853,6 +1853,10 @@ Code on the Device: Modules and Functions
             which can make it somewhat slow. For a kernel that is invoked often,
             this can be inconvenient. For a faster (but mildly less convenient) way
             of invoking kernels, see :meth:`prepare` and :meth:`prepared_call`.
+            
+        .. note::
+        
+            *grid* with more than two dimensions requires CUDA 4.0 or newer.
 
     .. method:: param_set_texref(texref)
 
