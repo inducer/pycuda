@@ -1,0 +1,9 @@
+
+blank_issues_enabled: true
+contact_links:
+  - name: ❓ Question
+    url: https://github.com/inducer/pycuda/discussions/categories/q-a
+    about: Ask and answer questions about PyCUDA on Discussions
+  - name: 🔧 Troubleshooting
+    url: https://github.com/inducer/pycuda/discussions/categories/troubleshooting
+    about: For troubleshooting help, see the Discussions
