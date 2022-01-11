@@ -68,8 +68,8 @@ original *a*::
 
   a_doubled = numpy.empty_like(a)
   cuda.memcpy_dtoh(a_doubled, a_gpu)
-  print a_doubled
-  print a
+  print(a_doubled)
+  print(a)
 
 This will print something like this::
 
@@ -127,8 +127,8 @@ achieved with much less writing::
 
   a_gpu = gpuarray.to_gpu(numpy.random.randn(4,4).astype(numpy.float32))
   a_doubled = (2*a_gpu).get()
-  print a_doubled
-  print a_gpu
+  print(a_doubled)
+  print(a_gpu)
 
 Advanced Topics
 ---------------
