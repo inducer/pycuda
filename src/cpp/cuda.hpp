@@ -990,6 +990,7 @@ namespace pycuda
 
   // {{{ stream
   class event;
+  class graph;
 
   class stream : public boost::noncopyable, public context_dependent
   {
@@ -1022,6 +1023,10 @@ namespace pycuda
 #if CUDAPP_CUDA_VERSION >= 3020
       void wait_for_event(const event &evt);
 #endif
+#if CUDAPP_CUDA_VERSION >= 10000
+      void begin_capture(CUstreamCaptureMode mode);
+      graph *end_capture();
+#endif
 
       bool is_done() const
       {
@@ -1040,6 +1045,62 @@ namespace pycuda
       }
   };
 
+  // }}}
+
+  // {{{ graph
+#if CUDAPP_CUDA_VERSION >= 10000
+  class graph_exec : public boost::noncopyable, public context_dependent
+  {
+    private:
+      CUgraphExec m_exec;
+
+    public:
+      graph_exec(CUgraphExec exec)
+        : m_exec(exec)
+      { }
+
+      void launch(py::object stream_py)
+      {
+        PYCUDA_PARSE_STREAM_PY;
+        CUDAPP_CALL_GUARDED(cuGraphLaunch, (m_exec, s_handle))
+      }
+  };
+
+  class graph : public boost::noncopyable, public context_dependent
+  {
+    private:
+      CUgraph m_graph;
+
+    public:
+      graph(CUgraph graph)
+        : m_graph(graph)
+      { }
+
+      graph_exec *instance()
+      {
+        CUgraphExec instance;
+        CUDAPP_CALL_GUARDED(cuGraphInstantiate, (&instance, m_graph, NULL, NULL, 0))
+        return new graph_exec(instance);
+      }
+
+      void debug_dot_print(std::string path)
+      {
+        CUDAPP_CALL_GUARDED(cuGraphDebugDotPrint, (m_graph, path.c_str(), 0))
+      }
+  };
+
+  inline void stream::begin_capture(CUstreamCaptureMode mode = CU_STREAM_CAPTURE_MODE_GLOBAL)
+  {
+    CUDAPP_CALL_GUARDED(cuStreamBeginCapture, (m_stream, mode));
+  }
+
+  inline graph *stream::end_capture()
+  {
+    CUgraph result;
+    CUDAPP_CALL_GUARDED(cuStreamEndCapture, (m_stream, &result))
+    return new graph(result);
+  }
+#endif
   // }}}
 
   // {{{ array
