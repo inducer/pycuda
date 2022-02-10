@@ -764,59 +764,41 @@ class GPUArray:
         Do the pow operator.
         with new, the user can choose between ipow or just pow
         """
-
-        if isinstance(other, GPUArray):
-            if not self.flags.forc or not other.flags.forc:
-                raise RuntimeError(
-                    "only contiguous arrays may "
-                    "be used as arguments to this operation"
-                )
-
-            assert self.shape == other.shape
-
-            if new:
-                result = self._new_like_me(_get_common_dtype(self, other))
-            else:
-                result = self
-
-            func = elementwise.get_pow_array_kernel(
-                self.dtype, other.dtype, result.dtype
-            )
-
-            func.prepared_async_call(
-                self._grid,
-                self._block,
-                None,
-                self.gpudata,
-                other.gpudata,
-                result.gpudata,
-                self.mem_size,
-            )
-
-            return result
+        common_dtype = _get_common_dtype(self, other)
+        if new:
+            result = self._new_like_me(common_dtype)
         else:
-            if not self.flags.forc:
-                raise RuntimeError(
-                    "only contiguous arrays may "
-                    "be used as arguments to this operation"
-                )
+            result = self
 
-            if new:
-                result = self._new_like_me()
-            else:
-                result = self
-            func = elementwise.get_pow_kernel(self.dtype)
-            func.prepared_async_call(
-                self._grid,
-                self._block,
-                None,
-                other,
-                self.gpudata,
-                result.gpudata,
-                self.mem_size,
-            )
+        # {{{ sanity checks
 
-            return result
+        if (not self.flags.forc) or (isinstance(other, GPUArray)
+                                     and not other.flags.forc):
+            raise RuntimeError("only contiguous arrays may "
+                               "be used as arguments to this operation")
+        assert not isinstance(other, GPUArray) or other.shape == self.shape
+
+        # }}}
+
+        func = elementwise.get_pow_array_kernel(
+            self.dtype,
+            common_dtype if np.isscalar(other) else other.dtype,
+            result.dtype,
+            not np.isscalar(self),
+            not np.isscalar(other)
+        )
+
+        func.prepared_async_call(
+            self._grid,
+            self._block,
+            None,
+            self.gpudata,
+            other if np.isscalar(other) else other.gpudata,
+            result.gpudata,
+            self.mem_size,
+        )
+
+        return result
 
     def __pow__(self, other):
         """pow function::
@@ -838,6 +820,27 @@ class GPUArray:
 
         """
         return self._pow(other, new=False)
+
+    def __rpow__(self, other):
+        common_dtype = _get_common_dtype(self, other)
+        result = self._new_like_me(common_dtype)
+
+        if not np.isscalar(other):
+            # Base is a gpuarray => do not cast.
+            base = other
+        else:
+            base = common_dtype.type(other)
+
+        func = elementwise.get_pow_array_kernel(
+            base.dtype, self.dtype, result.dtype,
+            is_base_array=not np.isscalar(other), is_exp_array=not np.isscalar(self))
+        # Evaluates z = x ** y
+        func.prepared_async_call(self._grid, self._block, None,
+                                 base if np.isscalar(base) else base.gpudata,  # x
+                                 self.gpudata,  # y
+                                 result.gpudata,  # z
+                                 self.mem_size)
+        return result
 
     def reverse(self, stream=None):
         """Return this array in reversed order. The array is treated

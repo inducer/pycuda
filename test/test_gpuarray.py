@@ -17,16 +17,18 @@ class TestGPUArray:
     def test_pow_array(self):
         a = np.array([1, 2, 3, 4, 5]).astype(np.float32)
         a_gpu = gpuarray.to_gpu(a)
+        b = np.array([1, 2, 3, 4, 5]).astype(np.float64)
+        b_gpu = gpuarray.to_gpu(b)
 
-        result = pow(a_gpu, a_gpu).get()
-        assert (np.abs(a ** a - result) < 1e-3).all()
+        result = pow(a_gpu, b_gpu).get()
+        np.testing.assert_allclose(a ** b, result, rtol=1e-6)
 
-        result = (a_gpu ** a_gpu).get()
-        assert (np.abs(pow(a, a) - result) < 1e-3).all()
+        result = (a_gpu ** b_gpu).get()
+        np.testing.assert_allclose(pow(a, b), result, rtol=1e-6)
 
-        a_gpu **= a_gpu
+        a_gpu **= b_gpu
         a_gpu = a_gpu.get()
-        assert (np.abs(pow(a, a) - a_gpu) < 1e-3).all()
+        np.testing.assert_allclose(pow(a, b), a_gpu, rtol=1e-6)
 
     @mark_cuda_test
     def test_pow_number(self):
@@ -34,11 +36,26 @@ class TestGPUArray:
         a_gpu = gpuarray.to_gpu(a)
 
         result = pow(a_gpu, 2).get()
-        assert (np.abs(a ** 2 - result) < 1e-3).all()
+        np.testing.assert_allclose(a ** 2, result, rtol=1e-6)
 
         a_gpu **= 2
         a_gpu = a_gpu.get()
-        assert (np.abs(a ** 2 - a_gpu) < 1e-3).all()
+        np.testing.assert_allclose(a ** 2, a_gpu, rtol=1e-6)
+
+    @mark_cuda_test
+    def test_rpow_array(self):
+        scalar = np.random.rand()
+        a = abs(np.random.rand(10))
+        a_gpu = gpuarray.to_gpu(a)
+
+        result = (scalar ** a_gpu).get()
+        np.testing.assert_allclose(scalar ** a, result)
+
+        result = (a_gpu ** a_gpu).get()
+        np.testing.assert_allclose(a ** a, result)
+
+        result = (a_gpu ** scalar).get()
+        np.testing.assert_allclose(a ** scalar, result)
 
     @mark_cuda_test
     def test_numpy_integer_shape(self):

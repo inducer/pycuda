@@ -631,38 +631,44 @@ def get_arange_kernel(dtype):
 
 
 @context_dependent_memoize
-def get_pow_kernel(dtype):
-    if dtype == np.float32:
+def get_pow_array_kernel(dtype_x, dtype_y, dtype_z, is_base_array, is_exp_array):
+    """
+    Returns the kernel for the operation: ``z = x ** y``
+    """
+    if dtype_z == np.float32:
         func = "powf"
     else:
+        # FIXME: Casting args to double-precision not
+        # ideal for all cases (ex. int args)
         func = "pow"
 
-    return get_elwise_kernel(
-        "%(tp)s value, %(tp)s *y, %(tp)s *z"
-        % {
-            "tp": dtype_to_ctype(dtype),
-        },
-        "z[i] = %s(y[i], value)" % func,
-        "pow_method",
-    )
+    if not is_base_array and is_exp_array:
+        x_ctype = "%(tp_x)s x"
+        y_ctype = "%(tp_y)s *y"
+        func = "%s(x,y[i])" % func
 
+    elif is_base_array and is_exp_array:
+        x_ctype = "%(tp_x)s *x"
+        y_ctype = "%(tp_y)s *y"
+        func = "%s(x[i],y[i])" % func
 
-@context_dependent_memoize
-def get_pow_array_kernel(dtype_x, dtype_y, dtype_z):
-    if np.float64 in [dtype_x, dtype_y]:
-        func = "pow"
+    elif is_base_array and not is_exp_array:
+        x_ctype = "%(tp_x)s *x"
+        y_ctype = "%(tp_y)s y"
+        func = "%s(x[i],y)" % func
+
     else:
-        func = "powf"
+        raise AssertionError
 
     return get_elwise_kernel(
-        "%(tp_x)s *x, %(tp_y)s *y, %(tp_z)s *z"
+        (x_ctype + ", " + y_ctype + ", " + "%(tp_z)s *z")
         % {
             "tp_x": dtype_to_ctype(dtype_x),
             "tp_y": dtype_to_ctype(dtype_y),
             "tp_z": dtype_to_ctype(dtype_z),
         },
-        "z[i] = %s(x[i], y[i])" % func,
-        "pow_method",
+        "z[i] = %s" % func,
+        name="pow_method"
     )
 
 
