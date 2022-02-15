@@ -1419,6 +1419,15 @@ namespace pycuda
       }
 #endif
 
+      // 10.0+ is a guess
+#if CUDAPP_CUDA_VERSION >= 10000
+      void set_attribute(CUfunction_attribute attr, int value) const
+      {
+        CUDAPP_CALL_GUARDED_WITH_TRACE_INFO(
+            cuFuncSetAttribute, (m_function, attr, value), m_symbol);
+      }
+#endif
+
 #if CUDAPP_CUDA_VERSION >= 3000 && defined(CUDAPP_POST_30_BETA)
       void set_cache_config(CUfunc_cache fc)
       {
