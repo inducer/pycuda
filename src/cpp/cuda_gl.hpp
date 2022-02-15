@@ -294,7 +294,7 @@ namespace pycuda { namespace gl {
         CUarray devptr;
         CUDAPP_CALL_GUARDED(cuGraphicsSubResourceGetMappedArray, 
             (&devptr, m_object->resource(), index, level));
-        std::auto_ptr<pycuda::array> result(
+        std::unique_ptr<pycuda::array> result(
             new pycuda::array(devptr, false));
         return result.release();
       }

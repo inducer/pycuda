@@ -1320,7 +1320,7 @@ namespace pycuda
   {
     CUtexref tr;
     CUDAPP_CALL_GUARDED(cuModuleGetTexRef, (&tr, mod->handle(), name));
-    std::auto_ptr<texture_reference> result(
+    std::unique_ptr<texture_reference> result(
         new texture_reference(tr, false));
     result->set_module(mod);
     return result.release();
@@ -1333,7 +1333,7 @@ namespace pycuda
   {
     CUsurfref sr;
     CUDAPP_CALL_GUARDED(cuModuleGetSurfRef, (&sr, mod->handle(), name));
-    std::auto_ptr<surface_reference> result(
+    std::unique_ptr<surface_reference> result(
         new surface_reference(sr));
     result->set_module(mod);
     return result.release();
@@ -1613,13 +1613,13 @@ namespace pycuda
   };
 
   inline Py_ssize_t mem_alloc_pitch(
-      std::auto_ptr<device_allocation> &da,
+      std::unique_ptr<device_allocation> &da,
         unsigned int width, unsigned int height, unsigned int access_size)
   {
     CUdeviceptr devptr;
     pycuda_size_t pitch;
     CUDAPP_CALL_GUARDED(cuMemAllocPitch, (&devptr, &pitch, width, height, access_size));
-    da = std::auto_ptr<device_allocation>(new device_allocation(devptr));
+    da = std::unique_ptr<device_allocation>(new device_allocation(devptr));
     return pitch;
   }
 

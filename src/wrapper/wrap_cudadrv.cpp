@@ -118,7 +118,7 @@ namespace
   py::tuple mem_alloc_pitch_wrap(
       size_t width, size_t height, unsigned int access_size)
   {
-    std::auto_ptr<device_allocation> da;
+    std::unique_ptr<device_allocation> da;
     Py_ssize_t pitch = mem_alloc_pitch(
         da, width, height, access_size);
     return py::make_tuple(
@@ -571,7 +571,7 @@ namespace
           py::stl_input_iterator<npy_intp>(),
           back_inserter(dims));
 
-    std::auto_ptr<Allocation> alloc(
+    std::unique_ptr<Allocation> alloc(
         new Allocation(
           tp_descr->elsize*pycuda::size_from_dims(dims.size(), &dims.front()),
           par1)
@@ -612,7 +612,7 @@ namespace
       throw pycuda::error("register_host_memory", CUDA_ERROR_INVALID_VALUE,
           "ary argument is not contiguous");
 
-    std::auto_ptr<registered_host_memory> regmem(
+    std::unique_ptr<registered_host_memory> regmem(
         new registered_host_memory(
           PyArray_DATA(ary.ptr()), PyArray_NBYTES(ary.ptr()), flags, ary));
 

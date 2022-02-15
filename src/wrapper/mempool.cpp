@@ -192,7 +192,7 @@ namespace
         py::stl_input_iterator<npy_intp>(),
         back_inserter(dims));
 
-    std::auto_ptr<pooled_host_allocation> alloc(
+    std::unique_ptr<pooled_host_allocation> alloc(
         new pooled_host_allocation(
           pool, tp_descr->elsize*pycuda::size_from_dims(dims.size(), &dims.front())));
 
