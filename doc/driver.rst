@@ -331,7 +331,7 @@ Constants
         CUDA 6.0 and above.
 
         .. versionadded:: 2014.1
-        
+
     .. attribute :: HOST_NATIVE_ATOMIC_SUPPORTED
         SINGLE_TO_DOUBLE_PRECISION_PERF_RATIO
         PAGEABLE_MEMORY_ACCESS
@@ -408,6 +408,18 @@ Constants
         CUDA 3.0 (post-beta) and above.
 
         .. versionadded:: 0.94
+
+    .. attribute:: CACHE_MODE_CA
+
+        .. versionadded:: 2022.1
+
+    .. attribute:: MAX_DYNAMIC_SHARED_SIZE_BYTES
+
+        .. versionadded:: 2022.1
+
+    .. attribute:: PREFERRED_SHARED_MEMORY_CARVEOUT
+
+        .. versionadded:: 2022.1
 
     .. attribute:: MAX
 
@@ -1853,9 +1865,9 @@ Code on the Device: Modules and Functions
             which can make it somewhat slow. For a kernel that is invoked often,
             this can be inconvenient. For a faster (but mildly less convenient) way
             of invoking kernels, see :meth:`prepare` and :meth:`prepared_call`.
-            
+
         .. note::
-        
+
             *grid* with more than two dimensions requires CUDA 4.0 or newer.
 
     .. method:: param_set_texref(texref)
@@ -1931,6 +1943,13 @@ Code on the Device: Modules and Functions
         CUDA 2.2 and newer.
 
         .. versionadded:: 0.93
+
+    .. method:: set_attribute(attr, value)
+
+        Set one of the (settable) attributes given by the
+        :class:`function_attribute` value *attr* to *value*.
+
+        .. versionadded:: 2022.1
 
     .. attribute:: set_cache_config(fc)
 
