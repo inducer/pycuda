@@ -201,6 +201,9 @@ def main():
         author_email="inform@tiker.net",
         license="MIT",
         url="http://mathema.tician.de/software/pycuda",
+        project_urls={
+            "Source": "https://github.com/inducer/pycuda",
+        },
         classifiers=[
             "Environment :: Console",
             "Development Status :: 5 - Production/Stable",
