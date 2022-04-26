@@ -1193,6 +1193,9 @@ BOOST_PYTHON_MODULE(_driver)
       .add_property("handle", &cl::handle_int)
       ;
   }
+
+  DEF_SIMPLE_FUNCTION(get_stream_priority_range);
+
   // }}}
 
   // {{{ stream

@@ -531,7 +531,6 @@ namespace pycuda
    * to push contexts that are already active at a deeper stack level, so we
    * maintain all contexts floating other than the top one.
    */
-
   // for friend decl
   namespace gl {
     boost::shared_ptr<context>
@@ -861,6 +860,16 @@ namespace pycuda
     context_stack::get().push(result);
     return result;
   }
+
+  inline
+  py::tuple get_stream_priority_range()
+  {
+    int leastPriority;
+    int greatestPriority;
+    CUDAPP_CALL_GUARDED(cuCtxGetStreamPriorityRange, (&leastPriority, &greatestPriority));
+    return py::make_tuple(leastPriority, greatestPriority);
+  }
+
 
 
 #if CUDAPP_CUDA_VERSION >= 7000
