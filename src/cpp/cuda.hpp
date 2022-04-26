@@ -861,6 +861,7 @@ namespace pycuda
     return result;
   }
 
+#if CUDAPP_CUDA_VERSION >= 7500
   inline
   py::tuple get_stream_priority_range()
   {
@@ -869,6 +870,7 @@ namespace pycuda
     CUDAPP_CALL_GUARDED(cuCtxGetStreamPriorityRange, (&leastPriority, &greatestPriority));
     return py::make_tuple(leastPriority, greatestPriority);
   }
+#endif
 
 
 
@@ -1006,8 +1008,17 @@ namespace pycuda
       CUstream m_stream;
 
     public:
-      stream(unsigned int flags=0, int priority=0)
-      { CUDAPP_CALL_GUARDED(cuStreamCreateWithPriority, (&m_stream, flags, priority)); }
+
+      #if CUDAPP_CUDA_VERSION >= 7500
+        stream(unsigned int flags=0, int priority=0)
+        { CUDAPP_CALL_GUARDED(cuStreamCreateWithPriority, (&m_stream, flags, priority)); }
+      #else
+        if (priority != 0)
+          throw pycuda::error("stream", CUDA_ERROR_INVALID_HANDLE,
+            "priority!=0 setting isn't supported for your CUDA version");
+        stream(unsigned int flags=0)
+        { CUDAPP_CALL_GUARDED(cuStreamCreate, (&m_stream, flags)); }
+      #endif
 
       ~stream()
       {
