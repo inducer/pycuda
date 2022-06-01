@@ -72,7 +72,10 @@ def preprocess_source(source, options, nvcc):
 
     unlink(source_path)
 
-    return stdout.decode("utf-8", "replace")
+    preprocessed_str = stdout.decode("utf-8", "replace")
+
+    # remove the temporary filename from the preprocessed source code to get reproducible hashes
+    return preprocessed_str.replace(os.path.basename(source_path), "")
 
 
 def compile_plain(source, options, keep, nvcc, cache_dir, target="cubin"):
