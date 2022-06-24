@@ -211,7 +211,7 @@ class GPUArray:
         except TypeError:
             # handle dim-0 ndarrays:
             if isinstance(shape, np.ndarray):
-                shape = np.asscalar(shape)
+                shape = shape.item()
             assert isinstance(shape, numbers.Integral)
             s = shape
             shape = (shape,)
@@ -221,7 +221,7 @@ class GPUArray:
 
         if isinstance(s, np.integer):
             # bombs if s is a Python integer
-            s = np.asscalar(s)
+            s = s.item()
 
         if strides is None:
             if order == "F":
