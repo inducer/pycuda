@@ -1,3 +1,7 @@
+include doc/conf.py
+include doc/*.rst
+include doc/Makefile
+
 include pycuda/cuda/*.hpp
 
 include src/cpp/*.hpp
