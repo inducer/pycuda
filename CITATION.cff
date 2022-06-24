@@ -1,0 +1,68 @@
+cff-version: 1.2.0
+message: "If you use this software, please cite it as below."
+authors:
+- family-names: "Kloeckner"
+  given-names: "Andreas"
+  orcid: "https://orcid.org/0000-0003-1228-519X"
+- family-names: Wohlgemuth
+  given-names: Gert
+- family-names: Lee
+  given-names: Gregory
+- family-names: Rybak
+  given-names: Tomasz
+- family-names: Nitz
+  given-names: Alex
+- family-names: Chiang
+  given-names: David
+- family-names: Seibert
+  given-names: Stan
+- family-names: Bergtholdt
+  given-names: Martin
+- family-names: Unterthiner
+  given-names: Thomas
+- family-names: Markall
+  given-names: Graham
+- family-names: Kotak
+  given-names: Mit
+- family-names: Favre-Nicolin
+  given-names: Vincent
+- family-names: Opanchuk
+  given-names: Bogdan
+- family-names: Merry
+  given-names: Bruce
+- family-names: Pinto
+  given-names: Nicolas
+- family-names: Milo
+  given-names: Fabrizio
+- family-names: Collignon
+  given-names: Thomas
+- family-names: Rathgeber
+  given-names: Florian
+- family-names: Perkins
+  given-names: Simon
+- family-names: Rutsky
+  given-names: Vladimir
+- family-names: Catanzaro
+  given-names: Bryan
+- family-names: Park
+  given-names: Alex
+- family-names: Witherden
+  given-names: Freddie
+- family-names: E. Givon
+  given-names: Lev
+- family-names: Pfister
+  given-names: Luke
+- family-names: Brubaker
+  given-names: Marcus
+- family-names: ZA
+  given-names: RA
+- family-names: Hausammann
+  given-names: Loic
+- family-names: Gohlke
+  given-names: Christoph
+
+title: "PyCUDA"
+version: 2022.1
+doi: 10.5281/zenodo.6728391
+date-released: 2022-06-10
+url: "https://github.com/inducer/pycuda"
