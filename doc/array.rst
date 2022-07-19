@@ -293,6 +293,11 @@ Constructing :class:`GPUArray` Instances
     Same as :func:`empty`, but the :class:`GPUArray` is zero-initialized before
     being returned.
 
+.. function:: ones(shape, dtype=np.float64, *, allocator=None, order="C")
+
+    Same as :func:`empty`, but the :class:`GPUArray` is one-initialized before
+    being returned.
+
 .. function:: empty_like(other_ary, dtype=None, order="K")
 
     Make a new, uninitialized :class:`GPUArray` having the same properties

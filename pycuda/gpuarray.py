@@ -1248,6 +1248,14 @@ def zeros(shape, dtype, allocator=drv.mem_alloc, order="C"):
     return result
 
 
+def ones(shape, dtype=np.float64, allocator=drv.mem_alloc, order="C"):
+    """Returns an array of the given shape and dtype filled with 1's."""
+    result = GPUArray(shape, dtype, allocator, order=order)
+    one = np.ones((), dtype)
+    result.fill(one)
+    return result
+
+
 def _array_like_helper(other_ary, dtype, order):
     """Set order, strides, dtype as in numpy's zero_like. """
     strides = None

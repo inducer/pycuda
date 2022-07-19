@@ -486,6 +486,15 @@ class TestGPUArray:
         assert (np.arange(12, dtype=np.float32) == a.get()).all()
 
     @mark_cuda_test
+    def test_ones(self):
+
+        ones = np.ones(10)
+        ones_gpu = gpuarray.ones(10)
+
+        np.testing.assert_allclose(ones, ones_gpu.get(), rtol=1e-6)
+        assert ones.dtype == ones_gpu.dtype
+
+    @mark_cuda_test
     def test_stack(self):
 
         orders = ["F", "C"]
