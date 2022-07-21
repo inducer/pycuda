@@ -385,6 +385,13 @@ class GPUArray:
     def __hash__(self):
         raise TypeError("GPUArrays are not hashable.")
 
+    def __bool__(self):
+        if self.size == 1:
+            return bool(self.get())
+        else:
+            raise ValueError("The truth value of an array with "
+                    "more than one element is ambiguous. Use a.any() or a.all()")
+
     @property
     def ptr(self):
         return self.gpudata.__int__()

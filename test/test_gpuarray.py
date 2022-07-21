@@ -1366,6 +1366,14 @@ class TestGPUArray:
             gpuarray.logical_not(gpuarray.ones(10)).get(),
             np.logical_not(np.ones(10)))
 
+    def test_truth_value(self):
+        for i in range(5):
+            shape = (1,)*i
+            zeros = gpuarray.zeros(shape, dtype="float32")
+            ones = gpuarray.ones(shape, dtype="float32")
+            assert bool(ones)
+            assert not bool(zeros)
+
 
 if __name__ == "__main__":
     # make sure that import failures get reported, instead of skipping the tests.
