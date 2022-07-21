@@ -739,7 +739,7 @@ class GPUArray:
         if len(self.shape):
             return self.shape[0]
         else:
-            return TypeError("scalar has no len()")
+            raise TypeError("len() of unsized object")
 
     def __abs__(self):
         """Return a `GPUArray` of the absolute values of the elements
