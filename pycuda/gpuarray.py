@@ -1121,7 +1121,10 @@ class GPUArray:
         )
 
     def __setitem__(self, index, value):
-        _memcpy_discontig(self[index], value)
+        if np.isscalar(value):
+            self[index].fill(value)
+        else:
+            _memcpy_discontig(self[index], value)
 
     # }}}
 

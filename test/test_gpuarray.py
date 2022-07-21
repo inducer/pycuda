@@ -1374,6 +1374,12 @@ class TestGPUArray:
             assert bool(ones)
             assert not bool(zeros)
 
+    def test_setitem_scalar(self):
+        a = gpuarray.zeros(5, "float64") + 42
+        np.testing.assert_allclose(a.get(), 42)
+        a[...] = 1729
+        np.testing.assert_allclose(a.get(), 1729)
+
 
 if __name__ == "__main__":
     # make sure that import failures get reported, instead of skipping the tests.
