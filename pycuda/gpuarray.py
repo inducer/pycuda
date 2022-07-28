@@ -584,6 +584,9 @@ class GPUArray:
         else:
             return self._axpbz(1, -other, self)
 
+    def __pos__(self):
+        return self
+
     def __neg__(self):
         result = self._new_like_me()
         return self._axpbz(-1, 0, result)

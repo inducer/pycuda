@@ -128,6 +128,15 @@ class TestGPUArray:
         assert (a * a == a_squared).all()
 
     @mark_cuda_test
+    def test_unit_multiply_array(self):
+
+        a = np.array([1, 2, 3, 4, 5, 6, 7, 8, 9, 10]).astype(np.float32)
+
+        a_gpu = gpuarray.to_gpu(a)
+        np.testing.assert_allclose(+a_gpu.get(), +a, rtol=1e-6)
+        np.testing.assert_allclose(-a_gpu.get(), -a, rtol=1e-6)
+
+    @mark_cuda_test
     def test_addition_array(self):
         """Test the addition of two arrays."""
 
