@@ -151,7 +151,7 @@ def _make_binary_op(operator):
                     "be used as arguments to this operation"
                 )
 
-            result = self._new_like_me()
+            result = self._new_like_me(dtype=bool)  # create bool array
             func = elementwise.get_binary_op_kernel(
                 self.dtype, other.dtype, result.dtype, operator
             )
@@ -167,7 +167,7 @@ def _make_binary_op(operator):
 
             return result
         else:  # scalar operator
-            result = self._new_like_me()
+            result = self._new_like_me(dtype=bool)
             func = elementwise.get_scalar_op_kernel(self.dtype, result.dtype, operator)
             func.prepared_async_call(
                 self._grid,
