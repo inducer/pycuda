@@ -1322,6 +1322,50 @@ class TestGPUArray:
                 assert new_z.dtype == np.complex64
                 assert new_z.shape == arr.shape
 
+    def test_logical_and_or(self):
+        rng = np.random.default_rng(seed=0)
+        for op in ["logical_and", "logical_or"]:
+            x_np = rng.random((10, 4))
+            y_np = rng.random((10, 4))
+            zeros_np = np.zeros((10, 4))
+            ones_np = np.ones((10, 4))
+
+            x_cu = gpuarray.to_gpu(x_np)
+            y_cu = gpuarray.to_gpu(y_np)
+            zeros_cu = gpuarray.zeros((10, 4), "float64")
+            ones_cu = gpuarray.ones((10, 4))
+
+            np.testing.assert_array_equal(
+                getattr(gpuarray, op)(x_cu, y_cu).get(),
+                getattr(np, op)(x_np, y_np))
+            np.testing.assert_array_equal(
+                getattr(gpuarray, op)(x_cu, ones_cu).get(),
+                getattr(np, op)(x_np, ones_np))
+            np.testing.assert_array_equal(
+                getattr(gpuarray, op)(x_cu, zeros_cu).get(),
+                getattr(np, op)(x_np, zeros_np))
+            np.testing.assert_array_equal(
+                getattr(gpuarray, op)(x_cu, 1.0).get(),
+                getattr(np, op)(x_np, ones_np))
+            np.testing.assert_array_equal(
+                getattr(gpuarray, op)(x_cu, 0.0).get(),
+                getattr(np, op)(x_np, 0.0))
+
+    def test_logical_not(self):
+        rng = np.random.default_rng(seed=0)
+        x_np = rng.random((10, 4))
+        x_cu = gpuarray.to_gpu(x_np)
+
+        np.testing.assert_array_equal(
+            gpuarray.logical_not(x_cu).get(),
+            np.logical_not(x_np))
+        np.testing.assert_array_equal(
+            gpuarray.logical_not(gpuarray.zeros(10, "float64")).get(),
+            np.logical_not(np.zeros(10)))
+        np.testing.assert_array_equal(
+            gpuarray.logical_not(gpuarray.ones(10)).get(),
+            np.logical_not(np.ones(10)))
+
 
 if __name__ == "__main__":
     # make sure that import failures get reported, instead of skipping the tests.
