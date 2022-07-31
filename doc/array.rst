@@ -356,6 +356,18 @@ Constructing :class:`GPUArray` Instances
 
     Join a sequence of arrays along a new axis.
 
+.. function:: logical_and(x1, x2, /, out=None, * allocator=None)
+
+    Returns the elementwise logical AND values of *x1* and *x2*.
+
+.. function:: logical_or(x1, x2, /, out=None, * allocator=None)
+
+    Returns the elementwise logical OR values of *x1* and *x2*.
+
+.. function:: logical_not(x, /, out=None, * allocator=None)
+
+    Returns the elementwise logical NOT of *x*.
+
 
 Conditionals
 ^^^^^^^^^^^^

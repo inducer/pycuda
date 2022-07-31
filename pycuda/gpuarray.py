@@ -2082,4 +2082,95 @@ subset_max = _make_subset_minmax_kernel("max")
 
 # }}}
 
+
+# {{{ logical ops
+
+def _logical_op(x1, x2, out, allocator, operator):
+    assert operator in ["&&", "||"]
+    allocator = (
+        allocator
+        or getattr(x1, "allocator", None)
+        or getattr(x2, "allocator", None)
+        or drv.mem_alloc)
+
+    if np.isscalar(x1) and np.isscalar(x2):
+        if out is None:
+            out = empty(shape=(), dtype=np.bool_, allocator=allocator)
+
+        if operator == "&&":
+            out[:] = np.logical_and(x1, x2)
+        else:
+            out[:] = np.logical_or(x1, x2)
+    elif np.isscalar(x1) or np.isscalar(x2):
+        scalar_arg, = [x for x in (x1, x2) if np.isscalar(x)]
+        ary_arg, = [x for x in (x1, x2) if not np.isscalar(x)]
+        if not isinstance(ary_arg, GPUArray):
+            raise ValueError("logical_and can take either scalar or GPUArrays"
+                             " as inputs")
+
+        out = out or ary_arg._new_like_me(dtype=np.bool_)
+
+        assert out.shape == ary_arg.shape and out.dtype == np.bool_
+
+        func = elementwise.get_scalar_op_kernel(ary_arg.dtype,
+                                                np.dtype(type(scalar_arg)),
+                                                out.dtype,
+                                                operator)
+
+        func.prepared_async_call(out._grid, out._block,
+                                 None,
+                                 ary_arg.gpudata,
+                                 scalar_arg,
+                                 out.gpudata,
+                                 out.mem_size)
+    else:
+        if not (isinstance(x1, GPUArray) and isinstance(x2, GPUArray)):
+            raise ValueError("logical_and can take either scalar or GPUArrays"
+                             " as inputs")
+        if x1.shape != x2.shape:
+            raise NotImplementedError("Broadcasting not supported")
+
+        if out is None:
+            out = x1._new_like_me(dtype=np.bool_)
+
+        assert out.shape == x1.shape and out.dtype == np.bool_
+
+        func = elementwise.get_binary_op_kernel(
+            x1.dtype, x2.dtype, out.dtype, operator
+        )
+        func.prepared_async_call(out._grid, out._block,
+                                 None,
+                                 x1.gpudata,
+                                 x2.gpudata,
+                                 out.gpudata,
+                                 out.mem_size)
+
+    return out
+
+
+def logical_and(x1, x2, /, out=None, *, allocator=None):
+    return _logical_op(x1, x2, out, allocator, "&&")
+
+
+def logical_or(x1, x2, /, out=None, *, allocator=None):
+    return _logical_op(x1, x2, out, allocator, "||")
+
+
+def logical_not(x, /, out=None, *, allocator=drv.mem_alloc):
+    if np.isscalar(x):
+        out = out or empty(shape=(), dtype=np.bool_, allocator=allocator)
+        out[:] = np.logical_not(x)
+    else:
+        out = out or empty(shape=x.shape, dtype=np.bool_, allocator=allocator)
+        func = elementwise.get_logical_not_kernel(x.dtype, out.dtype)
+        func.prepared_async_call(out._grid, out._block,
+                                 None,
+                                 x.gpudata,
+                                 out.gpudata,
+                                 out.mem_size)
+
+    return out
+
+# }}}
+
 # vim: foldmethod=marker

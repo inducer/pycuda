@@ -766,3 +766,15 @@ def get_scalar_op_kernel(dtype_x, dtype_a, dtype_y, operator):
         "y[i] = x[i] %s a" % operator,
         "scalarop_kernel",
     )
+
+
+@context_dependent_memoize
+def get_logical_not_kernel(dtype_x, dtype_out):
+    return get_elwise_kernel(
+        [
+            VectorArg(dtype_x, "x"),
+            VectorArg(dtype_out, "out"),
+        ],
+        "out[i] = (x[i] == 0)",
+        "logical_not",
+    )
