@@ -168,7 +168,9 @@ def _make_binary_op(operator):
             return result
         else:  # scalar operator
             result = self._new_like_me()
-            func = elementwise.get_scalar_op_kernel(self.dtype, result.dtype, operator)
+            func = elementwise.get_scalar_op_kernel(self.dtype,
+                                                    np.dtype(type(other)),
+                                                    result.dtype, operator)
             func.prepared_async_call(
                 self._grid,
                 self._block,
