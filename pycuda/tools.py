@@ -527,6 +527,20 @@ def mark_cuda_test(inner_f):
     return mark_test.cuda(f)
 
 
+def init_cuda_context_fixture():
+    import pycuda.driver as cuda
+    cuda.init()
+    ctx = make_default_context()
+    assert isinstance(ctx.get_device().name(), str)
+    assert isinstance(ctx.get_device().compute_capability(), tuple)
+    assert isinstance(ctx.get_device().get_attributes(), dict)
+    yield
+
+    from gc import collect
+    ctx.pop()
+    clear_context_caches()
+    collect()
+
 # }}}
 
 

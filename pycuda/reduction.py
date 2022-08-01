@@ -361,6 +361,32 @@ def get_sum_kernel(dtype_out, dtype_in):
 
 
 @context_dependent_memoize
+def get_any_kernel(dtype_out, dtype_in):
+    if dtype_out is None:
+        dtype_out = dtype_in
+
+    return ReductionKernel(
+        dtype_out,
+        "0",
+        "(a != 0) || (b != 0)",
+        arguments="const {tp} *in".format(tp=dtype_to_ctype(dtype_in)),
+    )
+
+
+@context_dependent_memoize
+def get_all_kernel(dtype_out, dtype_in):
+    if dtype_out is None:
+        dtype_out = dtype_in
+
+    return ReductionKernel(
+        dtype_out,
+        "1",
+        "(a != 0) && (b != 0)",
+        arguments="const {tp} *in".format(tp=dtype_to_ctype(dtype_in)),
+    )
+
+
+@context_dependent_memoize
 def get_subset_sum_kernel(dtype_out, dtype_subset, dtype_in):
     if dtype_out is None:
         dtype_out = dtype_in

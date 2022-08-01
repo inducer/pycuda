@@ -1071,6 +1071,7 @@ class WrappedAllocation(drv.PointerHolderBase):
         return int(self.wrapped)
 
 
+@mark_cuda_test
 def test_pointer_holder_base():
     alloc = WrappedAllocation(drv.mem_alloc(1024))
     ary = gpuarray.GPUArray((1024,), np.uint8, gpudata=alloc)
@@ -1102,6 +1103,7 @@ class CudaArrayInterfaceImpl:
         return self._ptr
 
 
+@mark_cuda_test
 def test_pass_cai_array():
     dtype = np.int32
     size = 1024

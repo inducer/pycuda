@@ -882,6 +882,12 @@ class GPUArray:
 
         return result
 
+    def any(self, stream=None, allocator=None):
+        return any(self, stream=stream, allocator=allocator)
+
+    def all(self, stream=None, allocator=None):
+        return all(self, stream=stream, allocator=allocator)
+
     def reshape(self, *shape, **kwargs):
         """Gives a new shape to an array without changing its data."""
 
@@ -1852,7 +1858,8 @@ def stack(arrays, axis=0, allocator=None):
     input_ndim = arrays[0].ndim
     axis = input_ndim if axis == -1 else axis
 
-    if not all(ary.shape == input_shape for ary in arrays[1:]):
+    import builtins
+    if not builtins.all(ary.shape == input_shape for ary in arrays[1:]):
         raise ValueError("arrays must have the same shape")
 
     if not (0 <= axis <= input_ndim):
@@ -1927,6 +1934,32 @@ def if_positive(criterion, then_, else_, out=None, stream=None):
     return out
 
 
+def where(criterion, then_, else_, out=None, stream=None):
+    if (criterion.shape != then_.shape != else_.shape):
+        raise NotImplementedError("shape broadcast not implemented")
+
+    if (then_.dtype != else_.dtype):
+        raise NotImplementedError("dtype broadcast not implemented")
+
+    func = elementwise.get_where_kernel(criterion.dtype, then_.dtype)
+
+    if out is None:
+        out = empty_like(then_)
+
+    func.prepared_async_call(
+        criterion._grid,
+        criterion._block,
+        stream,
+        criterion.gpudata,
+        then_.gpudata,
+        else_.gpudata,
+        out.gpudata,
+        criterion.size,
+    )
+
+    return out
+
+
 def _make_binary_minmax_func(which):
     def f(a, b, out=None, stream=None):
         if isinstance(a, GPUArray) and isinstance(b, GPUArray):
@@ -1976,6 +2009,20 @@ def sum(a, dtype=None, stream=None, allocator=None):
     from pycuda.reduction import get_sum_kernel
 
     krnl = get_sum_kernel(dtype, a.dtype)
+    return krnl(a, stream=stream, allocator=allocator)
+
+
+def any(a, stream=None, allocator=None):
+    from pycuda.reduction import get_any_kernel
+
+    krnl = get_any_kernel(np.dtype(bool), a.dtype)
+    return krnl(a, stream=stream, allocator=allocator)
+
+
+def all(a, stream=None, allocator=None):
+    from pycuda.reduction import get_all_kernel
+
+    krnl = get_all_kernel(np.dtype(bool), a.dtype)
     return krnl(a, stream=stream, allocator=allocator)
 
 

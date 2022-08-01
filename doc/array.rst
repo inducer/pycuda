@@ -182,6 +182,10 @@ The :class:`GPUArray` Array Class
     .. method :: astype(dtype, stream=None)
 
         Return *self*, cast to *dtype*.
+    
+    .. method :: any(stream=None, allocator=None)
+
+    .. method :: all(stream=None, allocator=None)
 
     .. attribute :: real
 
@@ -373,6 +377,10 @@ Reductions
 ^^^^^^^^^^
 
 .. function:: sum(a, dtype=None, stream=None)
+
+.. function:: any(a, stream=None, allocator=None)
+
+.. function:: all(a, stream=None, allocator=None)
 
 .. function:: subset_sum(subset, a, dtype=None, stream=None)
 

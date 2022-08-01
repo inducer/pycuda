@@ -741,6 +741,20 @@ def get_if_positive_kernel(crit_dtype, dtype):
 
 
 @context_dependent_memoize
+def get_where_kernel(crit_dtype, dtype):
+    return get_elwise_kernel(
+        [
+            VectorArg(crit_dtype, "crit"),
+            VectorArg(dtype, "then_"),
+            VectorArg(dtype, "else_"),
+            VectorArg(dtype, "result"),
+        ],
+        "result[i] = crit[i] != 0 ? then_[i] : else_[i]",
+        "if_positive",
+    )
+
+
+@context_dependent_memoize
 def get_scalar_op_kernel(dtype_x, dtype_y, operator):
     return get_elwise_kernel(
         "%(tp_x)s *x, %(tp_a)s a, %(tp_y)s *y"

@@ -3,17 +3,23 @@
 import numpy as np
 import numpy.linalg as la
 import sys
-from pycuda.tools import mark_cuda_test
+from pycuda.tools import init_cuda_context_fixture
 from pycuda.characterize import has_double_support
 
 
 import pycuda.gpuarray as gpuarray
 import pycuda.driver as drv
 from pycuda.compiler import SourceModule
+import pytest
 
 
+@pytest.fixture(autouse=True)
+def init_cuda_context():
+    yield from init_cuda_context_fixture()
+
+
+@pytest.mark.cuda
 class TestGPUArray:
-    @mark_cuda_test
     def test_pow_array(self):
         a = np.array([1, 2, 3, 4, 5]).astype(np.float32)
         a_gpu = gpuarray.to_gpu(a)
@@ -30,9 +36,9 @@ class TestGPUArray:
         a_gpu = a_gpu.get()
         np.testing.assert_allclose(pow(a, b), a_gpu, rtol=1e-6)
 
-    @mark_cuda_test
-    def test_pow_number(self):
-        a = np.array([1, 2, 3, 4, 5, 6, 7, 8, 9, 10]).astype(np.float32)
+    @pytest.mark.parametrize("dtype", [np.float32, np.float64])
+    def test_pow_number(self, dtype):
+        a = np.array([1, 2, 3, 4, 5, 6, 7, 8, 9, 10]).astype(dtype)
         a_gpu = gpuarray.to_gpu(a)
 
         result = pow(a_gpu, 2).get()
@@ -42,7 +48,6 @@ class TestGPUArray:
         a_gpu = a_gpu.get()
         np.testing.assert_allclose(a ** 2, a_gpu, rtol=1e-6)
 
-    @mark_cuda_test
     def test_rpow_array(self):
         scalar = np.random.rand()
         a = abs(np.random.rand(10))
@@ -57,18 +62,15 @@ class TestGPUArray:
         result = (a_gpu ** scalar).get()
         np.testing.assert_allclose(a ** scalar, result)
 
-    @mark_cuda_test
     def test_numpy_integer_shape(self):
         gpuarray.empty(np.int32(17), np.float32)
         gpuarray.empty((np.int32(17), np.int32(17)), np.float32)
 
-    @mark_cuda_test
     def test_ndarray_shape(self):
         gpuarray.empty(np.array(3), np.float32)
         gpuarray.empty(np.array([3]), np.float32)
         gpuarray.empty(np.array([2, 3]), np.float32)
 
-    @mark_cuda_test
     def test_abs(self):
         a = -gpuarray.arange(111, dtype=np.float32)
         res = a.get()
@@ -84,13 +86,11 @@ class TestGPUArray:
             assert abs(res[i]) >= 0
             assert res[i] == i
 
-    @mark_cuda_test
     def test_len(self):
         a = np.array([1, 2, 3, 4, 5, 6, 7, 8, 9, 10]).astype(np.float32)
         a_cpu = gpuarray.to_gpu(a)
         assert len(a_cpu) == 10
 
-    @mark_cuda_test
     def test_multiply(self):
         """Test the muliplication of an array with a scalar. """
 
@@ -103,7 +103,6 @@ class TestGPUArray:
 
                     assert (a * scalar == a_doubled).all()
 
-    @mark_cuda_test
     def test_rmul_yields_right_type(self):
         a = np.array([1, 2, 3, 4, 5]).astype(np.float32)
         a_gpu = gpuarray.to_gpu(a)
@@ -114,7 +113,6 @@ class TestGPUArray:
         two_a = np.float32(2) * a_gpu
         assert isinstance(two_a, gpuarray.GPUArray)
 
-    @mark_cuda_test
     def test_multiply_array(self):
         """Test the multiplication of two arrays."""
 
@@ -127,7 +125,6 @@ class TestGPUArray:
 
         assert (a * a == a_squared).all()
 
-    @mark_cuda_test
     def test_unit_multiply_array(self):
 
         a = np.array([1, 2, 3, 4, 5, 6, 7, 8, 9, 10]).astype(np.float32)
@@ -136,7 +133,6 @@ class TestGPUArray:
         np.testing.assert_allclose(+a_gpu.get(), +a, rtol=1e-6)
         np.testing.assert_allclose(-a_gpu.get(), -a, rtol=1e-6)
 
-    @mark_cuda_test
     def test_addition_array(self):
         """Test the addition of two arrays."""
 
@@ -146,7 +142,6 @@ class TestGPUArray:
 
         assert (a + a == a_added).all()
 
-    @mark_cuda_test
     def test_iaddition_array(self):
         """Test the inplace addition of two arrays."""
 
@@ -157,7 +152,6 @@ class TestGPUArray:
 
         assert (a + a == a_added).all()
 
-    @mark_cuda_test
     def test_addition_scalar(self):
         """Test the addition of an array and a scalar."""
 
@@ -167,7 +161,6 @@ class TestGPUArray:
 
         assert (7 + a == a_added).all()
 
-    @mark_cuda_test
     def test_iaddition_scalar(self):
         """Test the inplace addition of an array and a scalar."""
 
@@ -178,7 +171,6 @@ class TestGPUArray:
 
         assert (7 + a == a_added).all()
 
-    @mark_cuda_test
     def test_substract_array(self):
         """Test the subtraction of two arrays."""
         # test data
@@ -194,7 +186,6 @@ class TestGPUArray:
         result = (b_gpu - a_gpu).get()
         assert (b - a == result).all()
 
-    @mark_cuda_test
     def test_substract_scalar(self):
         """Test the subtraction of an array and a scalar."""
 
@@ -210,7 +201,6 @@ class TestGPUArray:
         result = (7 - a_gpu).get()
         assert (7 - a == result).all()
 
-    @mark_cuda_test
     def test_divide_scalar(self):
         """Test the division of an array and a scalar."""
 
@@ -223,7 +213,6 @@ class TestGPUArray:
         result = (2 / a_gpu).get()
         assert (2 / a == result).all()
 
-    @mark_cuda_test
     def test_divide_array(self):
         """Test the division of an array and a scalar. """
 
@@ -240,7 +229,6 @@ class TestGPUArray:
         a_divide = (b_gpu / a_gpu).get()
         assert (np.abs(b / a - a_divide) < 1e-3).all()
 
-    @mark_cuda_test
     def test_random(self):
         from pycuda.curandom import rand as curand
 
@@ -255,7 +243,6 @@ class TestGPUArray:
             assert (0 <= a).all()
             assert (a < 1).all()
 
-    @mark_cuda_test
     def test_curand_wrappers(self):
         from pycuda.curandom import get_curand_version
 
@@ -330,7 +317,6 @@ class TestGPUArray:
                     # # Compare with scipy.stats.poisson.pmf(v - 1, v)
                     # assert np.isclose(0.12511, tmp, atol=0.002)
 
-    @mark_cuda_test
     def test_array_gt(self):
         """Test whether array contents are > the other array's
         contents"""
@@ -343,7 +329,6 @@ class TestGPUArray:
         assert result[0]
         assert not result[1]
 
-    @mark_cuda_test
     def test_array_lt(self):
         """Test whether array contents are < the other array's
         contents"""
@@ -356,7 +341,6 @@ class TestGPUArray:
         assert result[0]
         assert not result[1]
 
-    @mark_cuda_test
     def test_array_le(self):
         """Test whether array contents are <= the other array's
         contents"""
@@ -370,7 +354,6 @@ class TestGPUArray:
         assert result[1]
         assert not result[2]
 
-    @mark_cuda_test
     def test_array_ge(self):
         """Test whether array contents are >= the other array's
         contents"""
@@ -384,7 +367,6 @@ class TestGPUArray:
         assert result[1]
         assert not result[2]
 
-    @mark_cuda_test
     def test_array_eq(self):
         """Test whether array contents are == the other array's
         contents"""
@@ -397,7 +379,6 @@ class TestGPUArray:
         assert not result[0]
         assert result[1]
 
-    @mark_cuda_test
     def test_array_ne(self):
         """Test whether array contents are != the other array's
         contents"""
@@ -410,7 +391,6 @@ class TestGPUArray:
         assert result[0]
         assert not result[1]
 
-    @mark_cuda_test
     def test_nan_arithmetic(self):
         def make_nan_contaminated_vector(size):
             shape = (size,)
@@ -435,7 +415,6 @@ class TestGPUArray:
 
         assert (np.isnan(ab) == np.isnan(ab_gpu)).all()
 
-    @mark_cuda_test
     def test_elwise_kernel(self):
         from pycuda.curandom import rand as curand
 
@@ -455,7 +434,6 @@ class TestGPUArray:
 
         assert la.norm((c_gpu - (5 * a_gpu + 6 * b_gpu)).get()) < 1e-5
 
-    @mark_cuda_test
     def test_ranged_elwise_kernel(self):
         from pycuda.elementwise import ElementwiseKernel
 
@@ -479,7 +457,6 @@ class TestGPUArray:
 
             assert la.norm(a_cpu - a_gpu.get()) == 0, i
 
-    @mark_cuda_test
     def test_take(self):
         idx = gpuarray.arange(0, 10000, 2, dtype=np.uint32)
         for dtype in [np.float32, np.complex64]:
@@ -489,12 +466,10 @@ class TestGPUArray:
 
             assert (a_host[idx.get()] == result.get()).all()
 
-    @mark_cuda_test
     def test_arange(self):
         a = gpuarray.arange(12, dtype=np.float32)
         assert (np.arange(12, dtype=np.float32) == a.get()).all()
 
-    @mark_cuda_test
     def test_ones(self):
 
         ones = np.ones(10)
@@ -503,35 +478,30 @@ class TestGPUArray:
         np.testing.assert_allclose(ones, ones_gpu.get(), rtol=1e-6)
         assert ones.dtype == ones_gpu.dtype
 
-    @mark_cuda_test
-    def test_stack(self):
+    @pytest.mark.parametrize("order", ["F", "C"])
+    @pytest.mark.parametrize("input_dims", [0, 1, 2])
+    def test_stack(self, order, input_dims):
 
-        orders = ["F", "C"]
-        input_dims_lst = [0, 1, 2]
+        shape = (2, 2, 2)[:input_dims]
+        axis = -1 if order == "F" else 0
 
-        for order in orders:
-            for input_dims in input_dims_lst:
-                shape = (2, 2, 2)[:input_dims]
-                axis = -1 if order == "F" else 0
+        from numpy.random import default_rng
+        rng = default_rng()
+        x_in = rng.random(size=shape)
+        y_in = rng.random(size=shape)
+        x_in = x_in if order == "C" else np.asfortranarray(x_in)
+        y_in = y_in if order == "C" else np.asfortranarray(y_in)
 
-                from numpy.random import default_rng
-                rng = default_rng()
-                x_in = rng.random(size=shape)
-                y_in = rng.random(size=shape)
-                x_in = x_in if order == "C" else np.asfortranarray(x_in)
-                y_in = y_in if order == "C" else np.asfortranarray(y_in)
+        x_gpu = gpuarray.to_gpu(x_in)
+        y_gpu = gpuarray.to_gpu(y_in)
 
-                x_gpu = gpuarray.to_gpu(x_in)
-                y_gpu = gpuarray.to_gpu(y_in)
+        numpy_stack = np.stack((x_in, y_in), axis=axis)
+        gpuarray_stack = gpuarray.stack((x_gpu, y_gpu), axis=axis)
 
-                numpy_stack = np.stack((x_in, y_in), axis=axis)
-                gpuarray_stack = gpuarray.stack((x_gpu, y_gpu), axis=axis)
+        np.testing.assert_allclose(gpuarray_stack.get(), numpy_stack)
 
-                np.testing.assert_allclose(gpuarray_stack.get(), numpy_stack)
+        assert gpuarray_stack.shape == numpy_stack.shape
 
-                assert gpuarray_stack.shape == numpy_stack.shape
-
-    @mark_cuda_test
     def test_concatenate(self):
 
         from pycuda.curandom import rand as curand
@@ -550,7 +520,6 @@ class TestGPUArray:
 
         assert cat.shape == cat_dev.shape
 
-    @mark_cuda_test
     def test_reverse(self):
         a = np.array([1, 2, 3, 4, 5, 6, 7, 8, 9, 10]).astype(np.float32)
         a_cpu = gpuarray.to_gpu(a)
@@ -562,7 +531,6 @@ class TestGPUArray:
         for i in range(0, 10):
             assert a[len(a) - 1 - i] == b[i]
 
-    @mark_cuda_test
     def test_sum(self):
         from pycuda.curandom import rand as curand
 
@@ -575,7 +543,56 @@ class TestGPUArray:
 
         assert abs(sum_a_gpu - sum_a) / abs(sum_a) < 1e-4
 
-    @mark_cuda_test
+    @pytest.mark.parametrize("dtype", [np.int32, np.bool, np.float32, np.float64])
+    def test_any(self, dtype):
+
+        ary_list = [np.ones(10, dtype),
+                    np.zeros(1, dtype),
+                    np.ones(1, dtype),
+                    np.empty(10, dtype)]
+
+        for ary in ary_list:
+            ary_gpu = gpuarray.to_gpu(ary)
+            any_ary = np.any(ary)
+            any_ary_gpu = ary_gpu.any().get()
+            np.testing.assert_array_equal(any_ary_gpu, any_ary)
+            assert any_ary_gpu.dtype == any_ary.dtype
+
+        import itertools
+        for _array in list(itertools.product([0, 1], [0, 1], [0, 1])):
+            array = np.array(_array, dtype)
+            array_gpu = gpuarray.to_gpu(array)
+            any_array = np.any(array)
+            any_array_gpu = array_gpu.any().get()
+
+            np.testing.assert_array_equal(any_array_gpu, any_array)
+            assert any_array_gpu.dtype == any_array.dtype
+
+    @pytest.mark.parametrize("dtype", [np.int32, np.bool, np.float32, np.float64])
+    def test_all(self, dtype):
+
+        ary_list = [np.ones(10, dtype),
+                    np.zeros(1, dtype),
+                    np.ones(1, dtype),
+                    np.empty(10, dtype)]
+
+        for ary in ary_list:
+            ary_gpu = gpuarray.to_gpu(ary)
+            all_ary = np.all(ary)
+            all_ary_gpu = ary_gpu.all().get()
+            np.testing.assert_array_equal(all_ary_gpu, all_ary)
+            assert all_ary_gpu.dtype == all_ary.dtype
+
+        import itertools
+        for _array in list(itertools.product([0, 1], [0, 1], [0, 1])):
+            array = np.array(_array, dtype)
+            array_gpu = gpuarray.to_gpu(array)
+            all_array = np.all(array)
+            all_array_gpu = array_gpu.all().get()
+
+            np.testing.assert_array_equal(all_array_gpu, all_array)
+            assert all_array_gpu.dtype == all_array.dtype
+
     def test_minmax(self):
         from pycuda.curandom import rand as curand
 
@@ -594,7 +611,6 @@ class TestGPUArray:
 
                 assert op_a_gpu == op_a, (op_a_gpu, op_a, dtype, what)
 
-    @mark_cuda_test
     def test_subset_minmax(self):
         from pycuda.curandom import rand as curand
 
@@ -628,41 +644,38 @@ class TestGPUArray:
 
             assert min_a_gpu == min_a
 
-    @mark_cuda_test
-    def test_dot(self):
+    @pytest.mark.parametrize("sz", [2,
+                                    3,
+                                    4,
+                                    5,
+                                    6,
+                                    7,
+                                    31,
+                                    32,
+                                    33,
+                                    127,
+                                    128,
+                                    129,
+                                    255,
+                                    256,
+                                    257,
+                                    16384 - 993,
+                                    20000,
+                                    ])
+    def test_dot(self, sz):
         from pycuda.curandom import rand as curand
 
-        for sz in [
-            2,
-            3,
-            4,
-            5,
-            6,
-            7,
-            31,
-            32,
-            33,
-            127,
-            128,
-            129,
-            255,
-            256,
-            257,
-            16384 - 993,
-            20000,
-        ]:
-            a_gpu = curand((sz,))
-            a = a_gpu.get()
-            b_gpu = curand((sz,))
-            b = b_gpu.get()
+        a_gpu = curand((sz,))
+        a = a_gpu.get()
+        b_gpu = curand((sz,))
+        b = b_gpu.get()
 
-            dot_ab = np.dot(a, b)
+        dot_ab = np.dot(a, b)
 
-            dot_ab_gpu = gpuarray.dot(a_gpu, b_gpu).get()
+        dot_ab_gpu = gpuarray.dot(a_gpu, b_gpu).get()
 
-            assert abs(dot_ab_gpu - dot_ab) / abs(dot_ab) < 1e-4
+        assert abs(dot_ab_gpu - dot_ab) / abs(dot_ab) < 1e-4
 
-    @mark_cuda_test
     def test_slice(self):
         from pycuda.curandom import rand as curand
 
@@ -681,7 +694,6 @@ class TestGPUArray:
 
             assert la.norm(a_gpu_slice.get() - a_slice) == 0
 
-    @mark_cuda_test
     def test_2d_slice_c(self):
         from pycuda.curandom import rand as curand
 
@@ -701,7 +713,6 @@ class TestGPUArray:
 
             assert la.norm(a_gpu_slice.get() - a_slice) == 0
 
-    @mark_cuda_test
     def test_2d_slice_f(self):
         from pycuda.curandom import rand as curand
         import pycuda.gpuarray as gpuarray
@@ -725,7 +736,22 @@ class TestGPUArray:
 
             assert la.norm(a_gpu_slice.get() - a_slice) == 0
 
-    @mark_cuda_test
+    def test_where(self):
+        a = np.array([1, 0, -1])
+        b = np.array([2, 2, 2])
+        c = np.array([3, 3, 3])
+
+        import pycuda.gpuarray as gpuarray
+
+        a_gpu = gpuarray.to_gpu(a)
+        b_gpu = gpuarray.to_gpu(b)
+        c_gpu = gpuarray.to_gpu(c)
+
+        result = gpuarray.where(a_gpu, b_gpu, c_gpu).get()
+        result_ref = np.where(a, b, c)
+
+        np.testing.assert_allclose(result_ref, result, rtol=1e-5)
+
     def test_if_positive(self):
         from pycuda.curandom import rand as curand
 
@@ -746,7 +772,6 @@ class TestGPUArray:
         assert la.norm(max_a_b_gpu.get() - np.maximum(a, b)) == 0
         assert la.norm(min_a_b_gpu.get() - np.minimum(a, b)) == 0
 
-    @mark_cuda_test
     def test_take_put(self):
         for n in [5, 17, 333]:
             one_field_size = 8
@@ -768,7 +793,6 @@ class TestGPUArray:
 
             drv.Context.synchronize()
 
-    @mark_cuda_test
     def test_astype(self):
         from pycuda.curandom import rand as curand
 
@@ -791,7 +815,6 @@ class TestGPUArray:
         assert a2.dtype == np.float32
         assert la.norm(a - a2) / la.norm(a) < 1e-7
 
-    @mark_cuda_test
     def test_complex_bits(self):
         from pycuda.curandom import rand as curand
 
@@ -817,7 +840,7 @@ class TestGPUArray:
             # verify conj with out parameter
             z_out = z.astype(np.complex64)
             assert z_out is z.conj(out=z_out)
-            assert la.norm(z.get().conj() - z_out.get()) < 1e-7
+            assert la.norm(z.get().conj() - z_out.get()) < 5e-6
 
             # verify contiguity is preserved
             for order in ["C", "F"]:
@@ -836,7 +859,6 @@ class TestGPUArray:
                         assert zdata.imag.flags.f_contiguous
                         assert zdata.conj().flags.f_contiguous
 
-    @mark_cuda_test
     def test_pass_slice_to_kernel(self):
         mod = SourceModule(
             """
@@ -857,9 +879,9 @@ class TestGPUArray:
 
         a = a_gpu.get()
         assert (a[255:257] == np.array([1, 2], np.float32)).all()
-        assert (a[255 * 256 - 1: 255 * 256 + 1] == np.array([2, 1], np.float32)).all()
+        np.testing.assert_array_equal(a[255 * 256 - 1: 255 * 256 + 1],
+                                      np.array([2, 1], np.float32))
 
-    @mark_cuda_test
     def test_scan(self):
         from pycuda.scan import ExclusiveScanKernel, InclusiveScanKernel
 
@@ -888,7 +910,6 @@ class TestGPUArray:
 
                 assert (gpu_data.get() == desired_result).all()
 
-    @mark_cuda_test
     def test_stride_preservation(self):
         A = np.random.rand(3, 3)
         AT = A.T
@@ -897,18 +918,15 @@ class TestGPUArray:
         print((AT_GPU.flags.f_contiguous, AT_GPU.flags.c_contiguous))
         assert np.allclose(AT_GPU.get(), AT)
 
-    @mark_cuda_test
     def test_vector_fill(self):
         a_gpu = gpuarray.GPUArray(100, dtype=gpuarray.vec.float3)
         a_gpu.fill(gpuarray.vec.make_float3(0.0, 0.0, 0.0))
         a = a_gpu.get()
         assert a.dtype == gpuarray.vec.float3
 
-    @mark_cuda_test
     def test_create_complex_zeros(self):
         gpuarray.zeros(3, np.complex64)
 
-    @mark_cuda_test
     def test_reshape(self):
         a = np.arange(128).reshape(8, 16).astype(np.float32)
         a_gpu = gpuarray.to_gpu(a)
@@ -941,7 +959,6 @@ class TestGPUArray:
         a_gpu = a_gpu.reshape((4, 32))
         assert a_gpu.flags.c_contiguous
 
-    @mark_cuda_test
     def test_view(self):
         a = np.arange(128).reshape(8, 16).astype(np.float32)
         a_gpu = gpuarray.to_gpu(a)
@@ -958,7 +975,6 @@ class TestGPUArray:
         view = a_gpu.view(np.int16)
         assert view.shape == (8, 32) and view.dtype == np.int16
 
-    @mark_cuda_test
     def test_squeeze(self):
         shape = (40, 2, 5, 100)
         a_cpu = np.random.random(size=shape)
@@ -975,7 +991,8 @@ class TestGPUArray:
         assert a_gpu_squeezed_slice.flags.c_contiguous
 
         # Check that we get the original values out
-        assert np.all(a_gpu_slice.get().ravel() == a_gpu_squeezed_slice.get().ravel())
+        np.testing.assert_array_equal(a_gpu_slice.get().ravel(),
+                                      a_gpu_squeezed_slice.get().ravel())
 
         # Slice with length 1 on dimensions 2
         a_gpu_slice = a_gpu[:, :, 2:3, :]
@@ -988,9 +1005,9 @@ class TestGPUArray:
         assert not a_gpu_squeezed_slice.flags.c_contiguous
 
         # Check that we get the original values out
-        assert np.all(a_gpu_slice.get().ravel() == a_gpu_squeezed_slice.get().ravel())
+        np.testing.assert_array_equal(a_gpu_slice.get().ravel(),
+                                      a_gpu_squeezed_slice.get().ravel())
 
-    @mark_cuda_test
     def test_struct_reduce(self):
         preamble = """
         struct minmax_collector
@@ -1062,7 +1079,6 @@ class TestGPUArray:
         assert minmax["cur_min"] == np.min(a)
         assert minmax["cur_max"] == np.max(a)
 
-    @mark_cuda_test
     def test_reduce_out(self):
         from pycuda.curandom import rand as curand
 
@@ -1080,14 +1096,15 @@ class TestGPUArray:
 
         assert np.alltrue(a.max(axis=1) == max_gpu.get())
 
-    @mark_cuda_test
     def test_sum_allocator(self):
         # FIXME
         from pytest import skip
 
         skip("https://github.com/inducer/pycuda/issues/163")
-        # crashes with  terminate called after throwing an instance of 'pycuda::error'
-        # what():  explicit_context_dependent failed: invalid device context - no currently active context?
+        # crashes with  terminate called after throwing an instance
+        # of 'pycuda::error'
+        # what():  explicit_context_dependent failed: invalid device context -
+        # no currently active context?
 
         import pycuda.tools
 
@@ -1107,7 +1124,6 @@ class TestGPUArray:
         assert b.allocator == a.allocator
         assert c.allocator == pool.allocate
 
-    @mark_cuda_test
     def test_dot_allocator(self):
         # FIXME
         from pytest import skip
@@ -1139,7 +1155,6 @@ class TestGPUArray:
         assert dot_gpu_1.allocator == a_gpu.allocator
         assert dot_gpu_2.allocator == pool.allocate
 
-    @mark_cuda_test
     def test_view_and_strides(self):
         from pycuda.curandom import rand as curand
 
@@ -1152,7 +1167,6 @@ class TestGPUArray:
 
         assert np.array_equal(y.get(), X.get()[:3, :5])
 
-    @mark_cuda_test
     def test_scalar_comparisons(self):
         a = np.array([1.0, 0.25, 0.1, -0.1, 0.0])
         a_gpu = gpuarray.to_gpu(a)
@@ -1173,7 +1187,6 @@ class TestGPUArray:
         x = (a == 1).astype(a.dtype)
         assert (x == x_gpu.get()).all()
 
-    @mark_cuda_test
     def test_minimum_maximum_scalar(self):
         from pycuda.curandom import rand as curand
 
@@ -1189,17 +1202,14 @@ class TestGPUArray:
         assert la.norm(max_a0_gpu.get() - np.maximum(a, 0)) == 0
         assert la.norm(min_a0_gpu.get() - np.minimum(0, a)) == 0
 
-    @mark_cuda_test
     def test_transpose(self):
         from pycuda.curandom import rand as curand
 
         a_gpu = curand((10, 20, 30))
         a = a_gpu.get()
 
-        # assert np.allclose(a_gpu.transpose((1,2,0)).get(), a.transpose((1,2,0))) # not contiguous
         assert np.allclose(a_gpu.T.get(), a.T)
 
-    @mark_cuda_test
     def test_newaxis(self):
         from pycuda.curandom import rand as curand
 
@@ -1212,7 +1222,6 @@ class TestGPUArray:
         assert b_gpu.shape == b.shape
         assert b_gpu.strides == b.strides
 
-    @mark_cuda_test
     def test_copy(self):
         from pycuda.curandom import rand as curand
 
@@ -1251,7 +1260,6 @@ class TestGPUArray:
                 a_gpu.get()[start:stop:step, :, start:stop:step],
             )
 
-    @mark_cuda_test
     def test_get_set(self):
         import pycuda.gpuarray as gpuarray
 
@@ -1265,7 +1273,6 @@ class TestGPUArray:
         assert np.allclose(a_gpu.get(), a)
         assert np.allclose(a_gpu[1:3, 1:3, 1:3].get(), a[1:3, 1:3, 1:3])
 
-    @mark_cuda_test
     def test_zeros_like_etc(self):
         shape = (16, 16)
         a = np.random.randn(*shape).astype(np.float32)
