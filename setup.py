@@ -225,7 +225,7 @@ def main():
         setup_requires=[
             "numpy>=1.6",
         ],
-        python_requires="~=3.6",
+        python_requires="~=3.8",
         install_requires=[
             "pytools>=2011.2",
             "appdirs>=1.4.0",
