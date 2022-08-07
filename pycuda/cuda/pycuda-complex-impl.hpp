@@ -173,9 +173,12 @@ __device__ complex<float>  exp(const complex<float>& z)
 __device__ complex<double> exp(const complex<double>& z)
 { return expT(z); }
 
-#if 0
 //----------------------------------------------------------------------
 // log10
+
+__device__ constexpr float log10_invf() { return 1.f / ::log(10.f); }
+__device__ constexpr double log10_inv() { return 1.0 / ::log(10.); }
+
 template <class _Tp>
 static __device__ complex<_Tp> log10T(const complex<_Tp>& z, const _Tp& ln10_inv) {
   complex<_Tp> r;
@@ -185,15 +188,11 @@ static __device__ complex<_Tp> log10T(const complex<_Tp>& z, const _Tp& ln10_inv
   return r;
 }
 
-static const float LN10_INVF = 1.f / ::log(10.f);
 __device__ complex<float> log10(const complex<float>& z)
-{ return log10T(z, LN10_INVF); }
+{ return log10T(z, log10_invf()); }
 
-static const double LN10_INV = 1. / ::log10(10.);
 __device__ complex<double> log10(const complex<double>& z)
-{ return log10T(z, LN10_INV); }
-
-#endif
+{ return log10T(z, log10_inv()); }
 
 //----------------------------------------------------------------------
 // log
