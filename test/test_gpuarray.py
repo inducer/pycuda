@@ -1380,6 +1380,17 @@ class TestGPUArray:
         a[...] = 1729
         np.testing.assert_allclose(a.get(), 1729)
 
+    @pytest.mark.parametrize("dtype,rtol", [(np.complex64, 1e-6),
+                                            (np.complex128, 1e-14)])
+    def test_log10(self, dtype, rtol):
+        from pycuda import cumath
+
+        rng = np.random.default_rng(seed=0)
+        x_np = rng.random((10, 4)) + dtype(1j)*rng.random((10, 4))
+        x_cu = gpuarray.to_gpu(x_np)
+        np.testing.assert_allclose(cumath.log10(x_cu).get(), np.log10(x_np),
+                                   rtol=rtol)
+
 
 if __name__ == "__main__":
     # make sure that import failures get reported, instead of skipping the tests.
