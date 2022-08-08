@@ -166,8 +166,9 @@ two arrays are instantiated::
       def __init__(self, array, struct_arr_ptr):
           self.data = cuda.to_device(array)
           self.shape, self.dtype = array.shape, array.dtype
-          cuda.memcpy_htod(int(struct_arr_ptr), numpy.getbuffer(numpy.int32(array.size)))
-          cuda.memcpy_htod(int(struct_arr_ptr) + 8, numpy.getbuffer(numpy.intp(int(self.data))))
+          packed_args = struct.pack("ixP", array.size, numpy.uintp(self.data))
+          cuda.memcpy_htod(struct_arr_ptr, packed_args)
+
       def __str__(self):
           return str(cuda.from_device(self.data, self.shape, self.dtype))
 
