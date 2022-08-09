@@ -25,6 +25,18 @@ def _get_common_dtype(obj1, obj2):
     return _get_common_dtype_base(obj1, obj2, has_double_support())
 
 
+def _get_broadcasted_binary_op_result(obj1, obj2,
+                                      dtype_getter=_get_common_dtype):
+
+    if obj1.shape == obj2.shape:
+        return obj1._new_like_me(dtype_getter(obj1, obj2))
+    elif obj1.shape == ():
+        return obj2._new_like_me(dtype_getter(obj1, obj2))
+    elif obj2.shape == ():
+        return obj1._new_like_me(dtype_getter(obj1, obj2))
+    else:
+        raise NotImplementedError("Broadcasting binary operator with shapes:"
+                                  f" {obj1.shape}, {obj2.shape}.")
 # {{{ vector types
 
 
@@ -141,20 +153,22 @@ def _make_binary_op(operator):
             raise RuntimeError(
                 "only contiguous arrays may " "be used as arguments to this operation"
             )
-
-        if isinstance(other, GPUArray):
-            assert self.shape == other.shape
-
+        if isinstance(other, GPUArray) and (self, GPUArray):
             if not other.flags.forc:
                 raise RuntimeError(
                     "only contiguous arrays may "
                     "be used as arguments to this operation"
                 )
 
-            result = self._new_like_me()
+            result = _get_broadcasted_binary_op_result(self, other)
             func = elementwise.get_binary_op_kernel(
-                self.dtype, other.dtype, result.dtype, operator
-            )
+                self.dtype,
+                other.dtype,
+                result.dtype,
+                operator,
+                x_is_scalar=(self.shape == ()),
+                y_is_scalar=(other.shape == ()))
+
             func.prepared_async_call(
                 self._grid,
                 self._block,
@@ -166,7 +180,8 @@ def _make_binary_op(operator):
             )
 
             return result
-        else:  # scalar operator
+        elif isinstance(self, GPUArray):  # scalar operator
+            assert np.isscalar(other)
             result = self._new_like_me()
             func = elementwise.get_scalar_op_kernel(self.dtype,
                                                     np.dtype(type(other)),
@@ -181,6 +196,8 @@ def _make_binary_op(operator):
                 self.mem_size,
             )
             return result
+        else:
+            return AssertionError
 
     return func
 
@@ -400,38 +417,41 @@ class GPUArray:
     def _axpbyz(self, selffac, other, otherfac, out, add_timer=None, stream=None):
         """Compute ``out = selffac * self + otherfac*other``,
         where `other` is a vector.."""
-        assert self.shape == other.shape
         if not self.flags.forc or not other.flags.forc:
             raise RuntimeError(
                 "only contiguous arrays may " "be used as arguments to this operation"
             )
-
-        func = elementwise.get_axpbyz_kernel(self.dtype, other.dtype, out.dtype)
-
+        assert ((self.shape == other.shape == out.shape)
+            or ((self.shape == ()) and other.shape == out.shape)
+            or ((other.shape == ()) and self.shape == out.shape))
+        func = elementwise.get_axpbyz_kernel(
+            self.dtype, other.dtype, out.dtype,
+            x_is_scalar=(self.shape == ()),
+            y_is_scalar=(other.shape == ()))
         if add_timer is not None:
             add_timer(
                 3 * self.size,
                 func.prepared_timed_call(
-                    self._grid,
+                    out._grid,
                     selffac,
-                    self.gpudata,
+                    out.gpudata,
                     otherfac,
                     other.gpudata,
                     out.gpudata,
-                    self.mem_size,
+                    out.mem_size,
                 ),
             )
         else:
             func.prepared_async_call(
-                self._grid,
-                self._block,
+                out._grid,
+                out._block,
                 stream,
                 selffac,
                 self.gpudata,
                 otherfac,
                 other.gpudata,
                 out.gpudata,
-                self.mem_size,
+                out.mem_size,
             )
 
         return out
@@ -463,16 +483,26 @@ class GPUArray:
             raise RuntimeError(
                 "only contiguous arrays may " "be used as arguments to this operation"
             )
+        assert ((self.shape == other.shape == out.shape)
+            or ((self.shape == ()) and other.shape == out.shape)
+            or ((other.shape == ()) and self.shape == out.shape))
 
-        func = elementwise.get_binary_op_kernel(self.dtype, other.dtype, out.dtype, "*")
+        func = elementwise.get_binary_op_kernel(
+            self.dtype,
+            other.dtype,
+            out.dtype,
+            "*",
+            x_is_scalar=(self.shape == ()),
+            y_is_scalar=(other.shape == ()))
+
         func.prepared_async_call(
-            self._grid,
-            self._block,
+            out._grid,
+            out._block,
             stream,
             self.gpudata,
             other.gpudata,
             out.gpudata,
-            self.mem_size,
+            out.mem_size,
         )
 
         return out
@@ -509,17 +539,25 @@ class GPUArray:
                 "only contiguous arrays may " "be used as arguments to this operation"
             )
 
-        assert self.shape == other.shape
+        assert ((self.shape == other.shape == out.shape)
+            or ((self.shape == ()) and other.shape == out.shape)
+            or ((other.shape == ()) and self.shape == out.shape))
 
-        func = elementwise.get_binary_op_kernel(self.dtype, other.dtype, out.dtype, "/")
+        func = elementwise.get_binary_op_kernel(
+            self.dtype,
+            other.dtype,
+            out.dtype,
+            "/",
+            x_is_scalar=(self.shape == ()),
+            y_is_scalar=(other.shape == ()))
         func.prepared_async_call(
-            self._grid,
-            self._block,
+            out._grid,
+            out._block,
             stream,
             self.gpudata,
             other.gpudata,
             out.gpudata,
-            self.mem_size,
+            out.mem_size,
         )
 
         return out
@@ -546,31 +584,35 @@ class GPUArray:
 
         if isinstance(other, GPUArray):
             # add another vector
-            result = self._new_like_me(_get_common_dtype(self, other))
+            result = _get_broadcasted_binary_op_result(self, other)
             return self._axpbyz(1, other, 1, result)
-        else:
+
+        elif np.isscalar(other):
             # add a scalar
             if other == 0:
                 return self.copy()
             else:
                 result = self._new_like_me(_get_common_dtype(self, other))
                 return self._axpbz(1, other, result)
-
+        else:
+            return NotImplemented
     __radd__ = __add__
 
     def __sub__(self, other):
         """Substract an array from an array or a scalar from an array."""
 
         if isinstance(other, GPUArray):
-            result = self._new_like_me(_get_common_dtype(self, other))
+            result = _get_broadcasted_binary_op_result(self, other)
             return self._axpbyz(1, other, -1, result)
-        else:
+        elif np.isscalar(other):
             if other == 0:
                 return self.copy()
             else:
                 # create a new array for the result
                 result = self._new_like_me(_get_common_dtype(self, other))
                 return self._axpbz(1, -other, result)
+        else:
+            return NotImplemented
 
     def __rsub__(self, other):
         """Substracts an array by a scalar or an array::
@@ -602,11 +644,13 @@ class GPUArray:
 
     def __mul__(self, other):
         if isinstance(other, GPUArray):
-            result = self._new_like_me(_get_common_dtype(self, other))
+            result = _get_broadcasted_binary_op_result(self, other)
             return self._elwise_multiply(other, result)
-        else:
+        elif np.isscalar(other):
             result = self._new_like_me(_get_common_dtype(self, other))
             return self._axpbz(other, 0, result)
+        else:
+            return NotImplemented
 
     def __rmul__(self, scalar):
         result = self._new_like_me(_get_common_dtype(self, scalar))
@@ -624,16 +668,17 @@ class GPUArray:
         x = self / n
         """
         if isinstance(other, GPUArray):
-            result = self._new_like_me(_get_common_dtype(self, other))
+            result = _get_broadcasted_binary_op_result(self, other)
             return self._div(other, result)
-        else:
+        elif np.isscalar(other):
             if other == 1:
                 return self.copy()
             else:
                 # create a new array for the result
                 result = self._new_like_me(_get_common_dtype(self, other))
                 return self._axpbz(1 / other, 0, result)
-
+        else:
+            return NotImplemented
     __truediv__ = __div__
 
     def __rdiv__(self, other):

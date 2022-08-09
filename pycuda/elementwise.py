@@ -43,7 +43,6 @@ def get_elwise_module(
     after_loop="",
 ):
     from pycuda.compiler import SourceModule
-
     return SourceModule(
         """
         #include <pycuda-complex.hpp>
@@ -464,7 +463,20 @@ def get_linear_combination_kernel(summand_descriptors, dtype_z):
 
 
 @context_dependent_memoize
-def get_axpbyz_kernel(dtype_x, dtype_y, dtype_z):
+def get_axpbyz_kernel(dtype_x, dtype_y, dtype_z,
+                    x_is_scalar=False, y_is_scalar=False):
+    """
+    Returns a kernel corresponding to ``z = ax + by``.
+
+    :arg x_is_scalar: A :class:`bool` which is *True* only if `x` is a scalar :class:`gpuarray`.
+    :arg y_is_scalar: A :class:`bool` which is *True* only if `y` is a scalar :class:`gpuarray`.
+    """
+    out_t = dtype_to_ctype(dtype_z)
+    x = "x[0]" if x_is_scalar else "x[i]"
+    ax = f"a*(({out_t}) {x})"
+    y = "y[0]" if y_is_scalar else "y[i]"
+    by = f"b*(({out_t}) {y})"
+    result = f"{ax} + {by}"
     return get_elwise_kernel(
         "%(tp_x)s a, %(tp_x)s *x, %(tp_y)s b, %(tp_y)s *y, %(tp_z)s *z"
         % {
@@ -472,7 +484,7 @@ def get_axpbyz_kernel(dtype_x, dtype_y, dtype_z):
             "tp_y": dtype_to_ctype(dtype_y),
             "tp_z": dtype_to_ctype(dtype_z),
         },
-        "z[i] = a*x[i] + b*y[i]",
+        f"z[i] = {result}",
         "axpbyz",
     )
 
@@ -488,7 +500,17 @@ def get_axpbz_kernel(dtype_x, dtype_z):
 
 
 @context_dependent_memoize
-def get_binary_op_kernel(dtype_x, dtype_y, dtype_z, operator):
+def get_binary_op_kernel(dtype_x, dtype_y, dtype_z, operator,
+                        x_is_scalar=False, y_is_scalar=False):
+    """
+    Returns a kernel corresponding to ``z = x (operator) y``.
+
+    :arg x_is_scalar: A :class:`bool` which is *True* only if `x` is a scalar :class:`gpuarray`.
+    :arg y_is_scalar: A :class:`bool` which is *True* only if `y` is a scalar :class:`gpuarray`.
+    """
+    x = "x[0]" if x_is_scalar else "x[i]"
+    y = "y[0]" if y_is_scalar else "y[i]"
+    result = f"{x} {operator} {y}"
     return get_elwise_kernel(
         "%(tp_x)s *x, %(tp_y)s *y, %(tp_z)s *z"
         % {
@@ -496,7 +518,7 @@ def get_binary_op_kernel(dtype_x, dtype_y, dtype_z, operator):
             "tp_y": dtype_to_ctype(dtype_y),
             "tp_z": dtype_to_ctype(dtype_z),
         },
-        "z[i] = x[i] %s y[i]" % operator,
+        f"z[i] = {result}",
         "multiply",
     )
 
@@ -760,8 +782,8 @@ def get_scalar_op_kernel(dtype_x, dtype_a, dtype_y, operator):
         "%(tp_x)s *x, %(tp_a)s a, %(tp_y)s *y"
         % {
             "tp_x": dtype_to_ctype(dtype_x),
-            "tp_a": dtype_to_ctype(dtype_a),
             "tp_y": dtype_to_ctype(dtype_y),
+            "tp_a": dtype_to_ctype(dtype_a),
         },
         "y[i] = x[i] %s a" % operator,
         "scalarop_kernel",

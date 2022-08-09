@@ -117,13 +117,24 @@ class TestGPUArray:
         """Test the multiplication of two arrays."""
 
         a = np.array([1, 2, 3, 4, 5, 6, 7, 8, 9, 10]).astype(np.float32)
+        b = np.array([10, 20, 30, 40, 50, 60, 70, 80, 90, 100]).astype(np.float32)
+        c = np.array(2)
 
         a_gpu = gpuarray.to_gpu(a)
-        b_gpu = gpuarray.to_gpu(a)
+        b_gpu = gpuarray.to_gpu(b)
+        c_gpu = gpuarray.to_gpu(c)
 
-        a_squared = (b_gpu * a_gpu).get()
+        a_mul_b = (a_gpu * b_gpu).get()
+        assert (a * b == a_mul_b).all()
 
-        assert (a * a == a_squared).all()
+        b_mul_a = (b_gpu * a_gpu).get()
+        assert (b * a == b_mul_a).all()
+
+        a_mul_c = (a_gpu * c_gpu).get()
+        assert (a * c == a_mul_c).all()
+
+        b_mul_c = (b_gpu * c_gpu).get()
+        assert (b * c == b_mul_c).all()
 
     def test_unit_multiply_array(self):
 
@@ -138,9 +149,19 @@ class TestGPUArray:
 
         a = np.array([1, 2, 3, 4, 5, 6, 7, 8, 9, 10]).astype(np.float32)
         a_gpu = gpuarray.to_gpu(a)
+        b = np.array(1).astype(np.float32)
+        b_gpu = gpuarray.to_gpu(b)
         a_added = (a_gpu + a_gpu).get()
+        a_added_scalar = (a_gpu + 1).get()
+        scalar_added_a = (1 + a_gpu).get()
+        a_gpu_pl_b_gpu = (a_gpu + b_gpu).get()
+        b_gpu_pl_a_gpu = (b_gpu + a_gpu).get()
 
         assert (a + a == a_added).all()
+        assert (a + 1 == a_added_scalar).all()
+        assert (1 + a == scalar_added_a).all()
+        assert (a + b == a_gpu_pl_b_gpu).all()
+        assert (b + a == b_gpu_pl_a_gpu).all()
 
     def test_iaddition_array(self):
         """Test the inplace addition of two arrays."""
@@ -176,15 +197,23 @@ class TestGPUArray:
         # test data
         a = np.array([1, 2, 3, 4, 5, 6, 7, 8, 9, 10]).astype(np.float32)
         b = np.array([10, 20, 30, 40, 50, 60, 70, 80, 90, 100]).astype(np.float32)
+        c = np.array(1).astype(np.float32)
 
         a_gpu = gpuarray.to_gpu(a)
         b_gpu = gpuarray.to_gpu(b)
+        c_gpu = gpuarray.to_gpu(c)
 
         result = (a_gpu - b_gpu).get()
         assert (a - b == result).all()
 
         result = (b_gpu - a_gpu).get()
         assert (b - a == result).all()
+
+        result = (a_gpu - c_gpu).get()
+        assert (a - c == result).all()
+
+        result = (c_gpu - a_gpu).get()
+        assert (c - a == result).all()
 
     def test_substract_scalar(self):
         """Test the subtraction of an array and a scalar."""
@@ -219,15 +248,23 @@ class TestGPUArray:
         # test data
         a = np.array([10, 20, 30, 40, 50, 60, 70, 80, 90, 100]).astype(np.float32)
         b = np.array([10, 10, 10, 10, 10, 10, 10, 10, 10, 10]).astype(np.float32)
+        c = np.array(2)
 
         a_gpu = gpuarray.to_gpu(a)
         b_gpu = gpuarray.to_gpu(b)
+        c_gpu = gpuarray.to_gpu(c)
 
         a_divide = (a_gpu / b_gpu).get()
         assert (np.abs(a / b - a_divide) < 1e-3).all()
 
         a_divide = (b_gpu / a_gpu).get()
         assert (np.abs(b / a - a_divide) < 1e-3).all()
+
+        a_divide = (a_gpu / c_gpu).get()
+        assert (np.abs(a / c - a_divide) < 1e-3).all()
+
+        a_divide = (c_gpu / a_gpu).get()
+        assert (np.abs(c / a - a_divide) < 1e-3).all()
 
     def test_random(self):
         from pycuda.curandom import rand as curand
