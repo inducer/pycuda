@@ -292,7 +292,7 @@ Constructing :class:`GPUArray` Instances
 
     A synonym for the :class:`GPUArray` constructor.
 
-.. function:: zeros(shape, dtype, *, allocator=None, order="C")
+.. function:: zeros(shape, dtype=np.float64, *, allocator=None, order="C")
 
     Same as :func:`empty`, but the :class:`GPUArray` is zero-initialized before
     being returned.

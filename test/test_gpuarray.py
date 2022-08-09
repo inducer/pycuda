@@ -1417,6 +1417,12 @@ class TestGPUArray:
         a[...] = 1729
         np.testing.assert_allclose(a.get(), 1729)
 
+    def test_default_zero(self):
+        # This test was added to make sure that
+        # gpurray.zeros is using np.float64 as the default dtype arg
+        a_gpu = gpuarray.zeros(10)
+        assert a_gpu.dtype == np.float64
+
     @pytest.mark.parametrize("dtype,rtol", [(np.complex64, 1e-6),
                                             (np.complex128, 1e-14)])
     def test_log10(self, dtype, rtol):
