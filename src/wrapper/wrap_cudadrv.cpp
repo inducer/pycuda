@@ -1203,6 +1203,13 @@ BOOST_PYTHON_MODULE(_driver)
   // }}}
 
   // {{{ stream
+#if CUDAPP_CUDA_VERSION >= 10000
+  py::enum_<CUstreamCaptureMode>("capture_mode")
+    .value("GLOBAL", CU_STREAM_CAPTURE_MODE_GLOBAL)
+    .value("THREAD_LOCAL", CU_STREAM_CAPTURE_MODE_THREAD_LOCAL)
+    .value("RELAXED", CU_STREAM_CAPTURE_MODE_RELAXED)
+    ;
+#endif
   {
     typedef stream cl;
     py::class_<cl, boost::noncopyable, shared_ptr<cl> >
@@ -1212,9 +1219,37 @@ BOOST_PYTHON_MODULE(_driver)
 #if CUDAPP_CUDA_VERSION >= 3020
       .DEF_SIMPLE_METHOD(wait_for_event)
 #endif
+#if CUDAPP_CUDA_VERSION >= 10000
+      .def("begin_capture", &cl::begin_capture,
+        py::arg("capture_mode") = CU_STREAM_CAPTURE_MODE_GLOBAL)
+      .def("end_capture", &cl::end_capture,
+        py::return_value_policy<py::manage_new_object>())
+#endif
       .add_property("handle", &cl::handle_int)
       ;
   }
+  // }}}
+
+  // {{{ graph
+#if CUDAPP_CUDA_VERSION >= 10000
+    ;
+  {
+    typedef graph_exec cl;
+    py::class_<cl, boost::noncopyable>("GraphExec", py::no_init)
+      .def("launch", &cl::launch,
+        py::arg("stream")=py::object())
+        ;
+  }
+
+  {
+    typedef graph cl;
+    py::class_<cl, boost::noncopyable>("Graph", py::no_init)
+      .def("instance", &cl::instance,
+          py::return_value_policy<py::manage_new_object>())
+      .DEF_SIMPLE_METHOD(debug_dot_print)
+      ;
+  }
+#endif
   // }}}
 
   // {{{ module
