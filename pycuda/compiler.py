@@ -206,9 +206,12 @@ def _get_per_user_string():
 
 
 def _find_pycuda_include_path():
-    from pkg_resources import Requirement, resource_filename
+    import importlib.util
+    import os
 
-    return resource_filename(Requirement.parse("pycuda"), "pycuda/cuda")
+    return os.path.abspath(
+        os.path.join(importlib.util.find_spec("pycuda").origin,
+                     os.path.pardir, "cuda"))
 
 
 DEFAULT_NVCC_FLAGS = [
