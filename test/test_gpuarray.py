@@ -11,11 +11,29 @@ import pycuda.gpuarray as gpuarray
 import pycuda.driver as drv
 from pycuda.compiler import SourceModule
 import pytest
+import operator
 
 
 @pytest.fixture(autouse=True)
 def init_cuda_context():
     yield from init_cuda_context_fixture()
+
+
+def get_random_array(rng, shape, dtype):
+    dtype = np.dtype(dtype)
+
+    if dtype.kind == "f":
+        return rng.random(shape, dtype)
+    elif dtype.kind in "il":
+        return rng.integers(-42, 42, shape, dtype)
+    elif dtype.kind in "u":
+        return rng.integers(0, 42, shape, dtype)
+    elif dtype.kind == "c":
+        real_dtype = np.empty(0, dtype).real.dtype
+        return (dtype.type(1j) * get_random_array(rng, shape, real_dtype)
+                + get_random_array(rng, shape, real_dtype))
+    else:
+        raise NotImplementedError(f"dtype = {dtype}")
 
 
 @pytest.mark.cuda
@@ -1433,6 +1451,33 @@ class TestGPUArray:
         x_cu = gpuarray.to_gpu(x_np)
         np.testing.assert_allclose(cumath.log10(x_cu).get(), np.log10(x_np),
                                    rtol=rtol)
+
+    @pytest.mark.parametrize("ldtype", [np.int32, np.int64,
+                                        np.float32, np.float64,
+                                        np.complex64, np.complex128])
+    @pytest.mark.parametrize("rdtype", [np.int32, np.int64,
+                                        np.float32, np.float64,
+                                        np.complex64, np.complex128])
+    @pytest.mark.parametrize("op", [operator.add, operator.sub, operator.mul,
+                                    operator.truediv])
+    def test_binary_ops_with_unequal_dtypes(self, ldtype, rdtype, op):
+        # See https://github.com/inducer/pycuda/issues/372
+        if op == operator.truediv and {ldtype, rdtype} <= {np.int32, np.int64}:
+            pytest.xfail("Enable after"
+                         " gitlab.tiker.net/inducer/pycuda/-/merge_requests/66"
+                         "is merged.")
+
+        rng = np.random.default_rng(0)
+        lop_np = get_random_array(rng, (10, 4), ldtype)
+        rop_np = get_random_array(rng, (10, 4), rdtype)
+
+        expected_result = op(lop_np, rop_np)
+        result = op(gpuarray.to_gpu(lop_np), gpuarray.to_gpu(rop_np)).get()
+
+        assert result.dtype == expected_result.dtype
+        assert result.shape == expected_result.shape
+        np.testing.assert_allclose(expected_result, result,
+                                   rtol=5e-5)
 
 
 if __name__ == "__main__":
