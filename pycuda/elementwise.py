@@ -27,6 +27,7 @@ OTHER DEALINGS IN THE SOFTWARE.
 
 
 from pycuda.tools import context_dependent_memoize
+from typing import Any
 import numpy as np
 from pycuda.tools import dtype_to_ctype, VectorArg, ScalarArg
 from pytools import memoize_method
@@ -462,6 +463,11 @@ def get_linear_combination_kernel(summand_descriptors, dtype_z):
     return func, tex_src
 
 
+def _get_real_dtype(dtype: np.dtype[Any]) -> np.dtype[Any]:
+    assert dtype.kind == "c"
+    return np.empty(0, dtype).real.dtype
+
+
 @context_dependent_memoize
 def get_axpbyz_kernel(dtype_x, dtype_y, dtype_z,
                     x_is_scalar=False, y_is_scalar=False):
@@ -472,10 +478,29 @@ def get_axpbyz_kernel(dtype_x, dtype_y, dtype_z,
     :arg y_is_scalar: A :class:`bool` which is *True* only if `y` is a scalar :class:`gpuarray`.
     """
     out_t = dtype_to_ctype(dtype_z)
+
+    # {{{ cast real scalars in context of complex scalar arithmetic
+
+    if dtype_z.kind == "c" and dtype_x.kind != "c":
+        dtype_z_real = _get_real_dtype(dtype_z)
+        x_t = dtype_to_ctype(dtype_z_real)
+    else:
+        x_t = out_t
+
+    if dtype_z.kind == "c" and dtype_y.kind != "c":
+        dtype_z_real = _get_real_dtype(dtype_z)
+        y_t = dtype_to_ctype(dtype_z_real)
+    else:
+        y_t = out_t
+
+    # }}}
+
     x = "x[0]" if x_is_scalar else "x[i]"
-    ax = f"a*(({out_t}) {x})"
+    a = f"({x_t}) a"
+    ax = f"{a}*(({x_t}) {x})"
     y = "y[0]" if y_is_scalar else "y[i]"
-    by = f"b*(({out_t}) {y})"
+    b = f"({y_t}) b"
+    by = f"({b})*(({y_t}) {y})"
     result = f"{ax} + {by}"
     return get_elwise_kernel(
         "%(tp_x)s a, %(tp_x)s *x, %(tp_y)s b, %(tp_y)s *y, %(tp_z)s *z"
@@ -508,8 +533,29 @@ def get_binary_op_kernel(dtype_x, dtype_y, dtype_z, operator,
     :arg x_is_scalar: A :class:`bool` which is *True* only if `x` is a scalar :class:`gpuarray`.
     :arg y_is_scalar: A :class:`bool` which is *True* only if `y` is a scalar :class:`gpuarray`.
     """
+
+    out_t = dtype_to_ctype(dtype_z)
+
+    # {{{ cast real scalars in context of complex scalar arithmetic
+
+    if dtype_z.kind == "c" and dtype_x.kind != "c":
+        dtype_z_real = _get_real_dtype(dtype_z)
+        x_t = dtype_to_ctype(dtype_z_real)
+    else:
+        x_t = out_t
+
+    if dtype_z.kind == "c" and dtype_y.kind != "c":
+        dtype_z_real = _get_real_dtype(dtype_z)
+        y_t = dtype_to_ctype(dtype_z_real)
+    else:
+        y_t = out_t
+
+    # }}}
+
     x = "x[0]" if x_is_scalar else "x[i]"
+    x = f"({x_t}) {x}"
     y = "y[0]" if y_is_scalar else "y[i]"
+    y = f"({y_t}) {y}"
     result = f"{x} {operator} {y}"
     return get_elwise_kernel(
         "%(tp_x)s *x, %(tp_y)s *y, %(tp_z)s *z"
@@ -518,7 +564,7 @@ def get_binary_op_kernel(dtype_x, dtype_y, dtype_z, operator,
             "tp_y": dtype_to_ctype(dtype_y),
             "tp_z": dtype_to_ctype(dtype_z),
         },
-        f"z[i] = {result}",
+        f"z[i] = ({out_t}) {result}",
         "multiply",
     )
 
