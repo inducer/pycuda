@@ -463,7 +463,7 @@ def get_linear_combination_kernel(summand_descriptors, dtype_z):
     return func, tex_src
 
 
-def _get_real_dtype(dtype: np.dtype[Any]) -> np.dtype[Any]:
+def _get_real_dtype(dtype: "np.dtype[Any]") -> "np.dtype[Any]":
     assert dtype.kind == "c"
     return np.empty(0, dtype).real.dtype
 
