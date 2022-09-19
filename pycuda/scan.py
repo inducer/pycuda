@@ -91,7 +91,7 @@ REQD_WG_SIZE(WG_SIZE, 1, 1)
 void ${name_prefix}_scan_intervals(
     GLOBAL_MEM scan_type *input,
     const size_t N,
-    const size_t interval_size,
+    const unsigned int interval_size,
     GLOBAL_MEM scan_type *output,
     GLOBAL_MEM scan_type *group_results)
 {
@@ -100,11 +100,11 @@ void ${name_prefix}_scan_intervals(
     LOCAL_MEM scan_type ldata[K + 1][WG_SIZE + 1];
 
     const size_t interval_begin = interval_size * GID_0;
-    const size_t interval_end   = min(interval_begin + interval_size, N);
+    const size_t interval_end   = min((size_t) (interval_begin + interval_size), N);
 
-    const size_t unit_size  = K * WG_SIZE;
+    const unsigned int unit_size  = K * WG_SIZE;
 
-    size_t unit_base = interval_begin;
+    unsigned int unit_base = interval_begin;
 
     %for is_tail in [False, True]:
 
@@ -140,7 +140,7 @@ void ${name_prefix}_scan_intervals(
 
             // read a unit's worth of data from global
 
-            for(size_t k = 0; k < K; k++)
+            for(unsigned int k = 0; k < K; k++)
             {
                 const size_t offset = k*WG_SIZE + LID_0;
 
@@ -165,7 +165,7 @@ void ${name_prefix}_scan_intervals(
                 const size_t offset_end = interval_end - unit_base;
             %endif
 
-            for(size_t k = 1; k < K; k++)
+            for(unsigned int k = 1; k < K; k++)
             {
                 %if is_tail:
                 if (K * LID_0 + k < offset_end)
@@ -193,7 +193,7 @@ void ${name_prefix}_scan_intervals(
             {
                 sum = ldata[K][LID_0 - 1];
 
-                for(size_t k = 0; k < K; k++)
+                for(unsigned int k = 0; k < K; k++)
                 {
                     %if is_tail:
                     if (K * LID_0 + k < offset_end)
@@ -208,7 +208,7 @@ void ${name_prefix}_scan_intervals(
             local_barrier();
 
             // write data
-            for(size_t k = 0; k < K; k++)
+            for(unsigned int k = 0; k < K; k++)
             {
                 const size_t offset = k*WG_SIZE + LID_0;
 
@@ -243,11 +243,11 @@ REQD_WG_SIZE(WG_SIZE, 1, 1)
 void ${name_prefix}_final_update(
     GLOBAL_MEM scan_type *output,
     const size_t N,
-    const size_t interval_size,
+    const unsigned int interval_size,
     GLOBAL_MEM scan_type *group_results)
 {
     const size_t interval_begin = interval_size * GID_0;
-    const size_t interval_end   = min(interval_begin + interval_size, N);
+    const size_t interval_end   = min((size_t) (interval_begin + interval_size), N);
 
     if (GID_0 == 0)
         return;
@@ -282,13 +282,13 @@ REQD_WG_SIZE(WG_SIZE, 1, 1)
 void ${name_prefix}_final_update(
     GLOBAL_MEM scan_type *output,
     const size_t N,
-    const size_t interval_size,
+    const unsigned int interval_size,
     GLOBAL_MEM scan_type *group_results)
 {
     LOCAL_MEM scan_type ldata[WG_SIZE];
 
     const size_t interval_begin = interval_size * GID_0;
-    const size_t interval_end   = min(interval_begin + interval_size, N);
+    const size_t interval_end   = min((size_t) (interval_begin + interval_size), N);
 
     // value to add to this segment
     scan_type carry = ${neutral};
@@ -381,7 +381,7 @@ class _ScanKernelBase:
         self.scan_intervals_knl = scan_intervals_prg.get_function(
             name_prefix + "_scan_intervals"
         )
-        self.scan_intervals_knl.prepare("PIIPP")
+        self.scan_intervals_knl.prepare("PnIPP")
 
         final_update_src = str(
             self.final_update_tp.render(wg_size=self.update_wg_size, **kw_values)
@@ -393,7 +393,7 @@ class _ScanKernelBase:
         self.final_update_knl = final_update_prg.get_function(
             name_prefix + "_final_update"
         )
-        self.final_update_knl.prepare("PIIP")
+        self.final_update_knl.prepare("PnIP")
 
     def __call__(self, input_ary, output_ary=None, allocator=None, stream=None):
         allocator = allocator or input_ary.allocator
