@@ -104,7 +104,7 @@ void ${name_prefix}_scan_intervals(
 
     const unsigned int unit_size  = K * WG_SIZE;
 
-    unsigned int unit_base = interval_begin;
+    size_t unit_base = interval_begin;
 
     %for is_tail in [False, True]:
 
