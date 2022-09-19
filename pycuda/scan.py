@@ -55,7 +55,7 @@ SCAN_INTERVALS_SOURCE = mako.template.Template(
     WITHIN_KERNEL
     void ${name}(LOCAL_MEM_ARG scan_type *array
     % if with_bounds_check:
-      , const unsigned n
+      , const size_t n
     % endif
     )
     {
@@ -90,8 +90,8 @@ KERNEL
 REQD_WG_SIZE(WG_SIZE, 1, 1)
 void ${name_prefix}_scan_intervals(
     GLOBAL_MEM scan_type *input,
-    const unsigned int N,
-    const unsigned int interval_size,
+    const size_t N,
+    const size_t interval_size,
     GLOBAL_MEM scan_type *output,
     GLOBAL_MEM scan_type *group_results)
 {
@@ -99,12 +99,12 @@ void ${name_prefix}_scan_intervals(
     // index K in first dimension used for carry storage
     LOCAL_MEM scan_type ldata[K + 1][WG_SIZE + 1];
 
-    const unsigned int interval_begin = interval_size * GID_0;
-    const unsigned int interval_end   = min(interval_begin + interval_size, N);
+    const size_t interval_begin = interval_size * GID_0;
+    const size_t interval_end   = min(interval_begin + interval_size, N);
 
-    const unsigned int unit_size  = K * WG_SIZE;
+    const size_t unit_size  = K * WG_SIZE;
 
-    unsigned int unit_base = interval_begin;
+    size_t unit_base = interval_begin;
 
     %for is_tail in [False, True]:
 
@@ -140,9 +140,9 @@ void ${name_prefix}_scan_intervals(
 
             // read a unit's worth of data from global
 
-            for(unsigned int k = 0; k < K; k++)
+            for(size_t k = 0; k < K; k++)
             {
-                const unsigned int offset = k*WG_SIZE + LID_0;
+                const size_t offset = k*WG_SIZE + LID_0;
 
                 %if is_tail:
                 if (unit_base + offset < interval_end)
@@ -162,10 +162,10 @@ void ${name_prefix}_scan_intervals(
             scan_type sum = ldata[0][LID_0];
 
             %if is_tail:
-                const unsigned int offset_end = interval_end - unit_base;
+                const size_t offset_end = interval_end - unit_base;
             %endif
 
-            for(unsigned int k = 1; k < K; k++)
+            for(size_t k = 1; k < K; k++)
             {
                 %if is_tail:
                 if (K * LID_0 + k < offset_end)
@@ -193,7 +193,7 @@ void ${name_prefix}_scan_intervals(
             {
                 sum = ldata[K][LID_0 - 1];
 
-                for(unsigned int k = 0; k < K; k++)
+                for(size_t k = 0; k < K; k++)
                 {
                     %if is_tail:
                     if (K * LID_0 + k < offset_end)
@@ -208,9 +208,9 @@ void ${name_prefix}_scan_intervals(
             local_barrier();
 
             // write data
-            for(unsigned int k = 0; k < K; k++)
+            for(size_t k = 0; k < K; k++)
             {
-                const unsigned int offset = k*WG_SIZE + LID_0;
+                const size_t offset = k*WG_SIZE + LID_0;
 
                 %if is_tail:
                 if (unit_base + offset < interval_end)
@@ -242,12 +242,12 @@ KERNEL
 REQD_WG_SIZE(WG_SIZE, 1, 1)
 void ${name_prefix}_final_update(
     GLOBAL_MEM scan_type *output,
-    const unsigned int N,
-    const unsigned int interval_size,
+    const size_t N,
+    const size_t interval_size,
     GLOBAL_MEM scan_type *group_results)
 {
-    const unsigned int interval_begin = interval_size * GID_0;
-    const unsigned int interval_end   = min(interval_begin + interval_size, N);
+    const size_t interval_begin = interval_size * GID_0;
+    const size_t interval_end   = min(interval_begin + interval_size, N);
 
     if (GID_0 == 0)
         return;
@@ -258,11 +258,11 @@ void ${name_prefix}_final_update(
     // advance result pointer
     output += interval_begin + LID_0;
 
-    for(unsigned int unit_base = interval_begin;
+    for(size_t unit_base = interval_begin;
         unit_base < interval_end;
         unit_base += WG_SIZE, output += WG_SIZE)
     {
-        const unsigned int i = unit_base + LID_0;
+        const size_t i = unit_base + LID_0;
 
         if(i < interval_end)
         {
@@ -281,14 +281,14 @@ KERNEL
 REQD_WG_SIZE(WG_SIZE, 1, 1)
 void ${name_prefix}_final_update(
     GLOBAL_MEM scan_type *output,
-    const unsigned int N,
-    const unsigned int interval_size,
+    const size_t N,
+    const size_t interval_size,
     GLOBAL_MEM scan_type *group_results)
 {
     LOCAL_MEM scan_type ldata[WG_SIZE];
 
-    const unsigned int interval_begin = interval_size * GID_0;
-    const unsigned int interval_end   = min(interval_begin + interval_size, N);
+    const size_t interval_begin = interval_size * GID_0;
+    const size_t interval_end   = min(interval_begin + interval_size, N);
 
     // value to add to this segment
     scan_type carry = ${neutral};
@@ -303,11 +303,11 @@ void ${name_prefix}_final_update(
     // advance result pointer
     output += interval_begin + LID_0;
 
-    for (unsigned int unit_base = interval_begin;
+    for (size_t unit_base = interval_begin;
         unit_base < interval_end;
         unit_base += WG_SIZE, output += WG_SIZE)
     {
-        const unsigned int i = unit_base + LID_0;
+        const size_t i = unit_base + LID_0;
 
         if(i < interval_end)
         {
