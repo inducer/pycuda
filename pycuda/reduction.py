@@ -91,7 +91,7 @@ def get_reduction_module(
         extern "C"
         __global__
         void %(name)s(out_type *out, %(arguments)s,
-          unsigned int seq_count, unsigned int n)
+          size_t seq_count, size_t n)
         {
           // Needs to be variable-size to prevent the braindead CUDA compiler from
           // running constructors on this array. Grrrr.
@@ -99,10 +99,10 @@ def get_reduction_module(
 
           unsigned int tid = threadIdx.x;
 
-          unsigned int i = blockIdx.x*BLOCK_SIZE*seq_count + tid;
+          size_t i = blockIdx.x*BLOCK_SIZE*seq_count + tid;
 
           out_type acc = %(neutral)s;
-          for (unsigned s = 0; s < seq_count; ++s)
+          for (size_t s = 0; s < seq_count; ++s)
           {
             if (i >= n)
               break;
