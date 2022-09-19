@@ -205,7 +205,7 @@ def get_reduction_kernel_and_types(
 
     func = mod.get_function(name)
     arg_types = [get_arg_type(arg) for arg in arguments.split(",")]
-    func.prepare("P%sII" % "".join(arg_types))
+    func.prepare("P%sIn" % "".join(arg_types))
 
     return func, arg_types
 
