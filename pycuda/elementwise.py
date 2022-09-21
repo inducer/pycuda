@@ -107,7 +107,7 @@ def get_elwise_range_module(
           size_t tid = threadIdx.x;
           size_t total_threads = gridDim.x*blockDim.x;
           size_t cta_start = blockDim.x*blockIdx.x;
-          size_t i;
+          long i;
 
           %(loop_prep)s;
 
