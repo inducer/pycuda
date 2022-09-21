@@ -1479,6 +1479,31 @@ class TestGPUArray:
         np.testing.assert_allclose(expected_result, result,
                                    rtol=5e-5)
 
+    def test_big_array_elementwise(self):
+        from pycuda.elementwise import ElementwiseKernel
+
+        device_mem_GB = drv.Context.get_device().total_memory() / 1e9
+        if device_mem_GB < 18:
+            pytest.skip("Need at least 17.2 GB memory")
+
+        # Array index must be >= 2**32 to ensure that large arrays can be handled.
+        # Unfortunately, doing "array[i] = i" does not work in float32, since
+        # float32 cannot represent some integers larger than 2**24.
+        # Switching to a 64-bit type is not an option as it would entail > 34 GB
+        # memory usage. So, we use this modulus trick.
+
+        eltwise = ElementwiseKernel(
+            "float* d_arr",
+            "d_arr[i] = (float) (i & 0b111111111111111111111111)", "mod_linspace"
+        )
+        d_arr = gpuarray.empty((1024, 2048, 2048), np.float32)
+        eltwise(d_arr)
+        result = d_arr.get()[()]
+        chunk_size = 2**24
+        reference_part = np.arange(chunk_size, dtype=np.float32)
+        for i in range(d_arr.size // chunk_size):
+            assert np.allclose(result.ravel()[i*chunk_size:(i+1)*chunk_size], reference_part)
+
 
 if __name__ == "__main__":
     # make sure that import failures get reported, instead of skipping the tests.
