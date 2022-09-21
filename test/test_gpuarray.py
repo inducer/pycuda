@@ -1517,6 +1517,23 @@ class TestGPUArray:
 
         assert result == d_arr.size / 1024
 
+    def test_big_array_scan(self):
+        device_mem_GB = drv.Context.get_device().total_memory() / 1e9
+        if device_mem_GB < 18:
+            pytest.skip("Need at least 17.2 GB memory")
+        from pycuda.scan import InclusiveScanKernel
+
+        # Same issue as in test_big_array_elementwise: need array of size > 2**32
+        # so we can't use 64 bits data type (otherwise memory usage blows up).
+        # Limit numbers to 2**32-1.
+        cumsum = InclusiveScanKernel(
+            np.uint32, "(a+b) & 0b11111111111111111111111111111111"
+        )
+        d_arr = gpuarray.zeros((1024, 2048, 2048), np.uint32)
+        d_arr.fill(1)
+        result = cumsum(d_arr.ravel()).get()[()]
+        assert np.allclose(result[-2**32:], np.roll(np.arange(2**32, dtype=np.uint32), -1))
+
 
 if __name__ == "__main__":
     # make sure that import failures get reported, instead of skipping the tests.
