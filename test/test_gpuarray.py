@@ -1504,6 +1504,19 @@ class TestGPUArray:
         for i in range(d_arr.size // chunk_size):
             assert np.allclose(result.ravel()[i*chunk_size:(i+1)*chunk_size], reference_part)
 
+    def test_big_array_reduction(self):
+        device_mem_GB = drv.Context.get_device().total_memory() / 1e9
+        if device_mem_GB < 18:
+            pytest.skip("Need at least 17.2 GB memory")
+
+        from pycuda.reduction import ReductionKernel
+        reduction = ReductionKernel(np.float32, neutral="0", reduce_expr="a+b", map_expr="x[i]/1024", arguments="float* x")
+        d_arr = gpuarray.zeros((1024, 2048, 2048), np.float32)
+        d_arr.fill(1)  # elementwise!
+        result = reduction(d_arr.ravel()).get()[()]
+
+        assert result == d_arr.size / 1024
+
 
 if __name__ == "__main__":
     # make sure that import failures get reported, instead of skipping the tests.
