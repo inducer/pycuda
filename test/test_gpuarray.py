@@ -1532,7 +1532,7 @@ class TestGPUArray:
         d_arr = gpuarray.zeros((1024, 2048, 2048), np.uint32)
         d_arr.fill(1)
         result = cumsum(d_arr.ravel()).get()[()]
-        assert np.allclose(result[-2**32:], np.roll(np.arange(2**32, dtype=np.uint32), -1))
+        assert np.allclose(result, np.roll(np.arange(d_arr.size, dtype=np.uint32), -1))
 
 
 if __name__ == "__main__":
