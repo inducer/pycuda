@@ -1498,10 +1498,11 @@ class TestGPUArray:
         d_arr = gpuarray.empty(n_items, np.uint8)
         eltwise(d_arr)
         result = d_arr.get()[()]
-        # Needs 8.6 GB memory on host - numpy cannot keep uint8 for mod() operation
-        reference = np.arange(d_arr.size, dtype=d_arr.dtype)
-        reference = np.mod(reference, 256)
-        assert np.allclose(result, reference)
+        # Needs 8.6 GB memory on host - numpy cannot keep uint8 for mod() operation,
+        # and np.mod(np.arange()) is way too slow
+        reference = np.mod(np.arange(d_arr.size, dtype=np.int16), 256, dtype=np.int16)
+        reference -= result
+        assert np.max(reference) == 0
 
     def test_big_array_reduction(self):
         skip_if_not_enough_gpu_memory(4.5)
