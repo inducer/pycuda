@@ -36,6 +36,12 @@ def get_random_array(rng, shape, dtype):
         raise NotImplementedError(f"dtype = {dtype}")
 
 
+def skip_if_not_enough_gpu_memory(required_mem_gigabytes):
+    device_mem_GB = drv.Context.get_device().total_memory() / 1e9
+    if device_mem_GB < required_mem_gigabytes:
+        pytest.skip("Need at least %.1f GB memory" % required_mem_gigabytes)
+
+
 @pytest.mark.cuda
 class TestGPUArray:
     def test_pow_array(self):
@@ -1480,59 +1486,57 @@ class TestGPUArray:
                                    rtol=5e-5)
 
     def test_big_array_elementwise(self):
+        skip_if_not_enough_gpu_memory(4.5)
+
         from pycuda.elementwise import ElementwiseKernel
-
-        device_mem_GB = drv.Context.get_device().total_memory() / 1e9
-        if device_mem_GB < 18:
-            pytest.skip("Need at least 17.2 GB memory")
-
-        # Array index must be >= 2**32 to ensure that large arrays can be handled.
-        # Unfortunately, doing "array[i] = i" does not work in float32, since
-        # float32 cannot represent some integers larger than 2**24.
-        # Switching to a 64-bit type is not an option as it would entail > 34 GB
-        # memory usage. So, we use this modulus trick.
+        n_items = 2**32
 
         eltwise = ElementwiseKernel(
-            "float* d_arr",
-            "d_arr[i] = (float) (i & 0b111111111111111111111111)", "mod_linspace"
+            "unsigned char* d_arr",
+            "d_arr[i] = (unsigned char) (i & 0b11111111)", "mod_linspace"
         )
-        d_arr = gpuarray.empty((1024, 2048, 2048), np.float32)
+        d_arr = gpuarray.empty(n_items, np.uint8)
         eltwise(d_arr)
         result = d_arr.get()[()]
-        chunk_size = 2**24
-        reference_part = np.arange(chunk_size, dtype=np.float32)
-        for i in range(d_arr.size // chunk_size):
-            assert np.allclose(result.ravel()[i*chunk_size:(i+1)*chunk_size], reference_part)
+        # Needs 8.6 GB memory on host - numpy cannot keep uint8 for mod() operation
+        reference = np.arange(d_arr.size, dtype=d_arr.dtype)
+        reference = np.mod(reference, 256)
+        assert np.allclose(result, reference)
 
     def test_big_array_reduction(self):
-        device_mem_GB = drv.Context.get_device().total_memory() / 1e9
-        if device_mem_GB < 18:
-            pytest.skip("Need at least 17.2 GB memory")
+        skip_if_not_enough_gpu_memory(4.5)
 
         from pycuda.reduction import ReductionKernel
-        reduction = ReductionKernel(np.float32, neutral="0", reduce_expr="a+b", map_expr="x[i]/1024", arguments="float* x")
-        d_arr = gpuarray.zeros((1024, 2048, 2048), np.float32)
+        n_items = 2**32 + 11
+        reduction = ReductionKernel(
+            np.uint8,
+            neutral="0",
+            reduce_expr="(a+b) & 0b11111111",
+            map_expr="x[i]",
+            arguments="unsigned char* x"
+        )
+        d_arr = gpuarray.zeros(n_items, np.uint8)
         d_arr.fill(1)  # elementwise!
-        result = reduction(d_arr.ravel()).get()[()]
+        result = reduction(d_arr).get()[()]
 
-        assert result == d_arr.size / 1024
+        assert result == 11
 
     def test_big_array_scan(self):
-        device_mem_GB = drv.Context.get_device().total_memory() / 1e9
-        if device_mem_GB < 18:
-            pytest.skip("Need at least 17.2 GB memory")
+        skip_if_not_enough_gpu_memory(4.5)
+        n_items = 2**32 + 12
         from pycuda.scan import InclusiveScanKernel
 
-        # Same issue as in test_big_array_elementwise: need array of size > 2**32
-        # so we can't use 64 bits data type (otherwise memory usage blows up).
-        # Limit numbers to 2**32-1.
-        cumsum = InclusiveScanKernel(
-            np.uint32, "(a+b) & 0b11111111111111111111111111111111"
-        )
-        d_arr = gpuarray.zeros((1024, 2048, 2048), np.uint32)
+        cumsum = InclusiveScanKernel(np.uint8, "(a+b) & 0b11111111")
+        d_arr = gpuarray.zeros(n_items, np.uint8)
         d_arr.fill(1)
-        result = cumsum(d_arr.ravel()).get()[()]
-        assert np.allclose(result, np.roll(np.arange(d_arr.size, dtype=np.uint32), -1))
+        result = cumsum(d_arr).get()[()]
+        # Needs 8.6 GB on host. numpy.allclose() is way too slow otherwise.
+        reference = np.tile(
+            np.roll(np.arange(256, dtype=np.int16), -1), n_items//256
+        )
+        reference -= result[:reference.size]
+        assert np.max(reference) == 0
+        assert np.allclose(result[2**32:], np.arange(1, 12+1))
 
 
 if __name__ == "__main__":
