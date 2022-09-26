@@ -38,6 +38,7 @@ def _add_cuda_libdir_to_dll_path():
     nvcc_path = _search_on_path(["nvcc.exe"])
     if nvcc_path is not None:
         os.add_dll_directory(dirname(nvcc_path))
+        return
 
     from warnings import warn
 
