@@ -381,7 +381,7 @@ class _ScanKernelBase:
         self.scan_intervals_knl = scan_intervals_prg.get_function(
             name_prefix + "_scan_intervals"
         )
-        self.scan_intervals_knl.prepare("PnIPP")
+        self.scan_intervals_knl.prepare("PNIPP")
 
         final_update_src = str(
             self.final_update_tp.render(wg_size=self.update_wg_size, **kw_values)
@@ -393,7 +393,7 @@ class _ScanKernelBase:
         self.final_update_knl = final_update_prg.get_function(
             name_prefix + "_final_update"
         )
-        self.final_update_knl.prepare("PnIP")
+        self.final_update_knl.prepare("PNIP")
 
     def __call__(self, input_ary, output_ary=None, allocator=None, stream=None):
         allocator = allocator or input_ary.allocator
