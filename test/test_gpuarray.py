@@ -1539,6 +1539,13 @@ class TestGPUArray:
         assert np.max(reference) == 0
         assert np.allclose(result[2**32:], np.arange(1, 12+1))
 
+    def test_noncontig_transpose(self):
+        # https://github.com/inducer/pycuda/issues/385
+        d = gpuarray.zeros((1000, 15, 2048), "f")
+        d.transpose(axes=(1, 0, 2))  # works
+        d2 = d[:, 7:9, :]  # non C-contiguous
+        d2.transpose(axes=(1, 0, 2))  # crashes for recent versions
+
 
 if __name__ == "__main__":
     # make sure that import failures get reported, instead of skipping the tests.

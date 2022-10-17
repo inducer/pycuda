@@ -1066,7 +1066,7 @@ class GPUArray:
             shape=tuple(new_shape),
             dtype=self.dtype,
             allocator=self.allocator,
-            base=self.base or self,
+            base=self if self.base is None else self.base,
             gpudata=self.gpudata,
             strides=tuple(new_strides),
         )
