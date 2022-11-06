@@ -50,12 +50,6 @@ namespace PYGPU_PACKAGE
     mp_noncopyable& operator=(const mp_noncopyable&) = delete;
   };
 
-#ifdef PYGPU_PYCUDA
-#define PYGPU_SHARED_PTR boost::shared_ptr
-#else
-#define PYGPU_SHARED_PTR std::shared_ptr
-#endif
-
   template <class T>
   inline T signed_left_shift(T x, signed shift_amount)
   {
@@ -400,14 +394,14 @@ namespace PYGPU_PACKAGE
       typedef typename Pool::size_type size_type;
 
     private:
-      PYGPU_SHARED_PTR<pool_type> m_pool;
+      std::shared_ptr<pool_type> m_pool;
 
       pointer_type m_ptr;
       size_type m_size;
       bool m_valid;
 
     public:
-      pooled_allocation(PYGPU_SHARED_PTR<pool_type> p, size_type size)
+      pooled_allocation(std::shared_ptr<pool_type> p, size_type size)
         : m_pool(p), m_ptr(p->allocate(size)), m_size(size), m_valid(true)
       { }
 

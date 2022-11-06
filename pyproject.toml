@@ -5,6 +5,7 @@
 # implementing that C_API_VERSION.
 requires = [
     "setuptools",
+    "pybind11>=2.5.0",
     "wheel",
     "oldest-supported-numpy",
 ]
