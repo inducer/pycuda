@@ -186,11 +186,6 @@ def main():
 
     import sys
 
-    if sys.version_info >= (3,):
-        pvt_struct_source = "src/wrapper/_pvt_struct_v3.cpp"
-    else:
-        pvt_struct_source = "src/wrapper/_pvt_struct_v2.cpp"
-
     setup(
         name="pycuda",
         # metadata
@@ -254,7 +249,7 @@ def main():
             ),
             ExtensionUsingNumpy(
                 "_pvt_struct",
-                [pvt_struct_source],
+                ["src/wrapper/_pvt_struct_v3.cpp"],
                 extra_compile_args=conf["CXXFLAGS"],
                 extra_link_args=conf["LDFLAGS"],
             ),
