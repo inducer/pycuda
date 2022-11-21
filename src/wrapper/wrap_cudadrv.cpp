@@ -8,7 +8,6 @@
 
 #include "tools.hpp"
 #include "wrap_helpers.hpp"
-#include <boost/python/stl_iterator.hpp>
 
 
 
@@ -21,7 +20,6 @@
 
 
 using namespace pycuda;
-using boost::shared_ptr;
 
 
 
@@ -291,14 +289,14 @@ namespace
       py::object dest_context_py, py::object src_context_py
       )
   {
-    boost::shared_ptr<context> dest_context = context::current_context();
-    boost::shared_ptr<context> src_context = dest_context;
+    std::shared_ptr<context> dest_context = context::current_context();
+    std::shared_ptr<context> src_context = dest_context;
 
     if (dest_context_py.ptr() == Py_None)
-      dest_context = py::extract<boost::shared_ptr<context> >(dest_context_py);
+      dest_context = py::extract<std::shared_ptr<context> >(dest_context_py);
 
     if (src_context_py.ptr() == Py_None)
-      src_context = py::extract<boost::shared_ptr<context> >(src_context_py);
+      src_context = py::extract<std::shared_ptr<context> >(src_context_py);
 
     CUDAPP_CALL_GUARDED_THREADED(cuMemcpyPeer, (
           dest, dest_context->handle(),
@@ -311,14 +309,14 @@ namespace
       py::object dest_context_py, py::object src_context_py,
       py::object stream_py)
   {
-    boost::shared_ptr<context> dest_context = context::current_context();
-    boost::shared_ptr<context> src_context = dest_context;
+    std::shared_ptr<context> dest_context = context::current_context();
+    std::shared_ptr<context> src_context = dest_context;
 
     if (dest_context_py.ptr() == Py_None)
-      dest_context = py::extract<boost::shared_ptr<context> >(dest_context_py);
+      dest_context = py::extract<std::shared_ptr<context> >(dest_context_py);
 
     if (src_context_py.ptr() == Py_None)
-      src_context = py::extract<boost::shared_ptr<context> >(src_context_py);
+      src_context = py::extract<std::shared_ptr<context> >(src_context_py);
 
     PYCUDA_PARSE_STREAM_PY
 
@@ -415,7 +413,7 @@ namespace
   // {{{ linker
 
 #if CUDAPP_CUDA_VERSION >= 5050
-  class Linker : public boost::noncopyable
+  class Linker : public ncopyable
   {
     private:
       py::object m_message_handler;
@@ -670,9 +668,9 @@ BOOST_PYTHON_MODULE(_driver)
   if (!import_numpy_helper())
     throw py::error_already_set();
 
-  py::def("get_version", cuda_version);
+  m.def("get_version", cuda_version);
 #if CUDAPP_CUDA_VERSION >= 2020
-  py::def("get_driver_version", pycuda::get_driver_version);
+  m.def("get_driver_version", pycuda::get_driver_version);
 #endif
 
   // {{{ exceptions
@@ -750,7 +748,7 @@ BOOST_PYTHON_MODULE(_driver)
 
 #if CUDAPP_CUDA_VERSION >= 3000
   {
-    py::class_<array3d_flags> cls("array3d_flags", py::no_init);
+    py::class_<array3d_flags> cls(m, "array3d_flags", py::no_init);
     // deprecated
     cls.attr("ARRAY3D_2DARRAY") = CUDA_ARRAY3D_2DARRAY;
 #if CUDAPP_CUDA_VERSION >= 4000
@@ -1046,7 +1044,7 @@ BOOST_PYTHON_MODULE(_driver)
 
 #if CUDAPP_CUDA_VERSION >= 2020
   {
-    py::class_<host_alloc_flags> cls("host_alloc_flags", py::no_init);
+    py::class_<host_alloc_flags> cls(m, "host_alloc_flags", py::no_init);
     cls.attr("PORTABLE") = CU_MEMHOSTALLOC_PORTABLE;
     cls.attr("DEVICEMAP") = CU_MEMHOSTALLOC_DEVICEMAP;
     cls.attr("WRITECOMBINED") = CU_MEMHOSTALLOC_WRITECOMBINED;
@@ -1055,7 +1053,7 @@ BOOST_PYTHON_MODULE(_driver)
 
 #if CUDAPP_CUDA_VERSION >= 4000
   {
-    py::class_<mem_host_register_flags> cls("mem_host_register_flags", py::no_init);
+    py::class_<mem_host_register_flags> cls(m, "mem_host_register_flags", py::no_init);
     cls.attr("PORTABLE") = CU_MEMHOSTREGISTER_PORTABLE;
     cls.attr("DEVICEMAP") = CU_MEMHOSTREGISTER_DEVICEMAP;
   }
@@ -1109,13 +1107,13 @@ BOOST_PYTHON_MODULE(_driver)
 
   // }}}
 
-  py::def("init", init,
+  m.def("init", init,
       py::arg("flags")=0);
 
   // {{{ device
   {
     typedef device cl;
-    py::class_<cl>("Device", py::no_init)
+    py::class_<cl>(m, "Device", py::no_init)
       .def("__init__", py::make_constructor(make_device))
 #if CUDAPP_CUDA_VERSION >= 4010
       .def("__init__", py::make_constructor(make_device_from_pci_bus_id))
@@ -1133,13 +1131,13 @@ BOOST_PYTHON_MODULE(_driver)
       .def(py::self != py::self)
       .def("__hash__", &cl::hash)
       .def("make_context", &cl::make_context,
-          (py::args("self"), py::args("flags")=0))
+          (py::arg("self"), py::arg("flags")=0))
 #if CUDAPP_CUDA_VERSION >= 4000
       .DEF_SIMPLE_METHOD(can_access_peer)
 #endif
 #if CUDAPP_CUDA_VERSION >= 7000
       .def("retain_primary_context", &cl::retain_primary_context,
-          (py::args("self")))
+          (py::arg("self")))
 #endif
       ;
   }
@@ -1148,7 +1146,7 @@ BOOST_PYTHON_MODULE(_driver)
   // {{{ context
   {
     typedef context cl;
-    py::class_<cl, shared_ptr<cl>, boost::noncopyable >("Context", py::no_init)
+    py::class_<cl, shared_ptr<cl>>(m, "Context", py::no_init)
       .def(py::self == py::self)
       .def(py::self != py::self)
       .def("__hash__", &cl::hash)
@@ -1168,7 +1166,7 @@ BOOST_PYTHON_MODULE(_driver)
       .DEF_SIMPLE_METHOD(synchronize)
       .staticmethod("synchronize")
 
-      .def("get_current", (boost::shared_ptr<cl> (*)()) &cl::current_context)
+      .def("get_current", (std::shared_ptr<cl> (*)()) &cl::current_context)
       .staticmethod("get_current")
 
 #if CUDAPP_CUDA_VERSION >= 3010
@@ -1205,8 +1203,8 @@ BOOST_PYTHON_MODULE(_driver)
   // {{{ stream
   {
     typedef stream cl;
-    py::class_<cl, boost::noncopyable, shared_ptr<cl> >
-      ("Stream", py::init<unsigned int>(py::arg("flags")=0))
+    py::class_<cl, shared_ptr<cl> >
+      (m, "Stream", py::init<unsigned int>(py::arg("flags")=0))
       .DEF_SIMPLE_METHOD(synchronize)
       .DEF_SIMPLE_METHOD(is_done)
 #if CUDAPP_CUDA_VERSION >= 3020
@@ -1220,24 +1218,24 @@ BOOST_PYTHON_MODULE(_driver)
   // {{{ module
   {
     typedef module cl;
-    py::class_<cl, boost::noncopyable, shared_ptr<cl> >("Module", py::no_init)
-      .def("get_function", &cl::get_function, (py::args("self", "name")),
+    py::class_<cl, shared_ptr<cl> >(m, "Module", py::no_init)
+      .def("get_function", &cl::get_function, py::arg("self"), py::arg("name")),
           py::with_custodian_and_ward_postcall<0, 1>())
-      .def("get_global", &cl::get_global, (py::args("self", "name")))
+      .def("get_global", &cl::get_global, py::arg("self") py::arg("name")))
       .def("get_texref", module_get_texref,
-          (py::args("self", "name")),
+          (py::arg("self"), py::arg("name")),
           py::return_value_policy<py::manage_new_object>())
 #if CUDAPP_CUDA_VERSION >= 3010
       .def("get_surfref", module_get_surfref,
-          (py::args("self", "name")),
+          (py::arg("self"), py::arg("name")),
           py::return_value_policy<py::manage_new_object>())
 #endif
       ;
   }
 
-  py::def("module_from_file", module_from_file, (py::arg("filename")),
+  m.def("module_from_file", module_from_file, (py::arg("filename")),
       py::return_value_policy<py::manage_new_object>());
-  py::def("module_from_buffer", module_from_buffer,
+  m.def("module_from_buffer", module_from_buffer,
       (py::arg("buffer"),
        py::arg("options")=py::list(),
        py::arg("message_handler")=py::object()),
@@ -1255,7 +1253,7 @@ BOOST_PYTHON_MODULE(_driver)
     .value("OBJECT", CU_JIT_INPUT_OBJECT)
     .value("LIBRARY", CU_JIT_INPUT_LIBRARY);
 
-  py::class_<Linker, boost::noncopyable, shared_ptr<Linker> >("Linker")
+  py::class_<Linker, shared_ptr<Linker> >(m, "Linker")
     .def(py::init<py::object>())
     .def(py::init<py::object, py::object>())
     .def(py::init<py::object, py::object, py::object>())
@@ -1269,7 +1267,7 @@ BOOST_PYTHON_MODULE(_driver)
   // {{{ function
   {
     typedef function cl;
-    py::class_<cl>("Function", py::no_init)
+    py::class_<cl>(m, "Function", py::no_init)
       .def("_set_block_shape", &cl::set_block_shape)
       .def("_set_shared_size", &cl::set_shared_size)
       .def("_param_set_size", &cl::param_set_size)
@@ -1281,9 +1279,9 @@ BOOST_PYTHON_MODULE(_driver)
 
       .def("_launch", &cl::launch)
       .def("_launch_grid", &cl::launch_grid,
-          py::args("grid_width", "grid_height"))
+          py::arg("grid_width"), py::arg("grid_height"))
       .def("_launch_grid_async", &cl::launch_grid_async,
-          py::args("grid_width", "grid_height", "s"))
+          py::arg("grid_width"), py::arg("grid_height"), py::arg("s"))
 
 #if CUDAPP_CUDA_VERSION >= 2020
       .DEF_SIMPLE_METHOD(get_attribute)
@@ -1306,8 +1304,7 @@ BOOST_PYTHON_MODULE(_driver)
 
   {
     typedef pointer_holder_base cl;
-    py::class_<pointer_holder_base_wrap, boost::noncopyable>(
-        "PointerHolderBase")
+    py::class_<pointer_holder_base_wrap>(m, "PointerHolderBase")
       .def("get_pointer", py::pure_virtual(&cl::get_pointer))
       .def("as_buffer", &cl::as_buffer,
           (py::arg("size"), py::arg("offset")=0))
@@ -1321,7 +1318,7 @@ BOOST_PYTHON_MODULE(_driver)
 
   {
     typedef device_allocation cl;
-    py::class_<cl, boost::noncopyable>("DeviceAllocation", py::no_init)
+    py::class_<cl>(m, "DeviceAllocation", py::no_init)
       .def("__int__", &cl::operator CUdeviceptr)
       .def("__long__", mem_obj_to_long<cl>)
       .def("__index__", mem_obj_to_long<cl>)
@@ -1336,7 +1333,7 @@ BOOST_PYTHON_MODULE(_driver)
 #if CUDAPP_CUDA_VERSION >= 4010 && PY_VERSION_HEX >= 0x02060000
   {
     typedef ipc_mem_handle cl;
-    py::class_<cl, boost::noncopyable>("IPCMemoryHandle",
+    py::class_<cl>(m, "IPCMemoryHandle",
         py::init<py::object, py::optional<CUipcMem_flags> >())
       .def("__int__", &cl::operator CUdeviceptr)
       .def("__long__", mem_obj_to_long<cl>)
@@ -1356,7 +1353,7 @@ BOOST_PYTHON_MODULE(_driver)
 
   {
     typedef host_pointer cl;
-    py::class_<cl, boost::noncopyable>("HostPointer", py::no_init)
+    py::class_<cl>(m, "HostPointer", py::no_init)
 #if CUDAPP_CUDA_VERSION >= 2020
       .DEF_SIMPLE_METHOD(get_device_pointer)
 #endif
@@ -1365,8 +1362,8 @@ BOOST_PYTHON_MODULE(_driver)
 
   {
     typedef pagelocked_host_allocation cl;
-    py::class_<cl, boost::noncopyable, py::bases<host_pointer> > wrp(
-        "PagelockedHostAllocation", py::no_init);
+    py::class_<cl, py::bases<host_pointer> > wrp(
+        m, "PagelockedHostAllocation", py::no_init);
 
     wrp
       .DEF_SIMPLE_METHOD(free)
@@ -1380,8 +1377,8 @@ BOOST_PYTHON_MODULE(_driver)
 
   {
     typedef aligned_host_allocation cl;
-    py::class_<cl, boost::noncopyable, py::bases<host_pointer> > wrp(
-        "AlignedHostAllocation", py::no_init);
+    py::class_<cl, py::bases<host_pointer> > wrp(
+        m, "AlignedHostAllocation", py::no_init);
 
     wrp
       .DEF_SIMPLE_METHOD(free)
@@ -1391,8 +1388,8 @@ BOOST_PYTHON_MODULE(_driver)
 #if CUDAPP_CUDA_VERSION >= 6000
   {
     typedef managed_allocation cl;
-    py::class_<cl, boost::noncopyable, py::bases<device_allocation> > wrp(
-        "ManagedAllocation", py::no_init);
+    py::class_<cl, py::bases<device_allocation> > wrp(
+        m, "ManagedAllocation", py::no_init);
 
     wrp
       .DEF_SIMPLE_METHOD(get_device_pointer)
@@ -1405,108 +1402,108 @@ BOOST_PYTHON_MODULE(_driver)
 #if CUDAPP_CUDA_VERSION >= 4000
   {
     typedef registered_host_memory cl;
-    py::class_<cl, boost::noncopyable, py::bases<host_pointer> >(
-        "RegisteredHostMemory", py::no_init)
+    py::class_<cl, py::bases<host_pointer> >(
+        m, "RegisteredHostMemory", py::no_init)
       .def("unregister", &cl::free)
       ;
   }
 #endif
 
-  py::def("pagelocked_empty", numpy_empty<pagelocked_host_allocation>,
+  m.def("pagelocked_empty", numpy_empty<pagelocked_host_allocation>,
       (py::arg("shape"), py::arg("dtype"), py::arg("order")="C",
        py::arg("mem_flags")=0));
 
-  py::def("aligned_empty", numpy_empty<aligned_host_allocation>,
+  m.def("aligned_empty", numpy_empty<aligned_host_allocation>,
       (py::arg("shape"), py::arg("dtype"),
        py::arg("order")="C", py::arg("alignment")=4096));
 
 #if CUDAPP_CUDA_VERSION >= 6000
-  py::def("managed_empty", numpy_empty<managed_allocation>,
+  m.def("managed_empty", numpy_empty<managed_allocation>,
       (py::arg("shape"), py::arg("dtype"), py::arg("order")="C",
        py::arg("mem_flags")=0));
 #endif
 
 #if CUDAPP_CUDA_VERSION >= 4000
-  py::def("register_host_memory", register_host_memory,
+  m.def("register_host_memory", register_host_memory,
       (py::arg("ary"), py::arg("flags")=0));
 #endif
 
   // }}}
 
   DEF_SIMPLE_FUNCTION(mem_get_info);
-  py::def("mem_alloc", mem_alloc_wrap,
+  m.def("mem_alloc", mem_alloc_wrap,
       py::return_value_policy<py::manage_new_object>());
-  py::def("mem_alloc_pitch", mem_alloc_pitch_wrap,
-      py::args("width", "height", "access_size"));
+  m.def("mem_alloc_pitch", mem_alloc_pitch_wrap,
+      py::arg("width"), py::arg("height"), py::arg("access_size"));
   DEF_SIMPLE_FUNCTION(mem_get_address_range);
 
   // {{{ memset/memcpy
-  py::def("memset_d8",  py_memset_d8, py::args("dest", "data", "size"));
-  py::def("memset_d16", py_memset_d16, py::args("dest", "data", "size"));
-  py::def("memset_d32", py_memset_d32, py::args("dest", "data", "size"));
+  m.def("memset_d8",  py_memset_d8, py::arg("dest"), py::arg("data"), py::arg("size"));
+  m.def("memset_d16", py_memset_d16, py::arg("dest"), py::arg("data"), py::arg("size"));
+  m.def("memset_d32", py_memset_d32, py::arg("dest"), py::arg("data"), py::arg"size"));
 
-  py::def("memset_d2d8", py_memset_d2d8,
-      py::args("dest", "pitch", "data", "width", "height"));
-  py::def("memset_d2d16", py_memset_d2d16,
-      py::args("dest", "pitch", "data", "width", "height"));
-  py::def("memset_d2d32", py_memset_d2d32,
-      py::args("dest", "pitch", "data", "width", "height"));
+  m.def("memset_d2d8", py_memset_d2d8,
+      py::arg("dest"), py::arg("pitch"), py::arg("data", py::arg("width"), py::arg("height"));
+  m.def("memset_d2d16", py_memset_d2d16,
+      py::arg("dest", py::arg("pitch"), py::arg("data", py::arg("width"), py::arg("height"));
+  m.def("memset_d2d32", py_memset_d2d32,
+      py::arg("dest", py::arg("pitch"), py::arg("data"), py::arg("width"), py::arg("height"));
 
-  py::def("memset_d8_async",  py_memset_d8_async,
-      (py::args("dest", "data", "size"), py::arg("stream")=py::object()));
-  py::def("memset_d16_async", py_memset_d16_async,
-      (py::args("dest", "data", "size"), py::arg("stream")=py::object()));
-  py::def("memset_d32_async", py_memset_d32_async,
-      (py::args("dest", "data", "size"), py::arg("stream")=py::object()));
+  m.def("memset_d8_async",  py_memset_d8_async,
+      (py::arg("dest", py::arg("data", py::arg("size"), py::arg("stream")=py::object()));
+  m.def("memset_d16_async", py_memset_d16_async,
+      (py::arg("dest", py::arg("data", py::arg("size"), py::arg("stream")=py::object()));
+  m.def("memset_d32_async", py_memset_d32_async,
+      (py::arg("dest", py::arg("data", py::arg("size"), py::arg("stream")=py::object()));
 
-  py::def("memset_d2d8_async", py_memset_d2d8_async,
-      (py::args("dest", "pitch", "data", "width", "height"),
+  m.def("memset_d2d8_async", py_memset_d2d8_async,
+      (py::arg("dest", py::arg("pitch"), py::arg("data"), py::arg("width"), py::arg("height"),
        py::arg("stream")=py::object()));
-  py::def("memset_d2d16_async", py_memset_d2d16_async,
-      (py::args("dest", "pitch", "data", "width", "height"),
+  m.def("memset_d2d16_async", py_memset_d2d16_async,
+      (py::arg("dest", py::arg("pitch"), py::arg("data"), py::arg("width"), py::arg("height"),
        py::arg("stream")=py::object()));
-  py::def("memset_d2d32_async", py_memset_d2d32_async,
-      (py::args("dest", "pitch", "data", "width", "height"),
+  m.def("memset_d2d32_async", py_memset_d2d32_async,
+      (py::arg("dest", py::arg("pitch"), py::arg("data"), py::arg("width"), py::arg("height"),
        py::arg("stream")=py::object()));
 
-  py::def("memcpy_htod", py_memcpy_htod,
-      (py::args("dest"), py::arg("src")));
-  py::def("memcpy_htod_async", py_memcpy_htod_async,
-      (py::args("dest"), py::arg("src"), py::arg("stream")=py::object()));
-  py::def("memcpy_dtoh", py_memcpy_dtoh,
-      (py::args("dest"), py::arg("src")));
-  py::def("memcpy_dtoh_async", py_memcpy_dtoh_async,
-      (py::args("dest"), py::arg("src"), py::arg("stream")=py::object()));
+  m.def("memcpy_htod", py_memcpy_htod,
+      (py::arg("dest"), py::arg("src")));
+  m.def("memcpy_htod_async", py_memcpy_htod_async,
+      (py::arg("dest"), py::arg("src"), py::arg("stream")=py::object()));
+  m.def("memcpy_dtoh", py_memcpy_dtoh,
+      (py::arg("dest"), py::arg("src")));
+  m.def("memcpy_dtoh_async", py_memcpy_dtoh_async,
+      (py::arg("dest"), py::arg("src"), py::arg("stream")=py::object()));
 
-  py::def("memcpy_dtod", py_memcpy_dtod, py::args("dest", "src", "size"));
+  m.def("memcpy_dtod", py_memcpy_dtod, py::arg("dest"), py::arg("src"), py::arg("size"));
 #if CUDAPP_CUDA_VERSION >= 3000
-  py::def("memcpy_dtod_async", py_memcpy_dtod_async,
-      (py::args("dest", "src", "size"), py::arg("stream")=py::object()));
+  m.def("memcpy_dtod_async", py_memcpy_dtod_async,
+      (py::arg("dest"), py::arg("src"), py::arg("size"), py::arg("stream")=py::object()));
 #endif
 #if CUDAPP_CUDA_VERSION >= 4000
-  py::def("memcpy_peer", py_memcpy_peer,
-      (py::args("dest", "src", "size"),
+  m.def("memcpy_peer", py_memcpy_peer,
+      (py::arg("dest"), py::arg("src"), py::arg("size"),
        py::arg("dest_context")=py::object(),
        py::arg("src_context")=py::object()));
 
-  py::def("memcpy_peer_async", py_memcpy_peer_async,
-      (py::args("dest", "src", "size"),
+  m.def("memcpy_peer_async", py_memcpy_peer_async,
+      (py::args("dest"), py::arg("src"), py::arg("size"),
        py::arg("dest_context")=py::object(),
        py::arg("src_context")=py::object(),
        py::arg("stream")=py::object()));
 #endif
 
-  DEF_SIMPLE_FUNCTION_WITH_ARGS(memcpy_dtoa,
-      ("ary", "index", "src", "len"));
-  DEF_SIMPLE_FUNCTION_WITH_ARGS(memcpy_atod,
-      ("dest", "ary", "index", "len"));
-  DEF_SIMPLE_FUNCTION_WITH_ARGS(py_memcpy_htoa,
-      ("ary", "index", "src"));
-  DEF_SIMPLE_FUNCTION_WITH_ARGS(py_memcpy_atoh,
-      ("dest", "ary", "index"));
+  m.def("memcpy_dtoa",memcpy_dtoa,
+      py::arg("ary"), py::arg("index"), py::arg("src"), py::arg("len"));
+  m.def("memcpy_atod", memcpy_atod,
+      py::arg("dest"), py::arg("ary"), py::arg("index"), py::arg("len"));
+  m.def("memcpy_htoa", py_memcpy_htoa,
+      py::arg("ary"), py::arg("index"), py::arg("src"));
+  m.def("memcpy_atoh",py_memcpy_atoh,
+      py::arg("dest"), py::arg("ary"_, py::arg("index"));
 
-  DEF_SIMPLE_FUNCTION_WITH_ARGS(memcpy_atoa,
-      ("dest", "dest_index", "src", "src_index", "len"));
+  m.def("memcpy_atoa", memcpy_atoa,
+      py::arg("dest"), py::arg("dest_index"), py::arg("src"), py::arg("src_index"), py::arg("len"));
 
 #if CUDAPP_CUDA_VERSION >= 4000
 #define WRAP_MEMCPY_2D_UNIFIED_SETTERS \
@@ -1544,7 +1541,7 @@ BOOST_PYTHON_MODULE(_driver)
 
   {
     typedef memcpy_2d cl;
-    py::class_<cl>("Memcpy2D")
+    py::class_<cl>(m, "Memcpy2D")
       WRAP_MEMCPY_2D_PROPERTIES
 
       .def("__call__", &cl::execute, py::args("self", "aligned"))
@@ -1567,7 +1564,7 @@ BOOST_PYTHON_MODULE(_driver)
 
   {
     typedef memcpy_3d cl;
-    py::class_<cl>("Memcpy3D")
+    py::class_<cl>(m, "Memcpy3D")
       WRAP_MEMCPY_3D_PROPERTIES
 
       .def("__call__", &cl::execute)
@@ -1578,7 +1575,7 @@ BOOST_PYTHON_MODULE(_driver)
 #if CUDAPP_CUDA_VERSION >= 4000
   {
     typedef memcpy_3d_peer cl;
-    py::class_<cl>("Memcpy3DPeer")
+    py::class_<cl>(m, "Memcpy3DPeer")
       WRAP_MEMCPY_3D_PROPERTIES
 
       .DEF_SIMPLE_METHOD(set_src_context)
@@ -1594,8 +1591,8 @@ BOOST_PYTHON_MODULE(_driver)
   // {{{ event
   {
     typedef event cl;
-    py::class_<cl, boost::noncopyable>
-      ("Event", py::init<py::optional<unsigned int> >(py::arg("flags")))
+    py::class_<cl>
+      (m, "Event", py::init<py::optional<unsigned int> >(py::arg("flags")))
       .def("record", &cl::record,
           py::arg("stream")=py::object(), py::return_self<>())
       .def("synchronize", &cl::synchronize, py::return_self<>())
@@ -1615,7 +1612,7 @@ BOOST_PYTHON_MODULE(_driver)
   // {{{ arrays
   {
     typedef CUDA_ARRAY_DESCRIPTOR cl;
-    py::class_<cl>("ArrayDescriptor")
+    py::class_<cl>(m, "ArrayDescriptor")
       .def_readwrite("width", &cl::Width)
       .def_readwrite("height", &cl::Height)
       .def_readwrite("format", &cl::Format)
@@ -1626,7 +1623,7 @@ BOOST_PYTHON_MODULE(_driver)
 #if CUDAPP_CUDA_VERSION >= 2000
   {
     typedef CUDA_ARRAY3D_DESCRIPTOR cl;
-    py::class_<cl>("ArrayDescriptor3D")
+    py::class_<cl>(m, "ArrayDescriptor3D")
       .def_readwrite("width", &cl::Width)
       .def_readwrite("height", &cl::Height)
       .def_readwrite("depth", &cl::Depth)
@@ -1639,8 +1636,8 @@ BOOST_PYTHON_MODULE(_driver)
 
   {
     typedef array cl;
-    py::class_<cl, shared_ptr<cl>, boost::noncopyable>
-      ("Array", py::init<const CUDA_ARRAY_DESCRIPTOR &>())
+    py::class_<cl, shared_ptr<cl>>
+      (m, "Array", py::init<const CUDA_ARRAY_DESCRIPTOR &>())
       .DEF_SIMPLE_METHOD(free)
       .DEF_SIMPLE_METHOD(get_descriptor)
 #if CUDAPP_CUDA_VERSION >= 2000
@@ -1655,15 +1652,15 @@ BOOST_PYTHON_MODULE(_driver)
   // {{{ texture reference
   {
     typedef texture_reference cl;
-    py::class_<cl, boost::noncopyable>("TextureReference")
+    py::class_<cl>(m, "TextureReference")
       .DEF_SIMPLE_METHOD(set_array)
       .def("set_address", &cl::set_address,
-          (py::arg("devptr"), py::arg("bytes"), py::arg("allow_offset")=false))
+          py::arg("devptr"), py::arg("bytes"), py::arg("allow_offset")=false)
 #if CUDAPP_CUDA_VERSION >= 2020
-      .DEF_SIMPLE_METHOD_WITH_ARGS(set_address_2d, ("devptr", "descr", "pitch"))
+      .def("set_address_2d", set_address_2d, py::arg("devptr", "descr", "pitch"))
 #endif
-      .DEF_SIMPLE_METHOD_WITH_ARGS(set_format, ("format", "num_components"))
-      .DEF_SIMPLE_METHOD_WITH_ARGS(set_address_mode, ("dim", "am"))
+      .def("set_format", set_format, py::arg("format"), py::arg9"num_components"))
+      .def("set_address_mode", set_address_mode, py::arg("dim"), py::arg("am"))
       .DEF_SIMPLE_METHOD(set_filter_mode)
       .DEF_SIMPLE_METHOD(set_flags)
       .DEF_SIMPLE_METHOD(get_address)
@@ -1685,7 +1682,7 @@ BOOST_PYTHON_MODULE(_driver)
 #if CUDAPP_CUDA_VERSION >= 3010
   {
     typedef surface_reference cl;
-    py::class_<cl, boost::noncopyable>("SurfaceReference", py::no_init)
+    py::class_<cl>(m, "SurfaceReference", py::no_init)
       .def("set_array", &cl::set_array,
           (py::arg("array"), py::arg("flags")=0))
       .def("get_array", &cl::get_array,

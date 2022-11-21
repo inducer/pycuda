@@ -12,7 +12,6 @@
 
 using namespace pycuda;
 using namespace pycuda::gl;
-using boost::shared_ptr;
 
 
 
@@ -56,7 +55,7 @@ void pycuda_expose_gl()
   {
     typedef registered_image cl;
     py::class_<cl, shared_ptr<cl>, py::bases<registered_object> >(
-        "RegisteredImage", 
+        "RegisteredImage",
         py::init<GLuint, GLenum, py::optional<CUgraphicsMapResourceFlags> >())
       ;
   }

@@ -1,7 +1,6 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
-from __future__ import absolute_import, print_function
 from os.path import dirname, join, normpath
 
 
@@ -28,10 +27,8 @@ def get_config_schema():
         IncludeDir,
         LibraryDir,
         Libraries,
-        BoostLibraries,
         Switch,
         StringListOption,
-        make_boost_base_options,
     )
 
     nvcc_path = search_on_path(["nvcc", "nvcc.exe"])
@@ -76,11 +73,7 @@ def get_config_schema():
         default_lib_dirs.append("/usr/local/cuda/lib")
 
     return ConfigSchema(
-        make_boost_base_options()
-        + [
-            Switch("USE_SHIPPED_BOOST", True, "Use included Boost library"),
-            BoostLibraries("python"),
-            BoostLibraries("thread"),
+        [
             Switch("CUDA_TRACE", False, "Enable CUDA API tracing"),
             Option(
                 "CUDA_ROOT", default=cuda_root_default, help="Path to the CUDA toolkit"
@@ -118,27 +111,26 @@ def main():
         get_config,
         setup,
         ExtensionUsingNumpy,
-        set_up_shipped_boost_if_requested,
         check_git_submodules,
-        NumpyBuildExtCommand,
+        check_pybind11,
+        get_pybind_include,
+        PybindBuildExtCommand,
     )
 
+    check_pybind11()
     check_git_submodules()
 
     hack_distutils()
     conf = get_config(get_config_schema())
 
-    EXTRA_SOURCES, EXTRA_DEFINES = set_up_shipped_boost_if_requested("pycuda", conf)
+    EXTRA_SOURCES = []
+    EXTRA_DEFINES = {}
 
     EXTRA_DEFINES["PYGPU_PACKAGE"] = "pycuda"
     EXTRA_DEFINES["PYGPU_PYCUDA"] = "1"
 
-    LIBRARY_DIRS = conf["BOOST_LIB_DIR"] + conf["CUDADRV_LIB_DIR"]
-    LIBRARIES = (
-        conf["BOOST_PYTHON_LIBNAME"]
-        + conf["BOOST_THREAD_LIBNAME"]
-        + conf["CUDADRV_LIBNAME"]
-    )
+    LIBRARY_DIRS = conf["CUDADRV_LIB_DIR"]
+    LIBRARIES = conf["CUDADRV_LIBNAME"]
 
     if not conf["CUDA_INC_DIR"] and conf["CUDA_ROOT"]:
         conf["CUDA_INC_DIR"] = [join(conf["CUDA_ROOT"], "include")]
@@ -149,7 +141,7 @@ def main():
     if conf["CUDA_PRETEND_VERSION"]:
         EXTRA_DEFINES["CUDAPP_PRETEND_CUDA_VERSION"] = conf["CUDA_PRETEND_VERSION"]
 
-    INCLUDE_DIRS = ["src/cpp"] + conf["BOOST_INC_DIR"]
+    INCLUDE_DIRS = ["src/cpp", get_pybind_include()]
     if conf["CUDA_INC_DIR"]:
         INCLUDE_DIRS += conf["CUDA_INC_DIR"]
 
@@ -254,7 +246,7 @@ def main():
                 extra_link_args=conf["LDFLAGS"],
             ),
         ],
-        cmdclass={"build_ext": NumpyBuildExtCommand},
+        cmdclass={"build_ext": PybindBuildExtCommand},
         include_package_data=True,
         package_data={
             "pycuda": [

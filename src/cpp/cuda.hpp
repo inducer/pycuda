@@ -20,29 +20,22 @@
 #endif
 
 #if CUDAPP_CUDA_VERSION >= 4000
-#include <cudaProfiler.h>
+// FIXME reenable
+//#include <cudaProfiler.h>
 #endif
 
 #ifndef _MSC_VER
 #include <stdint.h>
 #endif
 #include <stdexcept>
-#include <boost/shared_ptr.hpp>
-#include <boost/foreach.hpp>
+#include <memory>
 #include <utility>
 #include <stack>
 #include <iostream>
 #include <vector>
-#include <boost/python.hpp>
-#include <boost/thread/thread.hpp>
-#include <boost/thread/tss.hpp>
-#include <boost/version.hpp>
+#include <thread>
 
-#if (BOOST_VERSION/100) < 1035
-#warning *****************************************************************
-#warning **** Your version of Boost C++ is likely too old for PyCUDA. ****
-#warning *****************************************************************
-#endif
+#include <pybind11/pybind11.h>
 
 // MAYBE? cuMemcpy, cuPointerGetAttribute
 // TODO: cuCtxSetCurrent, cuCtxGetCurrent
@@ -79,7 +72,7 @@ typedef Py_ssize_t PYCUDA_BUFFER_SIZE_T;
     CUstream s_handle; \
     if (stream_py.ptr() != Py_None) \
     { \
-      const stream &s = py::extract<const stream &>(stream_py); \
+      const stream &s = py::cast<const stream &>(stream_py); \
       s_handle = s.handle(); \
     } \
     else \
@@ -180,7 +173,20 @@ typedef Py_ssize_t PYCUDA_BUFFER_SIZE_T;
 
 namespace pycuda
 {
-  namespace py = boost::python;
+  namespace py = pybind11;
+
+
+  // https://stackoverflow.com/a/44175911
+  class noncopyable {
+  public:
+    noncopyable() = default;
+    ~noncopyable() = default;
+
+  private:
+    noncopyable(const noncopyable&) = delete;
+    noncopyable& operator=(const noncopyable&) = delete;
+  };
+
 
   typedef
 #if CUDAPP_CUDA_VERSION >= 3020
@@ -367,7 +373,7 @@ namespace pycuda
 
   // {{{ buffer interface helper
 
-  class py_buffer_wrapper : public boost::noncopyable
+  class py_buffer_wrapper : public noncopyable
   {
     private:
       bool m_initialized;
@@ -482,9 +488,9 @@ namespace pycuda
         return m_device;
       }
 
-      boost::shared_ptr<context> make_context(unsigned int flags);
+      std::shared_ptr<context> make_context(unsigned int flags);
 #if CUDAPP_CUDA_VERSION >= 7000
-      boost::shared_ptr<context> retain_primary_context();
+      std::shared_ptr<context> retain_primary_context();
 #endif
 
       CUdevice handle() const
@@ -537,12 +543,12 @@ namespace pycuda
 
   // for friend decl
   namespace gl {
-    boost::shared_ptr<context>
+    std::shared_ptr<context>
         make_gl_context(device const &dev, unsigned int flags);
   }
 
   class context_stack;
-  extern boost::thread_specific_ptr<context_stack> context_stack_ptr;
+  extern std::thread_specific_ptr<context_stack> context_stack_ptr;
 
   class context_stack
   {
@@ -552,7 +558,7 @@ namespace pycuda
        * to be destroyed.
        */
     private:
-      typedef std::stack<boost::shared_ptr<context> > stack_t;
+      typedef std::stack<std::shared_ptr<context> > stack_t;
       typedef stack_t::value_type value_type;;
       stack_t m_stack;
 
@@ -587,18 +593,18 @@ namespace pycuda
       }
   };
 
-  class context : boost::noncopyable
+  class context : noncopyable
   {
     protected:
       CUcontext m_context;
       bool m_valid;
       unsigned m_use_count;
-      boost::thread::id m_thread;
+      std::thread::id m_thread;
 
     public:
       context(CUcontext ctx)
         : m_context(ctx), m_valid(true), m_use_count(1),
-        m_thread(boost::this_thread::get_id())
+        m_thread(std::this_thread::get_id())
       { }
 
       virtual ~context()
@@ -634,7 +640,7 @@ namespace pycuda
         return hash_type(m_context) ^ hash_type(this);
       }
 
-      boost::thread::id thread_id() const
+      std::thread::id thread_id() const
       { return m_thread; }
 
       bool is_valid() const
@@ -642,11 +648,11 @@ namespace pycuda
         return m_valid;
       }
 
-      static boost::shared_ptr<context> attach(unsigned int flags)
+      static std::shared_ptr<context> attach(unsigned int flags)
       {
         CUcontext current;
         CUDAPP_CALL_GUARDED(cuCtxAttach, (&current, flags));
-        boost::shared_ptr<context> result(new context(current));
+        std::shared_ptr<context> result(new context(current));
         context_stack::get().push(result);
         return result;
       }
@@ -669,7 +675,7 @@ namespace pycuda
           }
           else
           {
-            if (m_thread == boost::this_thread::get_id())
+            if (m_thread == std::this_thread::get_id())
             {
               CUDAPP_CALL_GUARDED_CLEANUP(cuCtxPushCurrent, (m_context));
               detach_internal();
@@ -689,7 +695,7 @@ namespace pycuda
 
           if (active_before_destruction)
           {
-            boost::shared_ptr<context> new_active = current_context(this);
+            std::shared_ptr<context> new_active = current_context(this);
             if (new_active.get())
             {
               CUDAPP_CALL_GUARDED(cuCtxPushCurrent, (new_active->m_context));
@@ -730,7 +736,7 @@ namespace pycuda
               "cannot pop non-current context");
         }
 
-        boost::shared_ptr<context> current = current_context();
+        std::shared_ptr<context> current = current_context();
         if (current)
           --current->m_use_count;
 
@@ -747,14 +753,14 @@ namespace pycuda
       static void synchronize()
       { CUDAPP_CALL_GUARDED_THREADED(cuCtxSynchronize, ()); }
 
-      static boost::shared_ptr<context> current_context(context *except=0)
+      static std::shared_ptr<context> current_context(context *except=0)
       {
         while (true)
         {
           if (context_stack::get().empty())
-            return boost::shared_ptr<context>();
+            return std::shared_ptr<context>();
 
-          boost::shared_ptr<context> result(context_stack::get().top());
+          std::shared_ptr<context> result(context_stack::get().top());
           if (result.get() != except
               && result->is_valid())
           {
@@ -829,8 +835,8 @@ namespace pycuda
 #endif
 
       friend class device;
-      friend void context_push(boost::shared_ptr<context> ctx);
-      friend boost::shared_ptr<context>
+      friend void context_push(std::shared_ptr<context> ctx);
+      friend std::shared_ptr<context>
           gl::make_gl_context(device const &dev, unsigned int flags);
       friend class primary_context;
   };
@@ -854,24 +860,24 @@ namespace pycuda
   };
 
   inline
-  boost::shared_ptr<context> device::make_context(unsigned int flags)
+  std::shared_ptr<context> device::make_context(unsigned int flags)
   {
     context::prepare_context_switch();
 
     CUcontext ctx;
     CUDAPP_CALL_GUARDED_THREADED(cuCtxCreate, (&ctx, flags, m_device));
-    boost::shared_ptr<context> result(new context(ctx));
+    std::shared_ptr<context> result(new context(ctx));
     context_stack::get().push(result);
     return result;
   }
 
 
 #if CUDAPP_CUDA_VERSION >= 7000
-  inline boost::shared_ptr<context> device::retain_primary_context()
+  inline std::shared_ptr<context> device::retain_primary_context()
   {
     CUcontext ctx;
     CUDAPP_CALL_GUARDED(cuDevicePrimaryCtxRetain, (&ctx, m_device));
-    boost::shared_ptr<context> result(new primary_context(ctx, m_device));
+    std::shared_ptr<context> result(new primary_context(ctx, m_device));
     return result;
   }
 #endif
@@ -879,7 +885,7 @@ namespace pycuda
 
 #if CUDAPP_CUDA_VERSION >= 2000
   inline
-  void context_push(boost::shared_ptr<context> ctx)
+  void context_push(std::shared_ptr<context> ctx)
   {
     context::prepare_context_switch();
 
@@ -916,7 +922,7 @@ namespace pycuda
   class explicit_context_dependent
   {
     private:
-      boost::shared_ptr<context> m_ward_context;
+      std::shared_ptr<context> m_ward_context;
 
     public:
       void acquire_context()
@@ -933,7 +939,7 @@ namespace pycuda
         m_ward_context.reset();
       }
 
-      boost::shared_ptr<context> get_context()
+      std::shared_ptr<context> get_context()
       {
         return m_ward_context;
       }
@@ -942,7 +948,7 @@ namespace pycuda
   class context_dependent : public explicit_context_dependent
   {
     private:
-      boost::shared_ptr<context> m_ward_context;
+      std::shared_ptr<context> m_ward_context;
 
     public:
       context_dependent()
@@ -953,11 +959,11 @@ namespace pycuda
   class scoped_context_activation
   {
     private:
-      boost::shared_ptr<context> m_context;
+      std::shared_ptr<context> m_context;
       bool m_did_switch;
 
     public:
-      scoped_context_activation(boost::shared_ptr<context> ctx)
+      scoped_context_activation(std::shared_ptr<context> ctx)
         : m_context(ctx)
       {
         if (!m_context->is_valid())
@@ -967,7 +973,7 @@ namespace pycuda
         m_did_switch = context::current_context() != m_context;
         if (m_did_switch)
         {
-          if (boost::this_thread::get_id() != m_context->thread_id())
+          if (std::this_thread::get_id() != m_context->thread_id())
             throw pycuda::cannot_activate_out_of_thread_context(
                 "cannot activate out-of-thread context");
 #if CUDAPP_CUDA_VERSION >= 2000
@@ -994,7 +1000,7 @@ namespace pycuda
   // {{{ stream
   class event;
 
-  class stream : public boost::noncopyable, public context_dependent
+  class stream : public noncopyable, public context_dependent
   {
     private:
       CUstream m_stream;
@@ -1046,7 +1052,7 @@ namespace pycuda
   // }}}
 
   // {{{ array
-  class array : public boost::noncopyable, public context_dependent
+  class array : public noncopyable, public context_dependent
   {
     private:
       CUarray m_array;
@@ -1114,15 +1120,15 @@ namespace pycuda
   // {{{ texture reference
   class module;
 
-  class texture_reference : public  boost::noncopyable
+  class texture_reference : public  noncopyable
   {
     private:
       CUtexref m_texref;
       bool m_managed;
 
       // life support for array and module
-      boost::shared_ptr<array> m_array;
-      boost::shared_ptr<module> m_module;
+      std::shared_ptr<array> m_array;
+      std::shared_ptr<module> m_module;
 
     public:
       texture_reference()
@@ -1141,13 +1147,13 @@ namespace pycuda
         }
       }
 
-      void set_module(boost::shared_ptr<module> mod)
+      void set_module(std::shared_ptr<module> mod)
       { m_module = mod; }
 
       CUtexref handle() const
       { return m_texref; }
 
-      void set_array(boost::shared_ptr<array> ary)
+      void set_array(std::shared_ptr<array> ary)
       {
         CUDAPP_CALL_GUARDED(cuTexRefSetArray, (m_texref,
             ary->handle(), CU_TRSA_OVERRIDE_FORMAT));
@@ -1236,27 +1242,27 @@ namespace pycuda
 #if CUDAPP_CUDA_VERSION >= 3010
   class module;
 
-  class surface_reference : public  boost::noncopyable
+  class surface_reference : public  noncopyable
   {
     private:
       CUsurfref m_surfref;
 
       // life support for array and module
-      boost::shared_ptr<array> m_array;
-      boost::shared_ptr<module> m_module;
+      std::shared_ptr<array> m_array;
+      std::shared_ptr<module> m_module;
 
     public:
       surface_reference(CUsurfref sr)
         : m_surfref(sr)
       { }
 
-      void set_module(boost::shared_ptr<module> mod)
+      void set_module(std::shared_ptr<module> mod)
       { m_module = mod; }
 
       CUsurfref handle() const
       { return m_surfref; }
 
-      void set_array(boost::shared_ptr<array> ary, unsigned int flags)
+      void set_array(std::shared_ptr<array> ary, unsigned int flags)
       {
         CUDAPP_CALL_GUARDED(cuSurfRefSetArray, (m_surfref, ary->handle(), flags));
         m_array = ary;
@@ -1276,7 +1282,7 @@ namespace pycuda
   // {{{ module
   class function;
 
-  class module : public boost::noncopyable, public context_dependent
+  class module : public noncopyable, public context_dependent
   {
     private:
       CUmodule m_module;
@@ -1319,7 +1325,7 @@ namespace pycuda
 
   inline
   texture_reference *module_get_texref(
-      boost::shared_ptr<module> mod, const char *name)
+      std::shared_ptr<module> mod, const char *name)
   {
     CUtexref tr;
     CUDAPP_CALL_GUARDED(cuModuleGetTexRef, (&tr, mod->handle(), name));
@@ -1332,7 +1338,7 @@ namespace pycuda
 #if CUDAPP_CUDA_VERSION >= 3010
   inline
   surface_reference *module_get_surfref(
-      boost::shared_ptr<module> mod, const char *name)
+      std::shared_ptr<module> mod, const char *name)
   {
     CUsurfref sr;
     CUDAPP_CALL_GUARDED(cuModuleGetSurfRef, (&sr, mod->handle(), name));
@@ -1460,7 +1466,7 @@ namespace pycuda
               "too many grid dimensions in kernel launch");
 
         for (unsigned i = 0; i < gd_length; ++i)
-          grid_dim[i] = py::extract<unsigned>(grid_dim_py[i]);
+          grid_dim[i] = py::cast<unsigned>(grid_dim_py[i]);
 
         pycuda_size_t bd_length = py::len(block_dim_py);
         if (bd_length > axis_count)
@@ -1468,7 +1474,7 @@ namespace pycuda
               "too many block dimensions in kernel launch");
 
         for (unsigned i = 0; i < bd_length; ++i)
-          block_dim[i] = py::extract<unsigned>(block_dim_py[i]);
+          block_dim[i] = py::cast<unsigned>(block_dim_py[i]);
 
         PYCUDA_PARSE_STREAM_PY;
 
@@ -1561,7 +1567,7 @@ namespace pycuda
       }
   };
 
-  class device_allocation : public boost::noncopyable, public context_dependent
+  class device_allocation : public noncopyable, public context_dependent
   {
     private:
       bool m_valid;
@@ -1655,7 +1661,7 @@ namespace pycuda
   // {{{ ipc_mem_handle
 
 #if CUDAPP_CUDA_VERSION >= 4010 && PY_VERSION_HEX >= 0x02060000
-  class ipc_mem_handle : public boost::noncopyable, public context_dependent
+  class ipc_mem_handle : public noncopyable, public context_dependent
   {
     private:
       bool m_valid;
@@ -1928,7 +1934,7 @@ namespace pycuda
 
 
 
-  struct host_pointer : public boost::noncopyable, public context_dependent
+  struct host_pointer : public noncopyable, public context_dependent
   {
     protected:
       bool m_valid;
@@ -2112,7 +2118,7 @@ namespace pycuda
   // }}}
 
   // {{{ event
-  class event : public boost::noncopyable, public context_dependent
+  class event : public noncopyable, public context_dependent
   {
     private:
       CUevent m_event;

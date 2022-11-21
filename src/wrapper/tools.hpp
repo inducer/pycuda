@@ -5,7 +5,7 @@
 
 
 #include <cuda.hpp>
-#include <boost/python.hpp>
+#include <pybind11/pybind11.h>
 #include <numeric>
 #include <numpy/arrayobject.h>
 
@@ -28,7 +28,7 @@ namespace pycuda
 
   inline void run_python_gc()
   {
-    namespace py = boost::python;
+    namespace py = pybind11;
 
     py::object gc_mod(
         py::handle<>(
@@ -46,7 +46,7 @@ namespace pycuda
       return pycuda::mem_alloc(bytes);
     }
     catch (pycuda::error &e)
-    { 
+    {
       if (e.code() != CUDA_ERROR_OUT_OF_MEMORY)
         throw;
     }
