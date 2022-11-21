@@ -1729,8 +1729,11 @@ PyInit__pvt_struct(void)
     m = PyModule_Create(&_structmodule);
     if (m == NULL)
         return NULL;
-
+#if PY_VERSION_HEX >= 0x03090000
+    Py_SET_TYPE(&PyStructType, &PyType_Type);
+#else
     Py_TYPE(&PyStructType) = &PyType_Type;
+#endif
     if (PyType_Ready(&PyStructType) < 0)
         return NULL;
 
