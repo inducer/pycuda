@@ -604,7 +604,7 @@ class TestGPUArray:
 
         assert abs(sum_a_gpu - sum_a) / abs(sum_a) < 1e-4
 
-    @pytest.mark.parametrize("dtype", [np.int32, np.bool, np.float32, np.float64])
+    @pytest.mark.parametrize("dtype", [np.int32, np.bool_, np.float32, np.float64])
     def test_any(self, dtype):
 
         ary_list = [np.ones(10, dtype),
@@ -629,7 +629,7 @@ class TestGPUArray:
             np.testing.assert_array_equal(any_array_gpu, any_array)
             assert any_array_gpu.dtype == any_array.dtype
 
-    @pytest.mark.parametrize("dtype", [np.int32, np.bool, np.float32, np.float64])
+    @pytest.mark.parametrize("dtype", [np.int32, np.bool_, np.float32, np.float64])
     def test_all(self, dtype):
 
         ary_list = [np.ones(10, dtype),
