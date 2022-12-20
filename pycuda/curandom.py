@@ -581,7 +581,7 @@ class _RandomNumberGeneratorBase:
             func = self.generators["uniform_float"]
         elif data.dtype == np.float64:
             func = self.generators["uniform_double"]
-        elif data.dtype in [np.int, np.int32, np.uint32]:
+        elif data.dtype in [np.int32, np.uint32]:
             func = self.generators["uniform_int"]
         elif data.dtype in [np.int64, np.uint64] and self.generator_bits >= 64:
             func = self.generators["uniform_long"]
