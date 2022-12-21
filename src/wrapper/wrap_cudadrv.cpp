@@ -1055,6 +1055,8 @@ BOOST_PYTHON_MODULE(_driver)
     .value("COMPUTE_75", CU_TARGET_COMPUTE_75)
 
     .value("COMPUTE_80", CU_TARGET_COMPUTE_80)
+#endif
+#if (CUDAPP_CUDA_VERSION >= 11060) /* approximate, precise version unknown */
     .value("COMPUTE_86", CU_TARGET_COMPUTE_86)
 #endif
 #if (CUDAPP_CUDA_VERSION >= 12000)
