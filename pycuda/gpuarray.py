@@ -389,7 +389,7 @@ class GPUArray:
         return self.get(ary=ary, async_=True, stream=stream)
 
     def copy(self):
-        new = GPUArray(self.shape, self.dtype, self.allocator)
+        new = GPUArray(self.shape, self.dtype, self.allocator, strides=self.strides)
         _memcpy_discontig(new, self)
         return new
 

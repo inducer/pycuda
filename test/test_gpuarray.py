@@ -1546,6 +1546,16 @@ class TestGPUArray:
         d2 = d[:, 7:9, :]  # non C-contiguous
         d2.transpose(axes=(1, 0, 2))  # crashes for recent versions
 
+    def test_copy_strides(self):
+        # https://github.com/inducer/pycuda/issues/403
+        a = np.random.randn(22, 33).copy(order="f")
+        a_dev = gpuarray.to_gpu(a)
+        assert a_dev.strides == a.strides
+        a_dev_2 = a_dev.copy()
+        assert a_dev_2.strides == a.strides
+        a_back = a_dev_2.get()
+        assert np.array_equal(a_back, a)
+
 
 if __name__ == "__main__":
     # make sure that import failures get reported, instead of skipping the tests.
