@@ -328,7 +328,7 @@ class ReductionKernel:
             else:
                 result = empty((block_count,), self.dtype_out, allocator=allocator)
 
-            kwargs = dict(shared_size=self.block_size * self.dtype_out.itemsize)
+            kwargs = {"shared_size": self.block_size * self.dtype_out.itemsize}
 
             # print block_count, seq_count, self.block_size, sz
             f(

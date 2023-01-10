@@ -98,7 +98,7 @@ class DebugMemoryPool(DeviceMemoryPool):
             file=self.logfile,
         )
 
-        hist_items = sorted(list(histogram.items()))
+        hist_items = sorted(histogram.items())
         for (bsize, descr), count in hist_items:
             print(
                 "  %s (%d bytes): %dx" % (descr[len(cpfx):], bsize, count),

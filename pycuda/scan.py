@@ -360,13 +360,13 @@ class _ScanKernelBase:
         self.update_wg_size = 256
         self.scan_wg_seq_batches = 6
 
-        kw_values = dict(
-            preamble=preamble,
-            name_prefix=name_prefix,
-            scan_type=dtype_to_ctype(dtype),
-            scan_expr=scan_expr,
-            neutral=neutral,
-        )
+        kw_values = {
+                "preamble": preamble,
+                "name_prefix": name_prefix,
+                "scan_type": dtype_to_ctype(dtype),
+                "scan_expr": scan_expr,
+                "neutral": neutral,
+        }
 
         scan_intervals_src = str(
             SCAN_INTERVALS_SOURCE.render(

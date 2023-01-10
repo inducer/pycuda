@@ -88,7 +88,7 @@ def _create_vector_types():
                     eval(
                         "lambda %s: array((%s), dtype=my_dtype)"
                         % (my_field_names, my_field_names),
-                        dict(array=np.array, my_dtype=dtype),
+                        {"array": np.array, "my_dtype": dtype},
                     )
                 ),
             )

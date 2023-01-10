@@ -202,15 +202,13 @@ class ElementwiseKernel:
     ):
 
         self.gen_kwargs = kwargs.copy()
-        self.gen_kwargs.update(
-            dict(
-                keep=keep,
-                options=options,
-                name=name,
-                operation=operation,
-                arguments=arguments,
-            )
-        )
+        self.gen_kwargs.update({
+            "keep": keep,
+            "options": options,
+            "name": name,
+            "operation": operation,
+            "arguments": arguments,
+            })
 
     def get_texref(self, name, use_range=False):
         mod, knl, arguments = self.generate_stride_kernel_and_types(use_range=use_range)
