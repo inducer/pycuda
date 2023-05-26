@@ -111,6 +111,7 @@ def main(argv):
     print("=%d blocks are launched!!! (%d from the GPU)" % (sum, sum-2))
     print("***************************************************************************\n")
 
+    pycuda.autoinit.context.set_limit(cuda.limit.PRINTF_FIFO_SIZE, 11 << 20)  # make this work at depth=8
     pycuda.autoinit.context.set_limit(cuda.limit.DEV_RUNTIME_SYNC_DEPTH, max_depth)
 
     print("Launching cdp_kernel() with CUDA Dynamic Parallelism:\n")
