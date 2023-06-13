@@ -276,41 +276,41 @@ if get_curand_version() >= (4, 0, 0):
 # {{{ Base class
 
 gen_template = """
-__global__ void %(name)s(%(state_type)s *s, %(out_type)s *d, const int n)
+__global__ void %(name)s(%(state_type)s *s, %(out_type)s *d, const size_t n)
 {
-  const int tidx = blockIdx.x*blockDim.x+threadIdx.x;
-  const int delta = blockDim.x*gridDim.x;
-  for (int idx = tidx; idx < n; idx += delta)
+  const size_t tidx = blockIdx.x*blockDim.x+threadIdx.x;
+  const size_t delta = blockDim.x*gridDim.x;
+  for (size_t idx = tidx; idx < n; idx += delta)
     d[idx] = curand%(suffix)s(&s[tidx]);
 }
 """
 
 gen_log_template = """
-__global__ void %(name)s(%(state_type)s *s, %(out_type)s *d, %(in_type)s mean, %(in_type)s stddev, const int n)
+__global__ void %(name)s(%(state_type)s *s, %(out_type)s *d, %(in_type)s mean, %(in_type)s stddev, const size_t n)
 {
-  const int tidx = blockIdx.x*blockDim.x+threadIdx.x;
-  const int delta = blockDim.x*gridDim.x;
-  for (int idx = tidx; idx < n; idx += delta)
+  const size_t tidx = blockIdx.x*blockDim.x+threadIdx.x;
+  const size_t delta = blockDim.x*gridDim.x;
+  for (size_t idx = tidx; idx < n; idx += delta)
     d[idx] = curand_log%(suffix)s(&s[tidx], mean, stddev);
 }
 """
 
 gen_poisson_template = """
-__global__ void %(name)s(%(state_type)s *s, %(out_type)s *d, double lambda, const int n)
+__global__ void %(name)s(%(state_type)s *s, %(out_type)s *d, double lambda, const size_t n)
 {
-  const int tidx = blockIdx.x*blockDim.x+threadIdx.x;
-  const int delta = blockDim.x*gridDim.x;
-  for (int idx = tidx; idx < n; idx += delta)
+  const size_t tidx = blockIdx.x*blockDim.x+threadIdx.x;
+  const size_t delta = blockDim.x*gridDim.x;
+  for (size_t idx = tidx; idx < n; idx += delta)
     d[idx] = curand_poisson%(suffix)s(&s[tidx], lambda);
 }
 """
 
 gen_poisson_inplace_template = """
-__global__ void %(name)s(%(state_type)s *s, %(inout_type)s *d, const int n)
+__global__ void %(name)s(%(state_type)s *s, %(inout_type)s *d, const size_t n)
 {
-  const int tidx = blockIdx.x*blockDim.x+threadIdx.x;
-  const int delta = blockDim.x*gridDim.x;
-  for (int idx = tidx; idx < n; idx += delta)
+  const size_t tidx = blockIdx.x*blockDim.x+threadIdx.x;
+  const size_t delta = blockDim.x*gridDim.x;
+  for (size_t idx = tidx; idx < n; idx += delta)
     d[idx] = (%(inout_type)s)(curand_poisson%(suffix)s(&s[tidx], double(d[idx])));
 }
 """
@@ -330,16 +330,16 @@ extern "C"
 
 random_skip_ahead32_source = """
 extern "C" {
-__global__ void skip_ahead(%(state_type)s *s, const int n, const unsigned int skip)
+__global__ void skip_ahead(%(state_type)s *s, const size_t n, const unsigned int skip)
 {
-  const int idx = blockIdx.x*blockDim.x+threadIdx.x;
+  const size_t idx = blockIdx.x*blockDim.x+threadIdx.x;
   if (idx < n)
     skipahead(skip, &s[idx]);
 }
 
-__global__ void skip_ahead_array(%(state_type)s *s, const int n, const unsigned int *skip)
+__global__ void skip_ahead_array(%(state_type)s *s, const size_t n, const unsigned int *skip)
 {
-  const int idx = blockIdx.x*blockDim.x+threadIdx.x;
+  const size_t idx = blockIdx.x*blockDim.x+threadIdx.x;
   if (idx < n)
       skipahead(skip[idx], &s[idx]);
 }
@@ -348,16 +348,16 @@ __global__ void skip_ahead_array(%(state_type)s *s, const int n, const unsigned 
 
 random_skip_ahead64_source = """
 extern "C" {
-__global__ void skip_ahead(%(state_type)s *s, const int n, const unsigned long long skip)
+__global__ void skip_ahead(%(state_type)s *s, const size_t n, const unsigned long long skip)
 {
-  const int idx = blockIdx.x*blockDim.x+threadIdx.x;
+  const size_t idx = blockIdx.x*blockDim.x+threadIdx.x;
   if (idx < n)
     skipahead(skip, &s[idx]);
 }
 
-__global__ void skip_ahead_array(%(state_type)s *s, const int n, const unsigned long long *skip)
+__global__ void skip_ahead_array(%(state_type)s *s, const size_t n, const unsigned long long *skip)
 {
-  const int idx = blockIdx.x*blockDim.x+threadIdx.x;
+  const size_t idx = blockIdx.x*blockDim.x+threadIdx.x;
   if (idx < n)
       skipahead(skip[idx], &s[idx]);
 }
@@ -517,24 +517,24 @@ class _RandomNumberGeneratorBase:
         self.generators = {}
         for name, out_type, suffix in my_generators:
             gen_func = module.get_function(name)
-            gen_func.prepare("PPi")
+            gen_func.prepare("PPn")
             self.generators[name] = gen_func
         if get_curand_version() >= (4, 0, 0):
             for name, in_type, out_type, suffix in my_log_generators:
                 gen_func = module.get_function(name)
                 if in_type == "float":
-                    gen_func.prepare("PPffi")
+                    gen_func.prepare("PPffn")
                 if in_type == "double":
-                    gen_func.prepare("PPddi")
+                    gen_func.prepare("PPddn")
                 self.generators[name] = gen_func
         if get_curand_version() >= (5, 0, 0):
             for name, out_type, suffix in my_poisson_generators:
                 gen_func = module.get_function(name)
-                gen_func.prepare("PPdi")
+                gen_func.prepare("PPdn")
                 self.generators[name] = gen_func
             for name, inout_type, suffix in my_poisson_inplace_generators:
                 gen_func = module.get_function(name)
-                gen_func.prepare("PPi")
+                gen_func.prepare("PPn")
                 self.generators[name] = gen_func
 
         self.generator_bits = generator_bits
@@ -546,11 +546,11 @@ class _RandomNumberGeneratorBase:
     def _prepare_skipahead(self):
         self.skip_ahead = self.module.get_function("skip_ahead")
         if self.generator_bits == 32:
-            self.skip_ahead.prepare("PiI")
+            self.skip_ahead.prepare("PnI")
         if self.generator_bits == 64:
-            self.skip_ahead.prepare("PiQ")
+            self.skip_ahead.prepare("PnQ")
         self.skip_ahead_array = self.module.get_function("skip_ahead_array")
-        self.skip_ahead_array.prepare("PiP")
+        self.skip_ahead_array.prepare("PnP")
 
     def _kernels(self):
         return list(self.generators.values()) + [
@@ -769,7 +769,7 @@ class _PseudoRandomNumberGeneratorBase(_RandomNumberGeneratorBase):
             raise TypeError("seed must be GPUArray of integers of right length")
 
         p = self.module.get_function("prepare")
-        p.prepare("PiPi")
+        p.prepare("PnPn")
 
         from pycuda.characterize import has_stack
 
@@ -799,15 +799,15 @@ class _PseudoRandomNumberGeneratorBase(_RandomNumberGeneratorBase):
 
     def _prepare_skipahead(self):
         self.skip_ahead = self.module.get_function("skip_ahead")
-        self.skip_ahead.prepare("PiQ")
+        self.skip_ahead.prepare("PnQ")
         self.skip_ahead_array = self.module.get_function("skip_ahead_array")
-        self.skip_ahead_array.prepare("PiP")
+        self.skip_ahead_array.prepare("PnP")
         self.skip_ahead_sequence = self.module.get_function("skip_ahead_sequence")
-        self.skip_ahead_sequence.prepare("PiQ")
+        self.skip_ahead_sequence.prepare("PnQ")
         self.skip_ahead_sequence_array = self.module.get_function(
             "skip_ahead_sequence_array"
         )
-        self.skip_ahead_sequence_array.prepare("PiP")
+        self.skip_ahead_sequence_array.prepare("PnP")
 
     def call_skip_ahead_sequence(self, i, stream=None):
         self.skip_ahead_sequence.prepared_async_call(
@@ -855,10 +855,10 @@ def seed_getter_unique(n):
 
 xorwow_random_source = """
 extern "C" {
-__global__ void prepare(%(state_type)s *s, const int n,
-    %(vector_type)s *v, const unsigned int o)
+__global__ void prepare(%(state_type)s *s, const size_t n,
+    %(vector_type)s *v, const size_t o)
 {
-  const int id = blockIdx.x*blockDim.x+threadIdx.x;
+  const size_t id = blockIdx.x*blockDim.x+threadIdx.x;
   if (id < n)
     curand_init(v[id], id, o, &s[id]);
 }
@@ -867,16 +867,16 @@ __global__ void prepare(%(state_type)s *s, const int n,
 
 xorwow_skip_ahead_sequence_source = """
 extern "C" {
-__global__ void skip_ahead_sequence(%(state_type)s *s, const int n, const unsigned long long skip)
+__global__ void skip_ahead_sequence(%(state_type)s *s, const size_t n, const unsigned long long skip)
 {
-  const int idx = blockIdx.x*blockDim.x+threadIdx.x;
+  const size_t idx = blockIdx.x*blockDim.x+threadIdx.x;
   if (idx < n)
     skipahead_sequence(skip, &s[idx]);
 }
 
-__global__ void skip_ahead_sequence_array(%(state_type)s *s, const int n, const unsigned long long *skip)
+__global__ void skip_ahead_sequence_array(%(state_type)s *s, const size_t n, const unsigned long long *skip)
 {
-  const int idx = blockIdx.x*blockDim.x+threadIdx.x;
+  const size_t idx = blockIdx.x*blockDim.x+threadIdx.x;
   if (idx < n)
       skipahead_sequence(skip[idx], &s[idx]);
 }
@@ -912,10 +912,10 @@ if get_curand_version() >= (3, 2, 0):
 
 mrg32k3a_random_source = """
 extern "C" {
-__global__ void prepare(%(state_type)s *s, const int n,
-    %(vector_type)s *v, const unsigned int o)
+__global__ void prepare(%(state_type)s *s, const size_t n,
+    %(vector_type)s *v, const size_t o)
 {
-  const int id = blockIdx.x*blockDim.x+threadIdx.x;
+  const size_t id = blockIdx.x*blockDim.x+threadIdx.x;
   if (id < n)
     curand_init(v[id], id, o, &s[id]);
 }
@@ -924,30 +924,30 @@ __global__ void prepare(%(state_type)s *s, const int n,
 
 mrg32k3a_skip_ahead_sequence_source = """
 extern "C" {
-__global__ void skip_ahead_sequence(%(state_type)s *s, const int n, const unsigned long long skip)
+__global__ void skip_ahead_sequence(%(state_type)s *s, const size_t n, const unsigned long long skip)
 {
-  const int idx = blockIdx.x*blockDim.x+threadIdx.x;
+  const size_t idx = blockIdx.x*blockDim.x+threadIdx.x;
   if (idx < n)
     skipahead_sequence(skip, &s[idx]);
 }
 
-__global__ void skip_ahead_sequence_array(%(state_type)s *s, const int n, const unsigned long long *skip)
+__global__ void skip_ahead_sequence_array(%(state_type)s *s, const size_t n, const unsigned long long *skip)
 {
-  const int idx = blockIdx.x*blockDim.x+threadIdx.x;
+  const size_t idx = blockIdx.x*blockDim.x+threadIdx.x;
   if (idx < n)
       skipahead_sequence(skip[idx], &s[idx]);
 }
 
-__global__ void skip_ahead_subsequence(%(state_type)s *s, const int n, const unsigned long long skip)
+__global__ void skip_ahead_subsequence(%(state_type)s *s, const size_t n, const unsigned long long skip)
 {
-  const int idx = blockIdx.x*blockDim.x+threadIdx.x;
+  const size_t idx = blockIdx.x*blockDim.x+threadIdx.x;
   if (idx < n)
     skipahead_subsequence(skip, &s[idx]);
 }
 
-__global__ void skip_ahead_subsequence_array(%(state_type)s *s, const int n, const unsigned long long *skip)
+__global__ void skip_ahead_subsequence_array(%(state_type)s *s, const size_t n, const unsigned long long *skip)
 {
-  const int idx = blockIdx.x*blockDim.x+threadIdx.x;
+  const size_t idx = blockIdx.x*blockDim.x+threadIdx.x;
   if (idx < n)
       skipahead_subsequence(skip[idx], &s[idx]);
 }
@@ -981,11 +981,11 @@ if get_curand_version() >= (4, 1, 0):
             self.skip_ahead_subsequence = self.module.get_function(
                 "skip_ahead_subsequence"
             )
-            self.skip_ahead_subsequence.prepare("PiQ")
+            self.skip_ahead_subsequence.prepare("PnQ")
             self.skip_ahead_subsequence_array = self.module.get_function(
                 "skip_ahead_subsequence_array"
             )
-            self.skip_ahead_subsequence_array.prepare("PiP")
+            self.skip_ahead_subsequence_array.prepare("PnP")
 
         def call_skip_ahead_subsequence(self, i, stream=None):
             self.skip_ahead_subsequence.prepared_async_call(
@@ -1049,10 +1049,10 @@ if get_curand_version() >= (4, 0, 0):
 
 sobol_random_source = """
 extern "C" {
-__global__ void prepare(%(state_type)s *s, const int n,
-    %(vector_type)s *v, const unsigned int o)
+__global__ void prepare(%(state_type)s *s, const size_t n,
+    %(vector_type)s *v, const size_t o)
 {
-  const int id = blockIdx.x*blockDim.x+threadIdx.x;
+  const size_t id = blockIdx.x*blockDim.x+threadIdx.x;
   if (id < n)
     curand_init(v[id], o, &s[id]);
 }
@@ -1099,7 +1099,7 @@ class _SobolRandomNumberGeneratorBase(_RandomNumberGeneratorBase):
             raise TypeError("seed must be GPUArray of integers of right length")
 
         p = self.module.get_function("prepare")
-        p.prepare("PiPi")
+        p.prepare("PnPn")
 
         from pycuda.characterize import has_stack
 
@@ -1135,10 +1135,10 @@ class _SobolRandomNumberGeneratorBase(_RandomNumberGeneratorBase):
 
 scrambledsobol_random_source = """
 extern "C" {
-__global__ void prepare( %(state_type)s *s, const int n,
-    %(vector_type)s *v, %(scramble_type)s *scramble, const unsigned int o)
+__global__ void prepare( %(state_type)s *s, const size_t n,
+    %(vector_type)s *v, %(scramble_type)s *scramble, const size_t o)
 {
-  const int id = blockIdx.x*blockDim.x+threadIdx.x;
+  const size_t id = blockIdx.x*blockDim.x+threadIdx.x;
   if (id < n)
     curand_init(v[id], scramble[id], o, &s[id]);
 }
@@ -1200,7 +1200,7 @@ class _ScrambledSobolRandomNumberGeneratorBase(_RandomNumberGeneratorBase):
             raise TypeError("scramble must be GPUArray of integers of right length")
 
         p = self.module.get_function("prepare")
-        p.prepare("PiPPi")
+        p.prepare("PnPPn")
 
         from pycuda.characterize import has_stack
 
