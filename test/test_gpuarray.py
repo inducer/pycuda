@@ -6,7 +6,6 @@ import sys
 from pycuda.tools import init_cuda_context_fixture
 from pycuda.characterize import has_double_support
 
-
 import pycuda.gpuarray as gpuarray
 import pycuda.driver as drv
 from pycuda.compiler import SourceModule
@@ -37,7 +36,7 @@ def get_random_array(rng, shape, dtype):
 
 
 def skip_if_not_enough_gpu_memory(required_mem_gigabytes):
-    device_mem_GB = drv.Context.get_device().total_memory() / 1e9
+    device_mem_GB = drv.Context.get_device().total_memory() / 1024 ** 3
     if device_mem_GB < required_mem_gigabytes:
         pytest.skip("Need at least %.1f GB memory" % required_mem_gigabytes)
 
@@ -378,6 +377,165 @@ class TestGPUArray:
                     # # Compare with scipy.stats.poisson.pmf(v - 1, v)
                     # assert np.isclose(0.12511, tmp, atol=0.002)
 
+    def test_curand_wrappers_8gb(self):
+        """ Test random number generation with array sizes of 2**31 with 4-byte types
+        to test sizes beyond the signed int range."""
+        skip_if_not_enough_gpu_memory(9)
+        from pycuda.curandom import get_curand_version
+
+        if get_curand_version() is None:
+            from pytest import skip
+
+            skip("curand not installed")
+
+        generator_types = []
+        if get_curand_version() >= (3, 2, 0):
+            from pycuda.curandom import (
+                XORWOWRandomNumberGenerator,
+                Sobol32RandomNumberGenerator,
+            )
+
+            generator_types.extend(
+                [XORWOWRandomNumberGenerator, Sobol32RandomNumberGenerator]
+            )
+        if get_curand_version() >= (4, 0, 0):
+            from pycuda.curandom import (
+                ScrambledSobol32RandomNumberGenerator,
+                Sobol64RandomNumberGenerator,
+                ScrambledSobol64RandomNumberGenerator,
+            )
+
+            generator_types.extend(
+                [
+                    ScrambledSobol32RandomNumberGenerator,
+                    Sobol64RandomNumberGenerator,
+                    ScrambledSobol64RandomNumberGenerator,
+                ]
+            )
+        if get_curand_version() >= (4, 1, 0):
+            from pycuda.curandom import MRG32k3aRandomNumberGenerator
+
+            generator_types.extend([MRG32k3aRandomNumberGenerator])
+
+        # Test ~2**31 elements for 32-bit types to not exceed ~8GB
+        dtypes = [np.float32, np.int32, np.uint32]
+
+        for gen_type in generator_types:
+            gen = gen_type()
+
+            for dtype in dtypes:
+                if dtype in [np.float32, np.float64]:
+                    gen.gen_normal(2 ** 31, dtype)
+                    # test non-Box-Muller version, if available
+                    gen.gen_normal(2 ** 31 + 1, dtype)
+
+                    if get_curand_version() >= (4, 0, 0):
+                        gen.gen_log_normal(2 ** 31, dtype, 10.0, 3.0)
+                        # test non-Box-Muller version, if available
+                        gen.gen_log_normal(2 ** 31 + 1, dtype, 10.0, 3.0)
+
+                x = gen.gen_uniform(2 ** 31, dtype)
+                if dtype in [np.float32, np.float64]:
+                    x_host = x.get()
+                    assert (-1 <= x_host).all()
+                    assert (x_host <= 1).all()
+                del x
+
+            if get_curand_version() >= (5, 0, 0):
+                gen.gen_poisson(2 ** 31, np.uint32, 13.0)
+                for dtype in [np.float32, np.uint32]:
+                    a = gpuarray.empty(2 ** 31, dtype=dtype)
+                    v = 10
+                    a.fill(v)
+                    gen.fill_poisson(a)
+                    tmp = (a.get() == (v - 1)).sum() / a.size  # noqa: F841
+                    # Check Poisson statistics (need 1e6 values)
+                    # Compare with scipy.stats.poisson.pmf(v - 1, v)
+                    assert np.isclose(0.12511, tmp, atol=0.005)
+                    del a
+
+    def test_curand_wrappers_16gb(self):
+        """ Test random number generation with array sizes of 2**31 (for 8-byte types)
+        or 2**32 (for 4-byte types) to test sizes beyond the unsigned int range."""
+        skip_if_not_enough_gpu_memory(17)
+        from pycuda.curandom import get_curand_version
+
+        if get_curand_version() is None:
+            from pytest import skip
+
+            skip("curand not installed")
+
+        generator_types = []
+        if get_curand_version() >= (3, 2, 0):
+            from pycuda.curandom import (
+                XORWOWRandomNumberGenerator,
+                Sobol32RandomNumberGenerator,
+            )
+
+            generator_types.extend(
+                [XORWOWRandomNumberGenerator, Sobol32RandomNumberGenerator]
+            )
+        if get_curand_version() >= (4, 0, 0):
+            from pycuda.curandom import (
+                ScrambledSobol32RandomNumberGenerator,
+                Sobol64RandomNumberGenerator,
+                ScrambledSobol64RandomNumberGenerator,
+            )
+
+            generator_types.extend(
+                [
+                    ScrambledSobol32RandomNumberGenerator,
+                    Sobol64RandomNumberGenerator,
+                    ScrambledSobol64RandomNumberGenerator,
+                ]
+            )
+        if get_curand_version() >= (4, 1, 0):
+            from pycuda.curandom import MRG32k3aRandomNumberGenerator
+
+            generator_types.extend([MRG32k3aRandomNumberGenerator])
+
+        if has_double_support():
+            dtypes = [np.float32, np.float64, np.int32, np.uint32]
+        else:
+            dtypes = [np.float32, np.int32, np.uint32]
+
+        for gen_type in generator_types:
+            gen = gen_type()
+
+            for dtype in dtypes:
+                # test 2**32 for double precision and 2**32 for single
+                s = 2 ** 31 if dtype == np.float64 else 2 ** 32
+                if dtype in [np.float32, np.float64]:
+                    gen.gen_normal(s, dtype)
+                    # test non-Box-Muller version, if available
+                    gen.gen_normal(s + 1, dtype)
+
+                    if get_curand_version() >= (4, 0, 0):
+                        gen.gen_log_normal(s, dtype, 10.0, 3.0)
+                        # test non-Box-Muller version, if available
+                        gen.gen_log_normal(s + 1, dtype, 10.0, 3.0)
+
+                x = gen.gen_uniform(s, dtype)
+                if dtype in [np.float32, np.float64]:
+                    x_host = x.get()
+                    assert (-1 <= x_host).all()
+                    assert (x_host <= 1).all()
+                del x
+
+            if get_curand_version() >= (5, 0, 0):
+                gen.gen_poisson(2 ** 32, np.uint32, 13.0)
+                for dtype in [np.float32, np.float64, np.uint32]:
+                    s = 2 ** 31 if dtype == np.float64 else 2 ** 32
+                    a = gpuarray.empty(s, dtype=dtype)
+                    v = 10
+                    a.fill(v)
+                    gen.fill_poisson(a)
+                    tmp = (a.get() == (v - 1)).sum() / a.size  # noqa: F841
+                    # Check Poisson statistics (need 1e6 values)
+                    # Compare with scipy.stats.poisson.pmf(v - 1, v)
+                    assert np.isclose(0.12511, tmp, atol=0.005)
+                    del a
+
     def test_array_gt(self):
         """Test whether array contents are > the other array's
         contents"""
@@ -508,7 +666,6 @@ class TestGPUArray:
                 slice(1000, -1),
             ]
         ):
-
             a_gpu = gpuarray.zeros((50000,), dtype=np.float32)
             a_cpu = np.zeros(a_gpu.shape, a_gpu.dtype)
 
@@ -1429,7 +1586,7 @@ class TestGPUArray:
 
     def test_truth_value(self):
         for i in range(5):
-            shape = (1,)*i
+            shape = (1,) * i
             zeros = gpuarray.zeros(shape, dtype="float32")
             ones = gpuarray.ones(shape, dtype="float32")
             assert bool(ones)
@@ -1453,7 +1610,7 @@ class TestGPUArray:
         from pycuda import cumath
 
         rng = np.random.default_rng(seed=0)
-        x_np = rng.random((10, 4)) + dtype(1j)*rng.random((10, 4))
+        x_np = rng.random((10, 4)) + dtype(1j) * rng.random((10, 4))
         x_cu = gpuarray.to_gpu(x_np)
         np.testing.assert_allclose(cumath.log10(x_cu).get(), np.log10(x_np),
                                    rtol=rtol)
@@ -1489,7 +1646,7 @@ class TestGPUArray:
         skip_if_not_enough_gpu_memory(4.5)
 
         from pycuda.elementwise import ElementwiseKernel
-        n_items = 2**32
+        n_items = 2 ** 32
 
         eltwise = ElementwiseKernel(
             "unsigned char* d_arr",
@@ -1508,7 +1665,7 @@ class TestGPUArray:
         skip_if_not_enough_gpu_memory(4.5)
 
         from pycuda.reduction import ReductionKernel
-        n_items = 2**32 + 11
+        n_items = 2 ** 32 + 11
         reduction = ReductionKernel(
             np.uint8,
             neutral="0",
@@ -1524,7 +1681,7 @@ class TestGPUArray:
 
     def test_big_array_scan(self):
         skip_if_not_enough_gpu_memory(4.5)
-        n_items = 2**32 + 12
+        n_items = 2 ** 32 + 12
         from pycuda.scan import InclusiveScanKernel
 
         cumsum = InclusiveScanKernel(np.uint8, "(a+b) & 0b11111111")
@@ -1533,11 +1690,11 @@ class TestGPUArray:
         result = cumsum(d_arr).get()[()]
         # Needs 8.6 GB on host. numpy.allclose() is way too slow otherwise.
         reference = np.tile(
-            np.roll(np.arange(256, dtype=np.int16), -1), n_items//256
+            np.roll(np.arange(256, dtype=np.int16), -1), n_items // 256
         )
         reference -= result[:reference.size]
         assert np.max(reference) == 0
-        assert np.allclose(result[2**32:], np.arange(1, 12+1))
+        assert np.allclose(result[2 ** 32:], np.arange(1, 12 + 1))
 
     def test_noncontig_transpose(self):
         # https://github.com/inducer/pycuda/issues/385
