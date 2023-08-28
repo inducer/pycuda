@@ -43,13 +43,13 @@ def setup(*args, **kwargs):
 
 
 def get_numpy_incpath():
-    from os.path import join, basename
+    from os.path import join, dirname
     from importlib.util import find_spec
     origin = find_spec("numpy").origin
     if origin is None:
         raise RuntimeError("origin of numpy package not found")
 
-    pathname = basename(origin)
+    pathname = dirname(origin)
     return join(pathname, "core", "include")
 
 
