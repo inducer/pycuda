@@ -1,8 +1,16 @@
-import setuptools  # noqa
-from setuptools import Extension
+import os
 import sys
-from setuptools.command.build_ext import (  # noqa: N812
-        build_ext as BaseBuildExtCommand)
+try:
+    from setuptools import Extension
+    from setuptools.command.build_ext import (  # noqa: N812
+            build_ext as BaseBuildExtCommand)
+
+except ImportError:
+    class Extension:
+        pass
+
+    class BaseBuildExtCommand:
+        pass
 
 
 def count_down_delay(delay):
@@ -35,10 +43,13 @@ def setup(*args, **kwargs):
 
 
 def get_numpy_incpath():
-    from imp import find_module
-    # avoid actually importing numpy, it screws up distutils
-    file, pathname, descr = find_module("numpy")
-    from os.path import join
+    from os.path import join, basename
+    from importlib.util import find_spec
+    origin = find_spec("numpy").origin
+    if origin is None:
+        raise RuntimeError("origin of numpy package not found")
+
+    pathname = basename(origin)
     return join(pathname, "core", "include")
 
 
@@ -163,7 +174,7 @@ def hack_distutils(debug=False, fast_link=True, what_opt=3):
 
         cvars = sysconfig.get_config_vars()
 
-        bad_prefixes = ['-g', '-O', '-Wstrict-prototypes', '-DNDEBUG']
+        bad_prefixes = ["-g", "-O", "-Wstrict-prototypes", "-DNDEBUG"]
 
         cflags = cvars.get("OPT")
         if cflags:
@@ -177,12 +188,12 @@ def hack_distutils(debug=False, fast_link=True, what_opt=3):
                     cflags.append("-O%s" % what_opt)
                     cflags.append("-DNDEBUG")
 
-            cvars["OPT"] = str.join(' ', cflags)
+            cvars["OPT"] = str.join(" ", cflags)
 
         cflags = cvars.get("CONFIGURE_CFLAGS")
         if cflags:
             cflags = remove_prefixes(cflags.split(), bad_prefixes)
-            cvars["CONFIGURE_CFLAGS"] = str.join(' ', cflags)
+            cvars["CONFIGURE_CFLAGS"] = str.join(" ", cflags)
 
         if "BASECFLAGS" in cvars:
             cvars["CFLAGS"] = cvars["BASECFLAGS"] + " " + cvars.get("OPT", "")
@@ -194,8 +205,8 @@ def hack_distutils(debug=False, fast_link=True, what_opt=3):
                 ldsharedflags = cvars.get(varname)
                 if ldsharedflags:
                     ldsharedflags = remove_prefixes(ldsharedflags.split(),
-                            ['-Wl,-O'])
-                    cvars[varname] = str.join(' ', ldsharedflags)
+                            ["-Wl,-O"])
+                    cvars[varname] = str.join(" ", ldsharedflags)
 
 # }}}
 
@@ -249,7 +260,7 @@ def expand_options(options):
 
 
 class ConfigSchema:
-    def __init__(self, options, conf_file="siteconf.py", conf_dir="."):
+    def __init__(self, options, conf_file="siteconf.py", conf_dir=os.path.dirname(__file__)):
         self.optdict = dict((opt.name, opt) for opt in options)
         self.options = options
         self.conf_dir = conf_dir
@@ -629,7 +640,7 @@ def set_up_shipped_boost_if_requested(project_name, conf, source_path=None,
 
                 "BOOST_MULTI_INDEX_DISABLE_SERIALIZATION": 1,
                 "BOOST_PYTHON_SOURCE": 1,
-                "boost": '%sboost' % project_name,
+                "boost": "%sboost" % project_name,
                 }
 
         if boost_chrono is False:
@@ -785,7 +796,7 @@ def _run_git_command(cmd):
     if stdout:
         return stdout.decode("utf-8"), git_error
     else:
-        return '', "(subprocess call to git did not succeed)"
+        return "", "(subprocess call to git did not succeed)"
 
 
 def check_git_submodules():
@@ -804,12 +815,12 @@ def check_git_submodules():
     pkg_warnings = []
 
     lines = stdout.split("\n")
-    for l in lines:
-        if not l.strip():
+    for ln in lines:
+        if not ln.strip():
             continue
 
-        status = l[0]
-        sha, package = l[1:].split(" ", 1)
+        status = ln[0]
+        sha, package = ln[1:].split(" ", 1)
 
         if package == "bpl-subset" or (
                 package.startswith("boost") and package.endswith("subset")):
@@ -829,39 +840,39 @@ def check_git_submodules():
                     % package)
 
     if pkg_warnings:
-            print(DASH_SEPARATOR)
-            print("git submodules are not up-to-date or in odd state")
-            print(DASH_SEPARATOR)
-            print("If this makes no sense, you probably want to say")
-            print("")
-            print(" $ git submodule update --init")
-            print("")
-            print("to fetch what you are presently missing and "
-                    "move on with your life.")
-            print("If you got this from a distributed package on the "
-                    "net, that package is")
-            print("broken and should be fixed. Please inform whoever "
-                    "gave you this package.")
-            print("")
-            print("These issues were found:")
-            for w in pkg_warnings:
-                print("  %s" % w)
-            print("")
-            print("I will try to initialize the submodules for you "
-                    "after a short wait.")
-            print(DASH_SEPARATOR)
-            print("Hit Ctrl-C now if you'd like to think about the situation.")
-            print(DASH_SEPARATOR)
+        print(DASH_SEPARATOR)
+        print("git submodules are not up-to-date or in odd state")
+        print(DASH_SEPARATOR)
+        print("If this makes no sense, you probably want to say")
+        print("")
+        print(" $ git submodule update --init")
+        print("")
+        print("to fetch what you are presently missing and "
+                "move on with your life.")
+        print("If you got this from a distributed package on the "
+                "net, that package is")
+        print("broken and should be fixed. Please inform whoever "
+                "gave you this package.")
+        print("")
+        print("These issues were found:")
+        for w in pkg_warnings:
+            print("  %s" % w)
+        print("")
+        print("I will try to initialize the submodules for you "
+                "after a short wait.")
+        print(DASH_SEPARATOR)
+        print("Hit Ctrl-C now if you'd like to think about the situation.")
+        print(DASH_SEPARATOR)
 
-            from os.path import exists
-            if not exists(".dirty-git-ok"):
-                count_down_delay(delay=10)
-                stdout, git_error = _run_git_command(
-                        ["submodule", "update", "--init"])
-                if git_error is None:
-                    print(DASH_SEPARATOR)
-                    print("git submodules initialized successfully")
-                    print(DASH_SEPARATOR)
+        from os.path import exists
+        if not exists(".dirty-git-ok"):
+            count_down_delay(delay=10)
+            stdout, git_error = _run_git_command(
+                    ["submodule", "update", "--init"])
+            if git_error is None:
+                print(DASH_SEPARATOR)
+                print("git submodules initialized successfully")
+                print(DASH_SEPARATOR)
 
 # }}}
 
@@ -913,9 +924,12 @@ def has_flag(compiler, flagname):
     the specified compiler.
     """
     import tempfile
-    with tempfile.NamedTemporaryFile('w', suffix='.cpp', delete=False) as f:
-        f.write('int main (int argc, char **argv) { return 0; }')
+    with tempfile.NamedTemporaryFile("w", suffix=".cpp", delete=False) as f:
+        f.write("int main (int argc, char **argv) { return 0; }")
         fname = f.name
+
+    import setuptools
+
     try:
         compiler.compile([fname], extra_postargs=[flagname])
     except setuptools.distutils.errors.CompileError:
@@ -926,24 +940,24 @@ def has_flag(compiler, flagname):
 def cpp_flag(compiler):
     """Return the -std=c++[11/14] compiler flag.
 
-    The c++14 is preferred over c++11 (when it is available).
+    C++14 is preferred over C++11 (when it is available).
     """
-    if has_flag(compiler, '-std=gnu++14'):
-        return '-std=gnu++14'
-    elif has_flag(compiler, '-std=c++14'):
-        return '-std=c++14'
-    elif has_flag(compiler, '-std=c++11'):
-        return '-std=c++11'
+    if has_flag(compiler, "-std=gnu++14"):
+        return "-std=gnu++14"
+    elif has_flag(compiler, "-std=c++14"):
+        return "-std=c++14"
+    elif has_flag(compiler, "-std=c++11"):
+        return "-std=c++11"
     else:
-        raise RuntimeError('Unsupported compiler -- at least C++11 support '
-                           'is needed!')
+        raise RuntimeError("Unsupported compiler -- at least C++11 support "
+                           "is needed!")
 
 
 class PybindBuildExtCommand(NumpyBuildExtCommand):
     """A custom build extension for adding compiler-specific options."""
     c_opts = {
-        'msvc': ['/EHsc'],
-        'unix': [],
+        "msvc": ["/EHsc"],
+        "unix": [],
     }
 
     def build_extensions(self):
@@ -951,17 +965,17 @@ class PybindBuildExtCommand(NumpyBuildExtCommand):
         opts = self.c_opts.get(ct, [])
         cxx_opts = []
 
-        if ct in ['unix', 'mingw32']:
+        if ct in ["unix", "mingw32"]:
             opts.append('-DVERSION_INFO="%s"' % self.distribution.get_version())
             cxx_opts.append(cpp_flag(self.compiler))
-            if has_flag(self.compiler, '-fvisibility=hidden'):
-                opts.append('-fvisibility=hidden')
-            if sys.platform == 'darwin':
-                if has_flag(self.compiler, '-stdlib=libc++'):
-                    opts.append('-stdlib=libc++')
-                if has_flag(self.compiler, '-mmacosx-version-min=10.7'):
-                    opts.append('-mmacosx-version-min=10.7')
-        elif ct == 'msvc':
+            if has_flag(self.compiler, "-fvisibility=hidden"):
+                opts.append("-fvisibility=hidden")
+            if sys.platform == "darwin":
+                if has_flag(self.compiler, "-stdlib=libc++"):
+                    opts.append("-stdlib=libc++")
+                if has_flag(self.compiler, "-mmacosx-version-min=10.7"):
+                    opts.append("-mmacosx-version-min=10.7")
+        elif ct == "msvc":
             opts.append('/DVERSION_INFO=\\"%s\\"' % self.distribution.get_version())
         for ext in self.extensions:
             ext.extra_compile_args = ext.extra_compile_args + opts
