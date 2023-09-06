@@ -159,6 +159,54 @@ class Out(ArgumentHandler):
 class InOut(In, Out):
     pass
 
+from functools import lru_cache
+
+@lru_cache(maxsize=None)
+def _build_arg_buf(args):
+    handlers = []
+
+    arg_data = []
+    format = ""
+    for i, arg in enumerate(args):
+        if isinstance(arg, np.number):
+            arg_data.append(arg)
+            format += arg.dtype.char
+        elif isinstance(arg, (DeviceAllocation, PooledDeviceAllocation)):
+            arg_data.append(int(arg))
+            format += "P"
+        elif isinstance(arg, ArgumentHandler):
+            handlers.append(arg)
+            arg_data.append(int(arg.get_device_alloc()))
+            format += "P"
+        elif isinstance(arg, np.ndarray):
+            if isinstance(arg.base, ManagedAllocationOrStub):
+                arg_data.append(int(arg.base))
+                format += "P"
+            else:
+                arg_data.append(arg)
+                format += "%ds" % arg.nbytes
+        elif isinstance(arg, np.void):
+            arg_data.append(_my_bytes(_memoryview(arg)))
+            format += "%ds" % arg.itemsize
+        else:
+            cai = getattr(arg, "__cuda_array_interface__", None)
+            if cai:
+                arg_data.append(cai["data"][0])
+                format += "P"
+                continue
+
+            try:
+                gpudata = np.uintp(arg.gpudata)
+            except AttributeError:
+                raise TypeError("invalid type on parameter #%d (0-based)" % i)
+            else:
+                # for gpuarrays
+                arg_data.append(int(gpudata))
+                format += "P"
+
+    from pycuda._pvt_struct import pack
+
+    return handlers, pack(format, *arg_data)
 
 def _add_functionality():
     def device_get_attributes(dev):
@@ -186,52 +234,6 @@ def _add_functionality():
 
     def device___getattr__(dev, name):
         return dev.get_attribute(getattr(device_attribute, name.upper()))
-
-    def _build_arg_buf(args):
-        handlers = []
-
-        arg_data = []
-        format = ""
-        for i, arg in enumerate(args):
-            if isinstance(arg, np.number):
-                arg_data.append(arg)
-                format += arg.dtype.char
-            elif isinstance(arg, (DeviceAllocation, PooledDeviceAllocation)):
-                arg_data.append(int(arg))
-                format += "P"
-            elif isinstance(arg, ArgumentHandler):
-                handlers.append(arg)
-                arg_data.append(int(arg.get_device_alloc()))
-                format += "P"
-            elif isinstance(arg, np.ndarray):
-                if isinstance(arg.base, ManagedAllocationOrStub):
-                    arg_data.append(int(arg.base))
-                    format += "P"
-                else:
-                    arg_data.append(arg)
-                    format += "%ds" % arg.nbytes
-            elif isinstance(arg, np.void):
-                arg_data.append(_my_bytes(_memoryview(arg)))
-                format += "%ds" % arg.itemsize
-            else:
-                cai = getattr(arg, "__cuda_array_interface__", None)
-                if cai:
-                    arg_data.append(cai["data"][0])
-                    format += "P"
-                    continue
-
-                try:
-                    gpudata = np.uintp(arg.gpudata)
-                except AttributeError:
-                    raise TypeError("invalid type on parameter #%d (0-based)" % i)
-                else:
-                    # for gpuarrays
-                    arg_data.append(int(gpudata))
-                    format += "P"
-
-        from pycuda._pvt_struct import pack
-
-        return handlers, pack(format, *arg_data)
 
     # {{{ pre-CUDA 4 call interface (stateful)
 
@@ -710,6 +712,33 @@ def _add_functionality():
 
 _add_functionality()
 
+# {{{ cudagraph
+
+def patch_cudagraph():
+    def graph_add_kernel_node_call(graph, *args, func, block, grid=(1, ), dependencies=[], shared_mem_bytes=0):
+        if func is None:
+            raise ValueError("must specify func")
+        if block is None:
+            raise ValueError("must specify block size")
+        _, arg_buf = _build_arg_buf(args)
+        return graph._add_kernel_node(dependencies, func, grid, block, arg_buf, shared_mem_bytes)
+
+    def exec_graph_set_kernel_node_call(exec_graph, *args, kernel_node, func, block, grid=(1, ), shared_mem_bytes=0):
+        if kernel_node is None:
+            raise ValueError("must specify kernel_node")
+        if func is None:
+            raise ValueError("must specify func")
+        if block is None:
+            raise ValueError("must specify block size")
+        _, arg_buf = _build_arg_buf(args)
+        return exec_graph._kernel_node_set_params(kernel_node, func, grid, block, arg_buf, shared_mem_bytes)
+
+    Graph.add_kernel_node = graph_add_kernel_node_call
+    GraphExec.kernel_node_set_params = exec_graph_set_kernel_node_call
+if get_version() >= (10,):
+    patch_cudagraph()
+
+# }}}
 
 # {{{ pagelocked numpy arrays
 

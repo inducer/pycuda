@@ -605,6 +605,22 @@ Constants
 
     .. attribute:: LAZY_ENABLE_PEER_ACCESS
 
+.. class:: capture_mode
+
+    CUDA 10 and newer.
+
+    .. attribute:: GLOBAL
+    .. attribute:: THREAD_LOCAL
+    .. attribute:: RELAXED
+
+.. class:: capture_status
+
+    CUDA 10 and newer.
+
+    .. attribute:: NONE
+    .. attribute:: ACTIVE
+    .. attribute:: INVALIDATED
+
 
 Graphics-related constants
 ^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -845,6 +861,43 @@ Concurrency and Streams
 
         .. versionadded:: 2011.1
 
+    .. method:: begin_capture(capture_mode=capture_mode.GLOBAL)
+
+        Begins graph stream capture on a stream.
+
+        When a stream is in capture mode, all operations pushed into the stream
+        will not be executed, but will instead be captured into a graph.
+
+        :arg capture_mode: A :class:`capture_mode` specifying mode for capturing graph.
+
+        CUDA 10 and above.
+
+    .. method:: end_capture()
+
+        Ends stream capture and returns a :class:`Graph` object.
+
+        CUDA 10 and above.
+
+    .. method:: get_capture_info_v2()
+
+        Query a stream's capture state.
+
+        Return a :class:`tuple` of (:class:`capture_status` capture status, :class:`int` id for the capture sequence,
+        :class:`Graph` the graph being captured into, a :class:`list` of :class:`GraphNode` specifying set of nodes the
+        next node to be captured in the stream will depend on)
+
+        CUDA 10 and above.
+
+    .. method:: update_capture_dependencies(dependencies, flags)
+
+        Modifies the dependency set of a capturing stream.
+        The dependency set is the set of nodes that the next captured node in the stream will depend on.
+
+        :arg dependencies: A :class:`list` of :class:`GraphNode` specifying the new list of dependencies.
+        :arg flags: A :class:`int` controlling whether the set passed to the API is added to the existing set or replaces it.
+
+        CUDA 11.3 and above.
+
 .. class:: Event(flags=0)
 
     An event is a temporal 'marker' in a :class:`Stream` that allows taking the time
@@ -894,6 +947,78 @@ Concurrency and Streams
         Requires Python 2.6 and CUDA 4.1.
 
         .. versionadded: 2011.2
+
+CUDAGraphs
+----------
+
+CUDA 10.0 and above
+
+Launching a simple kernel using CUDAGraphs
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+.. literalinclude:: ../examples/cudagraph_kernel.py
+
+.. class:: GraphNode
+
+    An object representing a node on :class:`Graph`.
+
+    Wraps `cuGraphNode <https://docs.nvidia.com/cuda/cuda-driver-api/group__CUDA__TYPES.html#group__CUDA__TYPES_1gc72514a94dacc85ed0617f979211079c>`
+
+.. class:: GraphExec
+
+    An executable graph to be launched on a stream.
+
+    Wraps `cuGraphExec <https://docs.nvidia.com/cuda/cuda-driver-api/group__CUDA__TYPES.html#group__CUDA__TYPES_1gf0abeceeaa9f0a39592fe36a538ea1f0>`_
+
+    .. method:: launch(stream_py=None)
+
+        Launches an executable graph in a stream.
+
+        :arg stream_py: :class:`Stream` object specifying device stream.
+                    Will use default stream if *stream_py* is None.
+
+    .. method:: kernel_node_set_params(*args, kernel_node, func=None, block=(), grid=(), shared_mem_bytes=0)
+
+        Sets a kernel node's parameters. Refer to :meth:`add_kernel_node` for argument specifications.
+
+.. class:: Graph()
+
+    A cudagraph is a data dependency graph meant to
+    serve as an alternative to :class:`Stream`.
+
+    Wraps `cuGraph <https://docs.nvidia.com/cuda/cuda-driver-api/group__CUDA__TYPES.html#group__CUDA__TYPES_1g69f555c38df5b3fa1ed25efef794739a>`
+
+    .. method:: add_kernel_node(*args, func, block, grid=(1, ), dependencies=[], shared_mem_bytes=0)
+
+        Returns and adds a :class:`GraphNode` object specifying
+        kernel node to the graph.
+
+        Will be placed at the root of the graph if dependencies
+        are not specified.
+
+        :arg args:  *arg1* through *argn* are the positional C arguments to the kernel.
+        See :meth:`Function.__call__` for more argument details.
+
+        :arg func: a :class:`Function`object specifying kernel function.
+
+        :arg block: a :class:`tuple` of up to three integer entries specifying the number
+        of thread blocks to launch, as a multi-dimensional grid.
+
+        :arg grid: a :class:`tuple` of up to three integer entries specifying the grid configuration.
+
+        :arg dependencies: A :class:`list` of :class:`GraphNode` objects specifying dependency nodes.
+
+        :arg shared_mem_bytes: A :class:`int` specifying size of shared memory.
+
+    .. method:: instantiate()
+
+        Returns and instantiates a :class:`GraphExec` object.
+
+    .. method:: debug_dot_print(path)
+
+        Returns a DOT file describing graph structure at specifed path.
+
+        :arg path: String specifying path for saving DOT file.
 
 Memory
 ------

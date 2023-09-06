@@ -1231,7 +1231,53 @@ BOOST_PYTHON_MODULE(_driver)
   }
   // }}}
 
+  // {{{ graph
+#if CUDAPP_CUDA_VERSION >= 10000
+  {
+    typedef graph_node cl;
+    py::class_<cl, boost::noncopyable>("GraphNode", py::no_init)
+      .def("__eq__", &cl::operator==)
+      .def("__ne__", &cl::operator!=)
+    ;
+  }
+
+  {
+    typedef graph_exec cl;
+    py::class_<cl, boost::noncopyable>("GraphExec", py::no_init)
+      .def("launch", &cl::launch,
+        py::arg("stream")=py::object())
+      .def("_kernel_node_set_params", &cl::kernel_node_set_params)
+      ;
+  }
+
+  {
+    typedef graph cl;
+    py::class_<cl, boost::noncopyable>("Graph", py::no_init)
+      .def("__eq__", &cl::operator==)
+      .def("__ne__", &cl::operator!=)
+      .def("_add_kernel_node", &cl::add_kernel_node,
+        py::return_value_policy<py::manage_new_object>())
+      .def("instantiate", &cl::instantiate,
+        py::return_value_policy<py::manage_new_object>())
+      .DEF_SIMPLE_METHOD(debug_dot_print)
+      ;
+  }
+#endif
+  // }}}
+
   // {{{ stream
+#if CUDAPP_CUDA_VERSION >= 10000
+  py::enum_<CUstreamCaptureMode>("capture_mode")
+    .value("GLOBAL", CU_STREAM_CAPTURE_MODE_GLOBAL)
+    .value("THREAD_LOCAL", CU_STREAM_CAPTURE_MODE_THREAD_LOCAL)
+    .value("RELAXED", CU_STREAM_CAPTURE_MODE_RELAXED)
+    ;
+  py::enum_<CUstreamCaptureStatus>("capture_status")
+    .value("NONE", CU_STREAM_CAPTURE_STATUS_NONE)
+    .value("ACTIVE", CU_STREAM_CAPTURE_STATUS_ACTIVE)
+    .value("INVALIDATED", CU_STREAM_CAPTURE_STATUS_INVALIDATED)
+    ;
+#endif
   {
     typedef stream cl;
     py::class_<cl, boost::noncopyable, shared_ptr<cl> >
@@ -1240,6 +1286,16 @@ BOOST_PYTHON_MODULE(_driver)
       .DEF_SIMPLE_METHOD(is_done)
 #if CUDAPP_CUDA_VERSION >= 3020
       .DEF_SIMPLE_METHOD(wait_for_event)
+#endif
+#if CUDAPP_CUDA_VERSION >= 10000
+      .def("begin_capture", &cl::begin_capture,
+        py::arg("capture_mode") = CU_STREAM_CAPTURE_MODE_GLOBAL)
+      .def("end_capture", &cl::end_capture,
+        py::return_value_policy<py::manage_new_object>())
+      .def("get_capture_info_v2", &cl::get_capture_info_v2)
+#if CUDAPP_CUDA_VERSION >= 11030
+      .def("update_capture_dependencies", &cl::update_capture_dependencies)
+#endif
 #endif
       .add_property("handle", &cl::handle_int)
       ;
