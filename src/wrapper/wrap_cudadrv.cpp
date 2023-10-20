@@ -1278,6 +1278,12 @@ BOOST_PYTHON_MODULE(_driver)
     .value("INVALIDATED", CU_STREAM_CAPTURE_STATUS_INVALIDATED)
     ;
 #endif
+#if CUDAPP_CUDA_VERSION >= 11030
+  py::enum_<CUstreamUpdateCaptureDependencies_flags>("update_capture_dependencies_flags")
+    .value("ADD_CAPTURE_DEPENDENCIES", CU_STREAM_ADD_CAPTURE_DEPENDENCIES)
+    .value("SET_CAPTURE_DEPENDENCIES", CU_STREAM_SET_CAPTURE_DEPENDENCIES)
+    ;
+#endif
   {
     typedef stream cl;
     py::class_<cl, boost::noncopyable, shared_ptr<cl> >
@@ -1294,7 +1300,9 @@ BOOST_PYTHON_MODULE(_driver)
         py::return_value_policy<py::manage_new_object>())
       .def("get_capture_info_v2", &cl::get_capture_info_v2)
 #if CUDAPP_CUDA_VERSION >= 11030
-      .def("update_capture_dependencies", &cl::update_capture_dependencies)
+      .def("update_capture_dependencies", &cl::update_capture_dependencies,
+        (py::arg("dependencies"),
+        py::arg("flags") = CU_STREAM_ADD_CAPTURE_DEPENDENCIES))
 #endif
 #endif
       .add_property("handle", &cl::handle_int)

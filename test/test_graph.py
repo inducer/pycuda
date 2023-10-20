@@ -61,7 +61,7 @@ class TestGraph:
         assert stat == drv.capture_status.ACTIVE, "Capture should be active"
         assert len(deps) == 0, "Nothing on deps"
         newnode = x_graph.add_kernel_node(a_gpu, numpy.int32(3), block=(4, 4, 1), func=func_plus, dependencies=deps)
-        stream_1.update_capture_dependencies([newnode], 1)
+        stream_1.update_capture_dependencies([newnode], cuda.update_capture_dependencies_flags.SET_CAPTURE_DEPENDENCIES)
         drv.memcpy_dtoh_async(result, a_gpu, stream_1) # Capture a copy as well.
         graph = stream_1.end_capture()
         assert graph == x_graph, "Should be the same"
@@ -110,11 +110,11 @@ class TestGraph:
         assert stat == drv.capture_status.ACTIVE, "Capture should be active"
         assert len(deps) == 0, "Nothing on deps"
         newnode = x_graph.add_kernel_node(a_gpu, numpy.int32(3), block=(4, 4, 1), func=func_plus, dependencies=deps)
-        stream_1.update_capture_dependencies([newnode], 1)
+        stream_1.update_capture_dependencies([newnode], cuda.update_capture_dependencies_flags.SET_CAPTURE_DEPENDENCIES)
         _, _, x_graph, deps = stream_1.get_capture_info_v2()
         assert deps == [newnode], "Call to update_capture_dependencies should set newnode as the only dep"
         newnode2 = x_graph.add_kernel_node(b_gpu, numpy.int32(3), block=(4, 4, 1), func=func_plus, dependencies=deps)
-        stream_1.update_capture_dependencies([newnode2], 1)
+        stream_1.update_capture_dependencies([newnode2], cuda.update_capture_dependencies_flags.SET_CAPTURE_DEPENDENCIES)
 
         # Static capture
         func_times(a_gpu, b_gpu, block=(4, 4, 1), stream=stream_1)

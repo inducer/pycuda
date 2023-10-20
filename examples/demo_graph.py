@@ -34,11 +34,11 @@ cuda.memcpy_htod_async(b2_gpu, b, stream_1)
 func_plus(a_gpu, numpy.int32(2), block=(4, 4, 1), stream=stream_1)
 _, _, graph, deps = stream_1.get_capture_info_v2()
 first_node = graph.add_kernel_node(b_gpu, numpy.int32(3), block=(4, 4, 1), func=func_plus, dependencies=deps)
-stream_1.update_capture_dependencies([first_node], 1)
+stream_1.update_capture_dependencies([first_node], cuda.update_capture_dependencies_flags.SET_CAPTURE_DEPENDENCIES)
 
 _, _, graph, deps = stream_1.get_capture_info_v2()
 second_node = graph.add_kernel_node(a_gpu, b_gpu, block=(4, 4, 1), func=func_times, dependencies=deps)
-stream_1.update_capture_dependencies([second_node], 1)
+stream_1.update_capture_dependencies([second_node], cuda.update_capture_dependencies_flags.SET_CAPTURE_DEPENDENCIES)
 cuda.memcpy_dtoh_async(result, a_gpu, stream_1)
 
 graph = stream_1.end_capture()

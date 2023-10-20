@@ -621,6 +621,13 @@ Constants
     .. attribute:: ACTIVE
     .. attribute:: INVALIDATED
 
+.. class:: update_capture_dependencies_flags
+
+    CUDA 11.3 and newer.
+
+    .. attribute:: ADD_CAPTURE_DEPENDENCIES
+    .. attribute:: SET_CAPTURE_DEPENDENCIES
+
 
 Graphics-related constants
 ^^^^^^^^^^^^^^^^^^^^^^^^^^
