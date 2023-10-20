@@ -96,6 +96,7 @@ class TestGraph:
         func_times = mod.get_function("times")
 
         stream_1 = drv.Stream()
+        _ , _, _, _ = stream_1.get_capture_info_v2()
 
         import numpy
         a = numpy.zeros((4, 4)).astype(numpy.float32)
@@ -103,6 +104,7 @@ class TestGraph:
         b = numpy.zeros((4, 4)).astype(numpy.float32)
         b_gpu = drv.mem_alloc_like(b)
         result = numpy.zeros_like(b)
+        _ , _, _, _ = stream_1.get_capture_info_v2()
         stream_1.begin_capture()
         stat , _, x_graph, deps = stream_1.get_capture_info_v2()
         assert stat == drv.capture_status.ACTIVE, "Capture should be active"

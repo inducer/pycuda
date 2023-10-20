@@ -1679,9 +1679,9 @@ namespace pycuda
   {
     CUgraph _capturing_graph;
     CUstreamCaptureStatus _capture_status;
-    const CUgraphNode *_deps;
-    size_t _dep_count;
-    uint64_t _id_out;
+    const CUgraphNode *_deps = nullptr;
+    size_t _dep_count = 0;
+    uint64_t _id_out = 0;
     CUDAPP_CALL_GUARDED(cuStreamGetCaptureInfo_v2, (m_stream, &_capture_status, &_id_out, &_capturing_graph, &_deps, &_dep_count));
     py::list list_root_nodes = array_of_nodes_to_list(_deps, _dep_count);
     graph *node = new graph(_capturing_graph);
