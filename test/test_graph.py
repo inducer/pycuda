@@ -61,7 +61,7 @@ class TestGraph:
         assert stat == drv.capture_status.ACTIVE, "Capture should be active"
         assert len(deps) == 0, "Nothing on deps"
         newnode = x_graph.add_kernel_node(a_gpu, numpy.int32(3), block=(4, 4, 1), func=func_plus, dependencies=deps)
-        stream_1.update_capture_dependencies([newnode], cuda.update_capture_dependencies_flags.SET_CAPTURE_DEPENDENCIES)
+        stream_1.update_capture_dependencies([newnode], drv.update_capture_dependencies_flags.SET_CAPTURE_DEPENDENCIES)
         drv.memcpy_dtoh_async(result, a_gpu, stream_1) # Capture a copy as well.
         graph = stream_1.end_capture()
         assert graph == x_graph, "Should be the same"
@@ -110,11 +110,11 @@ class TestGraph:
         assert stat == drv.capture_status.ACTIVE, "Capture should be active"
         assert len(deps) == 0, "Nothing on deps"
         newnode = x_graph.add_kernel_node(a_gpu, numpy.int32(3), block=(4, 4, 1), func=func_plus, dependencies=deps)
-        stream_1.update_capture_dependencies([newnode], cuda.update_capture_dependencies_flags.SET_CAPTURE_DEPENDENCIES)
+        stream_1.update_capture_dependencies([newnode], drv.update_capture_dependencies_flags.SET_CAPTURE_DEPENDENCIES)
         _, _, x_graph, deps = stream_1.get_capture_info_v2()
         assert deps == [newnode], "Call to update_capture_dependencies should set newnode as the only dep"
         newnode2 = x_graph.add_kernel_node(b_gpu, numpy.int32(3), block=(4, 4, 1), func=func_plus, dependencies=deps)
-        stream_1.update_capture_dependencies([newnode2], cuda.update_capture_dependencies_flags.SET_CAPTURE_DEPENDENCIES)
+        stream_1.update_capture_dependencies([newnode2], drv.update_capture_dependencies_flags.SET_CAPTURE_DEPENDENCIES)
 
         # Static capture
         func_times(a_gpu, b_gpu, block=(4, 4, 1), stream=stream_1)
@@ -138,6 +138,31 @@ class TestGraph:
         instance.kernel_node_set_params(b_gpu, numpy.int32(4), block=(4, 4, 1), func=func_plus, kernel_node=newnode2)
         instance.launch()
         np.testing.assert_allclose(result, np.full((4, 4), (4*9)*(9+4)), rtol=1e-5) # b is now (9 + 4), a is 4*9 as it was after func_times, since we write to another buffer this launch.
+
+    @mark_cuda_test
+    def test_graph_create(self):
+        mod = SourceModule("""
+            __global__ void plus(float *a, int num)
+            {
+            int idx = threadIdx.x + threadIdx.y*4;
+            a[idx] += num;
+            }
+            """)
+        func_plus = mod.get_function("plus")
+
+        import numpy
+        a = numpy.zeros((4, 4)).astype(numpy.float32)
+        a_gpu = drv.mem_alloc_like(a)
+        result = numpy.zeros_like(a)
+
+        graph = drv.Graph()
+        node1 = graph.add_kernel_node(a_gpu, numpy.int32(1), block=(4, 4, 1), func=func_plus, dependencies=[])
+        node2 = graph.add_kernel_node(a_gpu, numpy.int32(2), block=(4, 4, 1), func=func_plus, dependencies=[node1])
+
+        instance = graph.instantiate()
+        instance.launch()
+        drv.memcpy_dtoh_async(result, a_gpu)
+        np.testing.assert_allclose(result, np.full((4, 4), 1+2), rtol=1e-5)
 
 if __name__ == "__main__":
     # make sure that import failures get reported, instead of skipping the tests.

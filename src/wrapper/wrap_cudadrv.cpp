@@ -1252,7 +1252,7 @@ BOOST_PYTHON_MODULE(_driver)
 
   {
     typedef graph cl;
-    py::class_<cl, boost::noncopyable>("Graph", py::no_init)
+    py::class_<cl, boost::noncopyable>("Graph")
       .def("__eq__", &cl::operator==)
       .def("__ne__", &cl::operator!=)
       .def("_add_kernel_node", &cl::add_kernel_node,

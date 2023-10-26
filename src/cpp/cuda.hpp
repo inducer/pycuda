@@ -1552,7 +1552,7 @@ namespace pycuda
       { }
 
       ~graph_exec() {
-          free();
+        free();
       }
 
       void free() {
@@ -1623,11 +1623,35 @@ namespace pycuda
   {
     private:
       CUgraph m_graph;
+      bool m_own_graph;
 
     public:
+      graph()
+        : m_own_graph(true)
+      {
+        cuGraphCreate(&m_graph, 0);
+      }
+
       graph(CUgraph graph)
         : m_graph(graph)
+        , m_own_graph(false)
       { }
+
+      ~graph() {
+        if (m_own_graph) {
+          free();
+        }
+      }
+
+      void free() {
+        try
+        {
+          scoped_context_activation ca(get_context());
+          CUDAPP_CALL_GUARDED_CLEANUP(cuGraphDestroy,(m_graph));
+        }
+        CUDAPP_CATCH_CLEANUP_ON_DEAD_CONTEXT(graph);
+        release_context();
+      }
 
       bool operator==(const graph& rhs)
       {
