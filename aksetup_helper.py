@@ -643,6 +643,9 @@ def set_up_shipped_boost_if_requested(project_name, conf, source_path=None,
                 "boost": "%sboost" % project_name,
                 }
 
+        if os.environ.get("MINGW_CHOST"):
+            defines["BOOST_USE_WINDOWS_H"] = 1
+
         if boost_chrono is False:
             defines["BOOST_THREAD_DONT_USE_CHRONO"] = 1
         elif boost_chrono == "header_only":
