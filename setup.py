@@ -54,8 +54,11 @@ def get_config_schema():
         # https://github.com/inducer/pycuda/issues/113
         lib64 = "lib/x64"
 
-        cxxflags_default.extend(["/EHsc"])
-        ldflags_default.extend(["/FORCE"])
+        import os
+        if not os.environ.get("MINGW_CHOST"):
+            cxxflags_default.extend(["/EHsc"])
+            ldflags_default.extend(["/FORCE"])
+
     elif "darwin" in sys.platform:
         import glob
 
