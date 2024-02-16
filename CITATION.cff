@@ -66,3 +66,4 @@ version: 2022.1
 doi: 10.5281/zenodo.6728391
 date-released: 2022-06-10
 url: "https://github.com/inducer/pycuda"
+license: MIT
