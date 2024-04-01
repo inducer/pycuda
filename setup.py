@@ -223,7 +223,7 @@ def main():
         python_requires="~=3.8",
         install_requires=[
             "pytools>=2011.2",
-            "appdirs>=1.4.0",
+            "platformdirs>=2.2.0",
             "mako",
         ],
         test_requires=[
