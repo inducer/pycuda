@@ -267,21 +267,14 @@ def compile(
         cache_dir = False
 
     if cache_dir is None:
-        import appdirs
+        import platformdirs
 
         cache_dir = os.path.join(
-            appdirs.user_cache_dir("pycuda", "pycuda"), "compiler-cache-v1"
+            platformdirs.user_cache_dir("pycuda", "pycuda"), "compiler-cache-v1"
         )
 
         from os import makedirs
-
-        try:
-            makedirs(cache_dir)
-        except OSError as e:
-            from errno import EEXIST
-
-            if e.errno != EEXIST:
-                raise
+        makedirs(cache_dir, exist_ok=True)
 
     if arch is not None:
         options.extend(["-arch", arch])
