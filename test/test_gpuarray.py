@@ -884,7 +884,6 @@ class TestGPUArray:
 
     def test_subset_sum(self):
         """Test subset sum with annd without allocator"""
-        from pycuda.curandom import rand as curand
 
         l_a = 2000
         gran = 5
@@ -898,7 +897,7 @@ class TestGPUArray:
         import pycuda.tools
         for pool in [None, pycuda.tools.DeviceMemoryPool()]:
             for dtype in dtypes:
-                a = np.random.uniform(0,10, l_a).astype(dtype)
+                a = np.random.uniform(0, 10, l_a).astype(dtype)
                 a_gpu = gpuarray.to_gpu(a)
 
                 meaningful_indices_gpu = gpuarray.zeros(l_m, dtype=np.int32)
