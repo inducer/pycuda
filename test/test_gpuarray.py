@@ -159,6 +159,26 @@ class TestGPUArray:
         b_mul_c = (b_gpu * c_gpu).get()
         assert (b * c == b_mul_c).all()
 
+    def test_mul_add(self):
+        """Test the addition-multiplication of two arrays."""
+
+        a = np.array([1, 2, 3, 4, 5, 6, 7, 8, 9, 10]).astype(np.float32)
+        b = np.array([10, 20, 30, 40, 50, 60, 70, 80, 90, 100]).astype(np.float32)
+
+        a_gpu = gpuarray.to_gpu(a)
+        b_gpu = gpuarray.to_gpu(b)
+        c_gpu = gpuarray.empty_like(a_gpu)
+
+        res = a_gpu.mul_add(2, b_gpu, 3).get()
+        assert (2 * a + 3 * b == res).all()
+
+        a_gpu.mul_add(2, b_gpu, 3, out=c_gpu)
+        assert (2 * a + 3 * b == c_gpu.get()).all()
+
+        stream = drv.Stream()
+        res = a_gpu.mul_add(2, b_gpu, 3, stream=stream).get()
+        assert (2 * a + 3 * b == res).all()
+
     def test_unit_multiply_array(self):
 
         a = np.array([1, 2, 3, 4, 5, 6, 7, 8, 9, 10]).astype(np.float32)
@@ -861,6 +881,41 @@ class TestGPUArray:
             min_a_gpu = gpuarray.subset_min(meaningful_indices_gpu, a_gpu).get()
 
             assert min_a_gpu == min_a
+
+    def test_subset_sum(self):
+        """Test subset sum with annd without allocator"""
+        from pycuda.curandom import rand as curand
+
+        l_a = 2000
+        gran = 5
+        l_m = l_a - l_a // gran + 1
+
+        if has_double_support():
+            dtypes = [np.float64, np.float32, np.int32]
+        else:
+            dtypes = [np.float32, np.int32]
+
+        import pycuda.tools
+        for pool in [None, pycuda.tools.DeviceMemoryPool()]:
+            for dtype in dtypes:
+                a = np.random.uniform(0,10, l_a).astype(dtype)
+                a_gpu = gpuarray.to_gpu(a)
+
+                meaningful_indices_gpu = gpuarray.zeros(l_m, dtype=np.int32)
+                meaningful_indices = meaningful_indices_gpu.get()
+                j = 0
+                for i in range(len(meaningful_indices)):
+                    meaningful_indices[i] = j
+                    j = j + 1
+                    if j % gran == 0:
+                        j = j + 1
+
+                meaningful_indices_gpu = gpuarray.to_gpu(meaningful_indices)
+
+                sum_a = a[meaningful_indices].sum()
+                allocator = None if pool is None else pool.allocate
+                sum_a_gpu = gpuarray.subset_sum(meaningful_indices_gpu, a_gpu, allocator=allocator).get()
+                assert np.allclose(sum_a_gpu, sum_a)
 
     @pytest.mark.parametrize("sz", [2,
                                     3,

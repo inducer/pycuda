@@ -574,10 +574,10 @@ class GPUArray:
         )
 
     # operators ---------------------------------------------------------------
-    def mul_add(self, selffac, other, otherfac, add_timer=None, stream=None):
+    def mul_add(self, selffac, other, otherfac, add_timer=None, stream=None, out=None):
         """Return `selffac * self + otherfac*other`."""
-        result = self._new_like_me(_get_common_dtype(self, other))
-        return self._axpbyz(selffac, other, otherfac, result, add_timer)
+        result = self._new_like_me(_get_common_dtype(self, other)) if out is None else out
+        return self._axpbyz(selffac, other, otherfac, result, add_timer, stream=stream)
 
     def __add__(self, other):
         """Add an array with an array or an array with a scalar."""
@@ -2087,7 +2087,8 @@ def subset_sum(subset, a, dtype=None, stream=None, allocator=None):
     from pycuda.reduction import get_subset_sum_kernel
 
     krnl = get_subset_sum_kernel(dtype, subset.dtype, a.dtype)
-    return krnl(subset, a, stream=stream)
+    return krnl(subset, a, stream=stream,
+                allocator=drv.mem_alloc if allocator is None else allocator)
 
 
 def dot(a, b, dtype=None, stream=None, allocator=None):
