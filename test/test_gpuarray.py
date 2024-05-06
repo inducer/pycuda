@@ -912,9 +912,19 @@ class TestGPUArray:
                 meaningful_indices_gpu = gpuarray.to_gpu(meaningful_indices)
 
                 sum_a = a[meaningful_indices].sum()
-                allocator = None if pool is None else pool.allocate
-                sum_a_gpu = gpuarray.subset_sum(meaningful_indices_gpu, a_gpu, allocator=allocator).get()
+
+                alloc_uses = 0
+
+                def allocator(size):
+                    nonlocal alloc_uses, pool
+                    alloc_uses += 1
+                    return pool.allocate(size)
+
+                alloc = None if pool is None else allocator
+                sum_a_gpu = gpuarray.subset_sum(meaningful_indices_gpu, a_gpu, allocator=alloc).get()
                 assert np.allclose(sum_a_gpu, sum_a)
+                if pool is not None:
+                    assert alloc_uses == 1
 
     @pytest.mark.parametrize("sz", [2,
                                     3,
