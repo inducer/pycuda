@@ -576,7 +576,7 @@ class GPUArray:
     # operators ---------------------------------------------------------------
     def mul_add(self, selffac, other, otherfac, add_timer=None, stream=None, out=None):
         """Return `selffac * self + otherfac*other`."""
-        result = self._new_like_me(_get_common_dtype(self, other)) if out is None else out
+        result = out if out is not None else self._new_like_me(_get_common_dtype(self, other))
         return self._axpbyz(selffac, other, otherfac, result, add_timer, stream=stream)
 
     def __add__(self, other):
