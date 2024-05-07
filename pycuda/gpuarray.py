@@ -2087,8 +2087,7 @@ def subset_sum(subset, a, dtype=None, stream=None, allocator=None):
     from pycuda.reduction import get_subset_sum_kernel
 
     krnl = get_subset_sum_kernel(dtype, subset.dtype, a.dtype)
-    return krnl(subset, a, stream=stream,
-                allocator=drv.mem_alloc if allocator is None else allocator)
+    return krnl(subset, a, stream=stream, allocator=allocator)
 
 
 def dot(a, b, dtype=None, stream=None, allocator=None):
