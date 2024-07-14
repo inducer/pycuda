@@ -1,10 +1,8 @@
 [build-system]
 
-# For each Python version, build against the oldest numpy C_API_VERSION for
-# which binary numpy wheels exist, and then the newest version of numpy
-# implementing that C_API_VERSION.
+# See https://github.com/scipy/oldest-supported-numpy deprecation notice
 requires = [
     "setuptools",
     "wheel",
-    "oldest-supported-numpy",
+    "numpy>=2.0",
 ]

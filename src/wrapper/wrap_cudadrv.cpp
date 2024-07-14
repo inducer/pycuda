@@ -10,6 +10,9 @@
 #include "wrap_helpers.hpp"
 #include <boost/python/stl_iterator.hpp>
 
+#if NPY_ABI_VERSION < 0x02000000
+  #define PyDataType_ELSIZE(descr) ((descr)->elsize)
+#endif
 
 
 
@@ -573,17 +576,17 @@ namespace
 
     std::unique_ptr<Allocation> alloc(
         new Allocation(
-          tp_descr->elsize*pycuda::size_from_dims(dims.size(), &dims.front()),
+          PyDataType_ELSIZE(tp_descr)*pycuda::size_from_dims(dims.size(), &dims.front()),
           par1)
         );
 
-    NPY_ORDER order = PyArray_CORDER;
+    NPY_ORDER order = NPY_CORDER;
     PyArray_OrderConverter(order_py.ptr(), &order);
 
     int ary_flags = 0;
-    if (order == PyArray_FORTRANORDER)
+    if (order == NPY_FORTRANORDER)
       ary_flags |= NPY_FARRAY;
-    else if (order == PyArray_CORDER)
+    else if (order == NPY_CORDER)
       ary_flags |= NPY_CARRAY;
     else
       throw pycuda::error("numpy_empty", CUDA_ERROR_INVALID_VALUE,
@@ -595,7 +598,7 @@ namespace
         alloc->data(), ary_flags, /*obj*/NULL));
 
     py::handle<> alloc_py(handle_from_new_ptr(alloc.release()));
-    PyArray_BASE(result.get()) = alloc_py.get();
+    PyArray_SetBaseObject((PyArrayObject*)result.get(), alloc_py.get());
     Py_INCREF(alloc_py.get());
 
     return result;
@@ -608,13 +611,15 @@ namespace
       throw pycuda::error("register_host_memory", CUDA_ERROR_INVALID_VALUE,
           "ary argument is not a numpy array");
 
-    if (!PyArray_ISCONTIGUOUS(ary.ptr()))
+    if (!PyArray_ISCONTIGUOUS((PyArrayObject*)ary.ptr()))
       throw pycuda::error("register_host_memory", CUDA_ERROR_INVALID_VALUE,
           "ary argument is not contiguous");
 
     std::unique_ptr<registered_host_memory> regmem(
         new registered_host_memory(
-          PyArray_DATA(ary.ptr()), PyArray_NBYTES(ary.ptr()), flags, ary));
+          PyArray_DATA((PyArrayObject*)ary.ptr()),
+          PyArray_NBYTES((PyArrayObject*)ary.ptr()),
+          flags, ary));
 
     PyObject *new_array_ptr = PyArray_FromInterface(ary.ptr());
     if (new_array_ptr == Py_NotImplemented)
@@ -624,7 +629,8 @@ namespace
     py::handle<> result(new_array_ptr);
 
     py::handle<> regmem_py(handle_from_new_ptr(regmem.release()));
-    PyArray_BASE(result.get()) = regmem_py.get();
+    // ValueError: Cannot set the NumPy array 'base' dependency more than once
+    PyArray_SetBaseObject((PyArrayObject*)result.get(), regmem_py.get());
     Py_INCREF(regmem_py.get());
 
     return result;

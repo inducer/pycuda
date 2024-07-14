@@ -1376,7 +1376,7 @@ class TestGPUArray:
         for i in range(10):
             red(a_gpu[i], out=max_gpu[i])
 
-        assert np.alltrue(a.max(axis=1) == max_gpu.get())
+        assert np.all(a.max(axis=1) == max_gpu.get())
 
     def test_sum_allocator(self):
         # FIXME
