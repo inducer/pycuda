@@ -743,7 +743,7 @@ np_complex_float(char *p, PyObject *v, const formatdef *f)
                 NPY_CFLOAT);
         if (!v_cast)
             return -1;
-        memcpy(p, PyArray_DATA(v_cast), PyArray_NBYTES(v_cast));
+        memcpy(p, PyArray_DATA((PyArrayObject*)v_cast), PyArray_NBYTES((PyArrayObject*)v_cast));
         Py_DECREF(v_cast);
     }
     else {
@@ -773,7 +773,7 @@ np_complex_double(char *p, PyObject *v, const formatdef *f)
                 NPY_CDOUBLE);
         if (!v_cast)
             return -1;
-        memcpy(p, PyArray_DATA(v_cast), PyArray_NBYTES(v_cast));
+        memcpy(p, PyArray_DATA((PyArrayObject*)v_cast), PyArray_NBYTES((PyArrayObject*)v_cast));
         Py_DECREF(v_cast);
     }
     else {

@@ -1883,7 +1883,7 @@ def concatenate(arrays, axis=0, allocator=None):
     # }}}
 
     shape = tuple(shape)
-    dtype = np.find_common_type([ary.dtype for ary in arrays], [])
+    dtype = np.result_type(*(ary.dtype for ary in arrays))
     result = empty(shape, dtype, allocator=allocator)
 
     full_slice = (slice(None),) * len(shape)

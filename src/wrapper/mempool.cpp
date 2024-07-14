@@ -8,8 +8,9 @@
 #include <mempool.hpp>
 #include <boost/python/stl_iterator.hpp>
 
-
-
+#if NPY_ABI_VERSION < 0x02000000
+  #define PyDataType_ELSIZE(descr) ((descr)->elsize)
+#endif
 
 namespace py = boost::python;
 
@@ -194,15 +195,15 @@ namespace
 
     std::unique_ptr<pooled_host_allocation> alloc(
         new pooled_host_allocation(
-          pool, tp_descr->elsize*pycuda::size_from_dims(dims.size(), &dims.front())));
+          pool, PyDataType_ELSIZE(tp_descr)*pycuda::size_from_dims(dims.size(), &dims.front())));
 
-    NPY_ORDER order = PyArray_CORDER;
+    NPY_ORDER order = NPY_CORDER;
     PyArray_OrderConverter(order_py.ptr(), &order);
 
     int flags = 0;
-    if (order == PyArray_FORTRANORDER)
+    if (order == NPY_FORTRANORDER)
       flags |= NPY_FARRAY;
-    else if (order == PyArray_CORDER)
+    else if (order == NPY_CORDER)
       flags |= NPY_CARRAY;
     else
       throw std::runtime_error("unrecognized order specifier");
@@ -213,7 +214,7 @@ namespace
         alloc->ptr(), flags, /*obj*/NULL));
 
     py::handle<> alloc_py(handle_from_new_ptr(alloc.release()));
-    PyArray_BASE(result.get()) = alloc_py.get();
+    PyArray_SetBaseObject((PyArrayObject*)result.get(), alloc_py.get());
     Py_INCREF(alloc_py.get());
 
     return result;
