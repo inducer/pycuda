@@ -3,4 +3,4 @@
 	url = https://github.com/inducer/bpl-subset
 [submodule "pycuda/compyte"]
 	path = pycuda/compyte
-	url = https://github.com/inducer/compyte
+	url = https://github.com/inducer/compyte.git
