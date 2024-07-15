@@ -242,6 +242,10 @@ class GPUArray:
             # bombs if s is a Python integer
             s = s.item()
 
+        # Make sure shape is made of int and not e.g. np.int32 as these can overflow
+        # e.g. in __getitem__() when adding the new_offset...
+        shape = tuple(int(v) for v in shape)
+
         if strides is None:
             if order == "F":
                 strides = _f_contiguous_strides(dtype.itemsize, shape)
@@ -255,7 +259,9 @@ class GPUArray:
 
             strides = tuple(strides)
 
-        self.shape = tuple(shape)
+        strides = tuple(int(v) for v in strides)
+
+        self.shape = shape
         self.dtype = dtype
         self.strides = strides
         self.mem_size = self.size = s
