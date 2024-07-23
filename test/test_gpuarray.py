@@ -696,6 +696,9 @@ class TestGPUArray:
             assert la.norm(a_cpu - a_gpu.get()) == 0, i
 
     def test_take(self):
+        if drv.get_driver_version() // 1000 >= 12:
+            pytest.skip("texture references were removed in CUDA 12")
+
         idx = gpuarray.arange(0, 10000, 2, dtype=np.uint32)
         for dtype in [np.float32, np.complex64]:
             a = gpuarray.arange(0, 600000, dtype=np.uint32).astype(dtype)
@@ -1055,6 +1058,9 @@ class TestGPUArray:
         assert la.norm(min_a_b_gpu.get() - np.minimum(a, b)) == 0
 
     def test_take_put(self):
+        if drv.get_driver_version() // 1000 >= 12:
+            pytest.skip("texture references were removed in CUDA 12")
+
         for n in [5, 17, 333]:
             one_field_size = 8
             buf_gpu = gpuarray.zeros(n * one_field_size, dtype=np.float32)

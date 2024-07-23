@@ -181,6 +181,9 @@ class TestDriver:
 
     @mark_cuda_test
     def test_2d_texture(self):
+        if drv.get_driver_version() // 1000 >= 12:
+            pytest.skip("texture references were removed in CUDA 12")
+
         mod = SourceModule(
             """
         texture<float, 2, cudaReadModeElementType> mtx_tex;
@@ -208,6 +211,9 @@ class TestDriver:
 
     @mark_cuda_test
     def test_multiple_2d_textures(self):
+        if drv.get_driver_version() // 1000 >= 12:
+            pytest.skip("texture references were removed in CUDA 12")
+
         mod = SourceModule(
             """
         texture<float, 2, cudaReadModeElementType> mtx_tex;
@@ -242,6 +248,9 @@ class TestDriver:
 
     @mark_cuda_test
     def test_multichannel_2d_texture(self):
+        if drv.get_driver_version() // 1000 >= 12:
+            pytest.skip("texture references were removed in CUDA 12")
+
         mod = SourceModule(
             """
         #define CHANNELS 4
@@ -280,6 +289,9 @@ class TestDriver:
 
     @mark_cuda_test
     def test_multichannel_linear_texture(self):
+        if drv.get_driver_version() // 1000 >= 12:
+            pytest.skip("texture references were removed in CUDA 12")
+
         mod = SourceModule(
             """
         #define CHANNELS 4
@@ -315,6 +327,9 @@ class TestDriver:
 
     @mark_cuda_test
     def test_2d_fp_textures(self):
+        if drv.get_driver_version() // 1000 >= 12:
+            pytest.skip("texture references were removed in CUDA 12")
+
         orden = "F"
         npoints = 32
 
@@ -369,6 +384,9 @@ class TestDriver:
 
     @mark_cuda_test
     def test_2d_fp_textures_layered(self):
+        if drv.get_driver_version() // 1000 >= 12:
+            pytest.skip("texture references were removed in CUDA 12")
+
         orden = "F"
         npoints = 32
 
@@ -423,6 +441,9 @@ class TestDriver:
 
     @mark_cuda_test
     def test_3d_fp_textures(self):
+        if drv.get_driver_version() // 1000 >= 12:
+            pytest.skip("texture references were removed in CUDA 12")
+
         orden = "C"
         npoints = 32
 
@@ -477,6 +498,9 @@ class TestDriver:
 
     @mark_cuda_test
     def test_3d_fp_surfaces(self):
+        if drv.get_driver_version() // 1000 >= 12:
+            pytest.skip("surface references were removed in CUDA 12")
+
         orden = "C"
         npoints = 32
 
@@ -556,6 +580,9 @@ class TestDriver:
 
     @mark_cuda_test
     def test_2d_fp_surfaces(self):
+        if drv.get_driver_version() // 1000 >= 12:
+            pytest.skip("surface references were removed in CUDA 12")
+
         orden = "C"
         npoints = 32
 
@@ -734,6 +761,9 @@ class TestDriver:
 
     @mark_cuda_test
     def test_3d_texture(self):
+        if drv.get_driver_version() // 1000 >= 12:
+            pytest.skip("texture references were removed in CUDA 12")
+
         # adapted from code by Nicolas Pinto
         w = 2
         h = 4
@@ -842,6 +872,9 @@ class TestDriver:
 
     @mark_cuda_test
     def test_fp_textures(self):
+        if drv.get_driver_version() // 1000 >= 12:
+            pytest.skip("texture references were removed in CUDA 12")
+
         if drv.Context.get_device().compute_capability() < (1, 3):
             return
 
