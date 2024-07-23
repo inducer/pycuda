@@ -12,6 +12,7 @@ extern "C++" {
   typedef uint2 fp_tex_cfloat;
   typedef int4 fp_tex_cdouble;
 
+#if __CUDACC_VER_MAJOR__ < 12
    template <enum cudaTextureReadMode read_mode>
   __device__ pycuda::complex<float> fp_tex1Dfetch(texture<fp_tex_cfloat, 1, read_mode> tex, int i)
   {
@@ -244,6 +245,7 @@ extern "C++" {
   PYCUDA_GENERATE_FP_TEX_FUNCS(unsigned short int)
   PYCUDA_GENERATE_FP_TEX_FUNCS(char)
   PYCUDA_GENERATE_FP_TEX_FUNCS(unsigned char)
+#endif
 }
 
 #endif
