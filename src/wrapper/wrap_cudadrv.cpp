@@ -355,10 +355,9 @@ namespace
   module *module_from_buffer(py::object buffer, py::object py_options,
       py::object message_handler)
   {
-    const char *mod_buf;
     PYCUDA_BUFFER_SIZE_T len;
-    if (PyObject_AsCharBuffer(buffer.ptr(), &mod_buf, &len))
-      throw py::error_already_set();
+    py_buffer_wrapper py_buf;
+    py_buf.get(buffer.ptr(), PyBUF_ANY_CONTIGUOUS);
     CUmodule mod;
 
 #if CUDAPP_CUDA_VERSION >= 2010
@@ -387,7 +386,7 @@ namespace
 
     CUDAPP_PRINT_CALL_TRACE("cuModuleLoadDataEx");
     CUresult cu_status_code; \
-    cu_status_code = cuModuleLoadDataEx(&mod, mod_buf, (unsigned int) options.size(),
+    cu_status_code = cuModuleLoadDataEx(&mod, py_buf.m_buf.buf, (unsigned int) options.size(),
          const_cast<CUjit_option *>(&*options.begin()),
          const_cast<void **>(&*option_values.begin()));
 
@@ -407,7 +406,7 @@ namespace
       throw pycuda::error("module_from_buffer", CUDA_ERROR_INVALID_VALUE,
           "non-empty options argument only supported on CUDA 2.1 and newer");
 
-    CUDAPP_CALL_GUARDED(cuModuleLoadData, (&mod, mod_buf));
+    CUDAPP_CALL_GUARDED(cuModuleLoadData, (&mod, py_buf.buf));
 #endif
 
     return new module(mod);
@@ -500,16 +499,16 @@ namespace
 
       void add_data(py::object py_data, CUjitInputType input_type, py::str py_name)
       {
-        const char *data_buf;
+	Py_buffer py_buf;
         PYCUDA_BUFFER_SIZE_T data_buf_len;
-        if (PyObject_AsCharBuffer(py_data.ptr(), &data_buf, &data_buf_len) != 0) {
+        if (PyObject_GetBuffer(py_data.ptr(), &py_buf, PyBUF_ANY_CONTIGUOUS)) {
           throw py::error_already_set();
         }
         const char* name = (py_name.ptr() != Py_None)?
             py::extract<const char*>(py_name) : NULL;
-        const CUresult cu_result = cuLinkAddData(m_link_state, input_type,
-            static_cast<void *>(const_cast<char *>(data_buf)),
-            data_buf_len, name, 0, NULL, NULL);
+        const CUresult cu_result = cuLinkAddData(m_link_state, input_type, py_buf.buf,
+            py_buf.len, name, 0, NULL, NULL);
+	PyBuffer_Release(&py_buf);
         check_cu_result("cuLinkAddData", cu_result);
       }
 
