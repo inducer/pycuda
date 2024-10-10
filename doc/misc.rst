@@ -17,19 +17,21 @@ Version 2018.1
 --------------
 
 * Update Boost.Python for better PyPy support
-* Add :meth:`pycuda.elementwise.ElementwiseKernel.get_texref`.
+* Add ``pycuda.elementwise.ElementwiseKernel.get_texref``.
 * Bug fixes.
 
 Version 2017.2
 --------------
 
-* :func:`zeros_like` and :func:`empty_like` now have  *dtype* and *order*
+* :func:`~pycuda.gpuarray.zeros_like` and
+  :func:`~pycuda.gpuarray.empty_like` now have  *dtype* and *order*
   arguments as in numpy.  Previously these routines always returned a
   C-order array.  The new default behavior follows the numpy default, which is
   to match the order and strides of the input as closely as possible.
-* A :func:`ones_like` gpuarray function was added.
-* methods :attr:`GPUArray.imag`, :attr:`GPUArray.real`, :meth:`GPUArray.conj`
-  now all return Fortran-ordered arrays when the :class:`GPUArray` is
+* A :func:`~pycuda.gpuarray.ones_like` gpuarray function was added.
+* methods :attr:`~pycuda.gpuarray.GPUArray.imag`, :attr:`~pycuda.gpuarray.GPUArray.real`,
+  :meth:`~pycuda.gpuarray.GPUArray.conj`
+  now all return Fortran-ordered arrays when the :class:`pycuda.gpuarray.GPUArray` is
   Fortran-ordered.
 
 Version 2016.2
@@ -50,8 +52,9 @@ Version 2016.1
 Version 2014.1
 --------------
 
-* Add :meth:`PointerHolderBase.as_buffer` and :meth:`DeviceAllocation.as_buffer`.
-* Support for :class:`device_attribute` values added in CUDA 5.0, 5.5, and 6.0.
+* Add :meth:`pycuda.driver.PointerHolderBase.as_buffer` and
+  :meth:`pycuda.driver.DeviceAllocation.as_buffer`.
+* Support for :class:`pycuda.driver.device_attribute` values added in CUDA 5.0, 5.5, and 6.0.
 * Support for :ref:`managed_memory`. (contributed by Stan Seibert)
 
 Version 2013.1.1
@@ -73,7 +76,7 @@ Version 2013.1
 
 .. note::
 
-    The addition of :meth:`pyopencl.array.Array.__getitem__` has an unintended
+    The addition of :meth:`pycuda.gpuarray.GPUArray.__getitem__` has an unintended
     consequence due to `numpy bug 3375
     <https://github.com/numpy/numpy/issues/3375>`_.  For instance, this
     expression::
@@ -111,7 +114,7 @@ Version 2011.2
 * Fix a memory leak when using pagelocked memory. (reported by Paul Cazeaux)
 * Fix complex scalar argument passing.
 * Fix :func:`pycuda.gpuarray.zeros` when used on complex arrays.
-* Add :func:`pycuda.tools.register_dtype` to enable scan/reduction on struct types.
+* Add ``pycuda.tools.register_dtype`` to enable scan/reduction on struct types.
 * More improvements to CURAND.
 * Add support for CUDA 4.1.
 
@@ -169,7 +172,7 @@ Version 0.94
 * Support for CUDA 3.2 RC.
   Search for "CUDA 3.2" in :ref:`reference-doc` to see what's new.
 * Add sparse matrix-vector multiplication and linear system solving code,
-  in :mod:`pycuda.sparse`.
+  in ``pycuda.sparse``.
 * Add :func:`pycuda.gpuarray.if_positive`, :func:`pycuda.gpuarray.maximum`,
   :func:`pycuda.gpuarray.minimum`.
 * Deprecate :func:`pycuda.tools.get_default_device`
@@ -178,16 +181,16 @@ Version 0.94
   which changes its behavior.
 * Remove previously deprecated features:
 
-  * :attr:`pycuda.driver.Function.registers`,
-    :attr:`pycuda.driver.Function.lmem`, and
-    :attr:`pycuda.driver.Function.smem` have been deprecated in favor of the
+  * ``pycuda.driver.Function.registers``,
+    ``pycuda.driver.Function.lmem``, and
+    ``pycuda.driver.Function.smem`` have been deprecated in favor of the
     mechanism above. See :attr:`pycuda.driver.Function.num_regs` for more.
   * the three-argument forms (i.e. with streams)
     of :func:`pycuda.driver.memcpy_dtoh` and
     :func:`pycuda.driver.memcpy_htod`. Use
     :func:`pycuda.driver.memcpy_dtoh_async`
     and :func:`pycuda.driver.memcpy_htod_async` instead.
-  * :class:`pycuda.driver.SourceModule`.
+  * :class:`pycuda.compiler.SourceModule`.
 
 * Add :func:`pycuda.tools.context_dependent_memoize`, use it for
   context-dependent caching of PyCUDA's canned kernels.
@@ -231,7 +234,7 @@ Version 0.93
   :class:`pycuda.driver.Stream`.  Asynchronous GPUArray transfers are
   now separate from synchronous ones and have an ``_async`` suffix.
 * Support for features added in CUDA 2.2.
-* :class:`pycuda.driver.SourceModule` has been moved to
+* ``pycuda.driver.SourceModule`` has been moved to
   :class:`pycuda.compiler.SourceModule`. It is still available by
   the old name, but will print a warning about the impending
   deprecation.
@@ -239,9 +242,9 @@ Version 0.93
   :class:`pycuda.driver.device_attribute` `attr` can now be spelled
   `dev.attr`, with no further namespace detours. (Suggested by Ian Cullinan)
   Likewise for :meth:`pycuda.driver.Function.get_attribute`
-* :attr:`pycuda.driver.Function.registers`,
-  :attr:`pycuda.driver.Function.lmem`, and
-  :attr:`pycuda.driver.Function.smem` have been deprecated in favor of the
+* ``pycuda.driver.Function.registers``,
+  ``pycuda.driver.Function.lmem``, and
+  ``pycuda.driver.Function.smem`` have been deprecated in favor of the
   mechanism above. See :attr:`pycuda.driver.Function.num_regs` for more.
 * Add PyCUDA version query mechanism, see :data:`pycuda.VERSION`.
 
@@ -272,7 +275,7 @@ Version 0.92
 * Automatically run Python GC before throwing out-of-memory errors.
 * Allow explicit release of memory using
   :meth:`pycuda.driver.DeviceAllocation.free`,
-  :meth:`pycuda.driver.HostAllocation.free`,
+  :meth:`pycuda.driver.PagelockedHostAllocation.free`,
   :meth:`pycuda.driver.Array.free`,
   :meth:`pycuda.tools.PooledDeviceAllocation.free`,
   :meth:`pycuda.tools.PooledHostAllocation.free`.
@@ -309,7 +312,7 @@ Version 0.91
 * :class:`pycuda.gpuarray.GPUArray` parallelizes properly on
   GTX200-generation devices.
 * Make :class:`pycuda.driver.Function` resource usage available
-  to the program. (See, e.g. :attr:`pycuda.driver.Function.registers`.)
+  to the program. (See, e.g. ``pycuda.driver.Function.registers``.)
 * Cache kernels compiled by :class:`pycuda.compiler.SourceModule`.
   (Tom Annau)
 * Allow for faster, prepared kernel invocation.

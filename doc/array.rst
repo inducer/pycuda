@@ -30,7 +30,7 @@ The :class:`GPUArray` Array Class
     of bytes to be allocated, returns an object that can be cast to an
     :class:`int` representing the address of the newly allocated memory.
     Observe that both :func:`pycuda.driver.mem_alloc` and
-    :meth:`pycuda.tools.DeviceMemoryPool.alloc` are a model of this interface.
+    :meth:`pycuda.tools.DeviceMemoryPool.allocate` are a model of this interface.
 
     All arguments beyond *allocator* should be considered keyword-only.
 
@@ -132,7 +132,7 @@ The :class:`GPUArray` Array Class
     .. method :: get(ary=None, pagelocked=False)
 
         Transfer the contents of *self* into *ary* or a newly allocated
-        :mod:`numpy.ndarray`. If *ary* is given, it must have the same
+        :class:`numpy.ndarray`. If *ary* is given, it must have the same
         shape and dtype. If it is not given,
         a *pagelocked* specifies whether the new array is allocated
         page-locked.
@@ -144,7 +144,7 @@ The :class:`GPUArray` Array Class
     .. method :: get_async(stream=None, ary=None)
 
         Transfer the contents of *self* into *ary* or a newly allocated
-        :mod:`numpy.ndarray`. If *ary* is given, it must have the right
+        :class:`numpy.ndarray`. If *ary* is given, it must have the right
         size (not necessarily shape) and dtype. If it is not given,
         a *page-locked* array is newly allocated.
 
@@ -159,19 +159,25 @@ The :class:`GPUArray` Array Class
         :meth:`pycuda.driver.Function.prepared_timed_call`.
 
     .. method :: __add__(other)
+    .. method :: __radd__(other)
     .. method :: __sub__(other)
+    .. method :: __rsub__(other)
     .. method :: __iadd__(other)
     .. method :: __isub__(other)
     .. method :: __neg__(other)
     .. method :: __mul__(other)
-    .. method :: __div__(other)
-    .. method :: __rdiv__(other)
+    .. method :: __rmul__(other)
+    .. method :: __truediv__(other)
+    .. method :: __rtruediv__(other)
     .. method :: __pow__(other)
+    .. method :: __rpow__(other)
 
     .. method :: __abs__()
 
         Return a :class:`GPUArray` containing the absolute value of each
         element of *self*.
+
+    .. method :: __getitem__(index)
 
     .. UNDOC reverse()
 
@@ -182,7 +188,7 @@ The :class:`GPUArray` Array Class
     .. method :: astype(dtype, stream=None)
 
         Return *self*, cast to *dtype*.
-    
+
     .. method :: any(stream=None, allocator=None)
 
     .. method :: all(stream=None, allocator=None)
@@ -520,18 +526,18 @@ Quasirandom numbers are more expensive to generate.
 
 .. function:: seed_getter_uniform(N)
 
-    Return an :class:`GPUArray` filled with one random `int32` repeated `N`
+    Return an :class:`~pycuda.gpuarray.GPUArray` filled with one random `int32` repeated `N`
     times which can be used as a seed for XORWOW generator.
 
 .. function:: seed_getter_unique(N)
 
-    Return an :class:`GPUArray` filled with `N` random `int32` which can
+    Return an :class:`~pycuda.gpuarray.GPUArray` filled with `N` random `int32` which can
     be used as a seed for XORWOW generator.
 
 .. class:: XORWOWRandomNumberGenerator(seed_getter=None, offset=0)
 
     :arg seed_getter: a function that, given an integer count, will yield an
-      `int32` :class:`GPUArray` of seeds.
+      `int32` :class:`~pycuda.gpuarray.GPUArray` of seeds.
     :arg offset: Starting index into the XORWOW sequence, given seed.
 
     Provides pseudorandom numbers. Generates sequences with period
@@ -543,29 +549,29 @@ Quasirandom numbers are more expensive to generate.
 
     .. method:: fill_uniform(data, stream=None)
 
-        Fills in :class:`GPUArray` *data* with uniformly distributed
+        Fills in :class:`~pycuda.gpuarray.GPUArray` *data* with uniformly distributed
         pseudorandom values.
 
     .. method:: gen_uniform(shape, dtype, stream=None)
 
-        Creates object of :class:`GPUArray` with given *shape* and *dtype*,
+        Creates object of :class:`~pycuda.gpuarray.GPUArray` with given *shape* and *dtype*,
         fills it in with uniformly distributed pseudorandom values,
         and returns newly created object.
 
     .. method:: fill_normal(data, stream=None)
 
-        Fills in :class:`GPUArray` *data* with normally distributed
+        Fills in :class:`~pycuda.gpuarray.GPUArray` *data* with normally distributed
         pseudorandom values.
 
     .. method:: gen_normal(shape, dtype, stream=None)
 
-        Creates object of :class:`GPUArray` with given *shape* and *dtype*,
+        Creates object of :class:`~pycuda.gpuarray.GPUArray` with given *shape* and *dtype*,
         fills it in with normally distributed pseudorandom values,
         and returns newly created object.
 
     .. method:: fill_log_normal(data, mean, stddev, stream=None)
 
-        Fills in :class:`GPUArray` *data* with log-normally distributed
+        Fills in :class:`~pycuda.gpuarray.GPUArray` *data* with log-normally distributed
         pseudorandom values with mean *mean* and standard deviation *stddev*.
 
         CUDA 4.0 and above.
@@ -574,7 +580,7 @@ Quasirandom numbers are more expensive to generate.
 
     .. method:: gen_log_normal(shape, dtype, mean, stddev, stream=None)
 
-        Creates object of :class:`GPUArray` with given *shape* and *dtype*,
+        Creates object of :class:`~pycuda.gpuarray.GPUArray` with given *shape* and *dtype*,
         fills it in with log-normally distributed pseudorandom values
         with mean *mean* and standard deviation *stddev*, and returns
         newly created object.
@@ -585,7 +591,7 @@ Quasirandom numbers are more expensive to generate.
 
     .. method:: fill_poisson(data, lambda_value=None, stream=None)
 
-        Fills in :class:`GPUArray` *data* with Poisson distributed
+        Fills in :class:`~pycuda.gpuarray.GPUArray` *data* with Poisson distributed
         pseudorandom values.
 
         If *lambda_value* is not None, it is used as lambda,
@@ -602,7 +608,7 @@ Quasirandom numbers are more expensive to generate.
 
     .. method:: gen_poisson(shape, dtype, lambda_value, stream=None)
 
-        Creates object of :class:`GPUArray` with given *shape* and *dtype*,
+        Creates object of :class:`~pycuda.gpuarray.GPUArray` with given *shape* and *dtype*,
         fills it in with Poisson distributed pseudorandom values
         with lambda *lambda_value*, and returns newly created object.
         *dtype* must be 32-bit unsigned int.
@@ -635,7 +641,7 @@ Quasirandom numbers are more expensive to generate.
 .. class:: MRG32k3aRandomNumberGenerator(seed_getter=None, offset=0)
 
     :arg seed_getter: a function that, given an integer count, will yield an
-      `int32` :class:`GPUArray` of seeds.
+      `int32` :class:`~pycuda.gpuarray.GPUArray` of seeds.
     :arg offset: Starting index into the XORWOW sequence, given seed.
 
     Provides pseudorandom numbers. Generates sequences with period
@@ -647,41 +653,41 @@ Quasirandom numbers are more expensive to generate.
 
     .. method:: fill_uniform(data, stream=None)
 
-        Fills in :class:`GPUArray` *data* with uniformly distributed
+        Fills in :class:`~pycuda.gpuarray.GPUArray` *data* with uniformly distributed
         pseudorandom values.
 
     .. method:: gen_uniform(shape, dtype, stream=None)
 
-        Creates object of :class:`GPUArray` with given *shape* and *dtype*,
+        Creates object of :class:`~pycuda.gpuarray.GPUArray` with given *shape* and *dtype*,
         fills it in with uniformly distributed pseudorandom values,
         and returns newly created object.
 
     .. method:: fill_normal(data, stream=None)
 
-        Fills in :class:`GPUArray` *data* with normally distributed
+        Fills in :class:`~pycuda.gpuarray.GPUArray` *data* with normally distributed
         pseudorandom values.
 
     .. method:: gen_normal(shape, dtype, stream=None)
 
-        Creates object of :class:`GPUArray` with given *shape* and *dtype*,
+        Creates object of :class:`~pycuda.gpuarray.GPUArray` with given *shape* and *dtype*,
         fills it in with normally distributed pseudorandom values,
         and returns newly created object.
 
     .. method:: fill_log_normal(data, mean, stddev, stream=None)
 
-        Fills in :class:`GPUArray` *data* with log-normally distributed
+        Fills in :class:`~pycuda.gpuarray.GPUArray` *data* with log-normally distributed
         pseudorandom values with mean *mean* and standard deviation *stddev*.
 
     .. method:: gen_log_normal(shape, dtype, mean, stddev, stream=None)
 
-        Creates object of :class:`GPUArray` with given *shape* and *dtype*,
+        Creates object of :class:`~pycuda.gpuarray.GPUArray` with given *shape* and *dtype*,
         fills it in with log-normally distributed pseudorandom values
         with mean *mean* and standard deviation *stddev*, and returns
         newly created object.
 
     .. method:: fill_poisson(data, lambda_value, stream=None)
 
-        Fills in :class:`GPUArray` *data* with Poisson distributed
+        Fills in :class:`~pycuda.gpuarray.GPUArray` *data* with Poisson distributed
         pseudorandom values.
 
         If *lambda_value* is not None, it is used as lambda,
@@ -698,7 +704,7 @@ Quasirandom numbers are more expensive to generate.
 
     .. method:: gen_poisson(shape, dtype, lambda_value, stream=None)
 
-        Creates object of :class:`GPUArray` with given *shape* and *dtype*,
+        Creates object of :class:`~pycuda.gpuarray.GPUArray` with given *shape* and *dtype*,
         fills it in with Poisson distributed pseudorandom values
         with lambda *lambda_value*, and returns newly created object.
         *dtype* must be 32-bit unsigned int.
@@ -730,22 +736,22 @@ Quasirandom numbers are more expensive to generate.
 
 .. function:: generate_direction_vectors(count, direction=direction_vector_set.VECTOR_32)
 
-    Return an :class:`GPUArray` `count` filled with direction vectors
+    Return an :class:`~pycuda.gpuarray.GPUArray` `count` filled with direction vectors
     used to initialize Sobol generators.
 
 .. function:: generate_scramble_constants32(count)
 
-    Return a :class:`GPUArray` filled with `count' 32-bit unsigned integer
+    Return a :class:`~pycuda.gpuarray.GPUArray` filled with `count' 32-bit unsigned integer
     numbers used to initialize :class:`ScrambledSobol32RandomNumberGenerator`
 
 .. function:: generate_scramble_constants64(count)
 
-    Return a :class:`GPUArray` filled with `count' 64-bit unsigned integer
+    Return a :class:`~pycuda.gpuarray.GPUArray` filled with `count' 64-bit unsigned integer
     numbers used to initialize :class:`ScrambledSobol64RandomNumberGenerator`
 
 .. class:: Sobol32RandomNumberGenerator(dir_vector=None, offset=0)
 
-    :arg dir_vector: a :class:`GPUArray` of 32-element `int32` vectors which
+    :arg dir_vector: a :class:`~pycuda.gpuarray.GPUArray` of 32-element `int32` vectors which
       are used to initialize quasirandom generator; it must contain one vector
       for each initialized generator
     :arg offset: Starting index into the Sobol32 sequence, given direction
@@ -760,29 +766,29 @@ Quasirandom numbers are more expensive to generate.
 
     .. method:: fill_uniform(data, stream=None)
 
-        Fills in :class:`GPUArray` *data* with uniformly distributed
+        Fills in :class:`~pycuda.gpuarray.GPUArray` *data* with uniformly distributed
         quasirandom values.
 
     .. method:: gen_uniform(shape, dtype, stream=None)
 
-        Creates object of :class:`GPUArray` with given *shape* and *dtype*,
+        Creates object of :class:`~pycuda.gpuarray.GPUArray` with given *shape* and *dtype*,
         fills it in with uniformly distributed pseudorandom values,
         and returns newly created object.
 
     .. method:: fill_normal(data, stream=None)
 
-        Fills in :class:`GPUArray` *data* with normally distributed
+        Fills in :class:`~pycuda.gpuarray.GPUArray` *data* with normally distributed
         quasirandom values.
 
     .. method:: gen_normal(shape, dtype, stream=None)
 
-        Creates object of :class:`GPUArray` with given *shape* and *dtype*,
+        Creates object of :class:`~pycuda.gpuarray.GPUArray` with given *shape* and *dtype*,
         fills it in with normally distributed pseudorandom values,
         and returns newly created object.
 
     .. method:: fill_log_normal(data, mean, stddev, stream=None)
 
-        Fills in :class:`GPUArray` *data* with log-normally distributed
+        Fills in :class:`~pycuda.gpuarray.GPUArray` *data* with log-normally distributed
         pseudorandom values with mean *mean* and standard deviation *stddev*.
 
         CUDA 4.0 and above.
@@ -791,7 +797,7 @@ Quasirandom numbers are more expensive to generate.
 
     .. method:: gen_log_normal(shape, dtype, mean, stddev, stream=None)
 
-        Creates object of :class:`GPUArray` with given *shape* and *dtype*,
+        Creates object of :class:`~pycuda.gpuarray.GPUArray` with given *shape* and *dtype*,
         fills it in with log-normally distributed pseudorandom values
         with mean *mean* and standard deviation *stddev*, and returns
         newly created object.
@@ -802,7 +808,7 @@ Quasirandom numbers are more expensive to generate.
 
     .. method:: fill_poisson(data, lambda_value, stream=None)
 
-        Fills in :class:`GPUArray` *data* with Poisson distributed
+        Fills in :class:`~pycuda.gpuarray.GPUArray` *data* with Poisson distributed
         pseudorandom values.
 
         If *lambda_value* is not None, it is used as lambda,
@@ -819,7 +825,7 @@ Quasirandom numbers are more expensive to generate.
 
     .. method:: gen_poisson(shape, dtype, lambda_value, stream=None)
 
-        Creates object of :class:`GPUArray` with given *shape* and *dtype*,
+        Creates object of :class:`~pycuda.gpuarray.GPUArray` with given *shape* and *dtype*,
         fills it in with Poisson distributed pseudorandom values
         with lambda *lambda_value*, and returns newly created object.
         *dtype* must be 32-bit unsigned int.
@@ -840,10 +846,10 @@ Quasirandom numbers are more expensive to generate.
 
 .. class:: ScrambledSobol32RandomNumberGenerator(dir_vector=None, scramble_vector=None, offset=0)
 
-    :arg dir_vector: a :class:`GPUArray` of 32-element `uint32` vectors which
+    :arg dir_vector: a :class:`~pycuda.gpuarray.GPUArray` of 32-element `uint32` vectors which
       are used to initialize quasirandom generator; it must contain one vector
       for each initialized generator
-    :arg scramble_vector: a :class:`GPUArray` of `uint32` elements which
+    :arg scramble_vector: a :class:`~pycuda.gpuarray.GPUArray` of `uint32` elements which
       are used to initialize quasirandom generator; it must contain one number
       for each initialized generator
     :arg offset: Starting index into the Sobol32 sequence, given direction
@@ -858,29 +864,29 @@ Quasirandom numbers are more expensive to generate.
 
     .. method:: fill_uniform(data, stream=None)
 
-        Fills in :class:`GPUArray` *data* with uniformly distributed
+        Fills in :class:`~pycuda.gpuarray.GPUArray` *data* with uniformly distributed
         quasirandom values.
 
     .. method:: gen_uniform(shape, dtype, stream=None)
 
-        Creates object of :class:`GPUArray` with given *shape* and *dtype*,
+        Creates object of :class:`~pycuda.gpuarray.GPUArray` with given *shape* and *dtype*,
         fills it in with uniformly distributed pseudorandom values,
         and returns newly created object.
 
     .. method:: fill_normal(data, stream=None)
 
-        Fills in :class:`GPUArray` *data* with normally distributed
+        Fills in :class:`~pycuda.gpuarray.GPUArray` *data* with normally distributed
         quasirandom values.
 
     .. method:: gen_normal(shape, dtype, stream=None)
 
-        Creates object of :class:`GPUArray` with given *shape* and *dtype*,
+        Creates object of :class:`~pycuda.gpuarray.GPUArray` with given *shape* and *dtype*,
         fills it in with normally distributed pseudorandom values,
         and returns newly created object.
 
     .. method:: fill_log_normal(data, mean, stddev, stream=None)
 
-        Fills in :class:`GPUArray` *data* with log-normally distributed
+        Fills in :class:`~pycuda.gpuarray.GPUArray` *data* with log-normally distributed
         pseudorandom values with mean *mean* and standard deviation *stddev*.
 
         CUDA 4.0 and above.
@@ -889,7 +895,7 @@ Quasirandom numbers are more expensive to generate.
 
     .. method:: gen_log_normal(shape, dtype, mean, stddev, stream=None)
 
-        Creates object of :class:`GPUArray` with given *shape* and *dtype*,
+        Creates object of :class:`~pycuda.gpuarray.GPUArray` with given *shape* and *dtype*,
         fills it in with log-normally distributed pseudorandom values
         with mean *mean* and standard deviation *stddev*, and returns
         newly created object.
@@ -900,7 +906,7 @@ Quasirandom numbers are more expensive to generate.
 
     .. method:: fill_poisson(data, lambda_value, stream=None)
 
-        Fills in :class:`GPUArray` *data* with Poisson distributed
+        Fills in :class:`~pycuda.gpuarray.GPUArray` *data* with Poisson distributed
         pseudorandom values.
 
         If *lambda_value* is not None, it is used as lambda,
@@ -917,7 +923,7 @@ Quasirandom numbers are more expensive to generate.
 
     .. method:: gen_poisson(shape, dtype, lambda_value, stream=None)
 
-        Creates object of :class:`GPUArray` with given *shape* and *dtype*,
+        Creates object of :class:`~pycuda.gpuarray.GPUArray` with given *shape* and *dtype*,
         fills it in with Poisson distributed pseudorandom values
         with lambda *lambda_value*, and returns newly created object.
         *dtype* must be 32-bit unsigned int.
@@ -938,7 +944,7 @@ Quasirandom numbers are more expensive to generate.
 
 .. class:: Sobol64RandomNumberGenerator(dir_vector=None, offset=0)
 
-    :arg dir_vector: a :class:`GPUArray` of 64-element `uint64` vectors which
+    :arg dir_vector: a :class:`~pycuda.gpuarray.GPUArray` of 64-element `uint64` vectors which
       are used to initialize quasirandom generator; it must contain one vector
       for each initialized generator
     :arg offset: Starting index into the Sobol64 sequence, given direction
@@ -953,29 +959,29 @@ Quasirandom numbers are more expensive to generate.
 
     .. method:: fill_uniform(data, stream=None)
 
-        Fills in :class:`GPUArray` *data* with uniformly distributed
+        Fills in :class:`~pycuda.gpuarray.GPUArray` *data* with uniformly distributed
         quasirandom values.
 
     .. method:: gen_uniform(shape, dtype, stream=None)
 
-        Creates object of :class:`GPUArray` with given *shape* and *dtype*,
+        Creates object of :class:`~pycuda.gpuarray.GPUArray` with given *shape* and *dtype*,
         fills it in with uniformly distributed pseudorandom values,
         and returns newly created object.
 
     .. method:: fill_normal(data, stream=None)
 
-        Fills in :class:`GPUArray` *data* with normally distributed
+        Fills in :class:`~pycuda.gpuarray.GPUArray` *data* with normally distributed
         quasirandom values.
 
     .. method:: gen_normal(shape, dtype, stream=None)
 
-        Creates object of :class:`GPUArray` with given *shape* and *dtype*,
+        Creates object of :class:`~pycuda.gpuarray.GPUArray` with given *shape* and *dtype*,
         fills it in with normally distributed pseudorandom values,
         and returns newly created object.
 
     .. method:: fill_log_normal(data, mean, stddev, stream=None)
 
-        Fills in :class:`GPUArray` *data* with log-normally distributed
+        Fills in :class:`~pycuda.gpuarray.GPUArray` *data* with log-normally distributed
         pseudorandom values with mean *mean* and standard deviation *stddev*.
 
         CUDA 4.0 and above.
@@ -984,7 +990,7 @@ Quasirandom numbers are more expensive to generate.
 
     .. method:: gen_log_normal(shape, dtype, mean, stddev, stream=None)
 
-        Creates object of :class:`GPUArray` with given *shape* and *dtype*,
+        Creates object of :class:`~pycuda.gpuarray.GPUArray` with given *shape* and *dtype*,
         fills it in with log-normally distributed pseudorandom values
         with mean *mean* and standard deviation *stddev*, and returns
         newly created object.
@@ -995,7 +1001,7 @@ Quasirandom numbers are more expensive to generate.
 
     .. method:: fill_poisson(data, lambda_value, stream=None)
 
-        Fills in :class:`GPUArray` *data* with Poisson distributed
+        Fills in :class:`~pycuda.gpuarray.GPUArray` *data* with Poisson distributed
         pseudorandom values.
 
         If *lambda_value* is not None, it is used as lambda,
@@ -1012,7 +1018,7 @@ Quasirandom numbers are more expensive to generate.
 
     .. method:: gen_poisson(shape, dtype, lambda_value, stream=None)
 
-        Creates object of :class:`GPUArray` with given *shape* and *dtype*,
+        Creates object of :class:`~pycuda.gpuarray.GPUArray` with given *shape* and *dtype*,
         fills it in with Poisson distributed pseudorandom values
         with lambda *lambda_value*, and returns newly created object.
         *dtype* must be 32-bit unsigned int.
@@ -1033,10 +1039,10 @@ Quasirandom numbers are more expensive to generate.
 
 .. class:: ScrambledSobol64RandomNumberGenerator(dir_vector=None, scramble_vector=None, offset=0)
 
-    :arg dir_vector: a :class:`GPUArray` of 64-element `uint64` vectors which
+    :arg dir_vector: a :class:`~pycuda.gpuarray.GPUArray` of 64-element `uint64` vectors which
       are used to initialize quasirandom generator; it must contain one vector
       for each initialized generator
-    :arg scramble_vector: a :class:`GPUArray` of `uint64` vectors which
+    :arg scramble_vector: a :class:`~pycuda.gpuarray.GPUArray` of `uint64` vectors which
       are used to initialize quasirandom generator; it must contain one vector
       for each initialized generator
     :arg offset: Starting index into the ScrambledSobol64 sequence,
@@ -1051,29 +1057,29 @@ Quasirandom numbers are more expensive to generate.
 
     .. method:: fill_uniform(data, stream=None)
 
-        Fills in :class:`GPUArray` *data* with uniformly distributed
+        Fills in :class:`~pycuda.gpuarray.GPUArray` *data* with uniformly distributed
         quasirandom values.
 
     .. method:: gen_uniform(shape, dtype, stream=None)
 
-        Creates object of :class:`GPUArray` with given *shape* and *dtype*,
+        Creates object of :class:`~pycuda.gpuarray.GPUArray` with given *shape* and *dtype*,
         fills it in with uniformly distributed pseudorandom values,
         and returns newly created object.
 
     .. method:: fill_normal(data, stream=None)
 
-        Fills in :class:`GPUArray` *data* with normally distributed
+        Fills in :class:`~pycuda.gpuarray.GPUArray` *data* with normally distributed
         quasirandom values.
 
     .. method:: gen_normal(shape, dtype, stream=None)
 
-        Creates object of :class:`GPUArray` with given *shape* and *dtype*,
+        Creates object of :class:`~pycuda.gpuarray.GPUArray` with given *shape* and *dtype*,
         fills it in with normally distributed pseudorandom values,
         and returns newly created object.
 
     .. method:: fill_log_normal(data, mean, stddev, stream=None)
 
-        Fills in :class:`GPUArray` *data* with log-normally distributed
+        Fills in :class:`~pycuda.gpuarray.GPUArray` *data* with log-normally distributed
         pseudorandom values with mean *mean* and standard deviation *stddev*.
 
         CUDA 4.0 and above.
@@ -1082,7 +1088,7 @@ Quasirandom numbers are more expensive to generate.
 
     .. method:: gen_log_normal(shape, dtype, mean, stddev, stream=None)
 
-        Creates object of :class:`GPUArray` with given *shape* and *dtype*,
+        Creates object of :class:`~pycuda.gpuarray.GPUArray` with given *shape* and *dtype*,
         fills it in with log-normally distributed pseudorandom values
         with mean *mean* and standard deviation *stddev*, and returns
         newly created object.
@@ -1093,7 +1099,7 @@ Quasirandom numbers are more expensive to generate.
 
     .. method:: fill_poisson(data, lambda_value, stream=None)
 
-        Fills in :class:`GPUArray` *data* with Poisson distributed
+        Fills in :class:`~pycuda.gpuarray.GPUArray` *data* with Poisson distributed
         pseudorandom values.
 
         If *lambda_value* is not None, it is used as lambda,
@@ -1110,7 +1116,7 @@ Quasirandom numbers are more expensive to generate.
 
     .. method:: gen_poisson(shape, dtype, lambda_value, stream=None)
 
-        Creates object of :class:`GPUArray` with given *shape* and *dtype*,
+        Creates object of :class:`~pycuda.gpuarray.GPUArray` with given *shape* and *dtype*,
         fills it in with Poisson distributed pseudorandom values
         with lambda *lambda_value*, and returns newly created object.
         *dtype* must be 32-bit unsigned int.
@@ -1134,7 +1140,7 @@ Single-pass Custom Expression Evaluation
 
 .. module:: pycuda.elementwise
 
-Evaluating involved expressions on :class:`GPUArray` instances can be
+Evaluating involved expressions on :class:`~pycuda.gpuarray.GPUArray` instances can be
 somewhat inefficient, because a new temporary is created for each
 intermediate result. The functionality in the module :mod:`pycuda.elementwise`
 contains tools to help generate kernels that evaluate multi-stage expressions
@@ -1160,7 +1166,7 @@ on one or several operands in a single pass.
     .. method:: __call__(*args, range=None, slice=None)
 
         Invoke the generated scalar kernel. The arguments may either be scalars or
-        :class:`GPUArray` instances.
+        :class:`~pycuda.gpuarray.GPUArray` instances.
 
         If *range* is given, it must be a :class:`slice` object and specifies
         the range of indices *i* for which the *operation* is carried out.
@@ -1231,13 +1237,13 @@ Custom Reductions
     .. method:: __call__(*args, stream=None, out=None)
 
         Invoke the generated reduction kernel. The arguments may either be scalars or
-        :class:`GPUArray` instances. The reduction will be done on each entry of
+        :class:`~pycuda.gpuarray.GPUArray` instances. The reduction will be done on each entry of
         the first vector argument.
 
         If *stream* is given, it must be a :class:`pycuda.driver.Stream` object,
         where the execution will be serialized.
 
-        With *out* the resulting single-entry :class:`GPUArray` can be specified.
+        With *out* the resulting single-entry :class:`~pycuda.gpuarray.GPUArray` can be specified.
         Because offsets are supported one can store results anywhere (e.g. out=a[3]).
 
 Here's a usage example::
@@ -1310,7 +1316,7 @@ know about them using this function:
 
 .. function:: pycuda.tools.register_dtype(dtype, name)
 
-    *dtype* is a :func:`numpy.dtype`.
+    *dtype* is a :class:`numpy.dtype`.
 
     .. versionadded: 2011.2
 
@@ -1319,4 +1325,4 @@ GPGPU Algorithms
 
 Bogdan Opanchuk's `reikna <http://pypi.python.org/pypi/reikna>`_ offers a
 variety of GPU-based algorithms (FFT, RNG, matrix multiplication) designed to work with
-:class:`pycuda.gpuarray.GPUArray` objects.
+:class:`~pycuda.gpuarray.GPUArray` objects.
