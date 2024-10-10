@@ -69,7 +69,7 @@ Error Reporting
 .. exception:: LogicError
 
     Thrown when PyCuda was confronted with a situation where it is likely
-    that the programmer has made a mistake. :exc:`LogicErrors` do not depend
+    that the programmer has made a mistake. :exc:`LogicError`\ s do not depend
     on outer circumstances defined by the run-time environment.
 
     Example: CUDA was used before it was initialized.
@@ -709,7 +709,7 @@ Devices and Contexts
 
         Return the :class:`Context` obtained by retaining the device's
         primary context, which is the one used by the CUDA runtime API.
-        Unlike :meth:`Context.make_context`, the newly-created context is not made current.
+        Unlike :meth:`make_context`, the newly-created context is not made current.
 
         CUDA 7.0 and newer.
 
@@ -914,7 +914,7 @@ Global Device Memory
 .. function:: to_device(buffer)
 
     Allocate enough device memory for *buffer*, which adheres to the Python
-    :class:`buffer` interface. Copy the contents of *buffer* onto the device.
+    :ref:`python:bufferobjects` interface. Copy the contents of *buffer* onto the device.
     Return a :class:`DeviceAllocation` object representing the newly-allocated
     memory.
 
@@ -1003,7 +1003,7 @@ Global Device Memory
 
         If your subclass provides its own :meth:`!__init__`, it must call
         the base class :meth:`!__init__`. Failure to do so will lead to
-        :exc:`Boost.Python.ArgumentError` being raised when it is used.
+        ``boost.Python.ArgumentError`` being raised when it is used.
 
 .. _pagelocked_memory :
 
@@ -1494,7 +1494,7 @@ Arrays and Textures
 
 .. function:: gpuarray_to_array(gpuparray, order, allowSurfaceBind=False)
 
-    Turn a :class:`GPUArray` with 2D or 3D structure, into an
+    Turn a :class:`~pycuda.gpuarray.GPUArray` with 2D or 3D structure, into an
     :class:`Array`. Same structure and use of :func:`np_to_array`
 
     .. versionadded:: 2015.1
@@ -1833,7 +1833,7 @@ Code on the Device: Modules and Functions
         executing the kernel, depending on whether *time_kernel* is *True*.
 
         This is a convenience interface that can be used instead of the
-        :meth:`param_*` and :meth:`launch_*` methods below.  For a faster (but
+        ``param_*``` and ``launch_*``` methods below.  For a faster (but
         mildly less convenient) way of invoking kernels, see :meth:`prepare` and
         :meth:`prepared_call`.
 
@@ -1848,10 +1848,10 @@ Code on the Device: Modules and Functions
         * Instances of :class:`ArgumentHandler` subclasses. These can be used to
           automatically transfer :mod:`numpy` arrays onto and off of the device.
 
-        * Objects supporting the Python :class:`buffer` interface. These chunks
+        * Objects supporting the Python :ref:`python:bufferobjects` interface. These chunks
           of bytes will be copied into the parameter space verbatim.
 
-        * :class:`GPUArray` instances.
+        * :class:`~pycuda.gpuarray.GPUArray` instances.
 
         .. warning::
 
@@ -2052,17 +2052,17 @@ Code on the Device: Modules and Functions
 
 .. class:: In(array)
 
-    Inherits from :class:`ArgumentHandler`. Indicates that :class:`buffer`
+    Inherits from :class:`ArgumentHandler`. Indicates that :ref:`python:bufferobjects`
     *array* should be copied to the compute device before invoking the kernel.
 
 .. class:: Out(array)
 
-    Inherits from :class:`ArgumentHandler`. Indicates that :class:`buffer`
+    Inherits from :class:`ArgumentHandler`. Indicates that :ref:`python:bufferobjects`
     *array* should be copied off the compute device after invoking the kernel.
 
 .. class:: InOut(array)
 
-    Inherits from :class:`ArgumentHandler`. Indicates that :class:`buffer`
+    Inherits from :class:`ArgumentHandler`. Indicates that :ref:`python:bufferobjects`
     *array* should be copied both onto the compute device before invoking
     the kernel, and off it afterwards.
 
@@ -2101,7 +2101,7 @@ Just-in-time Compilation
     by the module :mod:`pycuda.gpuarray`.
 
     The initial value of this variable is taken from the environment variable
-    :envvar:`PYCUDA_DEFAULT_NVCC_FLAGS`.
+    ``PYCUDA_DEFAULT_NVCC_FLAGS``.
 
     If you modify this variable in your code, please be aware that this is a
     globally shared variable that may be modified by multiple packages. Please
@@ -2110,8 +2110,8 @@ Just-in-time Compilation
 
 .. class:: SourceModule(source, nvcc="nvcc", options=None, keep=False, no_extern_c=False, arch=None, code=None, cache_dir=None, include_dirs=[])
 
-    Create a :class:`Module` from the CUDA source code *source*. The Nvidia
-    compiler *nvcc* is assumed to be on the :envvar:`PATH` if no path to it is
+    Create a :class:`pycuda.driver.Module` from the CUDA source code *source*. The Nvidia
+    compiler *nvcc* is assumed to be on the ``PATH`` if no path to it is
     specified, and is invoked with *options* to compile the code. If *keep* is
     *True*, the compiler output directory is kept, and a line indicating its
     location in the file system is printed for debugging purposes.
@@ -2125,10 +2125,10 @@ Just-in-time Compilation
     If `code` is `None`, it will not be specified.
 
     `cache_dir` gives the directory used for compiler caching.  If `None`
-    then `cache_dir` is taken to be :envvar:`PYCUDA_CACHE_DIR` if set or
+    then `cache_dir` is taken to be ``PYCUDA_CACHE_DIR`` if set or
     a sensible per-user default.  If passed as `False`, caching is disabled.
 
-    If the environment variable :envvar:`PYCUDA_DISABLE_CACHE` is set to
+    If the environment variable ``PYCUDA_DISABLE_CACHE`` is set to
     any value then caching is disabled.  This preference overrides any
     value of `cache_dir` and can be used to disable caching globally.
 

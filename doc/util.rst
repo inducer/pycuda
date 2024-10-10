@@ -38,7 +38,7 @@ Choice of Device
   Return a :class:`pycuda.driver.Context` instance chosen according to the
   following rules:
 
-   * If the environment variable :envvar:`CUDA_DEVICE` is set, its integer
+   * If the environment variable ``CUDA_DEVICE`` is set, its integer
      value is used as the device number.
 
    * If the file :file:`.cuda-device` is present in the user's home directory,
@@ -57,7 +57,7 @@ Choice of Device
   Return a :class:`pycuda.driver.Device` instance chosen according to the
   following rules:
 
-   * If the environment variable :envvar:`CUDA_DEVICE` is set, its integer
+   * If the environment variable ``CUDA_DEVICE`` is set, its integer
      value is used as the device number.
 
    * If the file :file:`.cuda-device` is present in the user's home directory,
@@ -90,7 +90,7 @@ Testing
 
 .. function:: mark_cuda_test(func)
 
-    This function, meant for use with :mod:`py.test`, will mark *func* with a
+    This function, meant for use with :mod:`pytest`, will mark *func* with a
     "cuda" tag and make sure it has a CUDA context available when invoked.
 
 
@@ -199,8 +199,8 @@ Device-based Memory Pool
     An object representing a :class:`DeviceMemoryPool`-based allocation of
     linear device memory.  Once this object is deleted, its associated device
     memory is freed.
-    :class:`PooledDeviceAllocation` instances can be cast to :class:`int`
-    (and :class:`long`), yielding the starting address of the device memory
+    :class:`PooledDeviceAllocation` instances can be cast to :class:`int`,
+    yielding the starting address of the device memory
     allocated.
 
     .. method:: free

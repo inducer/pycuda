@@ -22,4 +22,9 @@ intersphinx_mapping = {
     "python": ("https://docs.python.org/3", None),
     "numpy": ("https://numpy.org/doc/stable/", None),
     "codepy": ("https://documen.tician.de/codepy/", None),
+    "pytest": ("https://docs.pytest.org/en/stable/", None),
 }
+
+nitpick_ignore_regex = [
+    ["py:class", r"numpy.(float32|u?int32)"],  # not sure why these don't work?
+]

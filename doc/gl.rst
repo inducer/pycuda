@@ -88,7 +88,7 @@ Automatic Initialization
 
 .. warning ::
 
-    Importing :mod:`pycuda.gl.autoinit` will fail with a rather unhelpful error 
+    Importing :mod:`pycuda.gl.autoinit` will fail with a rather unhelpful error
     message if you don't already have a GL context created and active.
 
 .. data:: device
@@ -102,9 +102,10 @@ Old-style (pre-CUDA 3.0) API
     Enable GL interoperability for the already-created (so far non-GL)
     and currently active :class:`pycuda.driver.Context`.
 
-    According to the forum post referenced in the note below, this will succeed 
-    on Windows XP and Linux, but it will not work on Windows Vista. There you 
-    *have* to create the GL-enabled context using :func:`make_context`.
+    According to the forum post referenced in the note below, this will succeed
+    on Windows XP and Linux, but it will not work on Windows Vista. There you
+    *have* to create the GL-enabled context using
+    :meth:`~pycuda.driver.Device.make_context`.
 
     .. warning ::
 
@@ -112,7 +113,7 @@ Old-style (pre-CUDA 3.0) API
 
     .. warning ::
 
-        This will fail with a rather unhelpful error message if you don't already 
+        This will fail with a rather unhelpful error message if you don't already
         have a GL context created and active.
 
 .. note ::
