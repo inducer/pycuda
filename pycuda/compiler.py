@@ -19,7 +19,7 @@ def get_nvcc_version(nvcc):
         from warnings import warn
 
         warn("NVCC version could not be determined.")
-        stdout = "nvcc unknown version"
+        stdout = b"nvcc unknown version"
 
     return stdout.decode("utf-8", "replace")
 
