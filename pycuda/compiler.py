@@ -78,7 +78,7 @@ def preprocess_source(source, options, nvcc):
     return preprocessed_str.replace(os.path.basename(source_path), "")
 
 
-def compile_plain(source, options, keep, nvcc, cache_dir, target="cubin"):
+def compile_plain(source, options, keep, nvcc, cache_dir, target="cubin", force_no_preprocess_checksum=False):
     from os.path import join
 
     assert target in ["cubin", "ptx", "fatbin"]
@@ -86,7 +86,7 @@ def compile_plain(source, options, keep, nvcc, cache_dir, target="cubin"):
     if cache_dir:
         checksum = _new_md5()
 
-        if "#include" in source:
+        if not force_no_preprocess_checksum and "#include" in source:
             checksum.update(preprocess_source(source, options, nvcc).encode("utf-8"))
         else:
             checksum.update(source.encode("utf-8"))
@@ -289,12 +289,13 @@ def compile(
     elif "win32" in sys.platform and sys.maxsize == 2147483647:
         options.append("-m32")
 
+    no_preprocess_checksum = "win32" in sys.platform and not include_dirs
     include_dirs = include_dirs + [_find_pycuda_include_path()]
 
     for i in include_dirs:
         options.append("-I" + i)
 
-    return compile_plain(source, options, keep, nvcc, cache_dir, target)
+    return compile_plain(source, options, keep, nvcc, cache_dir, target, no_preprocess_checksum)
 
 
 class CudaModule:
