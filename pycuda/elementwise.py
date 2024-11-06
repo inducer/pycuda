@@ -211,8 +211,12 @@ class ElementwiseKernel:
             })
 
     def get_texref(self, name, use_range=False):
-        mod, knl, arguments = self.generate_stride_kernel_and_types(use_range=use_range)
+        mod, knl, arguments = self.generate_stride_kernel_and_types(use_range)
         return mod.get_texref(name)
+
+    def get_global(self, name, use_range=False):
+        mod, knl, arguments = self.generate_stride_kernel_and_types(use_range)
+        return mod.get_global(name)
 
     @memoize_method
     def generate_stride_kernel_and_types(self, use_range):
