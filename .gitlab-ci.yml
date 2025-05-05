@@ -12,21 +12,6 @@ Python 3 Titan V:
   except:
   - tags
 
-Python 3 K40:
-  script:
-  - py_version=3
-  - EXTRA_INSTALL="numpy mako"
-  - echo "CUDADRV_LIB_DIR = ['/usr/lib/x86_64-linux-gnu/nvidia/current']" > siteconf.py
-  - curl -L -O -k https://gitlab.tiker.net/inducer/ci-support/raw/main/build-and-test-py-project.sh
-  - "export LD_LIBRARY_PATH=/usr/local/cuda/lib64:$LD_LIBRARY_PATH"
-  - ". ./build-and-test-py-project.sh"
-
-  tags:
-  - python3
-  - nvidia-k40
-  except:
-  - tags
-
 Documentation:
   script: |
     EXTRA_INSTALL="numpy mako"
