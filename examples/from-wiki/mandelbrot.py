@@ -1,4 +1,4 @@
-#!python 
+#!python
 # Mandelbrot calculate using GPU, Serial numpy and faster numpy
 # Use to show the speed difference between CPU and GPU calculations
 # ian@ianozsvald.com July 2010
@@ -6,30 +6,32 @@
 # Based on vegaseat's TKinter/numpy example code from 2006
 # http://www.daniweb.com/code/snippet216851.html#
 # with minor changes to move to numpy from the obsolete Numeric
+from __future__ import annotations
 
 import sys
+import tkinter as tk
+
+import Image  # PIL
+import ImageTk  # PIL
 import numpy as nm
 
-import tkinter as tk
-import Image          # PIL
-import ImageTk        # PIL
-
 import pycuda.driver as drv
-import pycuda.tools
-import pycuda.autoinit
-from pycuda.compiler import SourceModule
 import pycuda.gpuarray as gpuarray
+
 
 # set width and height of window, more pixels take longer to calculate
 w = 1000
 h = 1000
 
 from pycuda.elementwise import ElementwiseKernel
+
+
 complex_gpu = ElementwiseKernel(
         "pycuda::complex<float> *z, pycuda::complex<float> *q, int *iteration, int maxiter",
             "for (int n=0; n < maxiter; n++) {z[i] = (z[i]*z[i])+q[i]; if (abs(z[i]) > 2.0f) {iteration[i]=n; z[i] = pycuda::complex<float>(); q[i] = pycuda::complex<float>();};}",
         "complex5",
         preamble="#include <pycuda-complex.hpp>",)
+
 
 def calculate_z_gpu(q, maxiter, z):
     output = nm.resize(nm.array(0,), q.shape)
@@ -58,7 +60,7 @@ def calculate_z_numpy_gpu(q, maxiter, z):
     # we'll add 1 to iterg after each iteration
     iterg = gpuarray.to_gpu(nm.array([0]*zg.size).astype(nm.int32))
 
-    for iter in range(maxiter):
+    for _iter in range(maxiter):
         zg = zg*zg + qg
 
         # abs returns a complex (rather than a float) from the complex
@@ -84,10 +86,11 @@ def calculate_z_numpy(q, maxiter, z):
     for iter in range(maxiter):
         z = z*z + q
         done = nm.greater(abs(z), 2.0)
-        q = nm.where(done,0+0j, q)
-        z = nm.where(done,0+0j, z)
+        q = nm.where(done, 0+0j, q)
+        z = nm.where(done, 0+0j, z)
         output = nm.where(done, iter, output)
     return output
+
 
 def calculate_z_serial(q, maxiter, z):
     # calculate z using pure python with numpy arrays
@@ -112,9 +115,8 @@ show_instructions = False
 if len(sys.argv) == 1:
     show_instructions = True
 
-if len(sys.argv) > 1:
-    if sys.argv[1] not in ['gpu', 'gpuarray', 'numpy', 'python']:
-        show_instructions = True
+if len(sys.argv) > 1 and sys.argv[1] not in ["gpu", "gpuarray", "numpy", "python"]:
+    show_instructions = True
 
 if show_instructions:
     print("Usage: python mandelbrot.py [gpu|gpuarray|numpy|python]")
@@ -125,13 +127,13 @@ if show_instructions:
     print(" python is a pure Python solution on the CPU with numpy arrays")
     sys.exit(0)
 
-routine = {'gpuarray':calculate_z_numpy_gpu,
-            'gpu':calculate_z_gpu,
-            'numpy':calculate_z_numpy,
-            'python':calculate_z_serial}
+routine = {"gpuarray": calculate_z_numpy_gpu,
+            "gpu": calculate_z_gpu,
+            "numpy": calculate_z_numpy,
+            "python": calculate_z_serial}
 
 calculate_z = routine[sys.argv[1]]
-##if sys.argv[1] == 'python':
+# if sys.argv[1] == 'python':
 #    import psyco
 #    psyco.full()
 
@@ -149,7 +151,8 @@ calculate_z = routine[sys.argv[1]]
 # numpy: 43.4s
 # python (serial): 1605.6s
 
-class Mandelbrot(object):
+
+class Mandelbrot:
     def __init__(self):
         # create window
         self.root = tk.Tk()
@@ -158,7 +161,6 @@ class Mandelbrot(object):
         self.create_label()
         # start event loop
         self.root.mainloop()
-
 
     def draw(self, x1, x2, y1, y2, maxiter=300):
         # draw the Mandelbrot set, from numpy example
@@ -199,7 +201,7 @@ class Mandelbrot(object):
         self.label = tk.Label(self.root, image=self.image)
         self.label.pack()
 
-# test the class
-if __name__ == '__main__':
-    test = Mandelbrot()
 
+# test the class
+if __name__ == "__main__":
+    test = Mandelbrot()

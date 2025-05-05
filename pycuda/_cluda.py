@@ -1,3 +1,6 @@
+from __future__ import annotations
+
+
 CLUDA_PREAMBLE = """
 #define local_barrier() __syncthreads();
 

@@ -1,24 +1,24 @@
-from pytools import memoize
-
 # don't import pycuda.driver here--you'll create an import loop
+from __future__ import annotations
+
 import os
-
 import sys
-from tempfile import mkstemp
 from os import unlink
+from tempfile import mkstemp
 
+from pytools import memoize
 from pytools.prefork import call_capture_output
 
 
 @memoize
 def get_nvcc_version(nvcc):
     cmdline = [nvcc, "--version"]
-    result, stdout, stderr = call_capture_output(cmdline)
+    result, stdout, _stderr = call_capture_output(cmdline)
 
     if result != 0 or not stdout:
         from warnings import warn
 
-        warn("NVCC version could not be determined.")
+        warn("NVCC version could not be determined.", stacklevel=2)
         stdout = b"nvcc unknown version"
 
     return stdout.decode("utf-8", "replace")
@@ -39,12 +39,12 @@ def _new_md5():
 def preprocess_source(source, options, nvcc):
     handle, source_path = mkstemp(suffix=".cu")
 
-    outf = open(source_path, "w")
-    outf.write(source)
-    outf.close()
+    with open(source_path, "w") as outf:
+        outf.write(source)
+
     os.close(handle)
 
-    cmdline = [nvcc, "--preprocess"] + options + [source_path]
+    cmdline = [nvcc, "--preprocess", *options, source_path]
     if "win32" in sys.platform:
         cmdline.extend(["--compiler-options", "-EP"])
     else:
@@ -102,11 +102,8 @@ def compile_plain(source, options, keep, nvcc, cache_dir, target="cubin"):
         cache_path = join(cache_dir, cache_file + "." + target)
 
         try:
-            cache_file = open(cache_path, "rb")
-            try:
+            with open(cache_path, "rb") as cache_file:
                 return cache_file.read()
-            finally:
-                cache_file.close()
 
         except Exception:
             pass
@@ -119,9 +116,8 @@ def compile_plain(source, options, keep, nvcc, cache_dir, target="cubin"):
     cu_file_name = file_root + ".cu"
     cu_file_path = join(file_dir, cu_file_name)
 
-    outf = open(cu_file_path, "w")
-    outf.write(str(source))
-    outf.close()
+    with open(cu_file_path, "w") as outf:
+        outf.write(str(source))
 
     if keep:
         options = options[:]
@@ -129,13 +125,13 @@ def compile_plain(source, options, keep, nvcc, cache_dir, target="cubin"):
 
         print("*** compiler output in %s" % file_dir)
 
-    cmdline = [nvcc, "--" + target] + options + [cu_file_name]
+    cmdline = [nvcc, "--" + target, *options, cu_file_name]
     result, stdout, stderr = call_capture_output(
         cmdline, cwd=file_dir, error_on_nonzero=False
     )
 
     try:
-        result_f = open(join(file_dir, file_root + "." + target), "rb")
+        result_f = open(join(file_dir, file_root + "." + target), "rb")  # noqa: SIM115
     except OSError:
         no_output = True
     else:
@@ -147,7 +143,7 @@ def compile_plain(source, options, keep, nvcc, cache_dir, target="cubin"):
 
             warn(
                 "PyCUDA: nvcc exited with status 0, but appears to have "
-                "encountered an error"
+                "encountered an error", stacklevel=2
             )
         from pycuda.driver import CompileError
 
@@ -178,12 +174,11 @@ def compile_plain(source, options, keep, nvcc, cache_dir, target="cubin"):
     result_f.close()
 
     if cache_dir:
-        outf = open(cache_path, "wb")
-        outf.write(result_data)
-        outf.close()
+        with open(cache_path, "wb") as outf:
+            outf.write(result_data)
 
     if not keep:
-        from os import listdir, unlink, rmdir
+        from os import listdir, rmdir, unlink
 
         for name in listdir(file_dir):
             unlink(join(file_dir, name))
@@ -230,10 +225,12 @@ def compile(
     arch=None,
     code=None,
     cache_dir=None,
-    include_dirs=[],
+    include_dirs=None,
     target="cubin",
 ):
 
+    if include_dirs is None:
+        include_dirs = []
     assert target in ["cubin", "ptx", "fatbin"]
 
     if not no_extern_c:
@@ -282,14 +279,15 @@ def compile(
     if code is not None:
         options.extend(["-code", code])
 
-    if "darwin" in sys.platform and sys.maxsize == 9223372036854775807:
-        options.append("-m64")
-    elif "win32" in sys.platform and sys.maxsize == 9223372036854775807:
+    if (
+            ("darwin" in sys.platform and sys.maxsize == 9223372036854775807)
+            or
+            ("win32" in sys.platform and sys.maxsize == 9223372036854775807)):
         options.append("-m64")
     elif "win32" in sys.platform and sys.maxsize == 2147483647:
         options.append("-m32")
 
-    include_dirs = include_dirs + [_find_pycuda_include_path()]
+    include_dirs = [*include_dirs, _find_pycuda_include_path()]
 
     for i in include_dirs:
         options.append("-I" + i)
@@ -310,7 +308,7 @@ class CudaModule:
 
                 warn(
                     "trying to compile for a compute capability "
-                    "higher than selected GPU"
+                    "higher than selected GPU", stacklevel=2
                 )
         except Exception:
             pass
@@ -341,8 +339,10 @@ class SourceModule(CudaModule):
         arch=None,
         code=None,
         cache_dir=None,
-        include_dirs=[],
+        include_dirs=None,
     ):
+        if include_dirs is None:
+            include_dirs = []
         self._check_arch(arch)
 
         cubin = compile(
@@ -368,8 +368,8 @@ def _search_on_path(filenames):
     """Find file on system path."""
     # http://aspn.activestate.com/ASPN/Cookbook/Python/Recipe/52224
 
-    from os.path import exists, abspath, join
-    from os import pathsep, environ
+    from os import environ, pathsep
+    from os.path import abspath, exists, join
 
     search_path = environ["PATH"]
 
@@ -400,13 +400,15 @@ class DynamicModule(CudaModule):
         arch=None,
         code=None,
         cache_dir=None,
-        include_dirs=[],
+        include_dirs=None,
         message_handler=None,
         log_verbose=False,
         cuda_libdir=None,
     ):
         from pycuda.driver import Context
 
+        if include_dirs is None:
+            include_dirs = []
         compute_capability = Context.get_device().compute_capability()
         if compute_capability < (3, 5):
             raise Exception(
@@ -563,9 +565,11 @@ class DynamicSourceModule(DynamicModule):
         arch=None,
         code=None,
         cache_dir=None,
-        include_dirs=[],
+        include_dirs=None,
         cuda_libdir=None,
     ):
+        if include_dirs is None:
+            include_dirs = []
         super().__init__(
             nvcc=nvcc,
             link_options=None,

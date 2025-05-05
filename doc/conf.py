@@ -1,4 +1,7 @@
+from __future__ import annotations
+
 from urllib.request import urlopen
+
 
 _conf_url = \
         "https://raw.githubusercontent.com/inducer/sphinxconfig/main/sphinxconfig.py"
@@ -8,10 +11,10 @@ with urlopen(_conf_url) as _inf:
 copyright = "2008-21, Andreas Kloeckner"
 
 ver_dic = {}
+with open("../pycuda/__init__.py") as initf:
+    init_contents = initf.read()
 exec(
-    compile(
-        open("../pycuda/__init__.py").read(), "../pycuda/__init__.py", "exec"
-    ),
+    compile(init_contents, "../pycuda/__init__.py", "exec"),
     ver_dic,
 )
 version = ".".join(str(x) for x in ver_dic["VERSION"])

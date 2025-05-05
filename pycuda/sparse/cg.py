@@ -1,11 +1,12 @@
-from __future__ import division
-from __future__ import absolute_import
-from pycuda.sparse.inner import AsyncInnerProduct
-from pytools import memoize_method
-import pycuda.driver as drv
-import pycuda.gpuarray as gpuarray
+from __future__ import annotations
 
 import numpy as np
+
+from pytools import memoize_method
+
+import pycuda.driver as drv
+import pycuda.gpuarray as gpuarray
+from pycuda.sparse.inner import AsyncInnerProduct
 
 
 class ConvergenceError(RuntimeError):
@@ -158,10 +159,7 @@ class CGStateContainer:
             self.one_iteration(compute_real_residual=compute_real_residual)
 
             if debug_callback is not None:
-                if compute_real_residual:
-                    what = "it+residual"
-                else:
-                    what = "it"
+                what = "it+residual" if compute_real_residual else "it"
 
                 debug_callback(
                     what, iterations, self.x, self.residual, self.d, self.delta

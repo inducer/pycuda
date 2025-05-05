@@ -1,15 +1,13 @@
 # Copyright 2008-2021 Andreas Kloeckner
 # Copyright 2021 NVIDIA Corporation
-
-from numba import cuda
-
-import pycuda.driver as pycuda
-# We use autoprimaryctx instead of autoinit because Numba can only operate on a
-# primary context
-import pycuda.autoprimaryctx  # noqa
-import pycuda.gpuarray as gpuarray
+from __future__ import annotations
 
 import numpy
+from numba import cuda
+
+# We use autoprimaryctx instead of autoinit because Numba can only operate on a
+# primary context
+import pycuda.gpuarray as gpuarray
 
 
 # Create a PyCUDA gpuarray

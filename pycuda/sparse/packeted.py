@@ -1,10 +1,11 @@
-from __future__ import division
-from __future__ import absolute_import
-from __future__ import print_function
+from __future__ import annotations
+
+import numpy as np
+
 from pytools import memoize_method
+
 import pycuda.gpuarray as gpuarray
 from pycuda.compiler import SourceModule
-import numpy as np
 
 
 PKT_KERNEL_TEMPLATE = """
@@ -120,7 +121,7 @@ class PacketedSpMV:
             adj_mat = csr_mat
 
         while True:
-            cut_count, dof_to_packet_nr = part_graph(
+            _cut_count, dof_to_packet_nr = part_graph(
                 int(self.block_count), xadj=adj_mat.indptr, adjncy=adj_mat.indices
             )
 
@@ -148,10 +149,10 @@ class PacketedSpMV:
                 old_block_count = self.block_count
                 self.block_count = int(2 + 1.05 * self.block_count)
                 print(
-                    (
+
                         "Metis produced a big block at block count "
                         "%d--retrying with %d" % (old_block_count, self.block_count)
-                    )
+
                 )
                 continue
 
@@ -230,7 +231,7 @@ class PacketedSpMV:
     def find_local_row_costs_and_remaining_coo(
         self, csr_mat, dof_to_packet_nr, old2new_fetch_indices
     ):
-        h, w = self.shape
+        h, _w = self.shape
         local_row_costs = [0] * h
         rem_coo_values = []
         rem_coo_i = []

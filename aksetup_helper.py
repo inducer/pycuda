@@ -1,9 +1,14 @@
+from __future__ import annotations
+
 import os
 import sys
+
+
 try:
     from setuptools import Extension
     from setuptools.command.build_ext import (  # noqa: N812
-            build_ext as BaseBuildExtCommand)
+        build_ext as BaseBuildExtCommand,
+    )
 
 except ImportError:
     class Extension:
@@ -43,8 +48,8 @@ def setup(*args, **kwargs):
 
 
 def get_numpy_incpath():
-    from os.path import join, dirname, exists
     from importlib.util import find_spec
+    from os.path import dirname, exists, join
     origin = find_spec("numpy").origin
     if origin is None:
         raise RuntimeError("origin of numpy package not found")
@@ -294,7 +299,7 @@ class ConfigSchema:
     def read_config_from_pyfile(self, filename):
         result = {}
         filevars = {}
-        infile = open(filename, "r")
+        infile = open(filename)
         try:
             contents = infile.read()
         finally:
@@ -313,12 +318,11 @@ class ConfigSchema:
         filevars = {}
 
         try:
-            exec(compile(open(filename, "r").read(), filename, "exec"), filevars)
-        except IOError:
+            exec(compile(open(filename).read(), filename, "exec"), filevars)
+        except OSError:
             pass
 
-        if "__builtins__" in filevars:
-            del filevars["__builtins__"]
+        filevars.pop("__builtins__", None)
 
         for key, value in config.items():
             if value is not None:
@@ -405,7 +409,7 @@ class ConfigSchema:
 
         result = self.get_default_config_with_files()
         if os.access(cfile, os.R_OK):
-            with open(cfile, "r") as inf:
+            with open(cfile) as inf:
                 py_snippet = inf.read()
             self.update_from_python_snippet(result, py_snippet, cfile)
 
@@ -438,7 +442,7 @@ class ConfigSchema:
                 for opt in self.options)
 
 
-class Option(object):
+class Option:
     def __init__(self, name, default=None, help=None):
         self.name = name
         self.default = default
@@ -734,7 +738,7 @@ def substitute(substitutions, fname):
     string_var_re = re.compile(r"\$str\{([A-Za-z_0-9]+)\}")
 
     fname_in = fname+".in"
-    with open(fname_in, "r") as inf:
+    with open(fname_in) as inf:
         lines = inf.readlines()
 
     new_lines = []
@@ -769,7 +773,7 @@ def substitute(substitutions, fname):
     with open(fname, "w") as outf:
         outf.write("".join(new_lines))
 
-    from os import stat, chmod
+    from os import chmod, stat
     infile_stat_res = stat(fname_in)
     chmod(fname, infile_stat_res.st_mode)
 
@@ -778,7 +782,7 @@ def substitute(substitutions, fname):
 
 def _run_git_command(cmd):
     git_error = None
-    from subprocess import Popen, PIPE
+    from subprocess import PIPE, Popen
     stdout = None
     try:
         popen = Popen(["git"] + cmd, stdout=PIPE)
@@ -909,7 +913,7 @@ def check_pybind11():
 
 # {{{ (modified) boilerplate from https://github.com/pybind/python_example/blob/2ed5a68759cd6ff5d2e5992a91f08616ef457b5c/setup.py  # noqa
 
-class get_pybind_include(object):  # noqa: N801
+class get_pybind_include:  # noqa: N801
     """Helper class to determine the pybind11 include path
 
     The purpose of this class is to postpone importing pybind11

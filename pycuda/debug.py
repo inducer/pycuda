@@ -1,8 +1,11 @@
-import pycuda.driver
+from __future__ import annotations
 
 import sys
 from optparse import OptionParser
 from os.path import exists
+
+import pycuda.driver
+
 
 pycuda.driver.set_debugging()
 
@@ -23,4 +26,5 @@ if not exists(mainpyfile):
 
 sys.argv = args
 
-exec(compile(open(mainpyfile).read(), mainpyfile, "exec"))
+with open(mainpyfile) as mainpy:
+    exec(compile(mainpy.read(), mainpyfile, "exec"))

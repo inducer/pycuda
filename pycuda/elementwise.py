@@ -1,4 +1,6 @@
 """Elementwise functionality."""
+from __future__ import annotations
+
 
 __copyright__ = "Copyright (C) 2009 Andreas Kloeckner"
 
@@ -26,11 +28,13 @@ OTHER DEALINGS IN THE SOFTWARE.
 """
 
 
-from pycuda.tools import context_dependent_memoize
 from typing import Any
+
 import numpy as np
-from pycuda.tools import dtype_to_ctype, VectorArg, ScalarArg
+
 from pytools import memoize_method
+
+from pycuda.tools import ScalarArg, VectorArg, context_dependent_memoize, dtype_to_ctype
 
 
 def get_elwise_module(
@@ -170,10 +174,7 @@ def get_elwise_kernel_and_types(
     else:
         arguments.append(ScalarArg(np.uintp, "n"))
 
-    if use_range:
-        module_builder = get_elwise_range_module
-    else:
-        module_builder = get_elwise_module
+    module_builder = get_elwise_range_module if use_range else get_elwise_module
 
     mod = module_builder(arguments, operation, name, keep, options, **kwargs)
 
@@ -189,7 +190,7 @@ def get_elwise_kernel(
     """Return a L{pycuda.driver.Function} that performs the same scalar operation
     on one or several vectors.
     """
-    mod, func, arguments = get_elwise_kernel_and_types(
+    _mod, func, arguments = get_elwise_kernel_and_types(
         arguments, operation, name, keep, options, **kwargs
     )
 
@@ -211,7 +212,7 @@ class ElementwiseKernel:
             })
 
     def get_texref(self, name, use_range=False):
-        mod, knl, arguments = self.generate_stride_kernel_and_types(use_range=use_range)
+        mod, _knl, _arguments = self.generate_stride_kernel_and_types(use_range=use_range)
         return mod.get_texref(name)
 
     @memoize_method
@@ -241,7 +242,7 @@ class ElementwiseKernel:
             )
 
         invocation_args = []
-        mod, func, arguments = self.generate_stride_kernel_and_types(
+        _mod, func, arguments = self.generate_stride_kernel_and_types(
             range_ is not None or slice_ is not None
         )
 
@@ -414,8 +415,8 @@ def get_copy_kernel(dtype_dest, dtype_src):
 
 @context_dependent_memoize
 def get_linear_combination_kernel(summand_descriptors, dtype_z):
+    from pycuda.elementwise import ScalarArg, VectorArg, get_elwise_module
     from pycuda.tools import dtype_to_ctype
-    from pycuda.elementwise import VectorArg, ScalarArg, get_elwise_module
 
     args = []
     preamble = ["#include <pycuda-helpers.hpp>\n\n"]
@@ -461,7 +462,7 @@ def get_linear_combination_kernel(summand_descriptors, dtype_z):
     return func, tex_src
 
 
-def _get_real_dtype(dtype: "np.dtype[Any]") -> "np.dtype[Any]":
+def _get_real_dtype(dtype: np.dtype[Any]) -> np.dtype[Any]:
     assert dtype.kind == "c"
     return np.empty(0, dtype).real.dtype
 

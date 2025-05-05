@@ -1,4 +1,7 @@
-class OperatorBase(object):
+from __future__ import annotations
+
+
+class OperatorBase:
     @property
     def dtype(self):
         raise NotImplementedError

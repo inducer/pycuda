@@ -1,24 +1,29 @@
+from __future__ import annotations
+
+
 __copyright__ = """
 Copyright 2008-2021 Andreas Kloeckner
 Copyright 2021 NVIDIA Corporation
 """
 
+import copyreg
+import numbers
+from functools import reduce
+
 import numpy as np
-import pycuda.elementwise as elementwise
+
 from pytools import memoize, memoize_method
+
 import pycuda.driver as drv
+import pycuda.elementwise as elementwise
+from pycuda.characterize import has_double_support
 from pycuda.compyte.array import (
-    as_strided as _as_strided,
-    f_contiguous_strides as _f_contiguous_strides,
-    c_contiguous_strides as _c_contiguous_strides,
     ArrayFlags as _ArrayFlags,
+    as_strided as _as_strided,
+    c_contiguous_strides as _c_contiguous_strides,
+    f_contiguous_strides as _f_contiguous_strides,
     get_common_dtype as _get_common_dtype_base,
 )
-from pycuda.characterize import has_double_support
-from functools import reduce
-import numbers
-
-import copyreg
 
 
 def _get_common_dtype(obj1, obj2):
@@ -286,10 +291,7 @@ class GPUArray:
     def __cuda_array_interface__(self):
         """Returns a CUDA Array Interface dictionary describing this array's
         data."""
-        if self.gpudata is not None:
-            ptr = int(self.gpudata)
-        else:
-            ptr = 0
+        ptr = int(self.gpudata) if self.gpudata is not None else 0
 
         return {
             "shape": self.shape,
@@ -828,10 +830,7 @@ class GPUArray:
         with new, the user can choose between ipow or just pow
         """
         common_dtype = _get_common_dtype(self, other)
-        if new:
-            result = self._new_like_me(common_dtype)
-        else:
-            result = self
+        result = self._new_like_me(common_dtype) if new else self
 
         # {{{ sanity checks
 
@@ -960,7 +959,7 @@ class GPUArray:
                 "only contiguous arrays may " "be used as arguments to this operation"
             )
 
-        if isinstance(shape[0], tuple) or isinstance(shape[0], list):
+        if isinstance(shape[0], (tuple, list)):
             shape = tuple(shape[0])
 
         same_contiguity = (order == "C" and self.flags.c_contiguous) or (
@@ -1012,14 +1011,14 @@ class GPUArray:
             raise ValueError("new type not compatible with array")
 
         new_shape = (
-            self.shape[:min_stride_axis]
-            + (self.shape[min_stride_axis] * old_itemsize // itemsize,)
-            + self.shape[min_stride_axis + 1:]
+            (*self.shape[:min_stride_axis],
+                self.shape[min_stride_axis] * old_itemsize // itemsize,
+                *self.shape[min_stride_axis + 1:])
         )
         new_strides = (
-            self.strides[:min_stride_axis]
-            + (self.strides[min_stride_axis] * itemsize // old_itemsize,)
-            + self.strides[min_stride_axis + 1:]
+            (*self.strides[:min_stride_axis],
+                self.strides[min_stride_axis] * itemsize // old_itemsize,
+                *self.strides[min_stride_axis + 1:])
         )
 
         return GPUArray(
@@ -1036,9 +1035,9 @@ class GPUArray:
         Returns a view of the array with dimensions of
         length 1 removed.
         """
-        new_shape = tuple([dim for dim in self.shape if dim > 1])
+        new_shape = tuple(dim for dim in self.shape if dim > 1)
         new_strides = tuple(
-            [self.strides[i] for i, dim in enumerate(self.shape) if dim > 1]
+            self.strides[i] for i, dim in enumerate(self.shape) if dim > 1
         )
 
         return GPUArray(
@@ -1188,10 +1187,7 @@ class GPUArray:
             from pytools import match_precision
 
             real_dtype = match_precision(np.dtype(np.float64), dtype)
-            if self.flags.f_contiguous:
-                order = "F"
-            else:
-                order = "C"
+            order = "F" if self.flags.f_contiguous else "C"
             result = self._new_like_me(dtype=real_dtype, order=order)
 
             func = elementwise.get_real_kernel(dtype, real_dtype)
@@ -1221,10 +1217,7 @@ class GPUArray:
             from pytools import match_precision
 
             real_dtype = match_precision(np.dtype(np.float64), dtype)
-            if self.flags.f_contiguous:
-                order = "F"
-            else:
-                order = "C"
+            order = "F" if self.flags.f_contiguous else "C"
             result = self._new_like_me(dtype=real_dtype, order=order)
 
             func = elementwise.get_imag_kernel(dtype, real_dtype)
@@ -1250,14 +1243,8 @@ class GPUArray:
                     "be used as arguments to this operation"
                 )
 
-            if self.flags.f_contiguous:
-                order = "F"
-            else:
-                order = "C"
-            if out is None:
-                result = self._new_like_me(order=order)
-            else:
-                result = out
+            order = "F" if self.flags.f_contiguous else "C"
+            result = self._new_like_me(order=order) if out is None else out
 
             func = elementwise.get_conj_kernel(dtype, result.dtype)
             func.prepared_async_call(
@@ -1459,12 +1446,12 @@ def arange(*args, **kwargs):
 
         warn(
             "behavior change: arange guessed dtype other than float32. "
-            "suggest specifying explicit dtype."
+            "suggest specifying explicit dtype.", stacklevel=2
         )
 
     from math import ceil
 
-    size = int(ceil((stop - start) / step))
+    size = ceil((stop - start) / step)
 
     result = GPUArray((size,), dtype)
 
@@ -1897,7 +1884,9 @@ def concatenate(arrays, axis=0, allocator=None):
     base_idx = 0
     for ary in arrays:
         my_len = ary.shape[axis]
-        result[full_slice[:axis] + (slice(base_idx, base_idx+my_len),) + full_slice[axis+1:]] = ary
+        result[(*full_slice[:axis],
+            slice(base_idx, base_idx + my_len),
+            *full_slice[axis + 1:])] = ary
         base_idx += my_len
 
     return result
@@ -1928,7 +1917,7 @@ def stack(arrays, axis=0, allocator=None):
     if not (0 <= axis <= input_ndim):
         raise ValueError("invalid axis")
 
-    result_shape = input_shape[:axis] + (len(arrays),) + input_shape[axis:]
+    result_shape = (*input_shape[:axis], len(arrays), *input_shape[axis:])
     result = empty(shape=result_shape,
             dtype=np.result_type(*(ary.dtype for ary in arrays)),
             allocator=allocator, order="C" if axis == 0 else "F")

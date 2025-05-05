@@ -1,4 +1,6 @@
 """Scan primitive."""
+from __future__ import annotations
+
 
 __copyright__ = """
 Copyright 2011 Andreas Kloeckner
@@ -25,12 +27,12 @@ Derived from code within the Thrust project, https://github.com/thrust/thrust/
 
 import numpy as np
 
+import pycuda._mymako as mako
 import pycuda.driver as driver
 import pycuda.gpuarray as gpuarray
+from pycuda._cluda import CLUDA_PREAMBLE
 from pycuda.compiler import SourceModule
 from pycuda.tools import dtype_to_ctype
-import pycuda._mymako as mako
-from pycuda._cluda import CLUDA_PREAMBLE
 
 
 SHARED_PREAMBLE = (

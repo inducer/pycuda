@@ -1,10 +1,11 @@
-#!python 
+#!python
+from __future__ import annotations
 
 import numpy
-import pycuda.autoinit
-import pycuda.driver as cuda
 
+import pycuda.driver as cuda
 from pycuda.compiler import SourceModule
+
 
 w = 7
 
@@ -35,24 +36,24 @@ def diffusion(res):
     y = numpy.float32(1)
     z = numpy.float32(1)
 
-
     height, width = numpy.int32(len(res)), numpy.int32(len(res[0]))
 
     diff_func(
         cuda.InOut(res),
         width,
-        height,x,y,z,
-        block=(w,w,1)
+        height, x, y, z,
+        block=(w, w, 1)
         )
+
 
 def run(res, step):
 
     diffusion(res)
     print(res)
 
-res   = numpy.array([[0 \
-                        for _ in range(0, w)]\
-                        for _ in range(0, w)], dtype='int32')
+
+res   = numpy.array([[0
+                        for _ in range(0, w)]
+                        for _ in range(0, w)], dtype="int32")
 print(res)
 run(res, 0)
-

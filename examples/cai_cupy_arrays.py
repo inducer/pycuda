@@ -1,10 +1,11 @@
 # Copyright 2008-2021 Andreas Kloeckner
 # Copyright 2021 NVIDIA Corporation
+from __future__ import annotations
+
+import cupy as cp
 
 import pycuda.autoinit  # noqa
 from pycuda.compiler import SourceModule
-
-import cupy as cp
 
 
 # Create a CuPy array (and a copy for comparison later)

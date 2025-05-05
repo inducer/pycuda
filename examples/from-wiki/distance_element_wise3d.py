@@ -1,11 +1,14 @@
-#!python 
-import pycuda.gpuarray as gpuarray
+#!python
+from __future__ import annotations
+
+import random
+
+import numpy
+
 import pycuda.driver as cuda
-import pycuda.tools as tools
-import pycuda.autoinit
-import numpy, random, time
-from pycuda.curandom import rand as curand
+import pycuda.gpuarray as gpuarray
 from pycuda.elementwise import ElementwiseKernel as Elementwise
+
 
 x = 50
 y = 50
@@ -13,6 +16,7 @@ z = 2
 width = 100
 height = 100
 depth = 100
+
 
 def main():
     """
@@ -50,10 +54,9 @@ def main():
                                  random.uniform(-width, width)), n, r)
     end.record()
     end.synchronize()
-    print((start.time_till(end)))
+    print(start.time_till(end))
     print(r)
 
-if __name__ == '__main__':
+
+if __name__ == "__main__":
     main()
-
-

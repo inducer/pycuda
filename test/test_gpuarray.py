@@ -1,16 +1,18 @@
 #! /usr/bin/env python
+from __future__ import annotations
+
+import operator
+import sys
 
 import numpy as np
 import numpy.linalg as la
-import sys
-from pycuda.tools import init_cuda_context_fixture
-from pycuda.characterize import has_double_support
-
-import pycuda.gpuarray as gpuarray
-import pycuda.driver as drv
-from pycuda.compiler import SourceModule
 import pytest
-import operator
+
+import pycuda.driver as drv
+import pycuda.gpuarray as gpuarray
+from pycuda.characterize import has_double_support
+from pycuda.compiler import SourceModule
+from pycuda.tools import init_cuda_context_fixture
 
 
 @pytest.fixture(autouse=True)
@@ -235,7 +237,7 @@ class TestGPUArray:
 
         assert (7 + a == a_added).all()
 
-    def test_substract_array(self):
+    def test_subtract_array(self):
         """Test the subtraction of two arrays."""
         # test data
         a = np.array([1, 2, 3, 4, 5, 6, 7, 8, 9, 10]).astype(np.float32)
@@ -312,15 +314,12 @@ class TestGPUArray:
     def test_random(self):
         from pycuda.curandom import rand as curand
 
-        if has_double_support():
-            dtypes = [np.float32, np.float64]
-        else:
-            dtypes = [np.float32]
+        dtypes = [np.float32, np.float64] if has_double_support() else [np.float32]
 
         for dtype in dtypes:
             a = curand((10, 100), dtype=dtype).get()
 
-            assert (0 <= a).all()
+            assert (a >= 0).all()
             assert (a < 1).all()
 
     def test_curand_wrappers(self):
@@ -334,8 +333,8 @@ class TestGPUArray:
         generator_types = []
         if get_curand_version() >= (3, 2, 0):
             from pycuda.curandom import (
-                XORWOWRandomNumberGenerator,
                 Sobol32RandomNumberGenerator,
+                XORWOWRandomNumberGenerator,
             )
 
             generator_types.extend(
@@ -344,8 +343,8 @@ class TestGPUArray:
         if get_curand_version() >= (4, 0, 0):
             from pycuda.curandom import (
                 ScrambledSobol32RandomNumberGenerator,
-                Sobol64RandomNumberGenerator,
                 ScrambledSobol64RandomNumberGenerator,
+                Sobol64RandomNumberGenerator,
             )
 
             generator_types.extend(
@@ -360,10 +359,7 @@ class TestGPUArray:
 
             generator_types.extend([MRG32k3aRandomNumberGenerator])
 
-        if has_double_support():
-            dtypes = [np.float32, np.float64]
-        else:
-            dtypes = [np.float32]
+        dtypes = [np.float32, np.float64] if has_double_support() else [np.float32]
 
         for gen_type in generator_types:
             gen = gen_type()
@@ -380,13 +376,13 @@ class TestGPUArray:
 
                 x = gen.gen_uniform(10000, dtype)
                 x_host = x.get()
-                assert (-1 <= x_host).all()
+                assert (x_host >= -1).all()
                 assert (x_host <= 1).all()
 
             gen.gen_uniform(10000, np.uint32)
             if get_curand_version() >= (5, 0, 0):
                 gen.gen_poisson(10000, np.uint32, 13.0)
-                for dtype in dtypes + [np.uint32]:
+                for dtype in [*dtypes, np.uint32]:
                     a = gpuarray.empty(1000000, dtype=dtype)
                     v = 10
                     a.fill(v)
@@ -411,8 +407,8 @@ class TestGPUArray:
         generator_types = []
         if get_curand_version() >= (3, 2, 0):
             from pycuda.curandom import (
-                XORWOWRandomNumberGenerator,
                 Sobol32RandomNumberGenerator,
+                XORWOWRandomNumberGenerator,
             )
 
             generator_types.extend(
@@ -421,8 +417,8 @@ class TestGPUArray:
         if get_curand_version() >= (4, 0, 0):
             from pycuda.curandom import (
                 ScrambledSobol32RandomNumberGenerator,
-                Sobol64RandomNumberGenerator,
                 ScrambledSobol64RandomNumberGenerator,
+                Sobol64RandomNumberGenerator,
             )
 
             generator_types.extend(
@@ -457,7 +453,7 @@ class TestGPUArray:
                 x = gen.gen_uniform(2 ** 31, dtype)
                 if dtype in [np.float32, np.float64]:
                     x_host = x.get()
-                    assert (-1 <= x_host).all()
+                    assert (x_host >= -1).all()
                     assert (x_host <= 1).all()
                 del x
 
@@ -468,7 +464,7 @@ class TestGPUArray:
                     v = 10
                     a.fill(v)
                     gen.fill_poisson(a)
-                    tmp = (a.get() == (v - 1)).sum() / a.size  # noqa: F841
+                    tmp = (a.get() == (v - 1)).sum() / a.size
                     # Check Poisson statistics (need 1e6 values)
                     # Compare with scipy.stats.poisson.pmf(v - 1, v)
                     assert np.isclose(0.12511, tmp, atol=0.005)
@@ -488,8 +484,8 @@ class TestGPUArray:
         generator_types = []
         if get_curand_version() >= (3, 2, 0):
             from pycuda.curandom import (
-                XORWOWRandomNumberGenerator,
                 Sobol32RandomNumberGenerator,
+                XORWOWRandomNumberGenerator,
             )
 
             generator_types.extend(
@@ -498,8 +494,8 @@ class TestGPUArray:
         if get_curand_version() >= (4, 0, 0):
             from pycuda.curandom import (
                 ScrambledSobol32RandomNumberGenerator,
-                Sobol64RandomNumberGenerator,
                 ScrambledSobol64RandomNumberGenerator,
+                Sobol64RandomNumberGenerator,
             )
 
             generator_types.extend(
@@ -538,7 +534,7 @@ class TestGPUArray:
                 x = gen.gen_uniform(s, dtype)
                 if dtype in [np.float32, np.float64]:
                     x_host = x.get()
-                    assert (-1 <= x_host).all()
+                    assert (x_host >= -1).all()
                     assert (x_host <= 1).all()
                 del x
 
@@ -550,7 +546,7 @@ class TestGPUArray:
                     v = 10
                     a.fill(v)
                     gen.fill_poisson(a)
-                    tmp = (a.get() == (v - 1)).sum() / a.size  # noqa: F841
+                    tmp = (a.get() == (v - 1)).sum() / a.size
                     # Check Poisson statistics (need 1e6 values)
                     # Compare with scipy.stats.poisson.pmf(v - 1, v)
                     assert np.isclose(0.12511, tmp, atol=0.005)
@@ -638,7 +634,7 @@ class TestGPUArray:
             # a[i] = float('nan')
             from random import randrange
 
-            for i in range(size // 10):
+            for _i in range(size // 10):
                 a[randrange(0, size)] = float("nan")
             return a
 
@@ -921,10 +917,11 @@ class TestGPUArray:
                 def allocator(size):
                     nonlocal alloc_uses, pool
                     alloc_uses += 1
-                    return pool.allocate(size)
+                    return pool.allocate(size)  # noqa: B023
 
                 alloc = None if pool is None else allocator
-                sum_a_gpu = gpuarray.subset_sum(meaningful_indices_gpu, a_gpu, allocator=alloc).get()
+                sum_a_gpu = gpuarray.subset_sum(
+                            meaningful_indices_gpu, a_gpu, allocator=alloc).get()
                 assert np.allclose(sum_a_gpu, sum_a)
                 if pool is not None:
                     assert alloc_uses == 1
@@ -970,7 +967,7 @@ class TestGPUArray:
 
         from random import randrange
 
-        for i in range(200):
+        for _i in range(200):
             start = randrange(sz)
             end = randrange(start, sz)
 
@@ -989,7 +986,7 @@ class TestGPUArray:
 
         from random import randrange
 
-        for i in range(200):
+        for _i in range(200):
             start = randrange(n)
             end = randrange(start, n)
 
@@ -999,8 +996,8 @@ class TestGPUArray:
             assert la.norm(a_gpu_slice.get() - a_slice) == 0
 
     def test_2d_slice_f(self):
-        from pycuda.curandom import rand as curand
         import pycuda.gpuarray as gpuarray
+        from pycuda.curandom import rand as curand
 
         n = 1000
         m = 300
@@ -1012,7 +1009,7 @@ class TestGPUArray:
 
         from random import randrange
 
-        for i in range(200):
+        for _i in range(200):
             start = randrange(n)
             end = randrange(start, n)
 

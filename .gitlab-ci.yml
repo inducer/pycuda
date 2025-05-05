@@ -54,11 +54,11 @@ Documentation:
   # needs CUDA headers to compile
   - nvidia-titan-x
 
-Flake8:
+Ruff:
   script:
-  - curl -L -O -k https://gitlab.tiker.net/inducer/ci-support/raw/main/prepare-and-run-flake8.sh
-  - . ./prepare-and-run-flake8.sh "$CI_PROJECT_NAME" test/*.py
+  - pipx install ruff
+  - ruff check
   tags:
-  - python3
+  - docker-runner
   except:
   - tags

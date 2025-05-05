@@ -1,4 +1,4 @@
-#!python 
+#!python
 """
 3D display of Light Field images.
 Example images can be download from:
@@ -15,24 +15,24 @@ Prerequisites:
 
 Author: Amit Aides. amitibo at technion . ac . il
 """
+from __future__ import annotations
 
-
-from enthought.traits.api import HasTraits, Range, on_trait_change
-from enthought.traits.ui.api import View, Item
-from enthought.chaco.api import Plot, ArrayPlotData, gray
-from enthought.enable.component_editor import ComponentEditor
-
-import numpy as np
-import Image
 import argparse
-import os.path
+import contextlib
 import math
+import os.path
 
-import pycuda.driver as cuda
-import pycuda.compiler
-import pycuda.autoinit
-
+import Image
+import numpy as np
+from enthought.chaco.api import ArrayPlotData, Plot, gray
+from enthought.enable.component_editor import ComponentEditor
+from enthought.traits.api import HasTraits, Range, on_trait_change
+from enthought.traits.ui.api import Item, View
 from jinja2 import Template
+
+import pycuda.autoinit
+import pycuda.compiler
+import pycuda.driver as cuda
 
 
 _kernel_tpl = Template("""
@@ -64,7 +64,7 @@ __global__ void LFview_kernel(
     // calculate offset into destination array
     //
     unsigned int didx = (y * {{newiw}} + x) * {{NCHANNELS}};
-    
+
     //
     // calculate offset into source array (be aware of rotation and scaling)
     //
@@ -99,10 +99,10 @@ def ceil(x):
 class LFapplication(HasTraits):
 
     traits_view = View(
-        Item('LF_img', editor=ComponentEditor(), show_label=False),
-        Item('X_angle', label='Angle in the X axis'),
-        Item('Y_angle', label='Angle in the Y axis'),
-        resizable = True,
+        Item("LF_img", editor=ComponentEditor(), show_label=False),
+        Item("X_angle", label="Angle in the X axis"),
+        Item("Y_angle", label="Angle in the Y axis"),
+        resizable=True,
         title="LF Image"
         )
 
@@ -113,21 +113,19 @@ class LFapplication(HasTraits):
         # Load image data
         #
         base_path = os.path.splitext(img_path)[0]
-        lenslet_path = base_path + '-lenslet.txt'
-        optics_path = base_path + '-optics.txt'
+        lenslet_path = base_path + "-lenslet.txt"
+        optics_path = base_path + "-optics.txt"
 
         with open(lenslet_path) as f:
             tmp = eval(f.readline())
-            x_offset, y_offset, right_dx, right_dy, down_dx, down_dy = \
+            x_offset, y_offset, right_dx, _right_dy, _down_dx, down_dy = \
               np.array(tmp, dtype=np.float32)
 
         with open(optics_path) as f:
             for line in f:
                 name, val = line.strip().split()
-                try:
+                with contextlib.suppress(Exception):
                     setattr(self, name, np.float32(val))
-                except:
-                    pass
 
         max_angle = math.atan(self.pitch/2/self.flen)
 
@@ -135,7 +133,7 @@ class LFapplication(HasTraits):
         # Prepare image
         #
         im_pil = Image.open(img_path)
-        if im_pil.mode == 'RGB':
+        if im_pil.mode == "RGB":
             self.NCHANNELS = 3
             w, h = im_pil.size
             im = np.zeros((h, w, 4), dtype=np.float32)
@@ -170,10 +168,10 @@ class LFapplication(HasTraits):
                 NCHANNELS=self.NCHANNELS
                 )
             )
-        
+
         self.LFview_func = mod_LFview.get_function("LFview_kernel")
         self.texref = mod_LFview.get_texref("tex")
-        
+
         #
         # Now generate the cuda texture
         #
@@ -184,7 +182,7 @@ class LFapplication(HasTraits):
                 )
         else:
             cuda.matrix_to_texref(im, self.texref, order="C")
-            
+
         #
         # We could set the next if we wanted to address the image
         # in normalized coordinates ( 0 <= coordinate < 1.)
@@ -195,9 +193,9 @@ class LFapplication(HasTraits):
         #
         # Prepare the traits
         #
-        self.add_trait('X_angle', Range(-max_angle, max_angle, 0.0))
-        self.add_trait('Y_angle', Range(-max_angle, max_angle, 0.0))
-        
+        self.add_trait("X_angle", Range(-max_angle, max_angle, 0.0))
+        self.add_trait("Y_angle", Range(-max_angle, max_angle, 0.0))
+
         self.plotdata = ArrayPlotData(LF_img=self.sampleLF())
         self.LF_img = Plot(self.plotdata)
         if self.NCHANNELS == 3:
@@ -210,9 +208,9 @@ class LFapplication(HasTraits):
         # Get the output image
         #
         output = np.zeros(self.LF_dim, dtype=np.uint8)
-        
+
         #
-        # Calculate the gridsize. This is entirely given by the size of our image. 
+        # Calculate the gridsize. This is entirely given by the size of our image.
         #
         blocks = (16, 16, 1)
         gridx = ceil(self.LF_dim[1]/blocks[1])
@@ -233,22 +231,21 @@ class LFapplication(HasTraits):
 
         return output
 
-    @on_trait_change('X_angle, Y_angle')        
+    @on_trait_change("X_angle, Y_angle")
     def updateImge(self):
-        self.plotdata.set_data('LF_img', self.sampleLF())
-        
-        
+        self.plotdata.set_data("LF_img", self.sampleLF())
+
+
 def main(img_path):
     """Main function"""
 
     app = LFapplication(img_path)
     app.configure_traits()
-    
-    
-if __name__ == '__main__':
-    parser = argparse.ArgumentParser(description='View an LF image')
-    parser.add_argument('img_path', type=str, help='Path to LF image')
+
+
+if __name__ == "__main__":
+    parser = argparse.ArgumentParser(description="View an LF image")
+    parser.add_argument("img_path", type=str, help="Path to LF image")
     args = parser.parse_args()
 
     main(args.img_path)
-

@@ -1,11 +1,13 @@
+from __future__ import annotations
+
 import math
+
 import numpy as np
-from pycuda.tools import mark_cuda_test
 
-
-import pycuda.gpuarray as gpuarray
-import pycuda.driver as drv  # noqa
 import pycuda.cumath as cumath
+import pycuda.driver as drv  # noqa
+import pycuda.gpuarray as gpuarray
+from pycuda.tools import mark_cuda_test
 
 
 sizes = [10, 128, 1024, 1 << 10, 1 << 13]
@@ -24,13 +26,10 @@ def make_unary_function_test(name, a=0, b=1, threshold=0, complex=False):
     def test():
         gpu_func = getattr(cumath, name)
         cpu_func = getattr(np, numpy_func_names.get(name, name))
-        if complex:
-            _dtypes = complex_dtypes
-        else:
-            _dtypes = dtypes
+        dtypes_ = complex_dtypes if complex else dtypes
 
         for s in sizes:
-            for dtype in _dtypes:
+            for dtype in dtypes_:
                 np.random.seed(1)
                 A = (np.random.random(s) * (b - a) + a).astype(dtype)
                 if complex:

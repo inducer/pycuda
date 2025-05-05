@@ -1,4 +1,5 @@
 """Computation of reductions on vectors."""
+from __future__ import annotations
 
 
 __copyright__ = "Copyright (C) 2009 Andreas Kloeckner"
@@ -57,9 +58,9 @@ Consistent with 48 C.F.R.12.212 and 48 C.F.R. 227.7202-1 through
 source code with only those rights set forth herein.
 """
 
-from pycuda.tools import context_dependent_memoize
-from pycuda.tools import dtype_to_ctype
 import numpy as np
+
+from pycuda.tools import context_dependent_memoize, dtype_to_ctype
 
 
 def get_reduction_module(
@@ -180,13 +181,10 @@ def get_reduction_kernel_and_types(
             map_expr = "pycuda_reduction_inp[i]"
 
         in_arg = "const %s *pycuda_reduction_inp" % out_type
-        if arguments:
-            arguments = in_arg + ", " + arguments
-        else:
-            arguments = in_arg
+        arguments = in_arg + ", " + arguments if arguments else in_arg
 
     else:
-        assert False
+        raise AssertionError()
 
     mod = get_reduction_module(
         out_type,
@@ -264,8 +262,8 @@ class ReductionKernel:
         )
 
     def __call__(self, *args, **kwargs):
-        MAX_BLOCK_COUNT = 1024
-        SMALL_SEQ_COUNT = 4
+        MAX_BLOCK_COUNT = 1024  # noqa: N806
+        SMALL_SEQ_COUNT = 4  # noqa: N806
 
         s1_func = self.stage1_func
         s2_func = self.stage2_func
@@ -304,7 +302,7 @@ class ReductionKernel:
             repr_vec = vectors[0]
             sz = repr_vec.size
 
-            allocator = kwargs.get("allocator", None)
+            allocator = kwargs.get("allocator")
             if allocator is None:
                 allocator = repr_vec.allocator
 
@@ -335,7 +333,7 @@ class ReductionKernel:
                 (block_count, 1),
                 (self.block_size, 1, 1),
                 stream,
-                *([result.gpudata] + invocation_args + [seq_count, sz]),
+                *([result.gpudata, *invocation_args, seq_count, sz]),
                 **kwargs
             )
 
@@ -344,7 +342,7 @@ class ReductionKernel:
             else:
                 f = s2_func
                 arg_types = self.stage2_arg_types
-                args = (result,) + stage1_args
+                args = (result, *stage1_args)
 
 
 @context_dependent_memoize
@@ -426,10 +424,7 @@ def get_subset_dot_kernel(dtype_out, dtype_subset, dtype_a=None, dtype_b=None):
         dtype_out = dtype_a
 
     if dtype_b is None:
-        if dtype_a is None:
-            dtype_b = dtype_out
-        else:
-            dtype_b = dtype_a
+        dtype_b = dtype_out if dtype_a is None else dtype_a
 
     if dtype_a is None:
         dtype_a = dtype_out

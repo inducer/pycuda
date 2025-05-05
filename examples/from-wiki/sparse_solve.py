@@ -1,11 +1,11 @@
-#!python 
-import pycuda.autoinit
-import pycuda.driver as drv
-import pycuda.gpuarray as gpuarray
+#!python
+from __future__ import annotations
+
 import numpy
 import numpy.linalg as la
 
-
+import pycuda.driver as drv
+import pycuda.gpuarray as gpuarray
 
 
 def main_cg():
@@ -41,7 +41,7 @@ def main_cg():
 
     from pycuda.sparse.cg import solve_pkt_with_cg
     print("start solve")
-    for i in range(4):
+    for _i in range(4):
         start = drv.Event()
         stop = drv.Event()
         start.record()
@@ -64,11 +64,11 @@ def main_cg():
             est_flops += csr_mat.shape[0] * it_count
 
         print("residual norm: %g" % (la.norm(csr_mat*res - rhs)/la.norm(rhs)))
-        print(("size: %d, elapsed: %g s, %d it, %d residual, it/second: %g, "
+        print("size: %d, elapsed: %g s, %d it, %d residual, it/second: %g, "
                 "%g gflops/s" % (
                     csr_mat.shape[0],
                     elapsed, it_count, res_count, it_count/elapsed,
-                    est_flops/elapsed/1e9)))
+                    est_flops/elapsed/1e9))
 
     # TODO: mixed precision
     # TODO: benchmark
@@ -76,12 +76,6 @@ def main_cg():
     dev_pool.stop_holding()
 
 
-
-
-
 if __name__ == "__main__":
     print("starting...")
     main_cg()
-
-
-

@@ -1,14 +1,16 @@
-#!python 
+#!python
 # Exercise 2 from http://webapp.dam.brown.edu/wiki/SciComp/CudaExercises
 
 # Generate an array of random numbers between 0 and 1
 # List the indices of those numbers that are greater than a given limit
+from __future__ import annotations
+
+import numpy
 
 import pycuda.driver as cuda
-import pycuda.autoinit
 import pycuda.gpuarray as gpuarray
 from pycuda.compiler import SourceModule
-import numpy
+
 
 # Define block size and number of elements per thread
 block_size = 512
@@ -106,7 +108,7 @@ grid = (amount // multiple_block_size, 1)
 
 # Warmup
 warmup = 2
-for i in range(warmup):
+for _i in range(warmup):
     func.prepared_call(grid, block, a_gpu.gpudata, selec_gpu.gpudata,
                        limit, counter_gpu.gpudata)
     counter_gpu = gpuarray.zeros(1, dtype=numpy.int32)
@@ -119,7 +121,7 @@ stop = cuda.Event()
 cuda.Context.synchronize()
 start.record()
 count = 10
-for i in range(count):
+for _i in range(count):
     func.prepared_call(grid, block, a_gpu.gpudata, selec_gpu.gpudata,
                        limit, counter_gpu.gpudata)
     counter_gpu = gpuarray.zeros(1, dtype=numpy.int32)
@@ -136,7 +138,6 @@ elems_in_selec = len(numpy.nonzero(selec >= 0))
 elapsed_seconds = stop.time_since(start) * 1e-3
 print("mem bw:", (a.nbytes + elems_in_selec * 4) / elapsed_seconds / 1e9 * count)
 
-filtered_set = sorted(list(item for item in selec if item != -1))
-reference_set = sorted(list(i for i, x in enumerate(a) if x >= limit))
+filtered_set = sorted(item for item in selec if item != -1)
+reference_set = sorted(i for i, x in enumerate(a) if x >= limit)
 assert filtered_set == reference_set
-

@@ -1,8 +1,11 @@
-import pycuda.driver as cuda
-import pycuda.autoinit
+from __future__ import annotations
+
 import numpy
 import numpy.linalg as la
+
+import pycuda.driver as cuda
 from pycuda.compiler import SourceModule
+
 
 thread_strides = 16
 block_size = 32
@@ -20,20 +23,21 @@ c_gpu = cuda.mem_alloc(a.nbytes)
 
 from jinja2 import Template
 
+
 tpl = Template("""
     __global__ void add(
-            {{ type_name }} *tgt, 
-            {{ type_name }} *op1, 
+            {{ type_name }} *tgt,
+            {{ type_name }} *op1,
             {{ type_name }} *op2)
     {
-      int idx = threadIdx.x + 
+      int idx = threadIdx.x +
         {{ block_size }} * {{thread_strides}}
         * blockIdx.x;
 
       {% for i in range(thread_strides) %}
           {% set offset = i*block_size %}
-          tgt[idx + {{ offset }}] = 
-            op1[idx + {{ offset }}] 
+          tgt[idx + {{ offset }}] =
+            op1[idx + {{ offset }}]
             + op2[idx + {{ offset }}];
       {% endfor %}
     }""")
@@ -46,9 +50,9 @@ mod = SourceModule(rendered_tpl)
 # end
 
 func = mod.get_function("add")
-func(c_gpu, a_gpu, b_gpu, 
-        block=(block_size,1,1),
-        grid=(macroblock_count,1))
+func(c_gpu, a_gpu, b_gpu,
+        block=(block_size, 1, 1),
+        grid=(macroblock_count, 1))
 
 c = cuda.from_device_like(c_gpu, a)
 

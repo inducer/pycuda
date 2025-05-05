@@ -1,7 +1,10 @@
-import pycuda.autoinit
-import pycuda.gpuarray as gpuarray
-import pycuda.driver as cuda
+from __future__ import annotations
+
 import numpy
+
+import pycuda.driver as cuda
+import pycuda.gpuarray as gpuarray
+
 
 free_bytes, total_bytes = cuda.mem_get_info()
 exp = 10
@@ -22,4 +25,3 @@ while True:
 ary.fill(float("nan"))
 
 print("filled %d out of %d bytes with NaNs" % (fill_floats*4, free_bytes))
-

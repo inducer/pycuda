@@ -1,6 +1,6 @@
-#!python 
-#!/usr/bin/env python
-#-*- coding: utf-8 -*-
+#!python
+# !/usr/bin/env python
+# -*- coding: utf-8 -*-
 #
 # Requires PyCuda, PyOpenGL, and Pil
 # MAKE SURE YOU HAVE AN UPDATED VERSION OF THESE PACKAGES!!
@@ -20,18 +20,26 @@
 # this software and related documentation outside the terms of the EULA
 # is strictly prohibited.
 #
+from __future__ import annotations
 
+import os
+import sys
+import time
+
+import Image
+import numpy as np
 from OpenGL.GL import *
-from OpenGL.GLUT import *
-from OpenGL.GLU import *
 from OpenGL.GL.ARB.vertex_buffer_object import *
-import numpy as np, Image
-import sys, time, os
+from OpenGL.GLU import *
+from OpenGL.GLUT import *
+
+import pycuda
 import pycuda.driver as cuda_driver
 import pycuda.gl as cuda_gl
-import pycuda
-#import pycuda.gl.autoinit
+
+# import pycuda.gl.autoinit
 from pycuda.compiler import SourceModule
+
 
 imWidth = 0
 imHeight = 0
@@ -52,6 +60,7 @@ fpsLimit = 8
 timer = 0.0
 ver2011 = False
 
+
 def copy2D_array_to_device(dst, src, type_sz, width, height):
     copy = cuda_driver.Memcpy2D()
     copy.set_src_array(src)
@@ -59,6 +68,7 @@ def copy2D_array_to_device(dst, src, type_sz, width, height):
     copy.height = height
     copy.dst_pitch = copy.src_pitch = copy.width_in_bytes = width*type_sz
     copy(aligned=True)
+
 
 def computeFPS():
     global frameCount, fpsCount, fpsLimit, timer
@@ -68,6 +78,7 @@ def computeFPS():
         ifps = 1.0 /timer
         glutSetWindowTitle("Cuda Edge Detection: %f fps" % ifps)
         fpsCount = 0
+
 
 def sobelFilter(odata, iw, ih):
     global array, pixels, mode, scale
@@ -369,27 +380,28 @@ def sobelFilter(odata, iw, ih):
         # fixed BlockSize Launch
         RADIUS = 1
         threads = (16, 4, 1)
-        BlockWidth = 80 # Do not change!
-        blocks = (iw/(4*BlockWidth)+(0!=iw%(4*BlockWidth)),
-                               ih/threads[1]+(0!=ih%threads[1]) )
-        SharedPitch = ~0x3f & (4*(BlockWidth+2*RADIUS)+0x3f);
-        sharedMem = SharedPitch*(threads[1]+2*RADIUS);
+        BlockWidth = 80  # Do not change!
+        blocks = (iw/(4*BlockWidth)+(iw % (4*BlockWidth) != 0),
+                               ih/threads[1]+(ih % threads[1] != 0))
+        SharedPitch = ~0x3f & (4*(BlockWidth+2*RADIUS)+0x3f)
+        sharedMem = SharedPitch*(threads[1]+2*RADIUS)
         iw = iw & ~3
-        cuda_function(np.intp(odata), np.uint16(iw), np.int16(iw), np.int16(ih), np.float32(scale), texrefs=[texref],block=threads, grid=blocks, shared=sharedMem)
+        cuda_function(np.intp(odata), np.uint16(iw), np.int16(iw), np.int16(ih), np.float32(scale), texrefs=[texref], block=threads, grid=blocks, shared=sharedMem)
     elif mode == 2:
         # variable BlockSize launch
         RADIUS = 1
         threads = (16, 4, 1)
-        BlockWidth = 80 # Change only with divisible by 16 values!
-        blocks = (iw/(4*BlockWidth)+(0!=iw%(4*BlockWidth)),
-                               ih/threads[1]+(0!=ih%threads[1]) )
-        SharedPitch = ~0x3f & (4*(BlockWidth+2*RADIUS)+0x3f);
-        sharedMem = SharedPitch*(threads[1]+2*RADIUS);
+        BlockWidth = 80  # Change only with divisible by 16 values!
+        blocks = (iw/(4*BlockWidth)+(iw % (4*BlockWidth) != 0),
+                               ih/threads[1]+(ih % threads[1] != 0))
+        SharedPitch = ~0x3f & (4*(BlockWidth+2*RADIUS)+0x3f)
+        sharedMem = SharedPitch*(threads[1]+2*RADIUS)
         iw = iw & ~3
-        cuda_function(np.intp(odata), np.uint16(iw), np.int16(BlockWidth), np.int16(SharedPitch), np.int16(iw), np.int16(ih), np.float32(scale), texrefs=[texref],block=threads, grid=blocks, shared=sharedMem)
+        cuda_function(np.intp(odata), np.uint16(iw), np.int16(BlockWidth), np.int16(SharedPitch), np.int16(iw), np.int16(ih), np.float32(scale), texrefs=[texref], block=threads, grid=blocks, shared=sharedMem)
     else:
         BlockWidth = 384
-        cuda_function(np.intp(odata), np.uint32(iw), np.int32(iw), np.int32(ih), np.float32(scale), texrefs=[texref],block=(BlockWidth,1,1),grid=(ih,1))
+        cuda_function(np.intp(odata), np.uint32(iw), np.int32(iw), np.int32(ih), np.float32(scale), texrefs=[texref], block=(BlockWidth, 1, 1), grid=(ih, 1))
+
 
 def initGL():
     global wWidth, wHeight, wName
@@ -397,72 +409,72 @@ def initGL():
     glutInitDisplayMode(GLUT_DOUBLE | GLUT_RGBA)
     glutInitWindowSize(wWidth, wHeight)
     glutCreateWindow(wName)
-    import pycuda.gl.autoinit
+
 
 def loadImage(fn=None):
     global pixels, imWidth, imHeight, wWidth, wHeight
     try:
-        im = Image.open(fn) # Open the image
-    except IOError:
+        im = Image.open(fn)  # Open the image
+    except OSError:
         print("Usage:", os.path.basename(sys.argv[0]), "[IMAGE=defaultimage.jpg]")
         print("Can't open", fn)
         sys.exit(1)
-    imWidth, imHeight = im.size # Window size is set to image size
+    imWidth, imHeight = im.size  # Window size is set to image size
     wWidth, wHeight = im.size
-    im.draft("L", im.size) # L-flag is for Luminance
-    pixels = np.fromstring(im.tostring(), dtype=np.uint8) # Got the array
-    pixels.resize((imHeight, imWidth)) # Resize to 2d array
+    im.draft("L", im.size)  # L-flag is for Luminance
+    pixels = np.fromstring(im.tostring(), dtype=np.uint8)  # Got the array
+    pixels.resize((imHeight, imWidth))  # Resize to 2d array
     print("Reading image:", fn, "size:", imWidth, "x", imHeight)
+
 
 def initData(fn=None):
     global pixels, array, pbo_buffer, cuda_pbo_resource, imWidth, imHeight, texid
 
     # Cuda array initialization
-    array = cuda_driver.matrix_to_array(pixels, "C") # C-style instead of Fortran-style: row-major
+    array = cuda_driver.matrix_to_array(pixels, "C")  # C-style instead of Fortran-style: row-major
 
-    pixels.fill(0) # Resetting the array to 0
+    pixels.fill(0)  # Resetting the array to 0
 
-    pbo_buffer = glGenBuffers(1) # generate 1 buffer reference
-    glBindBuffer(GL_PIXEL_UNPACK_BUFFER, pbo_buffer) # binding to this buffer
-    glBufferData(GL_PIXEL_UNPACK_BUFFER, imWidth*imHeight, pixels, GL_STREAM_DRAW) # Allocate the buffer
-    bsize = glGetBufferParameteriv(GL_PIXEL_UNPACK_BUFFER, GL_BUFFER_SIZE) # Check allocated buffer size
-    assert(bsize == imWidth*imHeight)
-    glBindBuffer(GL_PIXEL_UNPACK_BUFFER, 0) # Unbind
+    pbo_buffer = glGenBuffers(1)  # generate 1 buffer reference
+    glBindBuffer(GL_PIXEL_UNPACK_BUFFER, pbo_buffer)  # binding to this buffer
+    glBufferData(GL_PIXEL_UNPACK_BUFFER, imWidth*imHeight, pixels, GL_STREAM_DRAW)  # Allocate the buffer
+    bsize = glGetBufferParameteriv(GL_PIXEL_UNPACK_BUFFER, GL_BUFFER_SIZE)  # Check allocated buffer size
+    assert (bsize == imWidth*imHeight)
+    glBindBuffer(GL_PIXEL_UNPACK_BUFFER, 0)  # Unbind
 
     if ver2011:
         cuda_pbo_resource = pycuda.gl.RegisteredBuffer(int(pbo_buffer), cuda_gl.graphics_map_flags.WRITE_DISCARD)
     else:
-        cuda_pbo_resource = cuda_gl.BufferObject(int(pbo_buffer)) # Mapping GLBuffer to cuda_resource
+        cuda_pbo_resource = cuda_gl.BufferObject(int(pbo_buffer))  # Mapping GLBuffer to cuda_resource
 
+    glGenTextures(1, texid)  # generate 1 texture reference
+    glBindTexture(GL_TEXTURE_2D, texid)  # binding to this texture
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_LUMINANCE, imWidth, imHeight, 0, GL_LUMINANCE, GL_UNSIGNED_BYTE, None)  # Allocate the texture
+    glBindTexture(GL_TEXTURE_2D, 0)  # Unbind
 
-    glGenTextures(1, texid); # generate 1 texture reference
-    glBindTexture(GL_TEXTURE_2D, texid); # binding to this texture
-    glTexImage2D(GL_TEXTURE_2D, 0, GL_LUMINANCE, imWidth, imHeight,  0, GL_LUMINANCE, GL_UNSIGNED_BYTE, None); # Allocate the texture
-    glBindTexture(GL_TEXTURE_2D, 0) # Unbind
-
-    glPixelStorei(GL_UNPACK_ALIGNMENT, 1) # 1-byte row alignment
-    glPixelStorei(GL_PACK_ALIGNMENT, 1) # 1-byte row alignment
+    glPixelStorei(GL_UNPACK_ALIGNMENT, 1)  # 1-byte row alignment
+    glPixelStorei(GL_PACK_ALIGNMENT, 1)  # 1-byte row alignment
 
 
 def display():
     global cuda_pbo_resource, pbo_buffer, texid, imWidth, imHeight, timer
 
-    timer = time.time() # Starting timer
-    mapping_obj = cuda_pbo_resource.map() # Map the GlBuffer
+    timer = time.time()  # Starting timer
+    mapping_obj = cuda_pbo_resource.map()  # Map the GlBuffer
     if ver2011:
-        data, sz = mapping_obj.device_ptr_and_size() # Got the CUDA pointer to GlBuffer
+        data, _sz = mapping_obj.device_ptr_and_size()  # Got the CUDA pointer to GlBuffer
     else:
         data = mapping_obj.device_ptr()
-    sobelFilter(data, imWidth, imHeight) # Writing to "data"
-    mapping_obj.unmap() # Unmap the GlBuffer
+    sobelFilter(data, imWidth, imHeight)  # Writing to "data"
+    mapping_obj.unmap()  # Unmap the GlBuffer
 
-    glClear(GL_COLOR_BUFFER_BIT) # Clear
+    glClear(GL_COLOR_BUFFER_BIT)  # Clear
     glBindTexture(GL_TEXTURE_2D, texid)
     glBindBuffer(GL_PIXEL_UNPACK_BUFFER, pbo_buffer)
     # Copyng from buffer to texture
     glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, imWidth, imHeight, GL_LUMINANCE, GL_UNSIGNED_BYTE, None)
-    #glTexImage2D(GL_TEXTURE_2D, 0, GL_LUMINANCE, imWidth, imHeight,  0, GL_LUMINANCE, GL_UNSIGNED_BYTE, None);
-    glBindBuffer(GL_PIXEL_UNPACK_BUFFER, 0) # Unbind
+    # glTexImage2D(GL_TEXTURE_2D, 0, GL_LUMINANCE, imWidth, imHeight,  0, GL_LUMINANCE, GL_UNSIGNED_BYTE, None);
+    glBindBuffer(GL_PIXEL_UNPACK_BUFFER, 0)  # Unbind
 
     glDisable(GL_DEPTH_TEST)
     glEnable(GL_TEXTURE_2D)
@@ -487,6 +499,7 @@ def display():
     computeFPS()
     glutPostRedisplay()
 
+
 def reshape(x, y):
     glViewport(0, 0, x, y)
     glMatrixMode(GL_PROJECTION)
@@ -496,32 +509,35 @@ def reshape(x, y):
     glLoadIdentity()
     glutPostRedisplay()
 
+
 def keyboard(key, x=0, y=0):
     global mode, scale
-    if key=="q":
+    if key == "q":
         sys.exit(0)
-    elif key=="I" or key=="i":
+    elif key == "I" or key == "i":
         mode = 0
-    elif key=="T" or key=="t":
+    elif key == "T" or key == "t":
         mode = 1
-    elif key=="S" or key=="s":
+    elif key == "S" or key == "s":
         mode = 2
-    elif key=="D" or key=="d":
+    elif key == "D" or key == "d":
         mode = 3
     elif key == "-":
         scale -= 0.1
     elif key == "=":
         scale += 0.1
 
+
 def idle():
     glutPostRedisplay()
+
 
 def main(argv):
     fn = "defaultimage.jpg"
     if len(argv) > 1:
         fn = argv[1]
 
-    loadImage(fn) # Loading the image
+    loadImage(fn)  # Loading the image
 
     initGL()
     initData(fn)
@@ -540,11 +556,10 @@ def main(argv):
     glutKeyboardFunc(keyboard)
     glutReshapeFunc(reshape)
     glutIdleFunc(idle)
-    glutMainLoop();
+    glutMainLoop()
+
 
 if __name__ == "__main__":
     if pycuda.VERSION[0] >= 2011:
         ver2011 = True
     main(sys.argv)
-
-

@@ -1,7 +1,6 @@
 #!/usr/bin/env python
-# -*- coding: utf-8 -*-
+from __future__ import annotations
 
-from __future__ import absolute_import, print_function
 from os.path import dirname, join, normpath
 
 
@@ -9,8 +8,8 @@ def search_on_path(filenames):
     """Find file on system path."""
     # http://aspn.activestate.com/ASPN/Cookbook/Python/Recipe/52224
 
-    from os.path import exists, abspath
-    from os import pathsep, environ
+    from os import environ, pathsep
+    from os.path import abspath, exists
 
     search_path = environ["PATH"]
 
@@ -23,14 +22,14 @@ def search_on_path(filenames):
 
 def get_config_schema():
     from aksetup_helper import (
-        ConfigSchema,
-        Option,
-        IncludeDir,
-        LibraryDir,
-        Libraries,
         BoostLibraries,
-        Switch,
+        ConfigSchema,
+        IncludeDir,
+        Libraries,
+        LibraryDir,
+        Option,
         StringListOption,
+        Switch,
         make_boost_base_options,
     )
 
@@ -79,19 +78,15 @@ def get_config_schema():
         default_lib_dirs.append("/usr/local/cuda/lib")
 
     return ConfigSchema(
-        make_boost_base_options()
-        + [
+        [*make_boost_base_options(),
             Switch("USE_SHIPPED_BOOST", True, "Use included Boost library"),
             BoostLibraries("python"),
             BoostLibraries("thread"),
             Switch("CUDA_TRACE", False, "Enable CUDA API tracing"),
-            Option(
-                "CUDA_ROOT", default=cuda_root_default, help="Path to the CUDA toolkit"
-            ),
-            Option(
-                "CUDA_PRETEND_VERSION",
-                help="Assumed CUDA version, in the form 3010 for 3.1.",
-            ),
+            Option("CUDA_ROOT", default=cuda_root_default,
+                   help="Path to the CUDA toolkit"),
+            Option("CUDA_PRETEND_VERSION",
+                   help="Assumed CUDA version, in the form 3010 for 3.1."),
             IncludeDir("CUDA", None),
             Switch("CUDA_ENABLE_GL", False, "Enable CUDA GL interoperability"),
             Switch("CUDA_ENABLE_CURAND", True, "Enable CURAND library"),
@@ -101,15 +96,10 @@ def get_config_schema():
             Libraries("CUDART", ["cudart"]),
             LibraryDir("CURAND", default_lib_dirs),
             Libraries("CURAND", ["curand"]),
-            StringListOption(
-                "CXXFLAGS",
-                cxxflags_default,
-                help="Any extra C++ compiler options to include",
-            ),
-            StringListOption(
-                "LDFLAGS", ldflags_default, help="Any extra linker options to include"
-            ),
-        ]
+            StringListOption("CXXFLAGS", cxxflags_default,
+                             help="Any extra C++ compiler options to include"),
+            StringListOption("LDFLAGS", ldflags_default,
+                             help="Any extra linker options to include")]
     )
 
 
@@ -117,13 +107,13 @@ def main():
     import sys
 
     from aksetup_helper import (
-        hack_distutils,
-        get_config,
-        setup,
         ExtensionUsingNumpy,
-        set_up_shipped_boost_if_requested,
-        check_git_submodules,
         NumpyBuildExtCommand,
+        check_git_submodules,
+        get_config,
+        hack_distutils,
+        set_up_shipped_boost_if_requested,
+        setup,
     )
 
     check_git_submodules()
@@ -194,7 +184,7 @@ def main():
         # metadata
         version=ver_dic["VERSION_TEXT"],
         description="Python wrapper for Nvidia CUDA",
-        long_description=open("README.rst", "rt").read(),
+        long_description=open("README.rst").read(),
         author="Andreas Kloeckner",
         author_email="inform@tiker.net",
         license="MIT",
@@ -233,13 +223,11 @@ def main():
         ext_modules=[
             ExtensionUsingNumpy(
                 "_driver",
-                [
-                    "src/cpp/cuda.cpp",
+                ["src/cpp/cuda.cpp",
                     "src/cpp/bitlog.cpp",
                     "src/wrapper/wrap_cudadrv.cpp",
                     "src/wrapper/mempool.cpp",
-                ]
-                + EXTRA_SOURCES,
+                    *EXTRA_SOURCES],
                 include_dirs=INCLUDE_DIRS,
                 library_dirs=LIBRARY_DIRS,
                 libraries=LIBRARIES,

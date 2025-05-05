@@ -1,7 +1,8 @@
-#!python 
-import pycuda.driver as cuda
-import pycuda.autoinit
+#!python
+from __future__ import annotations
+
 from pycuda.compiler import SourceModule
+
 
 mod = SourceModule("""
     #include <stdio.h>
@@ -13,5 +14,4 @@ mod = SourceModule("""
     """)
 
 func = mod.get_function("say_hi")
-func(block=(4,4,1))
-
+func(block=(4, 4, 1))

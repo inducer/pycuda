@@ -1,12 +1,17 @@
 # prepared invocations and structures -----------------------------------------
-import pycuda.driver as cuda
-import pycuda.autoinit
-import numpy
+from __future__ import annotations
+
 import struct
+
+import numpy
+
+import pycuda.driver as cuda
 from pycuda.compiler import SourceModule
+
 
 class DoubleOpStruct:
     mem_size = 8 + numpy.uintp(0).nbytes
+
     def __init__(self, array, struct_arr_ptr):
         self.data = cuda.to_device(array)
         self.shape, self.dtype = array.shape, array.dtype
@@ -16,6 +21,7 @@ class DoubleOpStruct:
 
     def __str__(self):
         return str(cuda.from_device(self.data, self.shape, self.dtype))
+
 
 struct_arr = cuda.mem_alloc(2 * DoubleOpStruct.mem_size)
 do2_ptr = int(struct_arr) + DoubleOpStruct.mem_size
