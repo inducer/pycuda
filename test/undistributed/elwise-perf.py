@@ -1,7 +1,6 @@
-import pycuda.driver as drv
-import pycuda.autoinit
+from __future__ import annotations
+
 import numpy
-import numpy.linalg as la
 
 
 def main():
@@ -22,17 +21,14 @@ def main():
         a.fill(1)
         b.fill(2)
 
-        if power > 20:
-            count = 10
-        else:
-            count = 100
+        count = 10 if power > 20 else 100
 
         elapsed = [0]
 
         def add_timer(_, time):
             elapsed[0] += time()
 
-        for i in range(count):
+        for _i in range(count):
             a.mul_add(1, b, 2, add_timer)
 
         bytes = a.nbytes * count * 3

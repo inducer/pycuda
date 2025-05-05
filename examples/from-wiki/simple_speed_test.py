@@ -1,4 +1,4 @@
-#!python 
+#!python
 # SimpleSpeedTest.py
 
 # Very simple speed testing code
@@ -24,7 +24,7 @@
 # CPU time and first three results:
 # 32.933660s, [ 0.005477  0.005477  0.005477]
 #
-# 
+#
 # Using Win 7 x64, GTX 470 GPU, X5650 Xeon,
 # Driver v301.42, CUDA 4.2, Python 2.7 x64,
 # PyCuda 2012.1 gave the following results:
@@ -41,16 +41,18 @@
 # 8.421861s, [ 0.005477  0.005477  0.005477]
 # CPU time measured using :
 # 5.905661s, [ 0.005477  0.005477  0.005477]
+from __future__ import annotations
 
-
-import pycuda.driver as drv
-import pycuda.tools
-import pycuda.autoinit
 import numpy
-from pycuda.compiler import SourceModule
-import pycuda.gpuarray as gpuarray
+
+import pycuda.autoinit
 import pycuda.cumath
+import pycuda.driver as drv
+import pycuda.gpuarray as gpuarray
+import pycuda.tools
+from pycuda.compiler import SourceModule
 from pycuda.elementwise import ElementwiseKernel
+
 
 blocks = 64
 block_size = 128
@@ -89,9 +91,9 @@ a = numpy.ones(nbr_values).astype(numpy.float32)
 # create a destination array that will receive the result
 dest = numpy.zeros_like(a)
 
-start.record() # start timing
-gpusin(drv.Out(dest), drv.In(a), numpy.int32(n_iter), grid=(blocks,1), block=(block_size,1,1) )
-end.record() # end timing
+start.record()  # start timing
+gpusin(drv.Out(dest), drv.In(a), numpy.int32(n_iter), grid=(blocks, 1), block=(block_size, 1, 1))
+end.record()  # end timing
 # calculate the run length
 end.synchronize()
 secs = start.time_till(end)*1e-3
@@ -109,9 +111,9 @@ kernel = ElementwiseKernel(
 
 a = numpy.ones(nbr_values).astype(numpy.float32)
 a_gpu = gpuarray.to_gpu(a)
-start.record() # start timing
-kernel(a_gpu, numpy.int(n_iter))
-end.record() # end timing
+start.record()  # start timing
+kernel(a_gpu, int(n_iter))
+end.record()  # end timing
 # calculate the run length
 end.synchronize()
 secs = start.time_till(end)*1e-3
@@ -129,10 +131,10 @@ kernel = ElementwiseKernel(
 
 a = numpy.ones(nbr_values).astype(numpy.float32)
 a_gpu = gpuarray.to_gpu(a)
-start.record() # start timing
-for i in range(n_iter):
+start.record()  # start timing
+for _i in range(n_iter):
     kernel(a_gpu)
-end.record() # end timing
+end.record()  # end timing
 # calculate the run length
 end.synchronize()
 secs = start.time_till(end)*1e-3
@@ -146,10 +148,10 @@ print("%fs, %s" % (secs, str(a_gpu.get()[:3])))
 
 a = numpy.ones(nbr_values).astype(numpy.float32)
 a_gpu = gpuarray.to_gpu(a)
-start.record() # start timing
-for i in range(n_iter):
+start.record()  # start timing
+for _i in range(n_iter):
     a_gpu = pycuda.cumath.sin(a_gpu)
-end.record() # end timing
+end.record()  # end timing
 # calculate the run length
 end.synchronize()
 secs = start.time_till(end)*1e-3
@@ -162,16 +164,15 @@ print("%fs, %s" % (secs, str(a_gpu.get()[:3])))
 # use numpy the calculate the result on the CPU for reference
 
 a = numpy.ones(nbr_values).astype(numpy.float32)
-start.record() # start timing
+start.record()  # start timing
 start.synchronize()
 
-for i in range(n_iter):
+for _i in range(n_iter):
     a = numpy.sin(a)
 
-end.record() # end timing
+end.record()  # end timing
 # calculate the run length
 end.synchronize()
 secs = start.time_till(end)*1e-3
 print("CPU time and first three results:")
 print("%fs, %s" % (secs, str(a[:3])))
-

@@ -6,3 +6,91 @@ requires = [
     "wheel",
     "numpy>=1.24",
 ]
+
+[tool.ruff]
+preview = true
+# FIXME
+line-length = 100
+
+[tool.ruff.lint]
+extend-select = [
+    "B",   # flake8-bugbear
+    "C",   # flake8-comprehensions
+    "E",   # pycodestyle
+    "F",   # pyflakes
+    "G",   # flake8-logging-format
+    "I",   # flake8-isort
+    "N",   # pep8-naming
+    "NPY", # numpy
+    "PGH", # pygrep-hooks
+    "Q",   # flake8-quotes
+    "RUF", # ruff
+    "SIM", # flake8-simplify
+    "TC",  # flake8-type-checking
+    "UP",  # pyupgrade
+    "W",   # pycodestyle
+]
+extend-ignore = [
+    "C90",  # McCabe complexity
+    "E221", # multiple spaces before operator
+    "E226", # missing whitespace around arithmetic operator
+    "E402", # module-level import not at top of file
+    "UP031", # use f-strings instead of %
+    "UP032", # use f-strings instead of .format
+    "NPY002", # legacy random
+    "SIM102", # single if instead of nested
+    "PGH004", # noqa requires rule
+    "B904",  # raise within except: use from
+    "RUF012",  # ClassVar
+    "SIM108", # ternary instead of if-then-else
+]
+
+[tool.ruff.lint.flake8-quotes]
+docstring-quotes = "double"
+inline-quotes = "double"
+multiline-quotes = "double"
+
+[tool.ruff.lint.isort]
+combine-as-imports = true
+known-local-folder = [
+    "pycuda",
+]
+known-first-party = [
+    "pytools",
+]
+lines-after-imports = 2
+required-imports = ["from __future__ import annotations"]
+
+[tool.ruff.lint.pep8-naming]
+extend-ignore-names = ["update_for_*"]
+
+[tool.ruff.lint.per-file-ignores]
+"test/test_*.py" = [
+    "N806", # upper case locals
+]
+"setup.py" = [
+    "N806", # upper case locals
+    "SIM115",  # context manager for files
+]
+"pycuda/sparse/coordinate.py" = [
+    "E501", # line length
+]
+"pycuda/driver.py" = [
+    "F405", # undefined symbol
+    "N806", # upper case locals
+]
+"pycuda/curandom.py" = [
+    "E501", # line length
+]
+"examples/from-wiki/*.py" = [
+    "F", "E", "N", "B"
+]
+"examples/demo_cdpSimplePrint.py" = [
+    "E501", # line length
+    "N816", # mixed case locals
+]
+"aksetup_helper.py" = [
+    # effectively unmaintained, will go away
+    "UP", "C", "E501", "B", "SIM", "RUF",
+]
+"test/undistributed/*.py" = ["B"]

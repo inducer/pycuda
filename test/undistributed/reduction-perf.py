@@ -1,7 +1,8 @@
-import pycuda.autoinit
-import pycuda.gpuarray as gpuarray
-import pycuda.driver as cuda
+from __future__ import annotations
+
 import numpy
+
+import pycuda.driver as cuda
 
 
 def main():
@@ -41,12 +42,12 @@ def main():
                 return result
 
             # warm-up
-            for i in range(3):
+            for _i in range(3):
                 krnl(a_gpu, b_gpu)
 
             cnt = 10
 
-            for i in range(cnt):
+            for _i in range(cnt):
                 krnl(
                     a_gpu,
                     b_gpu,

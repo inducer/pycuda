@@ -1,9 +1,13 @@
 # Sample source code from the Tutorial Introduction in the documentation.
-import pycuda.driver as cuda
-import pycuda.autoinit  # noqa
-from pycuda.compiler import SourceModule
+from __future__ import annotations
 
 import numpy
+
+import pycuda.autoinit  # noqa
+import pycuda.driver as cuda
+from pycuda.compiler import SourceModule
+
+
 a = numpy.random.randn(4, 4)
 
 a = a.astype(numpy.float32)
@@ -39,6 +43,8 @@ print(a)
 # part 2 ----------------------------------------------------------------------
 
 import pycuda.gpuarray as gpuarray
+
+
 a_gpu = gpuarray.to_gpu(numpy.random.randn(4, 4).astype(numpy.float32))
 a_doubled = (2*a_gpu).get()
 

@@ -1,4 +1,4 @@
-#!python 
+#!python
 '''
 /*
  * Copyright 1993-2007 NVIDIA Corporation.  All rights reserved.
@@ -42,12 +42,15 @@
 
  Ported to pycuda by Andrew Wagner <awagner@illinois.edu>, June 2009.
 '''
+from __future__ import annotations
+
+import string
 
 import numpy
-import pycuda.autoinit
+
 import pycuda.driver as cuda
 from pycuda.compiler import SourceModule
-import string
+
 
 # Pull out a bunch of stuff that was hard coded as pre-processor directives used
 # by both the kernel and calling code.
@@ -58,7 +61,7 @@ ROW_TILE_W = 128
 KERNEL_RADIUS_ALIGNED = 16
 COLUMN_TILE_W = 16
 COLUMN_TILE_H = 48
-template = '''
+template = """
 //24-bit multiplication is faster on G80,
 //but we must be sure to multiply integers
 //only within [-8M, 8M - 1] range
@@ -139,20 +142,20 @@ __global__ void convolutionRowGPU(
     if(writePos <= tileEndClamped){
         const int smemPos = writePos - apronStart;
         float sum = 0;
-'''
-originalLoop = '''
+"""
+originalLoop = """
         for(int k = -KERNEL_RADIUS; k <= KERNEL_RADIUS; k++)
             sum += data[smemPos + k] * d_Kernel_rows[KERNEL_RADIUS - k];
-'''
-unrolledLoop = ''
-for k in range(-KERNEL_RADIUS,  KERNEL_RADIUS+1):
+"""
+unrolledLoop = ""
+for k in range(-KERNEL_RADIUS, KERNEL_RADIUS+1):
     loopTemplate = string.Template(
-    'sum += data[smemPos + $k] * d_Kernel_rows[KERNEL_RADIUS - $k];\n')
+    "sum += data[smemPos + $k] * d_Kernel_rows[KERNEL_RADIUS - $k];\n")
     unrolledLoop += loopTemplate.substitute(k=k)
 
-#print unrolledLoop
+# print unrolledLoop
 template += unrolledLoop if UNROLL_INNER_LOOP else originalLoop
-template += '''
+template += """
         d_Result[rowStart + writePos] = sum;
         //d_Result[rowStart + writePos] = 128;
     }
@@ -212,40 +215,41 @@ __global__ void convolutionColumnGPU(
     //Calculate and output the results
     for(int y = tileStart + threadIdx.y; y <= tileEndClamped; y += blockDim.y){
         float sum = 0;
-'''
-originalLoop = '''
+"""
+originalLoop = """
         for(int k = -KERNEL_RADIUS; k <= KERNEL_RADIUS; k++)
             sum += data[smemPos + IMUL(k, COLUMN_TILE_W)] *
             d_Kernel_columns[KERNEL_RADIUS - k];
-'''
-unrolledLoop = ''
-for k in range(-KERNEL_RADIUS,  KERNEL_RADIUS+1):
-    loopTemplate = string.Template('sum += data[smemPos + IMUL($k, COLUMN_TILE_W)] * d_Kernel_columns[KERNEL_RADIUS - $k];\n')
+"""
+unrolledLoop = ""
+for k in range(-KERNEL_RADIUS, KERNEL_RADIUS+1):
+    loopTemplate = string.Template("sum += data[smemPos + IMUL($k, COLUMN_TILE_W)] * d_Kernel_columns[KERNEL_RADIUS - $k];\n")
     unrolledLoop += loopTemplate.substitute(k=k)
 
-#print unrolledLoop
+# print unrolledLoop
 template += unrolledLoop if UNROLL_INNER_LOOP else originalLoop
-template += '''
+template += """
         d_Result[gmemPos] = sum;
         //d_Result[gmemPos] = 128;
         smemPos += smemStride;
         gmemPos += gmemStride;
     }
 }
-'''
+"""
 template = string.Template(template)
-code = template.substitute(KERNEL_RADIUS = KERNEL_RADIUS,
-                           KERNEL_W = KERNEL_W,
+code = template.substitute(KERNEL_RADIUS=KERNEL_RADIUS,
+                           KERNEL_W=KERNEL_W,
                            COLUMN_TILE_H=COLUMN_TILE_H,
                            COLUMN_TILE_W=COLUMN_TILE_W,
                            ROW_TILE_W=ROW_TILE_W,
                            KERNEL_RADIUS_ALIGNED=KERNEL_RADIUS_ALIGNED)
 
 module = SourceModule(code)
-convolutionRowGPU = module.get_function('convolutionRowGPU')
-convolutionColumnGPU = module.get_function('convolutionColumnGPU')
-d_Kernel_rows = module.get_global('d_Kernel_rows')[0]
-d_Kernel_columns = module.get_global('d_Kernel_columns')[0]
+convolutionRowGPU = module.get_function("convolutionRowGPU")
+convolutionColumnGPU = module.get_function("convolutionColumnGPU")
+d_Kernel_rows = module.get_global("d_Kernel_rows")[0]
+d_Kernel_columns = module.get_global("d_Kernel_columns")[0]
+
 
 # Helper functions for computing alignment...
 def iDivUp(a, b):
@@ -254,11 +258,13 @@ def iDivUp(a, b):
     b = numpy.int32(b)
     return (a / b + 1) if (a % b != 0) else (a / b)
 
+
 def iDivDown(a, b):
     # Round a / b to nearest lower integer value
     a = numpy.int32(a)
     b = numpy.int32(b)
-    return a / b;
+    return a / b
+
 
 def iAlignUp(a, b):
     # Align a to nearest higher multiple of b
@@ -266,31 +272,34 @@ def iAlignUp(a, b):
     b = numpy.int32(b)
     return (a - a % b + b) if (a % b != 0) else a
 
+
 def iAlignDown(a, b):
     # Align a to nearest lower multiple of b
     a = numpy.int32(a)
     b = numpy.int32(b)
     return a - a % b
 
-def gaussian_kernel(width = KERNEL_W, sigma = 4.0):
-    assert width == numpy.floor(width),  'argument width should be an integer!'
+
+def gaussian_kernel(width=KERNEL_W, sigma=4.0):
+    assert width == numpy.floor(width), "argument width should be an integer!"
     radius = (width - 1)/2.0
-    x = numpy.linspace(-radius,  radius,  width)
+    x = numpy.linspace(-radius, radius, width)
     x = numpy.float32(x)
     sigma = numpy.float32(sigma)
     filterx = x*x / (2 * sigma * sigma)
     filterx = numpy.exp(-1 * filterx)
-    assert filterx.sum()>0,  'something very wrong if gaussian kernel sums to zero!'
+    assert filterx.sum() > 0, "something very wrong if gaussian kernel sums to zero!"
     filterx /= filterx.sum()
     return filterx
 
-def derivative_of_gaussian_kernel(width = KERNEL_W, sigma = 4):
-    assert width == numpy.floor(width),  'argument width should be an integer!'
+
+def derivative_of_gaussian_kernel(width=KERNEL_W, sigma=4):
+    assert width == numpy.floor(width), "argument width should be an integer!"
     radius = (width - 1)/2.0
-    x = numpy.linspace(-radius,  radius,  width)
+    x = numpy.linspace(-radius, radius, width)
     x = numpy.float32(x)
     # The derivative of a gaussian is really just a gaussian times x, up to scale.
-    filterx = gaussian_kernel(width,  sigma)
+    filterx = gaussian_kernel(width, sigma)
     filterx *= x
     # Rescale so that filter returns derivative of 1 when applied to x:
     scale = (x * filterx).sum()
@@ -299,43 +308,45 @@ def derivative_of_gaussian_kernel(width = KERNEL_W, sigma = 4):
     filterx *= -1.0
     return filterx
 
+
 def test_derivative_of_gaussian_kernel():
     width = 20
     sigma = 10.0
-    filterx = derivative_of_gaussian_kernel(width,  sigma)
+    filterx = derivative_of_gaussian_kernel(width, sigma)
     x = 2 * numpy.arange(0, width)
     x = numpy.float32(x)
     response = (filter * x).sum()
-    assert abs(response - (-2.0)) < .0001, 'derivative of gaussian failed scale test!'
+    assert abs(response - (-2.0)) < .0001, "derivative of gaussian failed scale test!"
     width = 19
     sigma = 10.0
-    filterx = derivative_of_gaussian_kernel(width,  sigma)
+    filterx = derivative_of_gaussian_kernel(width, sigma)
     x = 2 * numpy.arange(0, width)
     x = numpy.float32(x)
     response = (filterx * x).sum()
-    assert abs(response - (-2.0)) < .0001, 'derivative of gaussian failed scale test!'
+    assert abs(response - (-2.0)) < .0001, "derivative of gaussian failed scale test!"
 
-def convolution_cuda(sourceImage,  filterx,  filtery):
+
+def convolution_cuda(sourceImage, filterx, filtery):
     # Perform separable convolution on sourceImage using CUDA.
     # Operates on floating point images with row-major storage.
     destImage = sourceImage.copy()
-    assert sourceImage.dtype == 'float32',  'source image must be float32'
-    (imageHeight,  imageWidth) = sourceImage.shape
-    assert filterx.shape == filtery.shape == (KERNEL_W, ) ,  'Kernel is compiled for a different kernel size! Try changing KERNEL_W'
+    assert sourceImage.dtype == "float32", "source image must be float32"
+    (imageHeight, imageWidth) = sourceImage.shape
+    assert filterx.shape == filtery.shape == (KERNEL_W, ), "Kernel is compiled for a different kernel size! Try changing KERNEL_W"
     filterx = numpy.float32(filterx)
     filtery = numpy.float32(filtery)
-    DATA_W = iAlignUp(imageWidth, 16);
-    DATA_H = imageHeight;
-    BYTES_PER_WORD = 4;  # 4 for float32
-    DATA_SIZE = DATA_W * DATA_H * BYTES_PER_WORD;
-    KERNEL_SIZE = KERNEL_W * BYTES_PER_WORD;
+    DATA_W = iAlignUp(imageWidth, 16)
+    DATA_H = imageHeight
+    BYTES_PER_WORD = 4  # 4 for float32
+    DATA_W * DATA_H * BYTES_PER_WORD
+    KERNEL_W * BYTES_PER_WORD
     # Prepare device arrays
     destImage_gpu = cuda.mem_alloc_like(destImage)
     sourceImage_gpu = cuda.mem_alloc_like(sourceImage)
     intermediateImage_gpu = cuda.mem_alloc_like(sourceImage)
     cuda.memcpy_htod(sourceImage_gpu, sourceImage)
-    cuda.memcpy_htod(d_Kernel_rows,  filterx) # The kernel goes into constant memory via a symbol defined in the kernel
-    cuda.memcpy_htod(d_Kernel_columns,  filtery)
+    cuda.memcpy_htod(d_Kernel_rows, filterx)  # The kernel goes into constant memory via a symbol defined in the kernel
+    cuda.memcpy_htod(d_Kernel_columns, filtery)
     # Call the kernels for convolution in each direction.
     blockGridRows = (iDivUp(DATA_W, ROW_TILE_W), DATA_H)
     blockGridColumns = (iDivUp(DATA_W, COLUMN_TILE_W), iDivUp(DATA_H, COLUMN_TILE_H))
@@ -343,32 +354,33 @@ def convolution_cuda(sourceImage,  filterx,  filtery):
     threadBlockColumns = (COLUMN_TILE_W, 8, 1)
     DATA_H = numpy.int32(DATA_H)
     DATA_W = numpy.int32(DATA_W)
-    grid_rows = tuple([int(e) for e in blockGridRows])
-    block_rows = tuple([int(e) for e in threadBlockRows])
-    grid_cols = tuple([int(e) for e in blockGridColumns])
-    block_cols = tuple([int(e) for e in threadBlockColumns])
-    convolutionRowGPU(intermediateImage_gpu,  sourceImage_gpu,  DATA_W,  DATA_H,  grid=grid_rows,  block=block_rows)
-    convolutionColumnGPU(destImage_gpu,  intermediateImage_gpu,  DATA_W,  DATA_H,  numpy.int32(COLUMN_TILE_W * threadBlockColumns[1]),  numpy.int32(DATA_W * threadBlockColumns[1]),  grid=grid_cols,  block=block_cols)
+    grid_rows = tuple(int(e) for e in blockGridRows)
+    block_rows = tuple(int(e) for e in threadBlockRows)
+    grid_cols = tuple(int(e) for e in blockGridColumns)
+    block_cols = tuple(int(e) for e in threadBlockColumns)
+    convolutionRowGPU(intermediateImage_gpu, sourceImage_gpu, DATA_W, DATA_H, grid=grid_rows, block=block_rows)
+    convolutionColumnGPU(destImage_gpu, intermediateImage_gpu, DATA_W, DATA_H, numpy.int32(COLUMN_TILE_W * threadBlockColumns[1]), numpy.int32(DATA_W * threadBlockColumns[1]), grid=grid_cols, block=block_cols)
 
     # Pull the data back from the GPU.
-    cuda.memcpy_dtoh(destImage,  destImage_gpu)
+    cuda.memcpy_dtoh(destImage, destImage_gpu)
     return destImage
+
 
 def test_convolution_cuda():
     # Test the convolution kernel.
     # Generate or load a test image
-    original = numpy.random.rand(768,  1024) * 255
+    original = numpy.random.rand(768, 1024) * 255
     original = numpy.float32(original)
     # You probably want to display the image using the tool of your choice here.
     filterx = gaussian_kernel()
     destImage = original.copy()
     destImage[:] = numpy.nan
-    destImage = convolution_cuda(original,  filterx,  filterx)
+    destImage = convolution_cuda(original, filterx, filterx)
     # You probably want to display the result image using the tool of your choice here.
-    print('Done running the convolution kernel!')
+    print("Done running the convolution kernel!")
 
-if __name__ == '__main__':
+
+if __name__ == "__main__":
     test_convolution_cuda()
-    #test_derivative_of_gaussian_kernel()
-    boo = input('Pausing so you can look at results... <Enter> to finish...')
-
+    # test_derivative_of_gaussian_kernel()
+    boo = input("Pausing so you can look at results... <Enter> to finish...")

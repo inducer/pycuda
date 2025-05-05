@@ -1,3 +1,6 @@
+from __future__ import annotations
+
+
 __copyright__ = """
 Copyright 2008-2021 Andreas Kloeckner
 Copyright 2021 NVIDIA Corporation
@@ -5,13 +8,12 @@ Copyright 2021 NVIDIA Corporation
 
 import numpy as np
 import numpy.linalg as la
-from pycuda.tools import mark_cuda_test, dtype_to_ctype
-import pytest  # noqa
+import pytest
 
-
-import pycuda.gpuarray as gpuarray
 import pycuda.driver as drv
+import pycuda.gpuarray as gpuarray
 from pycuda.compiler import SourceModule
+from pycuda.tools import dtype_to_ctype, mark_cuda_test
 
 
 class TestDriver:
@@ -126,7 +128,7 @@ class TestDriver:
         strm.synchronize()
 
         dest = drv.pagelocked_empty_like(a)
-        multiply_them(drv.Out(dest), a_gpu, b_gpu, block=shape + (1,), stream=strm)
+        multiply_them(drv.Out(dest), a_gpu, b_gpu, block=(*shape, 1), stream=strm)
         strm.synchronize()
 
         drv.memcpy_dtoh_async(a, a_gpu, strm)
@@ -206,7 +208,7 @@ class TestDriver:
         drv.matrix_to_texref(a, mtx_tex, order="F")
 
         dest = np.zeros(shape, dtype=np.float32)
-        copy_texture(drv.Out(dest), block=shape + (1,), texrefs=[mtx_tex])
+        copy_texture(drv.Out(dest), block=(*shape, 1), texrefs=[mtx_tex])
         assert la.norm(dest - a) == 0
 
     @mark_cuda_test
@@ -243,7 +245,7 @@ class TestDriver:
         drv.matrix_to_texref(b, mtx2_tex, order="F")
 
         dest = np.zeros(shape, dtype=np.float32)
-        copy_texture(drv.Out(dest), block=shape + (1,), texrefs=[mtx_tex, mtx2_tex])
+        copy_texture(drv.Out(dest), block=(*shape, 1), texrefs=[mtx_tex, mtx2_tex])
         assert la.norm(dest - a - b) < 1e-6
 
     @mark_cuda_test
@@ -276,12 +278,12 @@ class TestDriver:
         shape = (5, 6)
         channels = 4
         a = np.asarray(
-            np.random.randn(*((channels,) + shape)), dtype=np.float32, order="F"
+            np.random.randn(*((channels, *shape))), dtype=np.float32, order="F"
         )
         drv.bind_array_to_texref(drv.make_multichannel_2d_array(a, order="F"), mtx_tex)
 
-        dest = np.zeros(shape + (channels,), dtype=np.float32)
-        copy_texture(drv.Out(dest), block=shape + (1,), texrefs=[mtx_tex])
+        dest = np.zeros((*shape, channels), dtype=np.float32)
+        copy_texture(drv.Out(dest), block=(*shape, 1), texrefs=[mtx_tex])
         reshaped_a = a.transpose(1, 2, 0)
         # print reshaped_a
         # print dest
@@ -314,13 +316,13 @@ class TestDriver:
 
         shape = (16, 16)
         channels = 4
-        a = np.random.randn(*(shape + (channels,))).astype(np.float32)
+        a = np.random.randn(*((*shape, channels))).astype(np.float32)
         a_gpu = drv.to_device(a)
         mtx_tex.set_address(a_gpu, a.nbytes)
         mtx_tex.set_format(drv.array_format.FLOAT, 4)
 
-        dest = np.zeros(shape + (channels,), dtype=np.float32)
-        copy_texture(drv.Out(dest), block=shape + (1,), texrefs=[mtx_tex])
+        dest = np.zeros((*shape, channels), dtype=np.float32)
+        copy_texture(drv.Out(dest), block=(*shape, 1), texrefs=[mtx_tex])
         # print a
         # print dest
         assert la.norm(dest - a) == 0
@@ -470,7 +472,9 @@ class TestDriver:
               int row   = blockIdx.x*blockDim.x + threadIdx.x;
               int col   = blockIdx.y*blockDim.y + threadIdx.y;
               int slice = blockIdx.z*blockDim.z + threadIdx.z;
-              dest[row + col*blockDim.x*gridDim.x + slice*blockDim.x*gridDim.x*blockDim.y*gridDim.y] = fp_tex3D(mtx_tex, slice, col, row);
+              dest[row + col*blockDim.x*gridDim.x
+                + slice*blockDim.x*gridDim.x*blockDim.y*gridDim.y] = fp_tex3D(
+                    mtx_tex, slice, col, row);
             }
             """
             myKern = myKern.replace("fpName", fpName_str)
@@ -537,7 +541,8 @@ class TestDriver:
               int row   = blockIdx.x*blockDim.x + threadIdx.x;
               int col   = blockIdx.y*blockDim.y + threadIdx.y;
               int slice = blockIdx.z*blockDim.z + threadIdx.z;
-              int tid = row + col*blockDim.x*gridDim.x + slice*blockDim.x*gridDim.x*blockDim.y*gridDim.y;
+              int tid = row + col*blockDim.x*gridDim.x
+                  + slice*blockDim.x*gridDim.x*blockDim.y*gridDim.y;
               if (rw==0){
               cuPres aux = dest[tid];
               fp_surf3Dwrite(aux, mtx_tex, row, col, slice,cudaBoundaryModeClamp);}
@@ -694,11 +699,12 @@ class TestDriver:
 
     @mark_cuda_test
     def test_mempool_2(self):
-        from pycuda.tools import DeviceMemoryPool
         from random import randrange
+
+        from pycuda.tools import DeviceMemoryPool
         pool = DeviceMemoryPool()
 
-        for i in range(2000):
+        for _i in range(2000):
             s = randrange(1 << 31) >> randrange(32)
             bin_nr = pool.bin_number(s)
             asize = pool.alloc_size(bin_nr)
@@ -709,17 +715,16 @@ class TestDriver:
 
     @mark_cuda_test
     def test_mempool(self):
-        from pycuda.tools import bitlog2
-        from pycuda.tools import DeviceMemoryPool
+        from pycuda.tools import DeviceMemoryPool, bitlog2
 
         pool = DeviceMemoryPool()
         queue = []
-        free, total = drv.mem_get_info()
+        free, _total = drv.mem_get_info()
 
         e0 = bitlog2(free)
 
         for e in range(e0 - 6, e0 - 4):
-            for i in range(100):
+            for _i in range(100):
                 queue.append(pool.allocate(1 << e))
                 if len(queue) > 10:
                     queue.pop(0)
@@ -906,11 +911,7 @@ class TestDriver:
             dest = np.zeros(shape, dtype=tp)
             copy_texture(
                 drv.Out(dest),
-                block=shape
-                + (
-                    1,
-                    1,
-                ),
+                block=(*shape, 1, 1),
                 texrefs=[my_tex],
             )
 
@@ -1084,11 +1085,11 @@ class TestDriver:
         mod = DynamicModule()
         mod.add_source(
             test_outer_cu,
-            nvcc_options=(["-rdc=true", "-lcudadevrt"] + DEFAULT_NVCC_FLAGS),
+            nvcc_options=(["-rdc=true", "-lcudadevrt", *DEFAULT_NVCC_FLAGS]),
         )
         mod.add_source(
             test_inner_cu,
-            nvcc_options=(["-rdc=true", "-lcudadevrt"] + DEFAULT_NVCC_FLAGS),
+            nvcc_options=(["-rdc=true", "-lcudadevrt", *DEFAULT_NVCC_FLAGS]),
         )
         mod.add_stdlib("cudadevrt")
         mod.link()

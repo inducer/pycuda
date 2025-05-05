@@ -1,4 +1,6 @@
 """Miscallenous helper functionality."""
+from __future__ import annotations
+
 
 __copyright__ = "Copyright (C) 2008 Andreas Kloeckner"
 
@@ -25,17 +27,19 @@ FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
 OTHER DEALINGS IN THE SOFTWARE.
 """
 
-import pycuda.driver as cuda
-import pycuda._driver as _drv
+import contextlib
+
 import numpy as np
 
-
+import pycuda._driver as _drv
+import pycuda.driver as cuda
 from pycuda.compyte.dtypes import (  # noqa: F401
-    register_dtype,
-    get_or_register_dtype,
     _fill_dtype_registry,
     dtype_to_ctype as base_dtype_to_ctype,
+    get_or_register_dtype,
+    register_dtype,
 )
+
 
 bitlog2 = _drv.bitlog2
 DeviceMemoryPool = _drv.DeviceMemoryPool
@@ -91,9 +95,8 @@ class DebugMemoryPool(DeviceMemoryPool):
             "(mem: last_free:%d, free: %d, total:%d) (pool: held:%d, active:%d):"
             "\n      at: %s"
             % (
-                (size, self.last_free)
-                + cuda.mem_get_info()
-                + (self.held_blocks, self.active_blocks, description)
+                (size, self.last_free, *cuda.mem_get_info(),
+                    self.held_blocks, self.active_blocks, description)
             ),
             file=self.logfile,
         )
@@ -144,23 +147,19 @@ def get_default_device(default=0):
 
     warn(
         "get_default_device() is deprecated; " "use make_default_context() instead",
-        DeprecationWarning,
+        DeprecationWarning, stacklevel=2,
     )
 
-    from pycuda.driver import Device
     import os
+
+    from pycuda.driver import Device
 
     dev = os.environ.get("CUDA_DEVICE")
 
     if dev is None:
-        try:
-            dev = (
-                open(os.path.join(os.path.expanduser("~"), ".cuda_device"))
-                .read()
-                .strip()
-            )
-        except Exception:
-            pass
+        with contextlib.suppress(Exception):  # noqa: SIM117
+            with open(os.path.join(os.path.expanduser("~"), ".cuda_device")) as devrc:
+                dev = devrc.read().strip()
 
     if dev is None:
         dev = default
@@ -197,7 +196,8 @@ def make_default_context(ctx_maker=None):
         try:
             homedir = os.environ.get("HOME")
             assert homedir is not None
-            devn = open(os.path.join(homedir, ".cuda_device")).read().strip()
+            with open(os.path.join(homedir, ".cuda_device")) as devrc:
+                devn = devrc.read().strip()
         except Exception:
             pass
 
@@ -247,7 +247,7 @@ def _int_ceiling(value, multiple_of=1):
 
     from math import ceil
 
-    return int(ceil(value / multiple_of)) * multiple_of
+    return ceil(value / multiple_of) * multiple_of
 
 
 def _int_floor(value, multiple_of=1):
@@ -256,7 +256,7 @@ def _int_floor(value, multiple_of=1):
 
     from math import floor
 
-    return int(floor(value / multiple_of)) * multiple_of
+    return floor(value / multiple_of) * multiple_of
 
 
 # }}}
@@ -314,9 +314,7 @@ class DeviceData:
     def align_bytes(self, word_size=4):
         if word_size == 4:
             return 64
-        elif word_size == 8:
-            return 128
-        elif word_size == 16:
+        elif word_size == 8 or word_size == 16:
             return 128
         else:
             raise ValueError("no alignment possible for fetches of size %d" % word_size)
@@ -452,10 +450,7 @@ context_dependent_memoized_functions = []
 
 def context_dependent_memoize(func):
     def wrapper(*args, **kwargs):
-        if kwargs:
-            cache_key = (args, frozenset(kwargs.items()))
-        else:
-            cache_key = (args,)
+        cache_key = (args, frozenset(kwargs.items())) if kwargs else (args,)
 
         try:
             ctx_dict = func._pycuda_ctx_dep_memoize_dic

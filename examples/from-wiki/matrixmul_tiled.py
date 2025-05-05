@@ -1,29 +1,30 @@
-#!python 
-#!/usr/bin/env python
+#!python
+# !/usr/bin/env python
 # -*- coding: utf-8 -*-
 
 
-""" 
-Multiples two square matrices together using multiple blocks and shared memory. 
+"""
+Multiples two square matrices together using multiple blocks and shared memory.
 Each thread block is assigned a "tile" of the resulting matrix and is responsible
-for generating the elements in that tile.  Each thread in a block computes one element 
+for generating the elements in that tile.  Each thread in a block computes one element
 of the tile.
 """
+from __future__ import annotations
 
 import numpy as np
 from numpy import linalg as la
-from pycuda import driver, compiler, gpuarray, tools
 
 # -- initialize the device
-import pycuda.autoinit
+from pycuda import compiler, gpuarray
+
 
 kernel_code_template = """
 __global__ void MatrixMulKernel(float *A, float *B, float *C)
 {
 
   const uint wA = %(MATRIX_SIZE)s;
-  const uint wB = %(MATRIX_SIZE)s;  
-  
+  const uint wB = %(MATRIX_SIZE)s;
+
   // Block index
   const uint bx = blockIdx.x;
   const uint by = blockIdx.y;
@@ -51,7 +52,7 @@ __global__ void MatrixMulKernel(float *A, float *B, float *C)
   // compute the block sub-matrix
   for (int a = aBegin, b = bBegin;
        a <= aEnd;
-       a += aStep, b += bStep) 
+       a += aStep, b += bStep)
     {
       // Shared memory for the sub-matrix of A
       __shared__ float As[%(BLOCK_SIZE)s][%(BLOCK_SIZE)s];
@@ -87,7 +88,7 @@ __global__ void MatrixMulKernel(float *A, float *B, float *C)
 # define the (square) matrix size
 MATRIX_SIZE = 4
 
-# define size of blocks and tiles sub-matrix 
+# define size of blocks and tiles sub-matrix
 # (we assume that the block size is same as tile size)
 TILE_SIZE = 2
 BLOCK_SIZE = TILE_SIZE
@@ -99,18 +100,18 @@ b_cpu = np.random.randn(MATRIX_SIZE, MATRIX_SIZE).astype(np.float32)
 # compute reference on the CPU to verify GPU computation
 c_cpu = np.dot(a_cpu, b_cpu)
 
-# transfer host (CPU) memory to device (GPU) memory 
-a_gpu = gpuarray.to_gpu(a_cpu) 
+# transfer host (CPU) memory to device (GPU) memory
+a_gpu = gpuarray.to_gpu(a_cpu)
 b_gpu = gpuarray.to_gpu(b_cpu)
 
 # create empty gpu array for the result (C = A * B)
 c_gpu = gpuarray.empty((MATRIX_SIZE, MATRIX_SIZE), np.float32)
 
-# get the kernel code from the template 
+# get the kernel code from the template
 # by specifying the constants MATRIX_SIZE and BLOCK_SIZE
-kernel_code = kernel_code_template % { 
-    'MATRIX_SIZE': MATRIX_SIZE,
-    'BLOCK_SIZE': BLOCK_SIZE,
+kernel_code = kernel_code_template % {
+    "MATRIX_SIZE": MATRIX_SIZE,
+    "BLOCK_SIZE": BLOCK_SIZE,
     }
 
 # compile the kernel code
@@ -122,13 +123,13 @@ matrixmul = mod.get_function("MatrixMulKernel")
 # call the kernel on the card
 matrixmul(
     # inputs
-    a_gpu, b_gpu, 
+    a_gpu, b_gpu,
     # output
-    c_gpu, 
+    c_gpu,
     # grid of multiple blocks
-    grid = (MATRIX_SIZE // TILE_SIZE, MATRIX_SIZE // TILE_SIZE),
+    grid=(MATRIX_SIZE // TILE_SIZE, MATRIX_SIZE // TILE_SIZE),
     # block of multiple threads
-    block = (TILE_SIZE, TILE_SIZE, 1), 
+    block=(TILE_SIZE, TILE_SIZE, 1),
     )
 
 # print the results
@@ -149,5 +150,3 @@ print("CPU-GPU difference:")
 print(c_cpu - c_gpu.get())
 print("L2 norm:", la.norm(c_cpu - c_gpu.get()))
 np.allclose(c_cpu, c_gpu.get())
-
-

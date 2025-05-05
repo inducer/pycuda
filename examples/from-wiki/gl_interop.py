@@ -1,23 +1,27 @@
-#!python 
+#!python
 # GL interoperability example, by Peter Berrington.
 # Draws a rotating teapot, using cuda to invert the RGB value
 # each frame
+from __future__ import annotations
 
+import sys
+import time
+
+import numpy
 from OpenGL.GL import *
-from OpenGL.GLUT import *
-from OpenGL.GLU import *
-from OpenGL.GL.ARB.vertex_buffer_object import *
 from OpenGL.GL.ARB.pixel_buffer_object import *
+from OpenGL.GL.ARB.vertex_buffer_object import *
+from OpenGL.GLU import *
+from OpenGL.GLUT import *
 
-
-import numpy, sys, time
 import pycuda.driver as cuda_driver
 import pycuda.gl as cuda_gl
 from pycuda.compiler import SourceModule
 
-#this is all munged together from the CUDA SDK postprocessGL example.
 
-initial_size = 512,512
+# this is all munged together from the CUDA SDK postprocessGL example.
+
+initial_size = 512, 512
 current_size = initial_size
 animate = True
 enable_cuda = True
@@ -26,15 +30,16 @@ time_of_last_draw = 0.0
 time_of_last_titleupdate = 0.0
 frames_per_second = 0.0
 frame_counter = 0
-output_texture = None # pointer to offscreen render target
+output_texture = None  # pointer to offscreen render target
 (source_pbo, dest_pbo, cuda_module, invert,
  pycuda_source_pbo, pycuda_dest_pbo) = [None]*6
-heading,pitch,bank = [0.0]*3
+heading, pitch, bank = [0.0]*3
 
-def create_PBOs(w,h):
+
+def create_PBOs(w, h):
     global source_pbo, dest_pbo, pycuda_source_pbo, pycuda_dest_pbo
     num_texels = w*h
-    data = numpy.zeros((num_texels,4),numpy.uint8)
+    data = numpy.zeros((num_texels, 4), numpy.uint8)
     source_pbo = glGenBuffers(1)
     glBindBuffer(GL_ARRAY_BUFFER, source_pbo)
     glBufferData(GL_ARRAY_BUFFER, data, GL_DYNAMIC_DRAW)
@@ -46,15 +51,17 @@ def create_PBOs(w,h):
     glBindBuffer(GL_ARRAY_BUFFER, 0)
     pycuda_dest_pbo = cuda_gl.BufferObject(int(dest_pbo))
 
+
 def destroy_PBOs():
     global source_pbo, dest_pbo, pycuda_source_pbo, pycuda_dest_pbo
     for pbo in [source_pbo, dest_pbo]:
         glBindBuffer(GL_ARRAY_BUFFER, int(pbo))
         glDeleteBuffers(1, int(pbo))
         glBindBuffer(GL_ARRAY_BUFFER, 0)
-    source_pbo,dest_pbo,pycuda_source_pbo,pycuda_dest_pbo = [None]*4
+    source_pbo, dest_pbo, pycuda_source_pbo, pycuda_dest_pbo = [None]*4
 
-def create_texture(w,h):
+
+def create_texture(w, h):
     global output_texture
     output_texture = glGenTextures(1)
     glBindTexture(GL_TEXTURE_2D, output_texture)
@@ -67,10 +74,12 @@ def create_texture(w,h):
     glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA,
                  w, h, 0, GL_RGBA, GL_UNSIGNED_BYTE, None)
 
+
 def destroy_texture():
     global output_texture
     glDeleteTextures(output_texture)
     output_texture = None
+
 
 def init_gl():
     Width, Height = current_size
@@ -82,11 +91,12 @@ def init_gl():
     gluPerspective(60.0, Width/float(Height), 0.1, 10.0)
     glPolygonMode(GL_FRONT_AND_BACK, GL_FILL)
     glEnable(GL_LIGHT0)
-    red   = ( 1.0, 0.1, 0.1, 1.0 )
-    white = ( 1.0, 1.0, 1.0, 1.0 )
-    glMaterialfv(GL_FRONT_AND_BACK, GL_DIFFUSE,  red  )
+    red   = (1.0, 0.1, 0.1, 1.0)
+    white = (1.0, 1.0, 1.0, 1.0)
+    glMaterialfv(GL_FRONT_AND_BACK, GL_DIFFUSE, red)
     glMaterialfv(GL_FRONT_AND_BACK, GL_SPECULAR, white)
-    glMaterialf( GL_FRONT_AND_BACK, GL_SHININESS, 60.0)
+    glMaterialf(GL_FRONT_AND_BACK, GL_SHININESS, 60.0)
+
 
 def resize(Width, Height):
     global current_size
@@ -96,31 +106,34 @@ def resize(Width, Height):
     glLoadIdentity()
     gluPerspective(60.0, Width/float(Height), 0.1, 10.0)
 
+
 def do_tick():
     global time_of_last_titleupdate, frame_counter, frames_per_second
-    if ((time.clock () * 1000.0) - time_of_last_titleupdate >= 1000.):
+    if ((time.clock() * 1000.0) - time_of_last_titleupdate >= 1000.):
         frames_per_second = frame_counter                   # Save The FPS
         frame_counter = 0  # Reset The FPS Counter
-        szTitle = "%d FPS" % (frames_per_second )
-        glutSetWindowTitle ( szTitle )
-        time_of_last_titleupdate = time.clock () * 1000.0
+        szTitle = "%d FPS" % (frames_per_second)
+        glutSetWindowTitle(szTitle)
+        time_of_last_titleupdate = time.clock() * 1000.0
     frame_counter += 1
+
 
 # The function called whenever a key is pressed. Note the use of Python tuples to pass in: (key, x, y)
 def keyPressed(*args):
     global animate, enable_cuda
     # If escape is pressed, kill everything.
-    if args[0] == '\033':
-        print('Closing..')
+    if args[0] == "\033":
+        print("Closing..")
         destroy_PBOs()
         destroy_texture()
         exit()
-    elif args[0] == 'a':
-        print('toggling animation')
+    elif args[0] == "a":
+        print("toggling animation")
         animate = not animate
-    elif args[0] == 'e':
-        print('toggling cuda')
+    elif args[0] == "e":
+        print("toggling cuda")
         enable_cuda = not enable_cuda
+
 
 def idle():
     global heading, pitch, bank
@@ -130,6 +143,7 @@ def idle():
         bank    += 1.0
 
     glutPostRedisplay()
+
 
 def display():
     try:
@@ -144,9 +158,10 @@ def display():
         from os import _exit
         _exit(0)
 
+
 def process(width, height):
     """ Use PyCuda """
-    grid_dimensions   = (width//16,height//16)
+    grid_dimensions   = (width//16, height//16)
 
     source_mapping = pycuda_source_pbo.map()
     dest_mapping   = pycuda_dest_pbo.map()
@@ -160,9 +175,10 @@ def process(width, height):
     source_mapping.unmap()
     dest_mapping.unmap()
 
+
 def process_image():
     """ copy image and process using CUDA """
-    global pycuda_source_pbo,source_pbo,current_size, dest_pbo
+    global pycuda_source_pbo, source_pbo, current_size, dest_pbo
     image_width, image_height = current_size
     assert source_pbo is not None
 
@@ -174,12 +190,12 @@ def process_image():
 
     # read data into pbo. note: use BGRA format for optimal performance
     glReadPixels(
-             0,                  #start x
-             0,                  #start y
-             image_width,        #end   x
-             image_height,       #end   y
-             GL_BGRA,            #format
-             GL_UNSIGNED_BYTE,   #output type
+             0,                  # start x
+             0,                  # start y
+             image_width,        # end   x
+             image_height,       # end   y
+             GL_BGRA,            # format
+             GL_UNSIGNED_BYTE,   # output type
              ctypes.c_void_p(0))
 
     pycuda_source_pbo = cuda_gl.BufferObject(int(source_pbo))
@@ -195,6 +211,7 @@ def process_image():
                     image_width, image_height,
                     GL_BGRA, GL_UNSIGNED_BYTE, ctypes.c_void_p(0))
 
+
 def display_image():
     """ render a screen sized quad """
     glDisable(GL_DEPTH_TEST)
@@ -205,7 +222,7 @@ def display_image():
     glPushMatrix()
     glLoadIdentity()
     glOrtho(-1.0, 1.0, -1.0, 1.0, -1.0, 1.0)
-    glMatrixMode( GL_MODELVIEW)
+    glMatrixMode(GL_MODELVIEW)
     glLoadIdentity()
     glViewport(0, 0, current_size[0], current_size[1])
     glBegin(GL_QUADS)
@@ -226,20 +243,21 @@ def display_image():
 
 
 def render_scene():
-    glClear (GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT)# Clear Screen And Depth Buffer
+    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT)  # Clear Screen And Depth Buffer
     glMatrixMode(GL_MODELVIEW)
-    glLoadIdentity ()      # Reset The Modelview Matrix
+    glLoadIdentity()      # Reset The Modelview Matrix
     glTranslatef(0.0, 0.0, -3.0)
     glRotatef(heading, 1.0, 0.0, 0.0)
-    glRotatef(pitch  , 0.0, 1.0, 0.0)
-    glRotatef(bank   , 0.0, 0.0, 1.0)
-    glViewport(0, 0, current_size[0],current_size[1])
+    glRotatef(pitch, 0.0, 1.0, 0.0)
+    glRotatef(bank, 0.0, 0.0, 1.0)
+    glViewport(0, 0, current_size[0], current_size[1])
     glEnable(GL_LIGHTING)
     glEnable(GL_DEPTH_TEST)
     glDepthFunc(GL_LESS)
     glutSolidTeapot(1.0)
-    do_tick()#just for fps display..
+    do_tick()  # just for fps display..
     return True
+
 
 def main():
     global window, cuda_module, cuda_gl, cuda_driver, invert
@@ -258,9 +276,9 @@ def main():
     # create texture for blitting to screen
     create_texture(*initial_size)
 
-    #setup pycuda gl interop
-    import pycuda.gl.autoinit
+    # setup pycuda gl interop
     import pycuda.gl
+    import pycuda.gl.autoinit
     cuda_gl = pycuda.gl
     cuda_driver = pycuda.driver
 
@@ -287,8 +305,8 @@ def main():
 
     glutMainLoop()
 
+
 # Print message to console, and kick off the main to get it rolling.
 if __name__ == "__main__":
     print("Hit ESC key to quit, 'a' to toggle animation, and 'e' to toggle cuda")
     main()
-

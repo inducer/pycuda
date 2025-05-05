@@ -1,10 +1,12 @@
-from __future__ import division
-from __future__ import absolute_import
+from __future__ import annotations
+
+import numpy as np
+
 from pytools import memoize_method
+
 import pycuda.driver as drv
 import pycuda.gpuarray as gpuarray
 from pycuda.compiler import SourceModule
-import numpy as np
 
 
 COO_FLAT_KERNEL_TEMPLATE = """

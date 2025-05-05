@@ -1,9 +1,13 @@
+from __future__ import annotations
+
+
 __copyright__ = """
 Copyright 2008-2021 Andreas Kloeckner
 Copyright 2021 NVIDIA Corporation
 """
 
 import os
+
 import numpy as np
 
 
@@ -14,8 +18,8 @@ def _search_on_path(filenames):
     """Find file on system path."""
     # http://aspn.activestate.com/ASPN/Cookbook/Python/Recipe/52224
 
-    from os.path import exists, abspath, join
-    from os import pathsep, environ
+    from os import environ, pathsep
+    from os.path import abspath, exists, join
 
     search_path = environ["PATH"]
 
@@ -27,7 +31,7 @@ def _search_on_path(filenames):
 
 
 def _add_cuda_libdir_to_dll_path():
-    from os.path import join, dirname
+    from os.path import dirname, join
 
     cuda_path = os.environ.get("CUDA_PATH")
 
@@ -46,12 +50,12 @@ def _add_cuda_libdir_to_dll_path():
         "Unable to discover CUDA installation directory "
         "while attempting to add it to Python's DLL path. "
         "Either set the 'CUDA_PATH' environment variable "
-        "or ensure that 'nvcc.exe' is on the path."
+        "or ensure that 'nvcc.exe' is on the path.", stacklevel=2
     )
 
 
 try:
-    os.add_dll_directory
+    os.add_dll_directory  # noqa: B018
 except AttributeError:
     # likely not on Py3.8 and Windows
     # https://github.com/inducer/pycuda/issues/213
@@ -71,7 +75,7 @@ except ImportError as e:
         warn(
             "Failed to import the CUDA driver interface, with an error "
             "message indicating that the version of your CUDA header "
-            "does not match the version of your CUDA driver."
+            "does not match the version of your CUDA driver.", stacklevel=2
         )
     raise
 
@@ -131,7 +135,8 @@ class ArgumentHandler:
                 self.dev_alloc = mem_alloc_like(self.array)
             except AttributeError:
                 raise TypeError(
-                    "could not determine array length of '%s': unsupported array type or not an array"
+                    "could not determine array length of '%s': "
+                    "unsupported array type or not an array"
                     % type(self.array)
                 )
         return self.dev_alloc
@@ -177,7 +182,7 @@ def _add_functionality():
 
                 warn(
                     "CUDA driver raised '%s' when querying '%s' on '%s'"
-                    % (e, att_name, dev)
+                    % (e, att_name, dev), stacklevel=2
                 )
             else:
                 result[att_id] = att_value
@@ -305,9 +310,11 @@ def _add_functionality():
                 for handler in post_handlers:
                     handler.post_call(stream)
 
-    def function_prepare_pre_v4(func, arg_types, block=None, shared=None, texrefs=[]):
+    def function_prepare_pre_v4(func, arg_types, block=None, shared=None, texrefs=None):
         from warnings import warn
 
+        if texrefs is None:
+            texrefs = []
         if block is not None:
             warn(
                 "setting the block size in Function.prepare is deprecated",
@@ -328,7 +335,7 @@ def _add_functionality():
 
         func.arg_format = ""
 
-        for i, arg_type in enumerate(arg_types):
+        for _i, arg_type in enumerate(arg_types):
             if (
                 isinstance(arg_type, type)
                 and np is not None
@@ -358,7 +365,7 @@ def _add_functionality():
                 DeprecationWarning,
                 stacklevel=2,
             )
-            args = (block,) + args
+            args = (block, *args)
 
         shared_size = kwargs.pop("shared_size", None)
         if shared_size is not None:
@@ -390,7 +397,7 @@ def _add_functionality():
                 DeprecationWarning,
                 stacklevel=2,
             )
-            args = (block,) + args
+            args = (block, *args)
 
         shared_size = kwargs.pop("shared_size", None)
         if shared_size is not None:
@@ -433,7 +440,7 @@ def _add_functionality():
                 DeprecationWarning,
                 stacklevel=2,
             )
-            args = (stream,) + args
+            args = (stream, *args)
             stream = block
 
         shared_size = kwargs.pop("shared_size", None)
@@ -522,12 +529,14 @@ def _add_functionality():
                 for handler in post_handlers:
                     handler.post_call(stream)
 
-    def function_prepare(func, arg_types, texrefs=[]):
+    def function_prepare(func, arg_types, texrefs=None):
+        if texrefs is None:
+            texrefs = []
         func.texrefs = texrefs
 
         func.arg_format = ""
 
-        for i, arg_type in enumerate(arg_types):
+        for _i, arg_type in enumerate(arg_types):
             if isinstance(arg_type, type) and np.number in arg_type.__mro__:
                 func.arg_format += np.dtype(arg_type).char
             elif isinstance(arg_type, np.dtype):
@@ -554,7 +563,7 @@ def _add_functionality():
                 DeprecationWarning,
                 stacklevel=2,
             )
-            args = (block,) + args
+            args = (block, *args)
 
         shared_size = kwargs.pop("shared_size", 0)
 
@@ -611,7 +620,7 @@ def _add_functionality():
                 DeprecationWarning,
                 stacklevel=2,
             )
-            args = (stream,) + args
+            args = (stream, *args)
             stream = block
 
         shared_size = kwargs.pop("shared_size", 0)
@@ -657,16 +666,8 @@ def _add_functionality():
             )
             return func(*args, **kwargs)
 
-        try:
-            from functools import update_wrapper
-        except ImportError:
-            pass
-        else:
-            try:
-                update_wrapper(new_func, func)
-            except Exception:
-                # User won't see true signature. Oh well.
-                pass
+        from functools import update_wrapper
+        update_wrapper(new_func, func)
 
         return new_func
 
@@ -1070,12 +1071,8 @@ def matrix_to_texref(matrix, texref, order):
 
 
 def to_device(bf_obj):
-    import sys
 
-    if sys.version_info >= (2, 7):
-        bf = memoryview(bf_obj).tobytes()
-    else:
-        bf = buffer(bf_obj)
+    bf = memoryview(bf_obj).tobytes()
     result = mem_alloc(len(bf))
     memcpy_htod(result, bf)
     return result

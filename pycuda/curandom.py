@@ -1,8 +1,12 @@
+from __future__ import annotations
+
 import numpy as np
+
+from pytools import memoize_method
+
 import pycuda.compiler
 import pycuda.driver as drv
 import pycuda.gpuarray as array
-from pytools import memoize_method
 
 
 # {{{ MD5-based random number generation
@@ -182,8 +186,8 @@ md5_code = """
 
 
 def rand(shape, dtype=np.float32, stream=None):
-    from pycuda.gpuarray import GPUArray
     from pycuda.elementwise import get_elwise_kernel
+    from pycuda.gpuarray import GPUArray
 
     result = GPUArray(shape, dtype)
 
@@ -515,12 +519,12 @@ class _RandomNumberGeneratorBase:
         self.module = module = pycuda.compiler.SourceModule(source, no_extern_c=True)
 
         self.generators = {}
-        for name, out_type, suffix in my_generators:
+        for name, _out_type, _suffix in my_generators:
             gen_func = module.get_function(name)
             gen_func.prepare("PPn")
             self.generators[name] = gen_func
         if get_curand_version() >= (4, 0, 0):
-            for name, in_type, out_type, suffix in my_log_generators:
+            for name, in_type, _out_type, _suffix in my_log_generators:
                 gen_func = module.get_function(name)
                 if in_type == "float":
                     gen_func.prepare("PPffn")
@@ -528,11 +532,11 @@ class _RandomNumberGeneratorBase:
                     gen_func.prepare("PPddn")
                 self.generators[name] = gen_func
         if get_curand_version() >= (5, 0, 0):
-            for name, out_type, suffix in my_poisson_generators:
+            for name, _out_type, _suffix in my_poisson_generators:
                 gen_func = module.get_function(name)
                 gen_func.prepare("PPdn")
                 self.generators[name] = gen_func
-            for name, inout_type, suffix in my_poisson_inplace_generators:
+            for name, _inout_type, _suffix in my_poisson_inplace_generators:
                 gen_func = module.get_function(name)
                 gen_func.prepare("PPn")
                 self.generators[name] = gen_func
@@ -553,10 +557,7 @@ class _RandomNumberGeneratorBase:
         self.skip_ahead_array.prepare("PnP")
 
     def _kernels(self):
-        return list(self.generators.values()) + [
-            self.skip_ahead,
-            self.skip_ahead_array,
-        ]
+        return [*list(self.generators.values()), self.skip_ahead, self.skip_ahead_array]
 
     @property
     @memoize_method
@@ -831,12 +832,7 @@ class _PseudoRandomNumberGeneratorBase(_RandomNumberGeneratorBase):
 
     def _kernels(self):
         return (
-            _RandomNumberGeneratorBase._kernels(self)
-            + [self.module.get_function("prepare")]
-            + [
-                self.module.get_function("skip_ahead_sequence"),
-                self.module.get_function("skip_ahead_sequence_array"),
-            ]
+            [*_RandomNumberGeneratorBase._kernels(self), self.module.get_function("prepare"), self.module.get_function("skip_ahead_sequence"), self.module.get_function("skip_ahead_sequence_array")]
         )
 
 
@@ -1008,10 +1004,7 @@ if get_curand_version() >= (4, 1, 0):
             )
 
         def _kernels(self):
-            return _PseudoRandomNumberGeneratorBase._kernels(self) + [
-                self.module.get_function("skip_ahead_subsequence"),
-                self.module.get_function("skip_ahead_subsequence_array"),
-            ]
+            return [*_PseudoRandomNumberGeneratorBase._kernels(self), self.module.get_function("skip_ahead_subsequence"), self.module.get_function("skip_ahead_subsequence_array")]
 
 
 # }}}
@@ -1128,9 +1121,7 @@ class _SobolRandomNumberGeneratorBase(_RandomNumberGeneratorBase):
                 drv.Context.set_limit(drv.limit.STACK_SIZE, prev_stack_size)
 
     def _kernels(self):
-        return _RandomNumberGeneratorBase._kernels(self) + [
-            self.module.get_function("prepare")
-        ]
+        return [*_RandomNumberGeneratorBase._kernels(self), self.module.get_function("prepare")]
 
 
 scrambledsobol_random_source = """
@@ -1230,9 +1221,7 @@ class _ScrambledSobolRandomNumberGeneratorBase(_RandomNumberGeneratorBase):
                 drv.Context.set_limit(drv.limit.STACK_SIZE, prev_stack_size)
 
     def _kernels(self):
-        return _RandomNumberGeneratorBase._kernels(self) + [
-            self.module.get_function("prepare")
-        ]
+        return [*_RandomNumberGeneratorBase._kernels(self), self.module.get_function("prepare")]
 
 
 if get_curand_version() >= (3, 2, 0):

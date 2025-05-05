@@ -16,13 +16,16 @@
  * is strictly prohibited.
  * ---------------------------------------------------------------------------
 '''
+from __future__ import annotations
 
-import sys, os
+import sys
+
 import pycuda.autoinit
 import pycuda.driver as cuda
 from pycuda.compiler import DynamicSourceModule
 
-cdpSimplePrint_cu = '''
+
+cdpSimplePrint_cu = """
 #include <cstdio>
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -66,7 +69,7 @@ __global__ void cdp_kernel( int max_depth, int depth, int thread, int parent_uid
 {
   // We create a unique ID per block. Thread 0 does that and shares the value with the other threads.
   __shared__ int s_uid;
-  if( threadIdx.x == 0 ) 
+  if( threadIdx.x == 0 )
   {
     s_uid = atomicAdd( &g_uids, 1 );
   }
@@ -74,7 +77,7 @@ __global__ void cdp_kernel( int max_depth, int depth, int thread, int parent_uid
 
   // We print the ID of the block and information about its parent.
   print_info( depth, thread, s_uid, parent_uid );
-  
+
   // We launch new blocks if we haven't reached the max_depth yet.
   if( ++depth >= max_depth )
   {
@@ -82,7 +85,8 @@ __global__ void cdp_kernel( int max_depth, int depth, int thread, int parent_uid
   }
   cdp_kernel<<<gridDim.x, blockDim.x>>>( max_depth, depth, threadIdx.x, s_uid );
 }
-'''
+"""
+
 
 def main(argv):
     max_depth = 2
@@ -96,7 +100,7 @@ def main(argv):
     print("starting Simple Print (CUDA Dynamic Parallelism)")
 
     mod = DynamicSourceModule(cdpSimplePrint_cu)
-    cdp_kernel = mod.get_function('cdp_kernel').prepare('iiii').prepared_call
+    cdp_kernel = mod.get_function("cdp_kernel").prepare("iiii").prepared_call
 
     print("***************************************************************************")
     print("The CPU launches 2 blocks of 2 threads each. On the device each thread will")
@@ -104,7 +108,7 @@ def main(argv):
     print("until it reaches max_depth=%d\n" % max_depth)
     print("In total 2")
     num_blocks, sum = 2, 2
-    for i in range(1, max_depth):
+    for _i in range(1, max_depth):
         num_blocks *= 4
         print("+%d" % num_blocks)
         sum += num_blocks
@@ -115,7 +119,8 @@ def main(argv):
     pycuda.autoinit.context.set_limit(cuda.limit.DEV_RUNTIME_SYNC_DEPTH, max_depth)
 
     print("Launching cdp_kernel() with CUDA Dynamic Parallelism:\n")
-    cdp_kernel((2,1), (2,1,1), max_depth, 0, 0, -1)
+    cdp_kernel((2, 1), (2, 1, 1), max_depth, 0, 0, -1)
+
 
 if __name__ == "__main__":
     main(sys.argv)

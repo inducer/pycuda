@@ -1,4 +1,4 @@
-#!python 
+#!python
 # Conway's Game of Life Accelerated with PyCUDA
 # Luis Villasenor
 # lvillasen@gmail.com
@@ -6,27 +6,34 @@
 # Licence: GPLv3
 # Usage: python GameOfLife.py n n_iter
 # where n is the board size and n_iter the number of iterations
-import pycuda.driver as cuda
-import pycuda.tools
-import pycuda.autoinit
-import pycuda.gpuarray as gpuarray
-from pycuda.compiler import SourceModule
+from __future__ import annotations
+
 import sys
+
+import matplotlib.pyplot as plt
 import numpy as np
 from pylab import cm as cm
-import matplotlib.pyplot as plt
-n=int(sys.argv[1])
-n_iter=int(sys.argv[2])
-n_block=16
-n_grid=int(n/n_block);
-n=n_block*n_grid;
+
+import pycuda.gpuarray as gpuarray
+from pycuda.compiler import SourceModule
+
+
+n = int(sys.argv[1])
+n_iter = int(sys.argv[2])
+n_block = 16
+n_grid = int(n/n_block)
+n = n_block*n_grid
+
+
 def random_init(n):
-    #np.random.seed(100)
-    M=np.zeros((n,n)).astype(np.int32)
+    # np.random.seed(100)
+    M = np.zeros((n, n)).astype(np.int32)
     for i in range(n):
         for j in range(n):
-            M[j,i]=np.int32(np.random.randint(2))
+            M[j, i] = np.int32(np.random.randint(2))
     return M
+
+
 mod = SourceModule("""
 __global__ void step(int *C, int *M)
 {
@@ -54,28 +61,27 @@ __global__ void step(int *C, int *M)
 }
 """)
 func = mod.get_function("step")
-C=random_init(n)
+C = random_init(n)
 M = np.empty_like(C)
-C_gpu = gpuarray.to_gpu( C )
-M_gpu = gpuarray.to_gpu( M )
-for k in range(n_iter):
-  func(C_gpu,M_gpu,block=(n_block,n_block,1),grid=(n_grid,n_grid,1))
+C_gpu = gpuarray.to_gpu(C)
+M_gpu = gpuarray.to_gpu(M)
+for _k in range(n_iter):
+  func(C_gpu, M_gpu, block=(n_block, n_block, 1), grid=(n_grid, n_grid, 1))
   C_gpu, M_gpu = M_gpu, C_gpu
-print(("%d live cells after %d iterations" %(np.sum(C_gpu.get()),n_iter)))
-fig = plt.figure(figsize=(12,12))
+print("%d live cells after %d iterations" % (np.sum(C_gpu.get()), n_iter))
+fig = plt.figure(figsize=(12, 12))
 ax = fig.add_subplot(111)
 fig.suptitle("Conway's Game of Life Accelerated with PyCUDA")
-ax.set_title('Number of Iterations = %d'%(n_iter))
-myobj =plt.imshow(C_gpu.get(),origin='lower',cmap='Greys',  interpolation='nearest',vmin=0, vmax=1)
+ax.set_title("Number of Iterations = %d" % (n_iter))
+myobj = plt.imshow(C_gpu.get(), origin="lower", cmap="Greys", interpolation="nearest", vmin=0, vmax=1)
 plt.pause(.01)
 plt.draw()
-m=n_iter
+m = n_iter
 while True:
-    m+=1
-    func(C_gpu,M_gpu,block=(n_block,n_block,1),grid=(n_grid,n_grid,1))
+    m += 1
+    func(C_gpu, M_gpu, block=(n_block, n_block, 1), grid=(n_grid, n_grid, 1))
     C_gpu, M_gpu = M_gpu, C_gpu
     myobj.set_data(C_gpu.get())
-    ax.set_title('Number of Iterations = %d'%(m))
+    ax.set_title("Number of Iterations = %d" % (m))
     plt.pause(.01)
     plt.draw()
-

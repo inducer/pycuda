@@ -1,21 +1,22 @@
-#!python 
+#!python
 # Exercise 1 from http://webapp.dam.brown.edu/wiki/SciComp/CudaExercises
 
 # Transposition of a matrix
 # by Hendrik Riedmann <riedmann@dam.brown.edu>
-
-
-import pycuda.driver as cuda
-import pycuda.gpuarray as gpuarray
-import pycuda.autoinit
-from pycuda.compiler import SourceModule
+from __future__ import annotations
 
 import numpy
 import numpy.linalg as la
 
+import pycuda.autoinit
+import pycuda.driver as cuda
+import pycuda.gpuarray as gpuarray
+from pycuda.compiler import SourceModule
 from pycuda.tools import context_dependent_memoize
 
+
 block_size = 16
+
 
 @context_dependent_memoize
 def _get_transpose_kernel():
@@ -46,19 +47,19 @@ def _get_transpose_kernel():
         // Write transposed submatrix to global memory
         A_t[glob_idx_a_t] = A_shared[threadIdx.x][threadIdx.y];
     }
-    """% {"block_size": block_size})
+    """ % {"block_size": block_size})
 
     func = mod.get_function("transpose")
     func.prepare("PPii")
 
     from pytools import Record
+
     class TransposeKernelInfo(Record): pass
 
     return TransposeKernelInfo(func=func,
             block=(block_size, block_size, 1),
             block_size=block_size,
             granularity=block_size)
-
 
 
 def _get_big_block_transpose_kernel():
@@ -101,20 +102,19 @@ def _get_big_block_transpose_kernel():
         A_t[glob_idx_a_t + A_T_BLOCK_STRIDE + BLOCK_SIZE] =
     A_shared[threadIdx.x + BLOCK_SIZE][threadIdx.y + BLOCK_SIZE];
     }
-      """% {"block_size": block_size})
+      """ % {"block_size": block_size})
 
     func = mod.get_function("transpose")
     func.prepare("PPii")
 
     from pytools import Record
+
     class TransposeKernelInfo(Record): pass
 
     return TransposeKernelInfo(func=func,
             block=(block_size, block_size, 1),
             block_size=block_size,
             granularity=2*block_size)
-
-
 
 
 def _transpose(tgt, src):
@@ -130,17 +130,12 @@ def _transpose(tgt, src):
                     tgt.gpudata, src.gpudata, w, h)
 
 
-
-
 def transpose(src):
     w, h = src.shape
 
     result = gpuarray.empty((h, w), dtype=src.dtype)
     _transpose(result, src)
     return result
-
-
-
 
 
 def check_transpose():
@@ -163,8 +158,6 @@ def check_transpose():
         assert err_norm == 0, (size, err_norm)
 
 
-
-
 def run_benchmark():
     from pycuda.curandom import rand
 
@@ -183,7 +176,7 @@ def run_benchmark():
 
         warmup = 2
 
-        for i in range(warmup):
+        for _i in range(warmup):
             _transpose(target, source)
 
         count = 10
@@ -191,7 +184,7 @@ def run_benchmark():
         cuda.Context.synchronize()
         start.record()
 
-        for i in range(count):
+        for _i in range(count):
             _transpose(target, source)
 
         stop.record()
@@ -206,21 +199,17 @@ def run_benchmark():
     slow_sizes = [s for s, bw in zip(sizes, bandwidths) if bw < 40e9]
     print(("Sizes for which bandwidth was low:", slow_sizes))
     print(("Ditto, mod 64:", [s % 64 for s in slow_sizes]))
-    from matplotlib.pyplot import semilogx, loglog, show, savefig, clf, xlabel, ylabel
-    xlabel('matrix size')
-    ylabel('bandwidth')
+    from matplotlib.pyplot import clf, loglog, savefig, semilogx, xlabel, ylabel
+    xlabel("matrix size")
+    ylabel("bandwidth")
     semilogx(sizes, bandwidths)
     savefig("transpose-bw.png")
     clf()
-    xlabel('matrix size')
-    ylabel('time')
+    xlabel("matrix size")
+    ylabel("time")
     loglog(sizes, times)
     savefig("transpose-times.png")
 
 
-
-
-#check_transpose()
+# check_transpose()
 run_benchmark()
-
-

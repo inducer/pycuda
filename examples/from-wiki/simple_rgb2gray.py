@@ -1,17 +1,18 @@
-#!python 
+#!python
+from __future__ import annotations
 
-__author__ = 'ashwin'
 
-import pycuda.driver as drv
-import pycuda.tools
-import pycuda.autoinit
-from pycuda.compiler import SourceModule
+__author__ = "ashwin"
+
+import matplotlib.pyplot as p
 import numpy as np
 import scipy.misc as scm
-import matplotlib.pyplot as p
 
-mod = SourceModule \
-    (
+import pycuda.driver as drv
+from pycuda.compiler import SourceModule
+
+
+mod = SourceModule(
         """
 #include<stdio.h>
 #define INDEX(a, b) a*256+b
@@ -32,21 +33,18 @@ dest[INDEX(a, b)] = (0.299*r_img[INDEX(a, b)]+0.587*g_img[INDEX(a, b)]+0.114*b_i
 """
     )
 
-a = scm.imread('Lenna.png').astype(np.float32)
+a = scm.imread("Lenna.png").astype(np.float32)
 print(a)
-r_img = a[:, :, 0].reshape(65536, order='F')
-g_img = a[:, :, 1].reshape(65536, order='F')
-b_img = a[:, :, 2].reshape(65536, order='F')
-dest=r_img
+r_img = a[:, :, 0].reshape(65536, order="F")
+g_img = a[:, :, 1].reshape(65536, order="F")
+b_img = a[:, :, 2].reshape(65536, order="F")
+dest = r_img
 print(dest)
 rgb2gray = mod.get_function("rgb2gray")
-rgb2gray(drv.Out(dest), drv.In(r_img), drv.In(g_img),drv.In(b_img),block=(1024, 1, 1), grid=(64, 1, 1))
+rgb2gray(drv.Out(dest), drv.In(r_img), drv.In(g_img), drv.In(b_img), block=(1024, 1, 1), grid=(64, 1, 1))
 
-dest=np.reshape(dest,(256,256), order='F')
+dest = np.reshape(dest, (256, 256), order="F")
 
 
 p.imshow(dest)
 p.show()
-
-
-

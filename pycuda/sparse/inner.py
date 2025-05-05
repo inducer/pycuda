@@ -1,9 +1,9 @@
-from __future__ import division
-from __future__ import absolute_import
-import pycuda.driver as drv
-import pycuda.gpuarray as gpuarray
+from __future__ import annotations
 
 import atexit
+
+import pycuda.driver as drv
+import pycuda.gpuarray as gpuarray
 
 
 STREAM_POOL = []

@@ -1,8 +1,9 @@
 #! /usr/bin/env python
-import pycuda.driver as drv
-import pycuda.autoinit
+from __future__ import annotations
+
 import numpy
-import numpy.linalg as la
+
+import pycuda.driver as drv
 
 
 def main():
@@ -26,17 +27,14 @@ def main():
         b = gpuarray.zeros((size,), dtype=numpy.float32)
         b.fill(1)
 
-        if power > 20:
-            count = 100
-        else:
-            count = 1000
+        count = 100 if power > 20 else 1000
 
         # gpu -----------------------------------------------------------------
         start = drv.Event()
         end = drv.Event()
         start.record()
 
-        for i in range(count):
+        for _i in range(count):
             a + b
 
         end.record()
@@ -57,7 +55,7 @@ def main():
         from time import time
 
         start = time()
-        for i in range(count):
+        for _i in range(count):
             a_cpu + b_cpu
         secs = time() - start
 

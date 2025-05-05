@@ -1,5 +1,8 @@
-from pycuda.tools import context_dependent_memoize
+from __future__ import annotations
+
 import numpy as np
+
+from pycuda.tools import context_dependent_memoize
 
 
 def platform_bits():

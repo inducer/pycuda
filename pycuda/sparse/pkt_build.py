@@ -1,5 +1,7 @@
-from __future__ import absolute_import
+from __future__ import annotations
+
 import numpy as np
+
 import pycuda.gpuarray as gpuarray
 
 
@@ -74,4 +76,6 @@ except ImportError:
     pass
 else:
     pyximport.install()
-    from pycuda.sparse.pkt_build_cython import build_pkt_data_structure  # noqa: F811, F401
+    from pycuda.sparse.pkt_build_cython import (
+        build_pkt_data_structure,  # noqa: F401
+    )

@@ -1,11 +1,11 @@
-#!python 
+#!python
+from __future__ import annotations
+
 import numpy
-import pycuda.autoinit
+
 import pycuda.driver as drv
 import pycuda.gpuarray as gpuarray
 from pycuda.tools import context_dependent_memoize
-
-
 
 
 def main(dtype):
@@ -30,7 +30,7 @@ def main(dtype):
         stop = drv.Event()
         start.record()
 
-        for i in range(20):
+        for _i in range(20):
             a.bind_to_texref_ext(lc_texrefs[0], allow_double_hack=True)
             b.bind_to_texref_ext(lc_texrefs[1], allow_double_hack=True)
             lc_kernel.prepared_call(x._grid, x._block,
@@ -42,13 +42,11 @@ def main(dtype):
         print(size, size_exp, stop.time_since(start))
 
 
-
 @context_dependent_memoize
 def get_lin_comb_kernel_no_tex(summand_descriptors,
         dtype_z):
+    from pycuda.elementwise import ScalarArg, VectorArg, get_elwise_module
     from pycuda.tools import dtype_to_ctype
-    from pycuda.elementwise import \
-            VectorArg, ScalarArg, get_elwise_module
 
     args = []
     loop_prep = []
@@ -81,14 +79,13 @@ def get_lin_comb_kernel_no_tex(summand_descriptors,
     return func
 
 
-
 def main_no_tex(dtype):
     lc_kernel = get_lin_comb_kernel_no_tex((
         (True, dtype, dtype),
         (True, dtype, dtype)
         ), dtype)
 
-    for size_exp in range(10,26):
+    for size_exp in range(10, 26):
         size = 1 << size_exp
 
         from pycuda.curandom import rand
@@ -103,7 +100,7 @@ def main_no_tex(dtype):
         stop = drv.Event()
         start.record()
 
-        for i in range(20):
+        for _i in range(20):
             lc_kernel.prepared_call(x._grid, x._block,
                 a.gpudata, x.gpudata,
                 b.gpudata, y.gpudata,
@@ -115,12 +112,9 @@ def main_no_tex(dtype):
         print(size, size_exp, stop.time_since(start))
 
 
-
-
 if __name__ == "__main__":
     dtype = numpy.float32
 
     main(dtype)
     print()
     main_no_tex(dtype)
-
