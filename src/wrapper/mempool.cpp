@@ -202,9 +202,9 @@ namespace
 
     int flags = 0;
     if (order == NPY_FORTRANORDER)
-      flags |= NPY_FARRAY;
+      flags |= NPY_ARRAY_FARRAY;
     else if (order == NPY_CORDER)
-      flags |= NPY_CARRAY;
+      flags |= NPY_ARRAY_CARRAY;
     else
       throw std::runtime_error("unrecognized order specifier");
 
