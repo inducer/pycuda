@@ -854,29 +854,37 @@ namespace pycuda
   };
 
   inline
-  boost::shared_ptr<context> device::make_context(unsigned int flags)
+boost::shared_ptr<context> device::make_context(unsigned int flags)
   {
     context::prepare_context_switch();
 
     CUcontext ctx;
     #if CUDAPP_CUDA_VERSION >= 13000
-        // CUDA 13+: cuCtxCreate now takes CUctxCreateParams*. Use the primary context instead.
-        // Try to apply requested flags if the primary context is currently inactive.
-        unsigned int pc_flags = 0; int pc_active = 0;
-        CUDAPP_CALL_GUARDED(cuDevicePrimaryCtxGetState, (&pc_flags, &pc_active, m_device));
-        if (!pc_active && flags != 0)
+        // CUDA 13+: avoid cuCtxCreate (now takes CUctxCreateParams*). Use primary context.
+        unsigned int pc_flags = 0;
+        int pc_active = 0;
+
+        // NOTE: argument order is (dev, &flags, &active)
+        CUDAPP_CALL_GUARDED(cuDevicePrimaryCtxGetState, (m_device, &pc_flags, &pc_active));
+
+        // If the primary context isn’t active yet, set flags if requested
+        if (!pc_active && flags != 0 && pc_flags != flags)
           CUDAPP_CALL_GUARDED(cuDevicePrimaryCtxSetFlags, (m_device, flags));
 
+        // Retain + make current
         CUDAPP_CALL_GUARDED_THREADED(cuDevicePrimaryCtxRetain, (&ctx, m_device));
-        CUDAPP_CALL_GUARDED_THREADED(cuCtxSetCurrent, (ctx));
+        CUDAPP_CALL_GUARDED(cuCtxSetCurrent, (ctx));
+
         boost::shared_ptr<context> result(new primary_context(ctx, m_device));
     #else
+        // Older CUDA: original 3-arg cuCtxCreate still works
         CUDAPP_CALL_GUARDED_THREADED(cuCtxCreate, (&ctx, flags, m_device));
         boost::shared_ptr<context> result(new context(ctx));
     #endif
-    context_stack::get().push(result);
-    return result;
-   }
+
+        context_stack::get().push(result);
+        return result;
+  }
 
 #if CUDAPP_CUDA_VERSION >= 7000
   inline boost::shared_ptr<context> device::retain_primary_context()
