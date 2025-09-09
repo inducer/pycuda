@@ -859,7 +859,13 @@ namespace pycuda
     context::prepare_context_switch();
 
     CUcontext ctx;
+
+#if CUDAPP_CUDA_VERSION >= 13000
+    CUDAPP_CALL_GUARDED_THREADED(cuCtxCreate, (&ctx, nullptr, flags, m_device));
+#else
     CUDAPP_CALL_GUARDED_THREADED(cuCtxCreate, (&ctx, flags, m_device));
+#endif
+
     boost::shared_ptr<context> result(new context(ctx));
     context_stack::get().push(result);
     return result;
