@@ -355,7 +355,6 @@ namespace
   module *module_from_buffer(py::object buffer, py::object py_options,
       py::object message_handler)
   {
-    PYCUDA_BUFFER_SIZE_T len;
     py_buffer_wrapper py_buf;
     py_buf.get(buffer.ptr(), PyBUF_ANY_CONTIGUOUS);
     CUmodule mod;
@@ -499,8 +498,7 @@ namespace
 
       void add_data(py::object py_data, CUjitInputType input_type, py::str py_name)
       {
-	Py_buffer py_buf;
-        PYCUDA_BUFFER_SIZE_T data_buf_len;
+        Py_buffer py_buf;
         if (PyObject_GetBuffer(py_data.ptr(), &py_buf, PyBUF_ANY_CONTIGUOUS)) {
           throw py::error_already_set();
         }
@@ -508,7 +506,7 @@ namespace
             py::extract<const char*>(py_name) : NULL;
         const CUresult cu_result = cuLinkAddData(m_link_state, input_type, py_buf.buf,
             py_buf.len, name, 0, NULL, NULL);
-	PyBuffer_Release(&py_buf);
+        PyBuffer_Release(&py_buf);
         check_cu_result("cuLinkAddData", cu_result);
       }
 

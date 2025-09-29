@@ -52,7 +52,6 @@ namespace pycuda { namespace curandom {
     buf_wrapper.get(dst.ptr(), PyBUF_ANY_CONTIGUOUS | PyBUF_WRITABLE);
 
     void *buf = buf_wrapper.m_buf.buf;
-    PYCUDA_BUFFER_SIZE_T len = buf_wrapper.m_buf.len;
 
     if (CURAND_DIRECTION_VECTORS_32_JOEKUO6 == set
 #if CUDAPP_CUDA_VERSION >= 4000
