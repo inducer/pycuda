@@ -1761,7 +1761,7 @@ def multi_take_put(
         if start_i + chunk_size > vec_count:
             func, tex_src = make_func_for_chunk_size(vec_count - start_i)
 
-        for src_tr, a in zip(tex_src, arrays[chunk_slice]):
+        for src_tr, a in zip(tex_src, arrays[chunk_slice], strict=False):
             a.bind_to_texref_ext(src_tr, allow_double_hack=True)
 
         func.prepared_async_call(

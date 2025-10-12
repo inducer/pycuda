@@ -246,7 +246,7 @@ class ElementwiseKernel:
             range_ is not None or slice_ is not None
         )
 
-        for arg, arg_descr in zip(args, arguments):
+        for arg, arg_descr in zip(args, arguments, strict=False):
             if isinstance(arg_descr, VectorArg):
                 if not arg.flags.forc:
                     raise RuntimeError(

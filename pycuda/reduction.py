@@ -287,7 +287,7 @@ class ReductionKernel:
             invocation_args = []
             vectors = []
 
-            for arg, arg_tp in zip(args, arg_types):
+            for arg, arg_tp in zip(args, arg_types, strict=False):
                 if arg_tp == "P":
                     if not arg.flags.forc:
                         raise RuntimeError(
