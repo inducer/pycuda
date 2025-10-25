@@ -1232,13 +1232,16 @@ BOOST_PYTHON_MODULE(_driver)
       .add_property("handle", &cl::handle_int)
       ;
   }
+
+  DEF_SIMPLE_FUNCTION(get_stream_priority_range);
+
   // }}}
 
   // {{{ stream
   {
     typedef stream cl;
     py::class_<cl, boost::noncopyable, shared_ptr<cl> >
-      ("Stream", py::init<unsigned int>(py::arg("flags")=0))
+      ("Stream", py::init<unsigned int, int>(py::arg("flags")=0, py::arg("priority")=0))
       .DEF_SIMPLE_METHOD(synchronize)
       .DEF_SIMPLE_METHOD(is_done)
 #if CUDAPP_CUDA_VERSION >= 3020
