@@ -408,6 +408,41 @@ namespace pycuda
 #endif
   // }}}
 
+  // {{{ helpers
+
+  template <class T>
+  inline T* vector_data_ptr(std::vector<T>& v)
+  { return v.empty() ? nullptr : &v[0]; }
+
+  inline
+  void preprocess_grid_block(py::tuple block_dim_py, unsigned int block_dim[],
+                              py::tuple grid_dim_py, unsigned int grid_dim[],
+                              const unsigned axis_count) {
+    for (unsigned i = 0; i < axis_count; ++i)
+    {
+      grid_dim[i] = 1;
+      block_dim[i] = 1;
+    }
+
+    pycuda_size_t gd_length = py::len(grid_dim_py);
+    if (gd_length > axis_count)
+      throw pycuda::error("function::launch_kernel", CUDA_ERROR_INVALID_HANDLE,
+          "too many grid dimensions in kernel launch");
+
+    for (unsigned i = 0; i < gd_length; ++i)
+      grid_dim[i] = py::extract<unsigned>(grid_dim_py[i]);
+
+    pycuda_size_t bd_length = py::len(block_dim_py);
+    if (bd_length > axis_count)
+      throw pycuda::error("function::launch_kernel", CUDA_ERROR_INVALID_HANDLE,
+          "too many block dimensions in kernel launch");
+
+    for (unsigned i = 0; i < bd_length; ++i)
+      block_dim[i] = py::extract<unsigned>(block_dim_py[i]);
+  }
+
+  // }}}
+
   // {{{ device
   class context;
   class primary_context;
@@ -999,6 +1034,8 @@ namespace pycuda
 
   // {{{ stream
   class event;
+  class graph;
+  class graph_node;
 
   class stream : public boost::noncopyable, public context_dependent
   {
@@ -1030,6 +1067,14 @@ namespace pycuda
 
 #if CUDAPP_CUDA_VERSION >= 3020
       void wait_for_event(const event &evt);
+#endif
+#if CUDAPP_CUDA_VERSION >= 10000
+      void begin_capture(CUstreamCaptureMode mode);
+      graph *end_capture();
+      py::tuple get_capture_info_v2();
+#if CUDAPP_CUDA_VERSION >= 11030
+      void update_capture_dependencies(py::list deps_py, unsigned int flags);
+#endif
 #endif
 
       bool is_done() const
@@ -1453,28 +1498,7 @@ namespace pycuda
         const unsigned axis_count = 3;
         unsigned grid_dim[axis_count];
         unsigned block_dim[axis_count];
-
-        for (unsigned i = 0; i < axis_count; ++i)
-        {
-          grid_dim[i] = 1;
-          block_dim[i] = 1;
-        }
-
-        pycuda_size_t gd_length = py::len(grid_dim_py);
-        if (gd_length > axis_count)
-          throw pycuda::error("function::launch_kernel", CUDA_ERROR_INVALID_HANDLE,
-              "too many grid dimensions in kernel launch");
-
-        for (unsigned i = 0; i < gd_length; ++i)
-          grid_dim[i] = py::extract<unsigned>(grid_dim_py[i]);
-
-        pycuda_size_t bd_length = py::len(block_dim_py);
-        if (bd_length > axis_count)
-          throw pycuda::error("function::launch_kernel", CUDA_ERROR_INVALID_HANDLE,
-              "too many block dimensions in kernel launch");
-
-        for (unsigned i = 0; i < bd_length; ++i)
-          block_dim[i] = py::extract<unsigned>(block_dim_py[i]);
+        preprocess_grid_block(block_dim_py, block_dim, grid_dim_py, grid_dim, axis_count);
 
         PYCUDA_PARSE_STREAM_PY;
 
@@ -1506,6 +1530,9 @@ namespace pycuda
       }
 #endif
 
+    CUfunction handle() const
+    { return m_function; }
+
   };
 
   inline
@@ -1516,6 +1543,264 @@ namespace pycuda
     return function(func, name);
   }
 
+  // }}}
+
+  // {{{ graph
+#if CUDAPP_CUDA_VERSION >= 10000
+  class graph_exec : public boost::noncopyable, public context_dependent
+  {
+    private:
+      CUgraphExec m_exec;
+
+    public:
+      graph_exec(CUgraphExec exec)
+        : m_exec(exec)
+      { }
+
+      ~graph_exec() {
+        free();
+      }
+
+      void free() {
+        try
+        {
+          scoped_context_activation ca(get_context());
+          CUDAPP_CALL_GUARDED_CLEANUP(cuGraphExecDestroy,(m_exec));
+        }
+        CUDAPP_CATCH_CLEANUP_ON_DEAD_CONTEXT(graph_exec);
+        release_context();
+      }
+
+      void launch(py::object stream_py)
+      {
+        PYCUDA_PARSE_STREAM_PY;
+        CUDAPP_CALL_GUARDED(cuGraphLaunch, (m_exec, s_handle))
+      }
+
+      void kernel_node_set_params(py::object graph_node_py, py::object function_py, 
+        py::tuple grid_dim_py, py::tuple block_dim_py,
+        py::object parameter_buffer,
+        unsigned shared_mem_bytes);
+  };
+
+  class graph_node : public boost::noncopyable, public context_dependent
+  {
+    private:
+      CUgraphNode m_node;
+
+    public:
+      graph_node(CUgraphNode node)
+        : m_node(node)
+      { }
+
+      bool operator==(const graph_node& rhs)
+      {
+        return m_node == rhs.m_node;
+      }
+
+      bool operator!=(const graph_node& rhs)
+      {
+        return !(*this == rhs);
+      }
+
+      CUgraphNode handle() const
+      { return m_node; }
+  };
+
+  inline py::list array_of_nodes_to_list(const CUgraphNode* nodes, size_t length) {
+    py::list list_nodes;
+    for (size_t i = 0; i < length; ++i) {
+      graph_node* pre_to_python_node = new graph_node(nodes[i]);
+      list_nodes.append(boost::ref(pre_to_python_node));
+    }
+    return list_nodes;
+  }
+
+  inline std::vector<CUgraphNode> list_to_vector_of_nodes(py::list list_nodes) {
+    std::vector<CUgraphNode> v;
+    for (ssize_t i = 0; i < len(list_nodes); ++i) {
+      graph_node* node = boost::python::extract<graph_node*>(list_nodes[i]);
+      v.push_back(node->handle());
+    }
+    return v;
+  }
+
+  class graph : public boost::noncopyable, public context_dependent
+  {
+    private:
+      CUgraph m_graph;
+      bool m_own_graph;
+
+    public:
+      graph()
+        : m_own_graph(true)
+      {
+        cuGraphCreate(&m_graph, 0);
+      }
+
+      graph(CUgraph graph)
+        : m_graph(graph)
+        , m_own_graph(false)
+      { }
+
+      ~graph() {
+        if (m_own_graph) {
+          free();
+        }
+      }
+
+      void free() {
+        try
+        {
+          scoped_context_activation ca(get_context());
+          CUDAPP_CALL_GUARDED_CLEANUP(cuGraphDestroy,(m_graph));
+        }
+        CUDAPP_CATCH_CLEANUP_ON_DEAD_CONTEXT(graph);
+        release_context();
+      }
+
+      bool operator==(const graph& rhs)
+      {
+        return m_graph == rhs.m_graph;
+      }
+
+      bool operator!=(const graph& rhs)
+      {
+        return !(*this == rhs);
+      }
+
+      graph_exec *instantiate()
+      {
+        CUgraphExec instance;
+#if CUDAPP_CUDA_VERSION >= 12000
+        CUDAPP_CALL_GUARDED(cuGraphInstantiate, (&instance, m_graph, 0))
+#else
+        CUDAPP_CALL_GUARDED(cuGraphInstantiate, (&instance, m_graph, nullptr, nullptr, 0))
+#endif
+        return new graph_exec(instance);
+      }
+
+      graph_node *add_kernel_node(py::list deps_py, py::object function_py,
+        py::tuple grid_dim_py, py::tuple block_dim_py, py::object parameter_buffer,
+        unsigned shared_mem_bytes);
+
+      void debug_dot_print(std::string path)
+      {
+        CUDAPP_CALL_GUARDED(cuGraphDebugDotPrint, (m_graph, path.c_str(), 1<<1))
+      }
+
+      CUgraph handle() const
+      { return m_graph; }
+  };
+
+  inline void stream::begin_capture(CUstreamCaptureMode mode = CU_STREAM_CAPTURE_MODE_GLOBAL)
+  {
+    CUDAPP_CALL_GUARDED(cuStreamBeginCapture, (m_stream, mode));
+  }
+
+  inline graph *stream::end_capture()
+  {
+    CUgraph result;
+    CUDAPP_CALL_GUARDED(cuStreamEndCapture, (m_stream, &result))
+    return new graph(result);
+  }
+
+  inline py::tuple stream::get_capture_info_v2()
+  {
+    CUgraph _capturing_graph;
+    CUstreamCaptureStatus _capture_status;
+    const CUgraphNode *_deps = nullptr;
+    size_t _dep_count = 0;
+    uint64_t _id_out = 0;
+    CUDAPP_CALL_GUARDED(cuStreamGetCaptureInfo_v2, (m_stream, &_capture_status, &_id_out, &_capturing_graph, &_deps, &_dep_count));
+    py::list list_root_nodes = array_of_nodes_to_list(_deps, _dep_count);
+    graph *node = new graph(_capturing_graph);
+    return py::make_tuple(_capture_status, _id_out, boost::ref(node), list_root_nodes);
+  }
+
+#if CUDAPP_CUDA_VERSION >= 11030
+  inline void stream::update_capture_dependencies(py::list deps_py, unsigned int flags)
+  {
+    std::vector<CUgraphNode> deps = list_to_vector_of_nodes(deps_py);
+    CUDAPP_CALL_GUARDED(cuStreamUpdateCaptureDependencies, (m_stream, vector_data_ptr(deps), len(deps_py), flags));
+  }
+#endif
+
+  inline graph_node *graph::add_kernel_node(py::list deps_py, py::object function_py,
+        py::tuple grid_dim_py, py::tuple block_dim_py, py::object parameter_buffer,
+        unsigned shared_mem_bytes)
+  {
+    const unsigned axis_count = 3;
+    unsigned grid_dim[axis_count];
+    unsigned block_dim[axis_count];
+    preprocess_grid_block(block_dim_py, block_dim, grid_dim_py, grid_dim, axis_count);
+
+    py_buffer_wrapper par_buf_wrapper;
+    par_buf_wrapper.get(parameter_buffer.ptr(), PyBUF_ANY_CONTIGUOUS);
+    size_t par_len = par_buf_wrapper.m_buf.len;
+
+    void *config[] = {
+      CU_LAUNCH_PARAM_BUFFER_POINTER, const_cast<void *>(par_buf_wrapper.m_buf.buf),
+      CU_LAUNCH_PARAM_BUFFER_SIZE, &par_len,
+      CU_LAUNCH_PARAM_END
+    };
+
+    CUgraphNode result;
+    function &fn = py::extract<function &>(function_py);
+    std::vector<CUgraphNode> deps = list_to_vector_of_nodes(deps_py);
+
+    CUDA_KERNEL_NODE_PARAMS _dynamic_params_cuda = { 0 };
+    _dynamic_params_cuda.blockDimX = block_dim[0];
+    _dynamic_params_cuda.blockDimY = block_dim[1];
+    _dynamic_params_cuda.blockDimZ = block_dim[2];
+    _dynamic_params_cuda.extra = config;
+    _dynamic_params_cuda.func = fn.handle();
+    _dynamic_params_cuda.gridDimX = grid_dim[0];
+    _dynamic_params_cuda.gridDimY = grid_dim[1];
+    _dynamic_params_cuda.gridDimZ = grid_dim[2];
+    _dynamic_params_cuda.kernelParams = 0;
+    _dynamic_params_cuda.sharedMemBytes = shared_mem_bytes;
+    CUDAPP_CALL_GUARDED(cuGraphAddKernelNode, (&result, m_graph, vector_data_ptr(deps), len(deps_py), &_dynamic_params_cuda));
+    return new graph_node(result);
+  }
+
+  inline void graph_exec::kernel_node_set_params(py::object graph_node_py, py::object function_py, 
+        py::tuple grid_dim_py, py::tuple block_dim_py,
+        py::object parameter_buffer,
+        unsigned shared_mem_bytes)
+  {
+    const unsigned axis_count = 3;
+    unsigned grid_dim[axis_count];
+    unsigned block_dim[axis_count];
+    preprocess_grid_block(block_dim_py, block_dim, grid_dim_py, grid_dim, axis_count);
+
+    py_buffer_wrapper par_buf_wrapper;
+    par_buf_wrapper.get(parameter_buffer.ptr(), PyBUF_ANY_CONTIGUOUS);
+    size_t par_len = par_buf_wrapper.m_buf.len;
+
+    void *config[] = {
+      CU_LAUNCH_PARAM_BUFFER_POINTER, const_cast<void *>(par_buf_wrapper.m_buf.buf),
+      CU_LAUNCH_PARAM_BUFFER_SIZE, &par_len,
+      CU_LAUNCH_PARAM_END
+    };
+
+    graph_node &gn = py::extract<graph_node &>(graph_node_py);
+    function &fn = py::extract<function &>(function_py);
+
+    CUDA_KERNEL_NODE_PARAMS _dynamic_params_cuda = { 0 };
+    _dynamic_params_cuda.blockDimX = block_dim[0];
+    _dynamic_params_cuda.blockDimY = block_dim[1];
+    _dynamic_params_cuda.blockDimZ = block_dim[2];
+    _dynamic_params_cuda.extra = config;
+    _dynamic_params_cuda.func = fn.handle();
+    _dynamic_params_cuda.gridDimX = grid_dim[0];
+    _dynamic_params_cuda.gridDimY = grid_dim[1];
+    _dynamic_params_cuda.gridDimZ = grid_dim[2];
+    _dynamic_params_cuda.kernelParams = 0;
+    _dynamic_params_cuda.sharedMemBytes = shared_mem_bytes;
+    CUDAPP_CALL_GUARDED(cuGraphExecKernelNodeSetParams, (m_exec, gn.handle(), &_dynamic_params_cuda));
+  }
+#endif
   // }}}
 
   // {{{ device memory
