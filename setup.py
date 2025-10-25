@@ -60,7 +60,6 @@ def get_config_schema():
 
     elif "darwin" in sys.platform:
         import glob
-
         root_candidates = glob.glob("/Developer/NVIDIA/CUDA-*")
         if root_candidates:
             cuda_root_default = root_candidates[-1]

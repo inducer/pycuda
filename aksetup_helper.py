@@ -558,7 +558,7 @@ class BoostLibraries(Libraries):
                 default_lib_name = "boost_python-py%d%d" % sys.version_info[:2]
             else:
                 default_lib_name = "boost_%s" % lib_base_name
-
+                
         Libraries.__init__(self, "BOOST_%s" % lib_base_name.upper(),
                 [default_lib_name],
                 help="Library names for Boost C++ %s library (without lib or .so)"
