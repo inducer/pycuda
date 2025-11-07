@@ -5,7 +5,6 @@
 #
 import numpy as np
 import time
-import sys
 import pycuda.driver as cuda
 import pycuda.autoinit
 from pycuda.compiler import SourceModule
