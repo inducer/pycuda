@@ -8,6 +8,7 @@ from tempfile import mkstemp
 
 from pytools import memoize
 from pytools.prefork import call_capture_output
+import glob
 
 
 @memoize
@@ -112,26 +113,37 @@ def compile_plain(source, options, keep, nvcc, cache_dir, target="cubin"):
 
     file_dir = mkdtemp()
     file_root = "kernel"
-
-    cu_file_name = file_root + ".cu"
+    if nvcc == "nvfortran":
+        cu_file_name = file_root + ".cuf"
+    else:
+        cu_file_name = file_root + ".cu"
     cu_file_path = join(file_dir, cu_file_name)
 
     with open(cu_file_path, "w") as outf:
         outf.write(str(source))
+        if nvcc == "nvfortran":
+           outf.write("\n \n end") #add null main program
 
     if keep:
         options = options[:]
-        options.append("--keep")
+        if nvcc != "nvfortran":
+           options.append("--keep")
 
-        print("*** compiler output in %s" % file_dir)
+    if nvcc == "nvfortran":
+       cmdline = [nvcc, "-gpu:keep", *options, cu_file_name]
+    else:
+       cmdline = [nvcc, "--" + target, *options, cu_file_name]
 
-    cmdline = [nvcc, "--" + target, *options, cu_file_name]
     result, stdout, stderr = call_capture_output(
         cmdline, cwd=file_dir, error_on_nonzero=False
     )
 
     try:
-        result_f = open(join(file_dir, file_root + "." + target), "rb")  # noqa: SIM115
+        if nvcc == "nvfortran":
+            fwild = glob.glob(join(file_dir,"pgcuda.*." + target))[0]
+            result_f = open(fwild,"rb")
+        else:
+            result_f = open(join(file_dir, file_root + "." + target), "rb")  # noqa: SIM115
     except OSError:
         no_output = True
     else:
@@ -274,7 +286,10 @@ def compile(
         makedirs(cache_dir, exist_ok=True)
 
     if arch is not None:
-        options.extend(["-arch", arch])
+        if nvcc == "nvfortran":
+           options.extend(["-gpu:"+arch])
+        else:
+           options.extend(["-arch", arch])
 
     if code is not None:
         options.extend(["-code", code])
