@@ -47,6 +47,7 @@ print("natom ",natom)
 print("npixel ",npixel)
 print("nthread",nthread)
 nblock = (npixel-1)//nthread+1
+# fill input arrays with random values for testing
 rng = np.random.default_rng(seed)
 r = (rng.random(3*natom).reshape((natom,3))-0.5).astype(np.float32)
 f2 = rng.random(2*natom).reshape((natom,2))-0.5
