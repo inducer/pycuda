@@ -16,7 +16,6 @@ mod = SourceModule("""
    dest(i)=a(i)*b(i)
    end subroutine multiply_them
 """,nvcc='nvfortran',no_extern_c=True)
-#""",nvcc='nvfortran',no_extern_c=True,options=["-O3", "-fast"])
 
 multiply_them = mod.get_function("multiply_them")
 
