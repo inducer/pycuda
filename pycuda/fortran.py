@@ -13,7 +13,10 @@ import glob
 @memoize
 def get_nvfortran_version(nvfortran):
     cmdline = [nvfortran, "--version"]
-    result, stdout, _stderr = call_capture_output(cmdline)
+    try:
+        result, stdout, _stderr = call_capture_output(cmdline)
+    except Exception:
+        raise SystemExit("nvfortran not found")
 
     if result != 0 or not stdout:
         from warnings import warn
