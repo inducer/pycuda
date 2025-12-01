@@ -796,8 +796,8 @@ class TestGPUArray:
             assert any_ary_gpu.dtype == any_ary.dtype
 
         import itertools
-        for _array in list(itertools.product([0, 1], [0, 1], [0, 1])):
-            array = np.array(_array, dtype)
+        for array_ in list(itertools.product([0, 1], [0, 1], [0, 1])):
+            array = np.array(array_, dtype)
             array_gpu = gpuarray.to_gpu(array)
             any_array = np.any(array)
             any_array_gpu = array_gpu.any().get()
@@ -821,8 +821,8 @@ class TestGPUArray:
             assert all_ary_gpu.dtype == all_ary.dtype
 
         import itertools
-        for _array in list(itertools.product([0, 1], [0, 1], [0, 1])):
-            array = np.array(_array, dtype)
+        for array_ in list(itertools.product([0, 1], [0, 1], [0, 1])):
+            array = np.array(array_, dtype)
             array_gpu = gpuarray.to_gpu(array)
             all_array = np.all(array)
             all_array_gpu = array_gpu.all().get()
