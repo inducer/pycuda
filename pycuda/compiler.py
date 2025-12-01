@@ -210,9 +210,9 @@ def _find_pycuda_include_path():
 
 
 DEFAULT_NVCC_FLAGS = [
-    _flag.strip()
-    for _flag in os.environ.get("PYCUDA_DEFAULT_NVCC_FLAGS", "").split()
-    if _flag.strip()
+    flag.strip()
+    for flag in os.environ.get("PYCUDA_DEFAULT_NVCC_FLAGS", "").split()
+    if flag.strip()
 ]
 
 
