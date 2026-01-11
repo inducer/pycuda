@@ -43,6 +43,7 @@ extend-ignore = [
     "B904",  # raise within except: use from
     "RUF012",  # ClassVar
     "SIM108", # ternary instead of if-then-else
+    "RUF067", # no code in __init__ *shrug*
 ]
 
 [tool.ruff.lint.flake8-quotes]
