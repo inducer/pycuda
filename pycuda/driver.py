@@ -31,12 +31,17 @@ def _search_on_path(filenames):
 
 
 def _add_cuda_libdir_to_dll_path():
-    from os.path import dirname, join
+    from os.path import dirname, exists, join
 
     cuda_path = os.environ.get("CUDA_PATH")
 
     if cuda_path is not None:
-        os.add_dll_directory(join(cuda_path, "bin"))
+        # CUDA 13.0+ use bin/x64/ as dir
+        lib_dir = join(cuda_path, "bin", "x64")
+        if exists(lib_dir):
+            os.add_dll_directory(lib_dir)
+        else:
+            os.add_dll_directory(join(cuda_path, "bin"))
         return
 
     nvcc_path = _search_on_path(["nvcc.exe"])
