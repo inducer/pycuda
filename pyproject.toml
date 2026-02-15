@@ -44,6 +44,7 @@ extend-ignore = [
     "RUF012",  # ClassVar
     "SIM108", # ternary instead of if-then-else
     "RUF067", # no code in __init__ *shrug*
+    "RUF069", # unreliable FP comparison
 ]
 
 [tool.ruff.lint.flake8-quotes]
