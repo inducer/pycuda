@@ -4,7 +4,8 @@
 requires = [
     "setuptools",
     "wheel",
-    "numpy>=1.24",
+    # https://github.com/inducer/pycuda/issues/499
+    "numpy>=1.24,<2.3",
 ]
 
 [tool.ruff]
