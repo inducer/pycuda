@@ -5,7 +5,7 @@ import numpy
 import numpy.linalg as la
 
 import pycuda.driver as drv
-import pycuda.gpuarray as gpuarray
+from pycuda import gpuarray
 
 
 def main_cg():

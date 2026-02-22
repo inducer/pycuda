@@ -4,8 +4,7 @@ import warnings
 
 import numpy as np
 
-import pycuda.elementwise as elementwise
-import pycuda.gpuarray as gpuarray
+from pycuda import elementwise, gpuarray
 from pycuda.driver import Stream
 
 

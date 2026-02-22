@@ -68,7 +68,7 @@ b2_a = numpy.zeros([p, p], dtype=numpy.complex64)     # RESHAPED (8192*8192) OUT
 num = 2  # I KNOW THIS IS A BAD PRACTISE, BUT I COUNDN'T FIND ANY OTHER WAY(INIT CANNOT BE USED HERE)
 
 # THE TRANSPOSE-SPLIT ALGORITHM FOR FFT
-for _t in range(0, trans):
+for _t in range(trans):
     for i in range(m):
         a2_1[i, :] = a2[i*p/m:(i+1)*p/m, :].flatten()  # DIVIDE AND RESHAPE THE INPUT IMAGE INTO 1D ARRAY
 

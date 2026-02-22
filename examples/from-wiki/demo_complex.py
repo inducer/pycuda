@@ -3,7 +3,7 @@ from __future__ import annotations
 
 import numpy
 
-import pycuda.gpuarray as gpuarray
+from pycuda import gpuarray
 
 
 a = (numpy.random.randn(400)

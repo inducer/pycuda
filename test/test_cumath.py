@@ -4,9 +4,8 @@ import math
 
 import numpy as np
 
-import pycuda.cumath as cumath
 import pycuda.driver as drv  # noqa
-import pycuda.gpuarray as gpuarray
+from pycuda import cumath, gpuarray
 from pycuda.tools import mark_cuda_test
 
 

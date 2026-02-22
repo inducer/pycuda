@@ -25,7 +25,7 @@ def count_down_delay(delay):
         sys.stdout.flush()
         delay -= 1
         sleep(1)
-    print("")
+    print()
 
 
 DASH_SEPARATOR = 75 * "-"
@@ -297,7 +297,6 @@ class ConfigSchema:
         return dict((opt.name, opt.default) for opt in self.options)
 
     def read_config_from_pyfile(self, filename):
-        result = {}
         filevars = {}
         infile = open(filename)
         try:
@@ -307,11 +306,7 @@ class ConfigSchema:
 
         exec(compile(contents, filename, "exec"), filevars)
 
-        for key, value in filevars.items():
-            if key in self.optdict:
-                result[key] = value
-
-        return result
+        return {key: value for key, value in filevars.items() if key in self.optdict}
 
     def update_conf_file(self, filename, config):
         result = {}
@@ -324,16 +319,13 @@ class ConfigSchema:
 
         filevars.pop("__builtins__", None)
 
-        for key, value in config.items():
-            if value is not None:
-                filevars[key] = value
+        filevars.update({key: value for key, value in config.items() if value is not None})
 
         keys = list(filevars.keys())
         keys.sort()
 
         outf = open(filename, "w")
-        for key in keys:
-            outf.write("%s = %s\n" % (key, repr(filevars[key])))
+        outf.writelines("%s = %s\n" % (key, repr(filevars[key])) for key in keys)
         outf.close()
 
         return result
@@ -520,8 +512,7 @@ class StringListOption(Option):
                 import re
                 sep = re.compile(r"(?<!\\),")
                 result = sep.split(opt)
-                result = [i.replace(r"\,", ",") for i in result]
-                return result
+                return [i.replace(r"\,", ",") for i in result]
             else:
                 return []
 
@@ -588,9 +579,9 @@ def set_up_shipped_boost_if_requested(project_name, conf, source_path=None,
             print("(The files should be under %s/.)" % source_path)
             print(DASH_SEPARATOR)
             print("If you got this package from git, you probably want to do")
-            print("")
+            print()
             print(" $ git submodule update --init")
-            print("")
+            print()
             print("to fetch what you are presently missing. If you got this from")
             print("a distributed package on the net, that package is broken and")
             print("should be fixed. For now, I will turn off 'USE_SHIPPED_BOOST'")
@@ -798,7 +789,7 @@ def _run_git_command(cmd):
         print(DASH_SEPARATOR)
         print("The package directory appears to be a git repository, but I could")
         print("not invoke git to check whether my submodules are up to date.")
-        print("")
+        print()
         print("The error was:")
         print(git_error)
         print("Hit Ctrl-C now if you'd like to think about the situation.")
@@ -855,20 +846,20 @@ def check_git_submodules():
         print("git submodules are not up-to-date or in odd state")
         print(DASH_SEPARATOR)
         print("If this makes no sense, you probably want to say")
-        print("")
+        print()
         print(" $ git submodule update --init")
-        print("")
+        print()
         print("to fetch what you are presently missing and "
                 "move on with your life.")
         print("If you got this from a distributed package on the "
                 "net, that package is")
         print("broken and should be fixed. Please inform whoever "
                 "gave you this package.")
-        print("")
+        print()
         print("These issues were found:")
         for w in pkg_warnings:
             print("  %s" % w)
-        print("")
+        print()
         print("I will try to initialize the submodules for you "
                 "after a short wait.")
         print(DASH_SEPARATOR)
@@ -898,12 +889,12 @@ def check_pybind11():
         print("Pybind11 is not installed.")
         print(DASH_SEPARATOR)
         print("Very likely, the build process after this message will fail.")
-        print("")
+        print()
         print("Simply press Ctrl+C and type")
         print("python -m pip install pybind11")
         print("to fix this. If you don't, the build will continue ")
         print("in a few seconds.")
-        print("")
+        print()
         print("[1] https://pybind11.readthedocs.io/en/stable/")
         print(DASH_SEPARATOR)
 

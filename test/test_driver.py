@@ -11,7 +11,7 @@ import numpy.linalg as la
 import pytest
 
 import pycuda.driver as drv
-import pycuda.gpuarray as gpuarray
+from pycuda import gpuarray
 from pycuda.compiler import SourceModule
 from pycuda.tools import dtype_to_ctype, mark_cuda_test
 
@@ -141,7 +141,7 @@ class TestDriver:
     def test_gpuarray(self):
         a = np.arange(200000, dtype=np.float32)
         b = a + 17
-        import pycuda.gpuarray as gpuarray
+        from pycuda import gpuarray
 
         a_g = gpuarray.to_gpu(a)
         b_g = gpuarray.to_gpu(b)
@@ -172,7 +172,7 @@ class TestDriver:
     def donottest_cublas_mixing(self):
         self.test_streamed_kernel()
 
-        import pycuda.blas as blas
+        from pycuda import blas
 
         shape = (10,)
         a = blas.ones(shape, dtype=np.float32)
@@ -675,7 +675,7 @@ class TestDriver:
 
         kernel = mod.get_function("kernel")
 
-        import pycuda.gpuarray as gpuarray
+        from pycuda import gpuarray
 
         arg = gpuarray.zeros((n,), dtype=np.float32)
 

@@ -4,7 +4,7 @@ from __future__ import annotations
 import numpy
 
 import pycuda.driver as drv
-import pycuda.gpuarray as gpuarray
+from pycuda import gpuarray
 from pycuda.tools import context_dependent_memoize
 
 

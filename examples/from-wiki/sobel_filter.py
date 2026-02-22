@@ -514,13 +514,13 @@ def keyboard(key, x=0, y=0):
     global mode, scale
     if key == "q":
         sys.exit(0)
-    elif key == "I" or key == "i":
+    elif key in {"I", "i"}:
         mode = 0
-    elif key == "T" or key == "t":
+    elif key in {"T", "t"}:
         mode = 1
-    elif key == "S" or key == "s":
+    elif key in {"S", "s"}:
         mode = 2
-    elif key == "D" or key == "d":
+    elif key in {"D", "d"}:
         mode = 3
     elif key == "-":
         scale -= 0.1

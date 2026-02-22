@@ -126,7 +126,7 @@ def keyPressed(*args):
         print("Closing..")
         destroy_PBOs()
         destroy_texture()
-        exit()
+        sys.exit()
     elif args[0] == "a":
         print("toggling animation")
         animate = not animate

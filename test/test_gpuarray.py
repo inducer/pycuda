@@ -1,4 +1,3 @@
-#! /usr/bin/env python
 from __future__ import annotations
 
 import operator
@@ -9,7 +8,7 @@ import numpy.linalg as la
 import pytest
 
 import pycuda.driver as drv
-import pycuda.gpuarray as gpuarray
+from pycuda import gpuarray
 from pycuda.characterize import has_double_support
 from pycuda.compiler import SourceModule
 from pycuda.tools import init_cuda_context_fixture
@@ -765,7 +764,7 @@ class TestGPUArray:
 
         b = a_cpu.get()
 
-        for i in range(0, 10):
+        for i in range(10):
             assert a[len(a) - 1 - i] == b[i]
 
     def test_sum(self):
@@ -996,7 +995,7 @@ class TestGPUArray:
             assert la.norm(a_gpu_slice.get() - a_slice) == 0
 
     def test_2d_slice_f(self):
-        import pycuda.gpuarray as gpuarray
+        from pycuda import gpuarray
         from pycuda.curandom import rand as curand
 
         n = 1000
@@ -1023,7 +1022,7 @@ class TestGPUArray:
         b = np.array([2, 2, 2])
         c = np.array([3, 3, 3])
 
-        import pycuda.gpuarray as gpuarray
+        from pycuda import gpuarray
 
         a_gpu = gpuarray.to_gpu(a)
         b_gpu = gpuarray.to_gpu(b)
@@ -1043,7 +1042,7 @@ class TestGPUArray:
         a = a_gpu.get()
         b = b_gpu.get()
 
-        import pycuda.gpuarray as gpuarray
+        from pycuda import gpuarray
 
         max_a_b_gpu = gpuarray.maximum(a_gpu, b_gpu)
         min_a_b_gpu = gpuarray.minimum(a_gpu, b_gpu)
@@ -1479,7 +1478,7 @@ class TestGPUArray:
         a_gpu = curand((sz,))
         a = a_gpu.get()
 
-        import pycuda.gpuarray as gpuarray
+        from pycuda import gpuarray
 
         max_a0_gpu = gpuarray.maximum(a_gpu, 0)
         min_a0_gpu = gpuarray.minimum(0, a_gpu)
@@ -1546,7 +1545,7 @@ class TestGPUArray:
             )
 
     def test_get_set(self):
-        import pycuda.gpuarray as gpuarray
+        from pycuda import gpuarray
 
         a = np.random.normal(0.0, 1.0, (4, 4))
         a_gpu = gpuarray.to_gpu(a)

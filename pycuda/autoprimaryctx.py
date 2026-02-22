@@ -17,7 +17,6 @@ def _retain_primary_context(dev):
     return context
 
 
-global context
 context = make_default_context(_retain_primary_context)
 device = context.get_device()
 

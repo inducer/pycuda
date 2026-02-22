@@ -8,7 +8,7 @@ from __future__ import annotations
 import numpy
 
 import pycuda.driver as cuda
-import pycuda.gpuarray as gpuarray
+from pycuda import gpuarray
 from pycuda.compiler import SourceModule
 
 

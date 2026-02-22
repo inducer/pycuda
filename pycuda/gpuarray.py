@@ -15,7 +15,7 @@ import numpy as np
 from pytools import memoize, memoize_method
 
 import pycuda.driver as drv
-import pycuda.elementwise as elementwise
+from pycuda import elementwise
 from pycuda.characterize import has_double_support
 from pycuda.compyte.array import (
     ArrayFlags as _ArrayFlags,
@@ -1345,10 +1345,9 @@ def _array_like_helper(other_ary, dtype, order):
 
 def empty_like(other_ary, dtype=None, order="K"):
     dtype, order, strides = _array_like_helper(other_ary, dtype, order)
-    result = GPUArray(
+    return GPUArray(
         other_ary.shape, dtype, other_ary.allocator, order=order, strides=strides
     )
-    return result
 
 
 def zeros_like(other_ary, dtype=None, order="K"):

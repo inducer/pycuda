@@ -2,7 +2,7 @@
 # simple module to show the plotting of random data
 from __future__ import annotations
 
-import pycuda.curandom as curandom
+from pycuda import curandom
 
 
 size = 1000

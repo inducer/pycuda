@@ -5,7 +5,7 @@ import numpy as np
 from pytools import memoize_method
 
 import pycuda.driver as drv
-import pycuda.gpuarray as gpuarray
+from pycuda import gpuarray
 from pycuda.sparse.inner import AsyncInnerProduct
 
 

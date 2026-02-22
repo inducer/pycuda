@@ -7,7 +7,7 @@ from numba import cuda
 
 # We use autoprimaryctx instead of autoinit because Numba can only operate on a
 # primary context
-import pycuda.gpuarray as gpuarray
+from pycuda import gpuarray
 
 
 # Create a PyCUDA gpuarray

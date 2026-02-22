@@ -3,7 +3,7 @@ from __future__ import annotations
 import atexit
 
 import pycuda.driver as drv
-import pycuda.gpuarray as gpuarray
+from pycuda import gpuarray
 
 
 STREAM_POOL = []

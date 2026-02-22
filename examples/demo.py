@@ -42,7 +42,7 @@ print(a)
 
 # part 2 ----------------------------------------------------------------------
 
-import pycuda.gpuarray as gpuarray
+from pycuda import gpuarray
 
 
 a_gpu = gpuarray.to_gpu(numpy.random.randn(4, 4).astype(numpy.float32))

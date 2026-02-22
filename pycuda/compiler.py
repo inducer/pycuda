@@ -5,6 +5,7 @@ import os
 import sys
 from os import unlink
 from tempfile import mkstemp
+from warnings import warn
 
 from pytools import memoize
 from pytools.prefork import call_capture_output
@@ -16,8 +17,6 @@ def get_nvcc_version(nvcc):
     result, stdout, _stderr = call_capture_output(cmdline)
 
     if result != 0 or not stdout:
-        from warnings import warn
-
         warn("NVCC version could not be determined.", stacklevel=2)
         stdout = b"nvcc unknown version"
 
@@ -105,8 +104,8 @@ def compile_plain(source, options, keep, nvcc, cache_dir, target="cubin"):
             with open(cache_path, "rb") as cache_file:
                 return cache_file.read()
 
-        except Exception:
-            pass
+        except Exception as e:
+            warn(f"Could not read cache file '{cache_path}': {e!s}", stacklevel=1)
 
     from tempfile import mkdtemp
 
@@ -139,8 +138,6 @@ def compile_plain(source, options, keep, nvcc, cache_dir, target="cubin"):
 
     if result != 0 or (no_output and (stdout or stderr)):
         if result == 0:
-            from warnings import warn
-
             warn(
                 "PyCUDA: nvcc exited with status 0, but appears to have "
                 "encountered an error", stacklevel=2
@@ -156,8 +153,6 @@ def compile_plain(source, options, keep, nvcc, cache_dir, target="cubin"):
 
     if stdout or stderr:
         lcase_err_text = (stdout + stderr).decode("utf-8", "replace").lower()
-        from warnings import warn
-
         if "demoted" in lcase_err_text or "demoting" in lcase_err_text:
             warn(
                 "nvcc said it demoted types in source code it "
@@ -304,14 +299,12 @@ class CudaModule:
 
             capability = Context.get_device().compute_capability()
             if tuple(map(int, tuple(arch.split("_")[1]))) > capability:
-                from warnings import warn
-
                 warn(
                     "trying to compile for a compute capability "
                     "higher than selected GPU", stacklevel=2
                 )
-        except Exception:
-            pass
+        except Exception as e:
+            warn(f"failed to check compute capability for module: {e!s}", stacklevel=1)
 
     def _bind_module(self):
         self.get_global = self.module.get_global
@@ -411,7 +404,7 @@ class DynamicModule(CudaModule):
             include_dirs = []
         compute_capability = Context.get_device().compute_capability()
         if compute_capability < (3, 5):
-            raise Exception(
+            raise RuntimeError(
                 "Minimum compute capability for dynamic parallelism is 3.5 (found: %u.%u)!"
                 % (compute_capability[0], compute_capability[1])
             )

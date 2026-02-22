@@ -1015,8 +1015,7 @@ if get_curand_version() >= (4, 1, 0):
 def generate_direction_vectors(count, direction=None):
     if get_curand_version() >= (4, 0, 0):
         if (
-            direction == direction_vector_set.VECTOR_64
-            or direction == direction_vector_set.SCRAMBLED_VECTOR_64
+            direction in (direction_vector_set.VECTOR_64, direction_vector_set.SCRAMBLED_VECTOR_64)
         ):
             result = np.empty((count, 64), dtype=np.uint64)
         else:

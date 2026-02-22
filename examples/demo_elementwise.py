@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import numpy
 
-import pycuda.gpuarray as gpuarray
+from pycuda import gpuarray
 from pycuda.curandom import rand as curand
 
 
