@@ -48,8 +48,8 @@ import numpy
 import pycuda.autoinit
 import pycuda.cumath
 import pycuda.driver as drv
-import pycuda.gpuarray as gpuarray
 import pycuda.tools
+from pycuda import gpuarray
 from pycuda.compiler import SourceModule
 from pycuda.elementwise import ElementwiseKernel
 

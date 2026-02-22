@@ -43,7 +43,7 @@ def sizeof(type_name, preamble=""):
         no_extern_c=True,
     )
 
-    import pycuda.gpuarray as gpuarray
+    from pycuda import gpuarray
 
     output = gpuarray.empty((), dtype=np.uintp)
     mod.get_function("write_size")(output, block=(1, 1, 1), grid=(1, 1))

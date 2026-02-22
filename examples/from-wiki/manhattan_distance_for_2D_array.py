@@ -53,7 +53,7 @@ def run(res, step):
 
 
 res   = numpy.array([[0
-                        for _ in range(0, w)]
-                        for _ in range(0, w)], dtype="int32")
+                        for _ in range(w)]
+                        for _ in range(w)], dtype="int32")
 print(res)
 run(res, 0)

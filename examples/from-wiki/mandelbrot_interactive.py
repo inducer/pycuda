@@ -33,7 +33,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 from matplotlib.patches import Rectangle
 from matplotlib.widgets import RectangleSelector
-from pylab import cm as cm
+from pylab import cm
 
 import pycuda.driver as drv
 from pycuda.compiler import SourceModule

@@ -16,7 +16,7 @@ import ImageTk  # PIL
 import numpy as nm
 
 import pycuda.driver as drv
-import pycuda.gpuarray as gpuarray
+from pycuda import gpuarray
 
 
 # set width and height of window, more pixels take longer to calculate
@@ -42,8 +42,7 @@ def calculate_z_gpu(q, maxiter, z):
     # we bring the iterations_gpu array back to determine pixel colours later
     complex_gpu(z_gpu, q_gpu, iterations_gpu, maxiter)
 
-    iterations = iterations_gpu.get()
-    return iterations
+    return iterations_gpu.get()
 
 
 def calculate_z_numpy_gpu(q, maxiter, z):
@@ -73,8 +72,7 @@ def calculate_z_numpy_gpu(q, maxiter, z):
         zg = gpuarray.if_positive(comparison_result, cmplx0sg, zg)
         outputg = gpuarray.if_positive(comparison_result, iterg, outputg)
         iterg = iterg + 1
-    output = outputg.get()
-    return output
+    return outputg.get()
 
 
 def calculate_z_numpy(q, maxiter, z):

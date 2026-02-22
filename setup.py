@@ -1,4 +1,3 @@
-#!/usr/bin/env python
 from __future__ import annotations
 
 from os.path import dirname, join, normpath

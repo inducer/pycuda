@@ -7,7 +7,7 @@ import pycuda.driver as drv
 
 
 def main():
-    import pycuda.gpuarray as gpuarray
+    from pycuda import gpuarray
 
     sizes = []
     times_gpu = []

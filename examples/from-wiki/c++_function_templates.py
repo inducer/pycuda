@@ -3,7 +3,7 @@ from __future__ import annotations
 
 import numpy as np
 
-import pycuda.gpuarray as gpuarray
+from pycuda import gpuarray
 from pycuda.compiler import SourceModule
 
 

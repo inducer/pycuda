@@ -4,7 +4,7 @@ import numpy as np
 
 from pytools import memoize_method
 
-import pycuda.gpuarray as gpuarray
+from pycuda import gpuarray
 from pycuda.compiler import SourceModule
 
 

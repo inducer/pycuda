@@ -10,7 +10,7 @@ import numpy.linalg as la
 
 import pycuda.autoinit
 import pycuda.driver as cuda
-import pycuda.gpuarray as gpuarray
+from pycuda import gpuarray
 from pycuda.compiler import SourceModule
 from pycuda.tools import context_dependent_memoize
 

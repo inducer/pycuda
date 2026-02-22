@@ -45,6 +45,7 @@ extend-ignore = [
     "SIM108", # ternary instead of if-then-else
     "RUF067", # no code in __init__ *shrug*
     "RUF069", # unreliable FP comparison
+    "BLE001",
 ]
 
 [tool.ruff.lint.flake8-quotes]
@@ -67,12 +68,15 @@ required-imports = ["from __future__ import annotations"]
 extend-ignore-names = ["update_for_*"]
 
 [tool.ruff.lint.per-file-ignores]
+"doc/conf.py" = ["S102"]
 "test/test_*.py" = [
     "N806", # upper case locals
+    "S102",
 ]
 "setup.py" = [
     "N806", # upper case locals
     "SIM115",  # context manager for files
+    "S102",
 ]
 "pycuda/sparse/coordinate.py" = [
     "E501", # line length
@@ -85,7 +89,7 @@ extend-ignore-names = ["update_for_*"]
     "E501", # line length
 ]
 "examples/from-wiki/*.py" = [
-    "F", "E", "N", "B"
+    "F", "E", "N", "B", "EXE001", "PLW",
 ]
 "examples/demo_cdpSimplePrint.py" = [
     "E501", # line length
@@ -93,6 +97,6 @@ extend-ignore-names = ["update_for_*"]
 ]
 "aksetup_helper.py" = [
     # effectively unmaintained, will go away
-    "UP", "C", "E501", "B", "SIM", "RUF",
+    "UP", "C", "E501", "B", "SIM", "RUF", "S102", "S110", "TRY"
 ]
 "test/undistributed/*.py" = ["B"]

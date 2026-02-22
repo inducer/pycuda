@@ -8,12 +8,12 @@ import numpy
 
 from pytools import Table
 
-import pycuda.curandom as curandom
 import pycuda.driver as drv
+from pycuda import curandom
 
 
 def main():
-    import pycuda.gpuarray as gpuarray
+    from pycuda import gpuarray
 
     sizes = []
     times = []

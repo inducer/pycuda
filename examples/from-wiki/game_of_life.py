@@ -12,9 +12,9 @@ import sys
 
 import matplotlib.pyplot as plt
 import numpy as np
-from pylab import cm as cm
+from pylab import cm
 
-import pycuda.gpuarray as gpuarray
+from pycuda import gpuarray
 from pycuda.compiler import SourceModule
 
 

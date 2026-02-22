@@ -6,7 +6,7 @@ import random
 import numpy
 
 import pycuda.driver as cuda
-import pycuda.gpuarray as gpuarray
+from pycuda import gpuarray
 from pycuda.elementwise import ElementwiseKernel as Elementwise
 
 

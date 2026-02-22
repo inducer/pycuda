@@ -3,7 +3,7 @@ from __future__ import annotations
 import numpy
 
 import pycuda.driver as cuda
-import pycuda.gpuarray as gpuarray
+from pycuda import gpuarray
 
 
 free_bytes, total_bytes = cuda.mem_get_info()

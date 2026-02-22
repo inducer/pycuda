@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import numpy as np
 
-import pycuda.gpuarray as gpuarray
+from pycuda import gpuarray
 
 
 def build_pkt_data_structure(

@@ -1,4 +1,4 @@
-"""Miscallenous helper functionality."""
+"""Miscellaneous helper functionality."""
 from __future__ import annotations
 
 
@@ -198,7 +198,7 @@ def make_default_context(ctx_maker=None):
             assert homedir is not None
             with open(os.path.join(homedir, ".cuda_device")) as devrc:
                 devn = devrc.read().strip()
-        except Exception:
+        except Exception:  # noqa: S110
             pass
 
     # If either CUDA_DEVICE or $HOME/.cuda_device is set, try to use it
@@ -314,7 +314,7 @@ class DeviceData:
     def align_bytes(self, word_size=4):
         if word_size == 4:
             return 64
-        elif word_size == 8 or word_size == 16:
+        elif word_size in {8, 16}:
             return 128
         else:
             raise ValueError("no alignment possible for fetches of size %d" % word_size)

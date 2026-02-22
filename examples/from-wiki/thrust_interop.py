@@ -6,7 +6,7 @@ from cgen import *
 from codepy.bpl import BoostPythonModule
 from codepy.cuda import CudaModule
 
-import pycuda.gpuarray as gpuarray
+from pycuda import gpuarray
 
 
 # Make a host_module, compiled for CPU

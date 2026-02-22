@@ -28,8 +28,7 @@ Derived from code within the Thrust project, https://github.com/thrust/thrust/
 import numpy as np
 
 import pycuda._mymako as mako
-import pycuda.driver as driver
-import pycuda.gpuarray as gpuarray
+from pycuda import driver, gpuarray
 from pycuda._cluda import CLUDA_PREAMBLE
 from pycuda.compiler import SourceModule
 from pycuda.tools import dtype_to_ctype

@@ -9,7 +9,7 @@ def main():
     tbl = Table()
     tbl.add_row(("size [MiB]", "time [s]", "mem.bw [GB/s]"))
 
-    import pycuda.gpuarray as gpuarray
+    from pycuda import gpuarray
 
     # they're floats, i.e. 4 bytes each
     for power in range(10, 28):
