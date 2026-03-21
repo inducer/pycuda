@@ -1603,7 +1603,8 @@ PYBIND11_MODULE(_driver, m)
   {
     typedef event cl;
     py::class_<cl>
-      (m, "Event", py::init<unsigned int>(py::arg("flags")=0))
+      (m, "Event")
+      .def(py::init<unsigned int>(), py::arg("flags")=0)
       .def("record", &cl::record,
           py::arg("stream")=py::none(), py::return_value_policy::reference)
       .def("synchronize", &cl::synchronize, py::return_value_policy::reference)
@@ -1612,9 +1613,8 @@ PYBIND11_MODULE(_driver, m)
       .DEF_SIMPLE_METHOD(time_till)
 #if CUDAPP_CUDA_VERSION >= 4010 && PY_VERSION_HEX >= 0x02060000
       .DEF_SIMPLE_METHOD(ipc_handle)
-      .def("from_ipc_handle", event_from_ipc_handle,
+      .def_static("from_ipc_handle", event_from_ipc_handle,
           py::return_value_policy::take_ownership)
-      .staticmethod("from_ipc_handle")
 #endif
       ;
   }
@@ -1648,7 +1648,8 @@ PYBIND11_MODULE(_driver, m)
   {
     typedef array cl;
     py::class_<cl, std::shared_ptr<cl>>
-      (m, "Array", py::init<const CUDA_ARRAY_DESCRIPTOR &>())
+      (m, "Array")
+      .def(py::init<const CUDA_ARRAY_DESCRIPTOR &>())
       .DEF_SIMPLE_METHOD(free)
       .DEF_SIMPLE_METHOD(get_descriptor)
 #if CUDAPP_CUDA_VERSION >= 2000
@@ -1668,11 +1669,11 @@ PYBIND11_MODULE(_driver, m)
       .def("set_address", &cl::set_address,
           py::arg("devptr"), py::arg("bytes"), py::arg("allow_offset")=false)
 #if CUDAPP_CUDA_VERSION >= 2020
-      .def("set_address_2d", set_address_2d,
+      .def("set_address_2d", &cl::set_address_2d,
           py::arg("devptr"), py::arg("descr"), py::arg("pitch"))
 #endif
-      .def("set_format", set_format, py::arg("format"), py::arg("num_components"))
-      .def("set_address_mode", set_address_mode, py::arg("dim"), py::arg("am"))
+      .def("set_format", &cl::set_format, py::arg("format"), py::arg("num_components"))
+      .def("set_address_mode", &cl::set_address_mode, py::arg("dim"), py::arg("am"))
       .DEF_SIMPLE_METHOD(set_filter_mode)
       .DEF_SIMPLE_METHOD(set_flags)
       .DEF_SIMPLE_METHOD(get_address)

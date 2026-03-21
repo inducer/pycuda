@@ -224,10 +224,10 @@ namespace
 
 
 
-  template<class Wrapper>
+  template<class PoolType, class Wrapper>
   void expose_memory_pool(Wrapper &wrapper)
   {
-    typedef typename Wrapper::wrapped_type cl;
+    typedef PoolType cl;
     wrapper
       .def_property_readonly("held_blocks", &cl::held_blocks)
       .def_property_readonly("active_blocks", &cl::active_blocks)
@@ -257,7 +257,7 @@ void pycuda_expose_tools(py::module_ &m)
           py::return_value_policy::take_ownership)
       ;
 
-    expose_memory_pool(wrapper);
+    expose_memory_pool<context_dependent_memory_pool<device_allocator>>(wrapper);
   }
 
   {
@@ -280,7 +280,7 @@ void pycuda_expose_tools(py::module_ &m)
           py::arg("shape"), py::arg("dtype"), py::arg("order")="C")
       ;
 
-    expose_memory_pool(wrapper);
+    expose_memory_pool<pycuda::memory_pool<host_allocator>>(wrapper);
   }
 
   {

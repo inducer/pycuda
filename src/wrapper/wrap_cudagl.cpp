@@ -13,6 +13,7 @@
 using namespace pycuda;
 using namespace pycuda::gl;
 namespace py = pybind11;
+using std::shared_ptr;
 
 
 
