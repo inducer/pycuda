@@ -177,7 +177,7 @@ namespace
 
 
 
-  py::handle<> host_pool_allocate(
+  py::object host_pool_allocate(
       std::shared_ptr<pycuda::memory_pool<host_allocator> > pool,
       py::object shape, py::object dtype, py::object order_py)
   {
@@ -186,34 +186,38 @@ namespace
       throw py::error_already_set();
 
     std::vector<npy_intp> dims;
-    std::copy(
-        py::stl_input_iterator<npy_intp>(shape),
-        py::stl_input_iterator<npy_intp>(),
-        back_inserter(dims));
+    if (py::isinstance<py::int_>(shape)) {
+      dims.push_back(shape.cast<npy_intp>());
+    } else {
+      for (auto item : shape)
+        dims.push_back(item.cast<npy_intp>());
+    }
 
     std::unique_ptr<pooled_host_allocation> alloc(
         new pooled_host_allocation(
-          pool, tp_descr->elsize*pycuda::size_from_dims(dims.size(), &dims.front())));
+          pool, PyDataType_ELSIZE(tp_descr)*pycuda::size_from_dims(dims.size(), &dims.front())));
 
-    NPY_ORDER order = PyArray_CORDER;
+    NPY_ORDER order = NPY_CORDER;
     PyArray_OrderConverter(order_py.ptr(), &order);
 
     int flags = 0;
-    if (order == PyArray_FORTRANORDER)
-      flags |= NPY_FARRAY;
-    else if (order == PyArray_CORDER)
-      flags |= NPY_CARRAY;
+    if (order == NPY_FORTRANORDER)
+      flags |= NPY_ARRAY_FARRAY;
+    else if (order == NPY_CORDER)
+      flags |= NPY_ARRAY_CARRAY;
     else
       throw std::runtime_error("unrecognized order specifier");
 
-    py::handle<> result = py::handle<>(PyArray_NewFromDescr(
+    py::object result = py::reinterpret_steal<py::object>(PyArray_NewFromDescr(
         &PyArray_Type, tp_descr,
         int(dims.size()), &dims.front(), /*strides*/ NULL,
         alloc->ptr(), flags, /*obj*/NULL));
 
-    py::handle<> alloc_py(handle_from_new_ptr(alloc.release()));
-    PyArray_BASE(result.get()) = alloc_py.get();
-    Py_INCREF(alloc_py.get());
+    py::object alloc_py = handle_from_new_ptr(alloc.release());
+    if (PyArray_SetBaseObject(
+          reinterpret_cast<PyArrayObject *>(result.ptr()),
+          alloc_py.inc_ref().ptr()) < 0)
+      throw py::error_already_set();
 
     return result;
   }
@@ -225,10 +229,10 @@ namespace
   {
     typedef typename Wrapper::wrapped_type cl;
     wrapper
-      .add_property("held_blocks", &cl::held_blocks)
-      .add_property("active_blocks", &cl::active_blocks)
-      .add_property("managed_bytes", &cl::managed_bytes)
-      .add_property("active_bytes", &cl::active_bytes)
+      .def_property_readonly("held_blocks", &cl::held_blocks)
+      .def_property_readonly("active_blocks", &cl::active_blocks)
+      .def_property_readonly("managed_bytes", &cl::managed_bytes)
+      .def_property_readonly("active_bytes", &cl::active_bytes)
       .DEF_SIMPLE_METHOD(bin_number)
       .DEF_SIMPLE_METHOD(alloc_size)
       .DEF_SIMPLE_METHOD(free_held)
@@ -240,19 +244,17 @@ namespace
 
 
 
-void pycuda_expose_tools()
+void pycuda_expose_tools(py::module_ &m)
 {
-  py::def("bitlog2", pycuda::bitlog2);
+  m.def("bitlog2", pycuda::bitlog2);
 
   {
     typedef context_dependent_memory_pool<device_allocator> cl;
 
-    py::class_<
-      cl, noncopyable,
-      std::shared_ptr<cl> > wrapper("DeviceMemoryPool");
+    py::class_<cl, std::shared_ptr<cl> > wrapper(m, "DeviceMemoryPool");
     wrapper
       .def("allocate", device_pool_allocate,
-          py::return_value_policy<py::manage_new_object>())
+          py::return_value_policy::take_ownership)
       ;
 
     expose_memory_pool(wrapper);
@@ -260,22 +262,22 @@ void pycuda_expose_tools()
 
   {
     typedef host_allocator cl;
-    py::class_<cl> wrapper("PageLockedAllocator",
-        py::init<py::optional<unsigned> >());
+    py::class_<cl> wrapper(m, "PageLockedAllocator");
+    wrapper
+      .def(py::init<>())
+      .def(py::init<unsigned>())
+      ;
   }
 
   {
     typedef pycuda::memory_pool<host_allocator> cl;
 
-    py::class_<
-      cl, noncopyable,
-      std::shared_ptr<cl> > wrapper(
-          "PageLockedMemoryPool",
-          py::init<py::optional<host_allocator const &> >()
-          );
+    py::class_<cl, std::shared_ptr<cl> > wrapper(m, "PageLockedMemoryPool");
     wrapper
+      .def(py::init<>())
+      .def(py::init<host_allocator const &>())
       .def("allocate", host_pool_allocate,
-          (py::arg("shape"), py::arg("dtype"), py::arg("order")="C"));
+          py::arg("shape"), py::arg("dtype"), py::arg("order")="C")
       ;
 
     expose_memory_pool(wrapper);
@@ -283,8 +285,7 @@ void pycuda_expose_tools()
 
   {
     typedef pooled_device_allocation cl;
-    py::class_<cl, noncopyable>(
-        "PooledDeviceAllocation", py::no_init)
+    py::class_<cl>(m, "PooledDeviceAllocation")
       .DEF_SIMPLE_METHOD(free)
       .def("__int__", &cl::ptr)
       .def("__long__", pooled_device_allocation_to_long)
@@ -297,8 +298,7 @@ void pycuda_expose_tools()
 
   {
     typedef pooled_host_allocation cl;
-    py::class_<cl, noncopyable>(
-        "PooledHostAllocation", py::no_init)
+    py::class_<cl>(m, "PooledHostAllocation")
       .DEF_SIMPLE_METHOD(free)
       .def("__len__", &cl::size)
       ;

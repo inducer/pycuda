@@ -310,13 +310,13 @@ namespace pycuda { namespace gl {
     CUstream s_handle;
     std::shared_ptr<stream> strm_sptr;
 
-    if (strm_py.ptr() == Py_None)
+    if (strm_py.is_none())
     {
       s_handle = 0;
     }
     else
     {
-      strm_sptr = py::extract<std::shared_ptr<stream> >(strm_py);
+      strm_sptr = strm_py.cast<std::shared_ptr<stream>>();
       s_handle = strm_sptr->handle();
     }
 

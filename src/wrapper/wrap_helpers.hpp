@@ -5,6 +5,7 @@
 
 
 #include <pybind11/pybind11.h>
+namespace py = pybind11;
 
 
 
@@ -16,13 +17,13 @@
   def(#NAME, &cl::NAME)
 
 #define DEF_SIMPLE_METHOD_WITH_ARGS(NAME, ARGS) \
-  def(#NAME, &cl::NAME, boost::python::args ARGS)
+  def(#NAME, &cl::NAME)
 
 #define DEF_SIMPLE_FUNCTION(NAME) \
   m.def(#NAME, &NAME)
 
 #define DEF_SIMPLE_FUNCTION_WITH_ARGS(NAME, ARGS) \
-  m.def(#NAME, &NAME, boost::python::args ARGS)
+  m.def(#NAME, &NAME)
 
 #define DEF_SIMPLE_RO_MEMBER(NAME) \
   def_readonly(#NAME, &cl::m_##NAME)
