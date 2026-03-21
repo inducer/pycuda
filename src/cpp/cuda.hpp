@@ -1555,15 +1555,14 @@ namespace pycuda
 
       py::object as_buffer(size_t size, size_t offset)
       {
-        return py::object(
-            py::handle<>(
+        return py::reinterpret_steal<py::object>(
 #if PY_VERSION_HEX >= 0x03030000
               PyMemoryView_FromMemory((char *) (get_pointer() + offset), size,
                 PyBUF_WRITE)
 #else /* Py2 */
               PyBuffer_FromReadWriteMemory((void *) (get_pointer() + offset), size)
 #endif
-              ));
+              );
       }
   };
 
@@ -1609,15 +1608,14 @@ namespace pycuda
 
       py::object as_buffer(size_t size, size_t offset)
       {
-        return py::object(
-            py::handle<>(
+        return py::reinterpret_steal<py::object>(
 #if PY_VERSION_HEX >= 0x03030000
               PyMemoryView_FromMemory((char *) (m_devptr + offset), size,
                 PyBUF_WRITE)
 #else /* Py2 */
               PyBuffer_FromReadWriteMemory((void *) (m_devptr + offset), size)
 #endif
-              ));
+              );
       }
   };
 
@@ -1718,9 +1716,9 @@ namespace pycuda
   {
     CUipcMemHandle handle;
     CUDAPP_CALL_GUARDED(cuIpcGetMemHandle, (&handle, devptr));
-    return py::object(py::handle<>(PyByteArray_FromStringAndSize(
+    return py::reinterpret_steal<py::object>(PyByteArray_FromStringAndSize(
             reinterpret_cast<const char *>(&handle),
-            sizeof(handle))));
+            sizeof(handle)));
   }
 
 #endif
@@ -2076,7 +2074,7 @@ namespace pycuda
 
     public:
       registered_host_memory(void *p, size_t bytes, unsigned int flags=0,
-          py::object base=py::object())
+          py::object base=py::none())
         : host_pointer(mem_host_register(p, bytes, flags)), m_base(base)
       {
       }
@@ -2194,9 +2192,9 @@ namespace pycuda
       {
         CUipcEventHandle handle;
         CUDAPP_CALL_GUARDED(cuIpcGetEventHandle, (&handle, m_event));
-        return py::object(py::handle<>(PyByteArray_FromStringAndSize(
+        return py::reinterpret_steal<py::object>(PyByteArray_FromStringAndSize(
               reinterpret_cast<const char *>(&handle),
-              sizeof(handle))));
+              sizeof(handle)));
       }
 #endif
   };

@@ -8,6 +8,7 @@
 #include <pybind11/pybind11.h>
 #include <numeric>
 #include <numpy/arrayobject.h>
+#include <numpy/npy_2_compat.h>
 
 
 
@@ -30,9 +31,8 @@ namespace pycuda
   {
     namespace py = pybind11;
 
-    py::object gc_mod(
-        py::handle<>(
-          PyImport_ImportModule("gc")));
+    py::object gc_mod = py::reinterpret_steal<py::object>(
+        PyImport_ImportModule("gc"));
     gc_mod.attr("collect")();
   }
 
