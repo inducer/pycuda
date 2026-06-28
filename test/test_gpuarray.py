@@ -14,7 +14,7 @@ from pycuda.compiler import SourceModule
 from pycuda.tools import init_cuda_context_fixture
 
 
-@pytest.fixture(autouse=True)  # noqa: RUF076
+@pytest.fixture(autouse=True)
 def init_cuda_context():
     yield from init_cuda_context_fixture()
 
