@@ -1317,6 +1317,12 @@ def ones(shape, dtype=np.float64, allocator=drv.mem_alloc, order="C"):
 
 def _array_like_helper(other_ary, dtype, order):
     """Set order, strides, dtype as in numpy's zero_like. """
+    if isinstance(other_ary, GPUArray):
+        allocator = other_ary.allocator
+    else:
+        # mirror numpy, which accepts array_like (e.g. scalar) inputs
+        other_ary = np.asarray(other_ary)
+        allocator = drv.mem_alloc
     strides = None
     if order == "A":
         if other_ary.flags.f_contiguous and not other_ary.flags.c_contiguous:
@@ -1340,20 +1346,22 @@ def _array_like_helper(other_ary, dtype, order):
         raise ValueError("Unsupported order: %r" % order)
     if dtype is None:
         dtype = other_ary.dtype
-    return dtype, order, strides
+    return other_ary, allocator, dtype, order, strides
 
 
 def empty_like(other_ary, dtype=None, order="K"):
-    dtype, order, strides = _array_like_helper(other_ary, dtype, order)
+    other_ary, allocator, dtype, order, strides = _array_like_helper(
+        other_ary, dtype, order)
     return GPUArray(
-        other_ary.shape, dtype, other_ary.allocator, order=order, strides=strides
+        other_ary.shape, dtype, allocator, order=order, strides=strides
     )
 
 
 def zeros_like(other_ary, dtype=None, order="K"):
-    dtype, order, strides = _array_like_helper(other_ary, dtype, order)
+    other_ary, allocator, dtype, order, strides = _array_like_helper(
+        other_ary, dtype, order)
     result = GPUArray(
-        other_ary.shape, dtype, other_ary.allocator, order=order, strides=strides
+        other_ary.shape, dtype, allocator, order=order, strides=strides
     )
     zero = np.zeros((), result.dtype)
     result.fill(zero)
@@ -1361,9 +1369,10 @@ def zeros_like(other_ary, dtype=None, order="K"):
 
 
 def ones_like(other_ary, dtype=None, order="K"):
-    dtype, order, strides = _array_like_helper(other_ary, dtype, order)
+    other_ary, allocator, dtype, order, strides = _array_like_helper(
+        other_ary, dtype, order)
     result = GPUArray(
-        other_ary.shape, dtype, other_ary.allocator, order=order, strides=strides
+        other_ary.shape, dtype, allocator, order=order, strides=strides
     )
     one = np.ones((), result.dtype)
     result.fill(one)
