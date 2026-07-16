@@ -48,3 +48,4 @@ distribute*tar.gz
 *.sess
 
 .cache
+.venv
