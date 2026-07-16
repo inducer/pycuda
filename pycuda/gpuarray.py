@@ -45,7 +45,7 @@ def _get_broadcasted_binary_op_result(obj1, obj2,
 # {{{ vector types
 
 
-class vec:  # noqa
+class vec:  # ruff:ignore[invalid-class-name]
     pass
 
 
@@ -1077,7 +1077,7 @@ class GPUArray:
         )
 
     @property
-    def T(self):  # noqa
+    def T(self):  # ruff:ignore[invalid-function-name]
         """
         .. versionadded:: 2015.2
         """

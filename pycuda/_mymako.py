@@ -2,7 +2,7 @@ from __future__ import annotations
 
 
 try:
-    import mako.template  # noqa: F401
+    import mako.template  # ruff:ignore[unused-import]
 except ImportError:
     raise ImportError(
         "Some of PyCUDA's facilities require the Mako templating engine.\n"
@@ -16,4 +16,4 @@ except ImportError:
     )
 
 
-from mako import *  # noqa: F403
+from mako import *  # ruff:ignore[undefined-local-with-import-star]

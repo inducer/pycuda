@@ -4,7 +4,7 @@ import math
 
 import numpy as np
 
-import pycuda.driver as drv  # noqa
+import pycuda.driver as drv  # ruff:ignore[unused-import]
 from pycuda import cumath, gpuarray
 from pycuda.tools import mark_cuda_test
 
@@ -218,7 +218,7 @@ class TestMath:
 
 if __name__ == "__main__":
     # make sure that import failures get reported, instead of skipping the tests.
-    import pycuda.autoinit  # noqa
+    import pycuda.autoinit  # ruff:ignore[unused-import, unsorted-imports]
 
     import sys
 

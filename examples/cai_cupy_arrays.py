@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import cupy as cp
 
-import pycuda.autoinit  # noqa
+import pycuda.autoinit  # ruff:ignore[unused-import]
 from pycuda.compiler import SourceModule
 
 

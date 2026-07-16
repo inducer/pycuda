@@ -27,4 +27,4 @@ if not exists(mainpyfile):
 sys.argv = args
 
 with open(mainpyfile) as mainpy:
-    exec(compile(mainpy.read(), mainpyfile, "exec"))  # noqa: S102
+    exec(compile(mainpy.read(), mainpyfile, "exec"))  # ruff:ignore[exec-builtin]

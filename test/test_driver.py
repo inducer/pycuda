@@ -1166,15 +1166,15 @@ def test_pass_cai_array():
 
 def test_import_pyopencl_before_pycuda():
     try:
-        import pyopencl  # noqa
+        import pyopencl  # ruff:ignore[unused-import]
     except ImportError:
         return
-    import pycuda.driver  # noqa
+    import pycuda.driver  # ruff:ignore[unused-import]
 
 
 if __name__ == "__main__":
     # make sure that import failures get reported, instead of skipping the tests.
-    import pycuda.autoinit  # noqa
+    import pycuda.autoinit  # ruff:ignore[unused-import, unsorted-imports]
 
     import sys
 

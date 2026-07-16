@@ -33,7 +33,7 @@ import numpy as np
 
 import pycuda._driver as _drv
 import pycuda.driver as cuda
-from pycuda.compyte.dtypes import (  # noqa: F401
+from pycuda.compyte.dtypes import (  # ruff:ignore[unused-import]
     _fill_dtype_registry,
     dtype_to_ctype as base_dtype_to_ctype,
     get_or_register_dtype,
@@ -157,7 +157,7 @@ def get_default_device(default=0):
     dev = os.environ.get("CUDA_DEVICE")
 
     if dev is None:
-        with contextlib.suppress(Exception):  # noqa: SIM117
+        with contextlib.suppress(Exception):  # ruff:ignore[multiple-with-statements]
             with open(os.path.join(os.path.expanduser("~"), ".cuda_device")) as devrc:
                 dev = devrc.read().strip()
 
@@ -198,7 +198,7 @@ def make_default_context(ctx_maker=None):
             assert homedir is not None
             with open(os.path.join(homedir, ".cuda_device")) as devrc:
                 devn = devrc.read().strip()
-        except Exception:  # noqa: S110
+        except Exception:  # ruff:ignore[try-except-pass]
             pass
 
     # If either CUDA_DEVICE or $HOME/.cuda_device is set, try to use it

@@ -262,8 +262,8 @@ class ReductionKernel:
         )
 
     def __call__(self, *args, **kwargs):
-        MAX_BLOCK_COUNT = 1024  # noqa: N806
-        SMALL_SEQ_COUNT = 4  # noqa: N806
+        MAX_BLOCK_COUNT = 1024  # ruff:ignore[non-lowercase-variable-in-function]
+        SMALL_SEQ_COUNT = 4  # ruff:ignore[non-lowercase-variable-in-function]
 
         s1_func = self.stage1_func
         s2_func = self.stage2_func

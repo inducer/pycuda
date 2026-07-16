@@ -77,5 +77,5 @@ except ImportError:
 else:
     pyximport.install()
     from pycuda.sparse.pkt_build_cython import (
-        build_pkt_data_structure,  # noqa: F401
+        build_pkt_data_structure,  # ruff:ignore[unused-import]
     )

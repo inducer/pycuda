@@ -386,7 +386,7 @@ class TestGPUArray:
                     v = 10
                     a.fill(v)
                     gen.fill_poisson(a)
-                    tmp = (a.get() == (v - 1)).sum() / a.size  # noqa: F841
+                    tmp = (a.get() == (v - 1)).sum() / a.size  # ruff:ignore[unused-variable]
                     # Commented out for CI on the off chance it'd fail
                     # # Check Poisson statistics (need 1e6 values)
                     # # Compare with scipy.stats.poisson.pmf(v - 1, v)
@@ -916,7 +916,7 @@ class TestGPUArray:
                 def allocator(size):
                     nonlocal alloc_uses, pool
                     alloc_uses += 1
-                    return pool.allocate(size)  # noqa: B023
+                    return pool.allocate(size)  # ruff:ignore[function-uses-loop-variable]
 
                 alloc = None if pool is None else allocator
                 sum_a_gpu = gpuarray.subset_sum(
@@ -1782,7 +1782,7 @@ class TestGPUArray:
 
 if __name__ == "__main__":
     # make sure that import failures get reported, instead of skipping the tests.
-    import pycuda.autoinit  # noqa
+    import pycuda.autoinit  # ruff:ignore[unused-import]
 
     if len(sys.argv) > 1:
         exec(sys.argv[1])

@@ -130,7 +130,7 @@ def compile_plain(source, options, keep, nvcc, cache_dir, target="cubin"):
     )
 
     try:
-        result_f = open(join(file_dir, file_root + "." + target), "rb")  # noqa: SIM115
+        result_f = open(join(file_dir, file_root + "." + target), "rb")  # ruff:ignore[open-file-with-context-handler]
     except OSError:
         no_output = True
     else:

@@ -31,21 +31,21 @@ extend-select = [
     "W",   # pycodestyle
 ]
 extend-ignore = [
-    "C90",  # McCabe complexity
-    "E221", # multiple spaces before operator
-    "E226", # missing whitespace around arithmetic operator
-    "E402", # module-level import not at top of file
-    "UP031", # use f-strings instead of %
-    "UP032", # use f-strings instead of .format
-    "NPY002", # legacy random
-    "SIM102", # single if instead of nested
-    "PGH004", # noqa requires rule
-    "B904",  # raise within except: use from
-    "RUF012",  # ClassVar
-    "SIM108", # ternary instead of if-then-else
-    "RUF067", # no code in __init__ *shrug*
-    "RUF069", # unreliable FP comparison
-    "BLE001",
+    "C90",
+    "multiple-spaces-before-operator",
+    "missing-whitespace-around-arithmetic-operator",
+    "module-import-not-at-top-of-file",
+    "printf-string-formatting",
+    "f-string",
+    "numpy-legacy-random",
+    "collapsible-if",
+    "blanket-noqa",
+    "raise-without-from-inside-except",
+    "mutable-class-default",
+    "if-else-block-instead-of-if-exp",
+    "non-empty-init-module",
+    "float-equality-comparison",
+    "blind-except",
 ]
 
 [tool.ruff.lint.flake8-quotes]
@@ -68,35 +68,35 @@ required-imports = ["from __future__ import annotations"]
 extend-ignore-names = ["update_for_*"]
 
 [tool.ruff.lint.per-file-ignores]
-"doc/conf.py" = ["S102"]
+"doc/conf.py" = ["exec-builtin"]
 "test/test_*.py" = [
-    "N806", # upper case locals
-    "S102",
+    "non-lowercase-variable-in-function",
+    "exec-builtin",
 ]
 "setup.py" = [
-    "N806", # upper case locals
-    "SIM115",  # context manager for files
-    "S102",
+    "non-lowercase-variable-in-function",
+    "open-file-with-context-handler",
+    "exec-builtin",
 ]
 "pycuda/sparse/coordinate.py" = [
-    "E501", # line length
+    "line-too-long", # line length
 ]
 "pycuda/driver.py" = [
-    "F405", # undefined symbol
-    "N806", # upper case locals
+    "undefined-local-with-import-star-usage",
+    "non-lowercase-variable-in-function",
 ]
 "pycuda/curandom.py" = [
-    "E501", # line length
+    "line-too-long", # line length
 ]
 "examples/from-wiki/*.py" = [
-    "F", "E", "N", "B", "EXE001", "PLW",
+    "F", "E", "N", "B", "shebang-not-executable", "PLW",
 ]
 "examples/demo_cdpSimplePrint.py" = [
-    "E501", # line length
-    "N816", # mixed case locals
+    "line-too-long", # line length
+    "mixed-case-variable-in-global-scope", # mixed case locals
 ]
 "aksetup_helper.py" = [
     # effectively unmaintained, will go away
-    "UP", "C", "E501", "B", "SIM", "RUF", "S102", "S110", "TRY"
+    "UP", "C", "line-too-long", "B", "SIM", "RUF", "exec-builtin", "try-except-pass", "TRY"
 ]
 "test/undistributed/*.py" = ["B"]

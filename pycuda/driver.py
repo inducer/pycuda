@@ -60,7 +60,7 @@ def _add_cuda_libdir_to_dll_path():
 
 
 try:
-    os.add_dll_directory  # noqa: B018
+    os.add_dll_directory  # ruff:ignore[useless-expression]
 except AttributeError:
     # likely not on Py3.8 and Windows
     # https://github.com/inducer/pycuda/issues/213
@@ -72,7 +72,7 @@ else:
 
 
 try:
-    from pycuda._driver import *  # noqa
+    from pycuda._driver import *  # ruff:ignore[undefined-local-with-import-star]
 except ImportError as e:
     if "_v2" in str(e):
         from warnings import warn
@@ -865,7 +865,7 @@ def matrix_to_array(matrix, order, allow_double_hack=False):
     return ary
 
 
-def np_to_array(nparray, order, allowSurfaceBind=False):  # noqa: N803
+def np_to_array(nparray, order, allowSurfaceBind=False):  # ruff:ignore[invalid-argument-name]
     case = order in ["C", "F"]
     if not case:
         raise LogicError("order must be either F or C")
@@ -946,7 +946,7 @@ def np_to_array(nparray, order, allowSurfaceBind=False):  # noqa: N803
         return cudaArray
 
 
-def gpuarray_to_array(gpuarray, order, allowSurfaceBind=False):  # noqa: N803
+def gpuarray_to_array(gpuarray, order, allowSurfaceBind=False):  # ruff:ignore[invalid-argument-name]
     case = order in ["C", "F"]
     if not case:
         raise LogicError("order must be either F or C")

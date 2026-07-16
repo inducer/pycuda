@@ -3,7 +3,7 @@ from __future__ import annotations
 
 import numpy
 
-import pycuda.autoinit  # noqa
+import pycuda.autoinit  # ruff:ignore[unused-import]
 import pycuda.driver as cuda
 from pycuda.compiler import SourceModule
 
