@@ -148,7 +148,7 @@ The :class:`GPUArray` Array Class
         size (not necessarily shape) and dtype. If it is not given,
         a *page-locked* array is newly allocated.
 
-    .. method :: copy()
+    .. method :: copy(stream=None)
 
         .. versionadded :: 2013.1
 
@@ -187,7 +187,7 @@ The :class:`GPUArray` Array Class
 
     .. method :: astype(dtype, stream=None)
 
-        Return *self*, cast to *dtype*.
+        Return copy of the array, cast to a specified type.
 
     .. method :: any(stream=None, allocator=None)
 

@@ -396,9 +396,10 @@ class GPUArray:
     def get_async(self, stream=None, ary=None):
         return self.get(ary=ary, async_=True, stream=stream)
 
-    def copy(self):
+    def copy(self, stream=None):
         new = GPUArray(self.shape, self.dtype, self.allocator, strides=self.strides)
-        _memcpy_discontig(new, self)
+        _memcpy_discontig(new, self,
+            **{"async_": True, "stream": stream} if stream is not None else {})
         return new
 
     def __str__(self):
@@ -926,11 +927,11 @@ class GPUArray:
     def astype(self, dtype, stream=None):
         if not self.flags.forc:
             raise RuntimeError(
-                "only contiguous arrays may " "be used as arguments to this operation"
+                "only contiguous arrays may be used as arguments to this operation"
             )
 
         if dtype == self.dtype:
-            return self.copy()
+            return self.copy(stream=stream)
 
         result = self._new_like_me(dtype=dtype)
 
