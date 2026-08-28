@@ -419,7 +419,7 @@ class GPUArray:
 
     @property
     def ptr(self):
-        return self.gpudata.__int__()
+        return int(self.gpudata)
 
     # kernel invocation wrappers ----------------------------------------------
     def _axpbyz(self, selffac, other, otherfac, out, add_timer=None, stream=None):

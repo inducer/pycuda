@@ -26,7 +26,7 @@ def get_random_array(rng, shape, dtype):
         return rng.random(shape, dtype)
     elif dtype.kind in "il":
         return rng.integers(-42, 42, shape, dtype)
-    elif dtype.kind in "u":
+    elif dtype.kind == "u":
         return rng.integers(0, 42, shape, dtype)
     elif dtype.kind == "c":
         real_dtype = np.empty(0, dtype).real.dtype

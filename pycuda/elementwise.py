@@ -269,8 +269,7 @@ class ElementwiseKernel:
             range_ = slice(*slice_.indices(repr_vec.size))
 
         if range_ is not None:
-            invocation_args.append(range_.start)
-            invocation_args.append(range_.stop)
+            invocation_args.extend((range_.start, range_.stop))
             if range_.step is None:
                 invocation_args.append(1)
             else:
@@ -439,13 +438,11 @@ def get_linear_combination_kernel(summand_descriptors, dtype_z):
                 % (dtype_to_ctype(scalar_dtype), i, i)
             )
         else:
-            args.append(ScalarArg(scalar_dtype, "a%d" % i))
-            args.append(VectorArg(vector_dtype, "x%d" % i))
+            args.extend((ScalarArg(scalar_dtype, "a%d" % i), VectorArg(vector_dtype, "x%d" % i)))
 
         summands.append("a%d*x%d[i]" % (i, i))
 
-    args.append(VectorArg(dtype_z, "z"))
-    args.append(ScalarArg(np.uintp, "n"))
+    args.extend((VectorArg(dtype_z, "z"), ScalarArg(np.uintp, "n")))
 
     mod = get_elwise_module(
         args,

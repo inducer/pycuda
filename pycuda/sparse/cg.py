@@ -62,9 +62,7 @@ class CGStateContainer:
             b.bind_to_texref_ext(texrefs.pop(0), allow_double_hack=True)
         else:
             args.append(b)
-        args.append(y.gpudata)
-        args.append(out.gpudata)
-        args.append(x.mem_size)
+        args.extend((y.gpudata, out.gpudata, x.mem_size))
 
         kernel.prepared_call(x._grid, x._block, *args)
 

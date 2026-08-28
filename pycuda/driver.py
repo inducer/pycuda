@@ -340,7 +340,7 @@ def _add_functionality():
 
         func.arg_format = ""
 
-        for _i, arg_type in enumerate(arg_types):
+        for arg_type in arg_types:
             if (
                 isinstance(arg_type, type)
                 and np is not None
@@ -541,7 +541,7 @@ def _add_functionality():
 
         func.arg_format = ""
 
-        for _i, arg_type in enumerate(arg_types):
+        for arg_type in arg_types:
             if isinstance(arg_type, type) and np.number in arg_type.__mro__:
                 func.arg_format += np.dtype(arg_type).char
             elif isinstance(arg_type, np.dtype):

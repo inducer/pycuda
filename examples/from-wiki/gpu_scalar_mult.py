@@ -55,18 +55,15 @@ def get_lin_comb_kernel_no_tex(summand_descriptors,
     for i, (is_gpu_scalar, scalar_dtype, vector_dtype) in \
             enumerate(summand_descriptors):
         if is_gpu_scalar:
-            args.append(VectorArg(vector_dtype, "global_a%d" % i))
-            args.append(VectorArg(vector_dtype, "x%d" % i))
+            args.extend((VectorArg(vector_dtype, "global_a%d" % i), VectorArg(vector_dtype, "x%d" % i)))
             loop_prep.append("%s a%d = *global_a%d"
                     % (dtype_to_ctype(scalar_dtype), i, i))
         else:
-            args.append(ScalarArg(scalar_dtype, "a%d" % i))
-            args.append(VectorArg(vector_dtype, "x%d" % i))
+            args.extend((ScalarArg(scalar_dtype, "a%d" % i), VectorArg(vector_dtype, "x%d" % i)))
 
         summands.append("a%d*x%d[i]" % (i, i))
 
-    args.append(VectorArg(dtype_z, "z"))
-    args.append(ScalarArg(numpy.uintp, "n"))
+    args.extend((VectorArg(dtype_z, "z"), ScalarArg(numpy.uintp, "n")))
 
     mod = get_elwise_module(args,
             "z[i] = " + " + ".join(summands),
