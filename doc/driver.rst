@@ -341,6 +341,12 @@ Constants
 
         CUDA 8.0 and above.
 
+    .. attribute :: COOPERATIVE_LAUNCH
+
+        Whether the device supports cooperative kernel launches.
+
+        CUDA 9.0 and above.
+
     .. attribute :: MAX_SHARED_MEMORY_PER_BLOCK_OPTIN
 
         CUDA 9.0 and above.
@@ -1811,7 +1817,7 @@ Code on the Device: Modules and Functions
     Handle to a *__global__* function in a :class:`Module`. Create using
     :meth:`Module.get_function`.
 
-    .. method:: __call__(arg1, ..., argn, block=block_size, [grid=(1,1), [stream=None, [shared=0, [texrefs=[], [time_kernel=False]]]]])
+    .. method:: __call__(arg1, ..., argn, block=block_size, [grid=(1,1), [stream=None, [shared=0, [texrefs=[], [time_kernel=False, [cooperative=False]]]]]])
 
         Launch *self*, with a thread block size of *block*. *block* must be a 3-tuple
         of integers.
@@ -1828,6 +1834,13 @@ Code on the Device: Modules and Functions
         *extern __shared__* arrays.
         *texrefs* is a :class:`list` of :class:`TextureReference` instances
         that the function will have access to.
+        If *cooperative* is *True*, launch the kernel cooperatively. This requires
+        CUDA 9.0 or newer and a device whose :attr:`device_attribute.COOPERATIVE_LAUNCH`
+        attribute is nonzero. The entire grid must fit concurrently on the device;
+        :meth:`get_max_active_blocks_per_multiprocessor` can be used to determine
+        this limit. On CUDA versions before 11.0, kernels that synchronize the
+        entire grid must be built using ``pycuda.compiler.DynamicSourceModule``.
+        Cooperatively launched kernels may not use CUDA dynamic parallelism.
 
         The function returns either *None* or the number of seconds spent
         executing the kernel, depending on whether *time_kernel* is *True*.
@@ -1893,18 +1906,20 @@ Code on the Device: Modules and Functions
 
         Return `self`.
 
-    .. method:: prepared_call(grid, block, *args, shared_size=0)
+    .. method:: prepared_call(grid, block, *args, shared_size=0, cooperative=False)
 
         Invoke `self` using :meth:`launch_grid`, with `args` a grid size of `grid`,
         and a block size of *block*.
         Assumes that :meth:`prepare` was called on *self*.
         The texture references given to :meth:`prepare` are set up as parameters, as
         well.
+        If *cooperative* is *True*, use the cooperative launch described in
+        :meth:`__call__`.
 
         .. versionchanged:: 2012.1
             *shared_size* was added.
 
-    .. method:: prepared_timed_call(grid, block, *args, shared_size=0)
+    .. method:: prepared_timed_call(grid, block, *args, shared_size=0, cooperative=False)
 
         Invoke `self` using :meth:`launch_grid`, with `args`, a grid size of `grid`,
         and a block size of *block*.
@@ -1919,7 +1934,7 @@ Code on the Device: Modules and Functions
         .. versionchanged:: 2012.1
             *shared_size* was added.
 
-    .. method:: prepared_async_call(grid, block, stream, *args, shared_size=0)
+    .. method:: prepared_async_call(grid, block, stream, *args, shared_size=0, cooperative=False)
 
         Invoke `self` using :meth:`launch_grid_async`, with `args`, a grid size
         of `grid`, and a block size of *block*, serialized into the
@@ -1930,6 +1945,17 @@ Code on the Device: Modules and Functions
 
         .. versionchanged:: 2012.1
             *shared_size* was added.
+
+    .. method:: get_max_active_blocks_per_multiprocessor(block_size, dynamic_smem_size=0)
+
+        Return the maximum number of thread blocks for *self* that can be active
+        on one multiprocessor. *dynamic_smem_size* is the dynamic shared memory
+        used by each block, in bytes.
+
+        A cooperative launch may contain at most this value multiplied by the
+        device's :attr:`device_attribute.MULTIPROCESSOR_COUNT`.
+
+        CUDA 9.0 and above.
 
     .. method:: get_attribute(attr)
 

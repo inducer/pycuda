@@ -49,6 +49,9 @@ namespace
         || err.code() == CUDA_ERROR_LAUNCH_OUT_OF_RESOURCES
         || err.code() == CUDA_ERROR_LAUNCH_TIMEOUT
         || err.code() == CUDA_ERROR_LAUNCH_INCOMPATIBLE_TEXTURING
+#if CUDAPP_CUDA_VERSION >= 9000
+        || err.code() == CUDA_ERROR_COOPERATIVE_LAUNCH_TOO_LARGE
+#endif
        )
       PyErr_SetString(CudaLaunchError.get(), err.what());
     else if (err.code() == CUDA_ERROR_OUT_OF_MEMORY)
@@ -910,6 +913,7 @@ BOOST_PYTHON_MODULE(_driver)
     .value("CAN_USE_HOST_POINTER_FOR_REGISTERED_MEM", CU_DEVICE_ATTRIBUTE_CAN_USE_HOST_POINTER_FOR_REGISTERED_MEM)
 #endif
 #if CUDAPP_CUDA_VERSION >= 9000
+    .value("COOPERATIVE_LAUNCH", CU_DEVICE_ATTRIBUTE_COOPERATIVE_LAUNCH)
     .value("MAX_SHARED_MEMORY_PER_BLOCK_OPTIN", CU_DEVICE_ATTRIBUTE_MAX_SHARED_MEMORY_PER_BLOCK_OPTIN)
 #endif
 #if CUDAPP_CUDA_VERSION >= 9020
@@ -1323,11 +1327,19 @@ BOOST_PYTHON_MODULE(_driver)
 #if CUDAPP_CUDA_VERSION >= 10000
       .DEF_SIMPLE_METHOD(set_attribute)
 #endif
+#if CUDAPP_CUDA_VERSION >= 9000
+      .def("get_max_active_blocks_per_multiprocessor",
+          &cl::get_max_active_blocks_per_multiprocessor,
+          (py::arg("block_size"), py::arg("dynamic_smem_size")=0))
+#endif
 #if CUDAPP_CUDA_VERSION >= 3000 && defined(CUDAPP_POST_30_BETA)
       .DEF_SIMPLE_METHOD(set_cache_config)
 #endif
 #if CUDAPP_CUDA_VERSION >= 4000
-      .def("_launch_kernel", &cl::launch_kernel)
+      .def("_launch_kernel", &cl::launch_kernel,
+          (py::arg("grid_dim"), py::arg("block_dim"),
+           py::arg("parameter_buffer"), py::arg("shared_mem_bytes"),
+           py::arg("stream"), py::arg("cooperative")=false))
 #endif
       ;
   }

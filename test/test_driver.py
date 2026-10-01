@@ -857,6 +857,87 @@ class TestDriver:
         assert la.norm(a_quadrupled[1:] - 4 * a[1:]) == 0
 
     @mark_cuda_test
+    def test_cooperative_kernel(self):
+        if drv.get_version() < (9,):
+            pytest.skip("cooperative kernel launches require CUDA 9.0")
+
+        dev = drv.Context.get_device()
+        if not dev.get_attribute(drv.device_attribute.COOPERATIVE_LAUNCH):
+            pytest.skip("device does not support cooperative kernel launches")
+
+        source = r"""
+        #include <cooperative_groups.h>
+
+        extern "C" __global__ void cooperative_test(int *result, int value)
+        {
+          cooperative_groups::grid_group grid = cooperative_groups::this_grid();
+
+          if (grid.thread_rank() == 0)
+          {
+            result[0] = grid.is_valid();
+            result[1] = value;
+          }
+          grid.sync();
+          if (grid.thread_rank() == grid.size()-1)
+            result[2] = result[1]+1;
+        }
+        """
+
+        if drv.get_version() < (11,):
+            from pycuda.compiler import DynamicSourceModule
+
+            mod = DynamicSourceModule(source, no_extern_c=True)
+        else:
+            mod = SourceModule(source, no_extern_c=True)
+
+        func = mod.get_function("cooperative_test")
+        block = (32, 1, 1)
+        grid = (2, 1, 1)
+        expected = np.array([1, 41, 42], dtype=np.int32)
+
+        result = np.zeros_like(expected)
+        func(
+            drv.Out(result), np.int32(41), block=block, grid=grid, cooperative=True
+        )
+        assert (result == expected).all()
+
+        func.prepare("Pi")
+        result_gpu = drv.mem_alloc(result.nbytes)
+
+        drv.memset_d32(result_gpu, 0, result.size)
+        func.prepared_call(grid, block, result_gpu, 41, cooperative=True)
+        drv.memcpy_dtoh(result, result_gpu)
+        assert (result == expected).all()
+
+        drv.memset_d32(result_gpu, 0, result.size)
+        get_time = func.prepared_timed_call(
+            grid, block, result_gpu, 41, cooperative=True
+        )
+        assert get_time() >= 0
+        drv.memcpy_dtoh(result, result_gpu)
+        assert (result == expected).all()
+
+        stream = drv.Stream()
+        drv.memset_d32_async(result_gpu, 0, result.size, stream)
+        func.prepared_async_call(
+            grid, block, stream, result_gpu, 41, cooperative=True
+        )
+        stream.synchronize()
+        drv.memcpy_dtoh(result, result_gpu)
+        assert (result == expected).all()
+
+        blocks_per_mp = func.get_max_active_blocks_per_multiprocessor(block[0])
+        mp_count = dev.get_attribute(drv.device_attribute.MULTIPROCESSOR_COUNT)
+        with pytest.raises(drv.LaunchError):
+            func.prepared_call(
+                (blocks_per_mp * mp_count + 1, 1, 1),
+                block,
+                result_gpu,
+                41,
+                cooperative=True,
+            )
+
+    @mark_cuda_test
     def test_prepared_with_vector(self):
         cuda_source = r"""
         __global__ void cuda_function(float3 input)
