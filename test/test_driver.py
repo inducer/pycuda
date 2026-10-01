@@ -972,6 +972,29 @@ class TestDriver:
         drv.Context.synchronize()
 
     @mark_cuda_test
+    def test_stream_priority_setting(self):
+        if drv.get_version() < (4,):
+            from py.test import skip
+
+            skip("register_host_memory only exists on CUDA 4.0 and later")
+
+        import sys
+
+        if sys.platform == "darwin":
+            from py.test import skip
+
+            skip("register_host_memory is not supported on OS X")
+
+        a = drv.aligned_empty((2 ** 20,), np.float64)
+        a_pin = drv.register_host_memory(a)
+
+        gpu_ary = drv.mem_alloc_like(a)
+        min_priority, max_priority = drv.get_stream_priority_range()
+        stream = drv.Stream(priority=np.random.choice(range(min_priority, max_priority)))
+        drv.memcpy_htod_async(gpu_ary, a_pin, stream)
+        drv.Context.synchronize()
+
+    @mark_cuda_test
     # https://github.com/inducer/pycuda/issues/45
     def test_recursive_launch(self):
         # Test contributed by Aditya Avinash Atluri

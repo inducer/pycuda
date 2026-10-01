@@ -656,6 +656,10 @@ Devices and Contexts
 
     See also :mod:`pycuda.autoinit`.
 
+.. function:: get_stream_priority_range()
+
+    Returns numerical values that correspond to the least and greatest stream priorities. 
+
 .. class:: Device(number)
         Device(pci_bus_id)
 
@@ -825,7 +829,7 @@ Devices and Contexts
 Concurrency and Streams
 -----------------------
 
-.. class:: Stream(flags=0)
+.. class:: Stream(flags=0, priority=0)
 
     A handle for a queue of operations that will be carried out in order.
 
