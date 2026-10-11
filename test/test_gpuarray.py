@@ -1606,6 +1606,13 @@ class TestGPUArray:
                 assert new_z.dtype == np.complex64
                 assert new_z.shape == arr.shape
 
+            # scalar / array_like (non-GPUArray) input, see issue #389
+            for scalar in [42.0, np.float32(42)]:
+                ref = np.asarray(scalar)
+                new_z = func(scalar)
+                assert new_z.shape == ref.shape
+                assert new_z.dtype == ref.dtype
+
     def test_logical_and_or(self):
         rng = np.random.default_rng(seed=0)
         for op in ["logical_and", "logical_or"]:
