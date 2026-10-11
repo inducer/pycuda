@@ -1884,9 +1884,9 @@ def concatenate(arrays, axis=0, allocator=None):
     base_idx = 0
     for ary in arrays:
         my_len = ary.shape[axis]
-        result[(*full_slice[:axis],
+        result[*full_slice[:axis],
             slice(base_idx, base_idx + my_len),
-            *full_slice[axis + 1:])] = ary
+            *full_slice[axis + 1:]] = ary
         base_idx += my_len
 
     return result
